@@ -1,0 +1,22 @@
+### 중요
+- 사이트 전반적인 ui의 일관성을 유지해주세요.
+- 파일이 너무 커지지않게 컴포넌트 단위를 적절하게 분리해주세요.
+- 코드가 길어지면, 중간에 멈추기 때문에 단계별로 코드를 작성해주세요.
+
+### 기술스택
+- 패키지매니저 pnpm
+- next.js - app라우터
+- Typescript 사용안함(컴포넌트'.jsx', javascript '.js')
+- 백엔드: supabase
+- style: tailwindcss 사용해주세요.
+- 아이콘은 Lucide React 사용해주세요.
+
+### ShadCn components
+- 모든 UI컴포넌트는 ShadCn사용 
+- 컴포넌트 사용전 설치여부 확인해주세요 path: '/src/components/ui/'
+- 컴포넌트 설치 명령어 'pnpm dlx shadcn@latest add [component-name]'
+
+### 그 외
+- 코드에 쓰이지 않는 부분들은 알아서 제거 해주세요.
+- 테이블 정보 '/src/data/table_info.md' 파일 확인.
+- 유저정보는 '/src/contexts/UserContext.jsx'에서 훅으로 가져오고있어요.
