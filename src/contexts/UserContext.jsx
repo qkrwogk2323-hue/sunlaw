@@ -6,6 +6,11 @@ import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 import { toast } from "sonner";
 import { supabase } from "@/utils/supabase";
 import { v4 as uuidv4 } from "uuid";
+import {
+  isDevBypassEnabled,
+  getDevRole,
+  buildDevUser,
+} from "@/utils/devAuth";
 
 // 카카오 API로 사용자 정보 가져오기
 const fetchKakaoProfile = async (accessToken) => {
@@ -52,6 +57,15 @@ export function UserProvider({ children }) {
       try {
         console.log("UserContext: 세션 상태 변경됨", status);
         console.log("UserContext: 세션 데이터", session);
+
+// ✅ 개발용 인증 우회
+    if (isDevBypassEnabled()) {
+      const devRole = getDevRole();
+      const devUser = buildDevUser(devRole);
+      console.log("UserContext: 개발용 우회 사용자 적용", devUser);
+      setUser(devUser);
+      return;
+    }
 
         if (session?.user?.email) {
           // 이메일 정보가 있으면 Supabase에서 사용자 조회
