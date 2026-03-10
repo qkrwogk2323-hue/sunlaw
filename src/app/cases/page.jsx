@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/utils/supabase";
@@ -28,7 +27,6 @@ import {
   MoreHorizontal,
   ExternalLink,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,32 +51,26 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 // 동적 임포트 추가
 import dynamic from "next/dynamic";
-
 // LawsuitManager와 RecoveryActivities 컴포넌트 동적 임포트
 const LawsuitManager = dynamic(() => import("@/app/cases/[id]/components/LawsuitManager"), {
   loading: () => <p>소송 정보를 불러오는 중...</p>,
   ssr: false,
 });
-
 const RecoveryActivities = dynamic(() => import("@/app/cases/[id]/components/RecoveryActivities"), {
   loading: () => <p>채권 정보를 불러오는 중...</p>,
   ssr: false,
 });
-
 function CasesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -86,48 +78,72 @@ function CasesContent() {
   const [searchType, setSearchType] = useState("case_number");
   const [results, setResults] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
-
   // 모달 관련 상태 추가
   const [showLawsuitModal, setShowLawsuitModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [selectedCaseTitle, setSelectedCaseTitle] = useState("");
   const [modalRefreshNeeded, setModalRefreshNeeded] = useState(false);
-
   useEffect(() => {
     const queryType = searchParams.get("type");
     const queryTerm = searchParams.get("q");
     const queryPage = searchParams.get("page");
     const queryPageSize = searchParams.get("pageSize");
-
     if (queryType) setSearchType(queryType);
     if (queryPageSize) setPageSize(parseInt(queryPageSize));
-
     if (queryTerm) {
       setSearchTerm(queryTerm);
       const currentPage = queryPage ? parseInt(queryPage) : 1;
       setPage(currentPage);
       performSearch(queryTerm, queryType || "case_number", currentPage);
     } else {
-      // 검색어가 없을 때 결과 초기화
-      setResults([]);
-      setTotalResults(0);
+      // 검색어가 없으면 기본 사건 목록 로드
+      loadCases();
     }
   }, [searchParams]);
-
+const loadCases = async () => {
+  setLoading(true);
+  try {
+    const { data, error } = await supabase
+      .from("test_cases")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    const normalized = (data || []).map((item) => ({
+      id: item.id,
+      case_id: item.id,
+      status: item.status || "pending",
+      principal_amount: item.principal_amount || 0,
+      recovered_amount: 0,
+      creditor_name: "미등록",
+      debtor_name: "미등록",
+      clientName: "미등록",
+      case_type: item.case_type || "",
+      filing_date: item.filing_date || null,
+      created_at: item.created_at,
+    }));
+    setResults(normalized);
+    setTotalResults(normalized.length);
+  } catch (error) {
+    console.error("사건 목록 로드 오류:", error);
+    toast.error("사건 목록을 불러오는 중 오류가 발생했습니다");
+    setResults([]);
+    setTotalResults(0);
+  } finally {
+    setLoading(false);
+  }
+};
   const performSearch = async (term, type, currentPage = 1) => {
     if (!term) {
       setResults([]);
       setTotalResults(0);
       return;
     }
-
     setLoading(true);
-
     try {
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
-
       if (type === "case_number") {
         const { data, error, count } = await supabase
           .from("test_case_lawsuits")
@@ -151,12 +167,9 @@ function CasesContent() {
           )
           .ilike("case_number", `%${term}%`)
           .range(from, to);
-
         if (error) throw error;
-
         const processedData = data.map((lawsuit) => {
           let clientName = "미등록";
-
           if (lawsuit.cases?.clients && lawsuit.cases.clients.length > 0) {
             const clientsWithName = lawsuit.cases.clients
               .map((client) => {
@@ -165,18 +178,15 @@ function CasesContent() {
                 return null;
               })
               .filter(Boolean);
-
             if (clientsWithName.length > 0) {
               clientName = clientsWithName.join(", ");
             }
           }
-
           return {
             ...lawsuit,
             clientName,
           };
         });
-
         setResults(processedData);
         setTotalResults(count || 0);
       } else {
@@ -208,32 +218,25 @@ function CasesContent() {
           )
           .or(`name.ilike.%${term}%,company_name.ilike.%${term}%`)
           .range(from, to);
-
         if (error) throw error;
-
         const processedData = data.map((party) => {
           const allParties = party.cases?.parties || [];
-
           const creditor = allParties.find((p) =>
             ["creditor", "plaintiff", "applicant"].includes(p.party_type)
           );
-
           const debtor = allParties.find((p) =>
             ["debtor", "defendant", "respondent"].includes(p.party_type)
           );
-
           const creditorName = creditor
             ? creditor.entity_type === "individual"
               ? creditor.name
               : creditor.company_name
             : "미등록";
-
           const debtorName = debtor
             ? debtor.entity_type === "individual"
               ? debtor.name
               : debtor.company_name
             : "미등록";
-
           return {
             id: party.cases?.id || party.case_id,
             case_id: party.case_id,
@@ -251,7 +254,6 @@ function CasesContent() {
             },
           };
         });
-
         setResults(processedData);
         setTotalResults(count || 0);
       }
@@ -262,52 +264,39 @@ function CasesContent() {
       setLoading(false);
     }
   };
-
   const handleSearch = (e) => {
     if (e) e.preventDefault();
-
     const params = new URLSearchParams();
     if (searchTerm) params.set("q", searchTerm);
     params.set("type", searchType);
     params.set("page", "1");
-
     router.push(`/cases?${params.toString()}`);
     performSearch(searchTerm, searchType, 1);
   };
-
   const handleSearchInputChange = (e) => {
     setSearchTerm(e.target.value);
   };
-
   const handlePageChange = (newPage) => {
     setPage(newPage);
-
     const params = new URLSearchParams(searchParams);
     params.set("page", newPage.toString());
-
     if (searchTerm) params.set("q", searchTerm);
     params.set("type", searchType);
-
     router.push(`/cases?${params.toString()}`);
     performSearch(searchTerm, searchType, newPage);
   };
-
   const handlePageSizeChange = (size) => {
     const newSize = parseInt(size);
     setPageSize(newSize);
     setPage(1);
-
     const params = new URLSearchParams(searchParams);
     params.set("page", "1");
     params.set("pageSize", newSize.toString());
-
     if (searchTerm) params.set("q", searchTerm);
     params.set("type", searchType);
-
     router.push(`/cases?${params.toString()}`);
     performSearch(searchTerm, searchType, 1);
   };
-
   const renderLawsuitTypeBadge = (type) => {
     switch (type) {
       case "civil":
@@ -354,17 +343,14 @@ function CasesContent() {
         );
     }
   };
-
   const PaginationComponent = ({ currentPage, totalPages, onPageChange }) => {
     const getPageButtons = () => {
       if (totalPages <= 7) {
         return Array.from({ length: totalPages }, (_, i) => i + 1);
       }
-
       if (currentPage <= 4) {
         return [1, 2, 3, 4, 5, "...", totalPages];
       }
-
       if (currentPage >= totalPages - 3) {
         return [
           1,
@@ -376,12 +362,9 @@ function CasesContent() {
           totalPages,
         ];
       }
-
       return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
     };
-
     const pageButtons = getPageButtons();
-
     return (
       <div className="flex justify-center py-4">
         <div className="flex gap-1">
@@ -393,7 +376,6 @@ function CasesContent() {
           >
             이전
           </Button>
-
           {pageButtons.map((pageNum, index) =>
             pageNum === "..." ? (
               <Button key={`ellipsis-${index}`} variant="outline" size="sm" disabled>
@@ -410,7 +392,6 @@ function CasesContent() {
               </Button>
             )
           )}
-
           <Button
             variant="outline"
             size="sm"
@@ -423,11 +404,9 @@ function CasesContent() {
       </div>
     );
   };
-
   const formatMoney = (amount) => {
     return formatUtil(amount);
   };
-
   // 모달 닫힐 때 새로고침 처리 함수
   const handleModalClose = (refreshNeeded = false) => {
     if (refreshNeeded || modalRefreshNeeded) {
@@ -436,17 +415,14 @@ function CasesContent() {
       setModalRefreshNeeded(false);
     }
   };
-
   // 데이터 변경 감지 함수
   const handleDataChange = () => {
     console.log("데이터 변경 감지됨");
     setModalRefreshNeeded(true);
   };
-
   // 메뉴 액션 핸들러
   const handleMenuAction = (action, caseItem, e) => {
     if (e) e.stopPropagation(); // 이벤트 버블링 방지
-
     switch (action) {
       case "detail":
         router.push(`/cases/${caseItem.case_id || caseItem.id}`);
@@ -473,7 +449,6 @@ function CasesContent() {
         break;
     }
   };
-
   // 사건 상태에 따른 배지 컴포넌트
   const getCaseStatusBadge = (status) => {
     // 상태값이 없는 경우 기본값 처리
@@ -484,11 +459,9 @@ function CasesContent() {
         </Badge>
       );
     }
-
     let IconComponent = null;
     let className = "";
     let name = "알 수 없음";
-
     switch (status) {
       case "active":
       case "in_progress":
@@ -509,7 +482,6 @@ function CasesContent() {
         name = "알 수 없음";
         break;
     }
-
     return (
       <Badge
         className={cn(
@@ -522,7 +494,6 @@ function CasesContent() {
       </Badge>
     );
   };
-
   // 탭 변경 핸들러 추가
   const handleTabChange = (value) => {
     setSearchType(value);
@@ -530,11 +501,9 @@ function CasesContent() {
     setResults([]);
     setTotalResults(0);
     setPage(1);
-
     // URL 파라미터 초기화
     router.push(`/cases?type=${value}`);
   };
-
   // 각 탭에 맞는 검색 안내 텍스트 구성
   const getSearchPlaceholder = () => {
     if (searchType === "case_number") {
@@ -543,7 +512,6 @@ function CasesContent() {
       return "당사자 이름 입력 (개인 또는 회사명)";
     }
   };
-
   // 각 탭에 맞는 검색 안내 메시지 구성
   const getSearchGuideMessage = () => {
     if (searchType === "case_number") {
@@ -559,7 +527,6 @@ function CasesContent() {
       };
     }
   };
-
   return (
     <div className="container py-6 px-4 md:px-6">
       <div className="mb-8">
@@ -581,13 +548,11 @@ function CasesContent() {
             </Link>
           </div>
         </div>
-
         <Tabs value={searchType} onValueChange={handleTabChange} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="case_number">사건번호</TabsTrigger>
             <TabsTrigger value="party_name">당사자 이름</TabsTrigger>
           </TabsList>
-
           <form onSubmit={handleSearch} className="flex w-full mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -603,27 +568,25 @@ function CasesContent() {
               검색
             </Button>
           </form>
-
           <Card className="border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl overflow-hidden shadow-md">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">
-                {searchTerm && results.length > 0 ? (
-                  <>
-                    '{searchTerm}' 검색 결과 ({totalResults}건)
-                  </>
-                ) : (
-                  "검색 결과"
-                )}
-              </CardTitle>
-              <CardDescription>
-                {searchTerm && results.length > 0
-                  ? searchType === "case_number"
-                    ? "사건번호로 검색한 결과입니다"
-                    : "당사자 이름으로 검색한 결과입니다"
-                  : "검색 버튼을 클릭하여 결과를 확인하세요"}
-              </CardDescription>
+  {searchParams.get("q") ? (
+    <>
+      '{searchTerm}' 검색 결과 ({totalResults}건)
+    </>
+  ) : (
+    <>최근 사건 목록 ({totalResults}건)</>
+  )}
+</CardTitle>
+<CardDescription>
+  {searchParams.get("q")
+    ? searchType === "case_number"
+      ? "사건번호로 검색한 결과입니다"
+      : "당사자 이름으로 검색한 결과입니다"
+    : "최근 등록된 사건 목록입니다"}
+</CardDescription>
             </CardHeader>
-
             <CardContent className="p-0">
               {loading ? (
                 <div className="p-6 space-y-4">
@@ -637,30 +600,30 @@ function CasesContent() {
                     ))}
                   </div>
                 </div>
-              ) : searchTerm && results.length === 0 && searchParams.get("q") ? (
-                <div className="flex flex-col items-center justify-center p-12">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                    <FileText className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    검색 결과 없음
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
-                    '{searchTerm}'에 대한 검색 결과가 없습니다. 다른 검색어로 시도해보세요.
-                  </p>
-                </div>
-              ) : !searchTerm || !searchParams.get("q") ? (
-                <div className="flex flex-col items-center justify-center p-12">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                    <Search className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    {getSearchGuideMessage().title}
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
-                    {getSearchGuideMessage().description}
-                  </p>
-                </div>
+              ) : searchParams.get("q") && results.length === 0 ? (
+  <div className="flex flex-col items-center justify-center p-12">
+    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+      <FileText className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+    </div>
+    <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
+      검색 결과 없음
+    </h3>
+    <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
+      '{searchTerm}'에 대한 검색 결과가 없습니다. 다른 검색어로 시도해보세요.
+    </p>
+  </div>
+) : results.length === 0 ? (
+  <div className="flex flex-col items-center justify-center p-12">
+    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+      <Search className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+    </div>
+    <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
+      등록된 사건이 없습니다
+    </h3>
+    <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
+      아직 등록된 사건이 없거나 불러오지 못했습니다.
+    </p>
+  </div>
               ) : (
                 <div className="overflow-x-auto">
                   <TabsContent value="case_number">
@@ -703,16 +666,24 @@ function CasesContent() {
                             </TableCell>
                             <TableCell className="py-3">
                               <span className="font-medium text-gray-900 dark:text-gray-100 text-sm md:text-base">
-                                {formatMoney(item.cases?.principal_amount || 0)}
+                                {formatMoney(item.cases?.principal_amount ?? item.principal_amount ?? 0)}
                               </span>
                             </TableCell>
                             <TableCell className="py-3">
                               <div className="flex flex-col">
-                                {renderLawsuitTypeBadge(item.lawsuit_type)}
-                                <div className="mt-1 text-sm text-gray-500">
-                                  {item.court_name ? item.court_name : ""} {item.case_number || ""}
-                                </div>
-                              </div>
+  {item.lawsuit_type ? (
+    renderLawsuitTypeBadge(item.lawsuit_type)
+  ) : (
+    <Badge className="bg-muted text-muted-foreground border-muted/50 border">
+      일반 사건
+    </Badge>
+  )}
+  <div className="mt-1 text-sm text-gray-500">
+    {item.court_name ? item.court_name : ""}
+    {item.court_name && item.case_number ? " " : ""}
+    {item.case_number || ""}
+  </div>
+</div>
                             </TableCell>
                             <TableCell className="text-center py-3 pr-4">
                               <DropdownMenu>
@@ -757,7 +728,6 @@ function CasesContent() {
                       </TableBody>
                     </Table>
                   </TabsContent>
-
                   <TabsContent value="party_name">
                     {searchType === "party_name" && (
                       <StaffCasesTable
@@ -780,7 +750,6 @@ function CasesContent() {
                   </TabsContent>
                 </div>
               )}
-
               {!loading && results.length > 0 && (
                 <div className="p-4 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center justify-between">
@@ -788,7 +757,6 @@ function CasesContent() {
                       총 {totalResults}개 중 {(page - 1) * pageSize + 1}-
                       {Math.min(page * pageSize, totalResults)}개 표시
                     </div>
-
                     {searchType === "case_number" && (
                       <PaginationComponent
                         currentPage={page}
@@ -803,7 +771,6 @@ function CasesContent() {
           </Card>
         </Tabs>
       </div>
-
       {/* 소송 정보 모달 */}
       <Dialog
         open={showLawsuitModal}
@@ -829,7 +796,6 @@ function CasesContent() {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* 채권 정보 모달 */}
       <Dialog
         open={showRecoveryModal}
@@ -857,9 +823,7 @@ function CasesContent() {
       </Dialog>
     </div>
   );
-}
-
-export default function CasesPage() {
+}export default function CasesPage() {
   return (
     <Suspense
       fallback={
