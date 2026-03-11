@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox"; // 💡 모름 체크박스용 임포트
 import {
   Pagination,
   PaginationContent,
@@ -26,7 +27,6 @@ import {
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
-// 💡 팝업창용 컴포넌트 불러오기
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ClientsPage() {
@@ -44,11 +44,18 @@ export default function ClientsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 8;
 
-  // 💡 새 의뢰인 등록 모달용 상태 변수들
+  // 💡 새 의뢰인 등록 모달 상태 변수들 (주민번호, 주소, 모름 체크 추가)
   const [showClientModal, setShowClientModal] = useState(false);
   const [newClientType, setNewClientType] = useState("individual");
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
+  
+  const [newClientResidentNum, setNewClientResidentNum] = useState("");
+  const [isUnknownResident, setIsUnknownResident] = useState(false);
+  
+  const [newClientAddress, setNewClientAddress] = useState("");
+  const [isUnknownAddress, setIsUnknownAddress] = useState(false);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -59,7 +66,6 @@ export default function ClientsPage() {
     filterClients();
   }, [searchTerm, activeTab, individualClients, organizationClients]);
 
-  // 💡 사건 유무 상관없이 모든 의뢰인을 불러오도록 개선된 함수
   const fetchClients = async () => {
     setLoading(true);
     try {
@@ -68,7 +74,6 @@ export default function ClientsPage() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      // 1. 모든 개인 의뢰인(role이 client인 유저) 가져오기
       const { data: individuals } = await supabase.from("users").select("*").eq("role", "client");
       if (individuals) {
         const individualWithCaseCounts = await Promise.all(
@@ -86,7 +91,6 @@ export default function ClientsPage() {
         setIndividualClients(individualWithCaseCounts);
       }
 
-      // 2. 모든 기업 의뢰인 가져오기
       const { data: orgs } = await supabase.from("test_organizations").select("*");
       if (orgs) {
         const orgsWithCaseCounts = await Promise.all(
@@ -110,7 +114,7 @@ export default function ClientsPage() {
     }
   };
 
-  // 💡 즉석에서 새 의뢰인을 DB에 추가하는 함수
+  // 💡 DB 저장 함수 (null 처리 완벽 적용)
   const handleCreateClient = async () => {
     if (!newClientName.trim()) {
       toast.error(newClientType === "individual" ? "이름을 입력해주세요" : "기업명을 입력해주세요");
@@ -118,18 +122,41 @@ export default function ClientsPage() {
     }
     setIsSubmitting(true);
     try {
+      // 모름 체크 시 null, 아니면 입력값 (빈 텍스트면 다시 null)
+      const residentValue = isUnknownResident ? null : (newClientResidentNum.trim() || null);
+      const addressValue = isUnknownAddress ? null : (newClientAddress.trim() || null);
+      const phoneValue = newClientPhone.trim() || null;
+
       if (newClientType === "individual") {
-        const { error } = await supabase.from("users").insert({ name: newClientName, phone_number: newClientPhone, role: "client" });
+        const { error } = await supabase.from("users").insert({ 
+          name: newClientName, 
+          phone_number: phoneValue, 
+          resident_number: residentValue, // 개인은 resident_number 컬럼
+          address: addressValue,
+          role: "client" 
+        });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("test_organizations").insert({ name: newClientName, phone: newClientPhone });
+        const { error } = await supabase.from("test_organizations").insert({ 
+          name: newClientName, 
+          phone: phoneValue,
+          business_number: residentValue, // 법인은 business_number 컬럼
+          address: addressValue
+        });
         if (error) throw error;
       }
       toast.success("새 의뢰인이 성공적으로 등록되었습니다!");
+      
+      // 모달 닫고 입력값 초기화
       setShowClientModal(false);
       setNewClientName("");
       setNewClientPhone("");
-      fetchClients(); // 새 데이터로 화면 즉시 새로고침
+      setNewClientResidentNum("");
+      setIsUnknownResident(false);
+      setNewClientAddress("");
+      setIsUnknownAddress(false);
+      
+      fetchClients(); // 새 데이터로 화면 새로고침
     } catch (err) {
       console.error(err);
       toast.error("등록 중 오류가 발생했습니다.");
@@ -290,7 +317,6 @@ export default function ClientsPage() {
             </TabsList>
           </Tabs>
           
-          {/* 💡 새로운 독립 팝업 띄우기 버튼 */}
           <Button size="sm" className="flex items-center gap-1" onClick={() => setShowClientModal(true)}>
             <Plus className="h-4 w-4" />
             <span>의뢰인 추가</span>
@@ -315,9 +341,9 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* 💡 새 의뢰인 쾌속 등록 팝업창 내장 */}
+      {/* 💡 업그레이드된 새 의뢰인 등록 팝업창 (주민번호, 주소, 모름 포함) */}
       <Dialog open={showClientModal} onOpenChange={setShowClientModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>새 의뢰인 등록</DialogTitle>
           </DialogHeader>
@@ -328,14 +354,18 @@ export default function ClientsPage() {
                 <TabsTrigger value="organization">기업 (법인/단체)</TabsTrigger>
               </TabsList>
             </Tabs>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{newClientType === "individual" ? "이름" : "기업명"}</label>
+            
+            {/* 1. 이름 / 기업명 */}
+            <div className="space-y-2 mt-4">
+              <label className="text-sm font-medium text-red-500">{newClientType === "individual" ? "이름 *" : "기업명 *"}</label>
               <Input
                 placeholder={newClientType === "individual" ? "홍길동" : "주식회사 태양"}
                 value={newClientName}
                 onChange={(e) => setNewClientName(e.target.value)}
               />
             </div>
+
+            {/* 2. 연락처 */}
             <div className="space-y-2">
               <label className="text-sm font-medium">연락처 (선택)</label>
               <Input
@@ -344,7 +374,58 @@ export default function ClientsPage() {
                 onChange={(e) => setNewClientPhone(e.target.value)}
               />
             </div>
-            <Button className="w-full mt-2" onClick={handleCreateClient} disabled={isSubmitting}>
+
+            {/* 3. 주민등록번호 / 사업자번호 + 모름 체크 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">
+                  {newClientType === "individual" ? "주민등록번호" : "사업자등록번호"}
+                </label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="unknown-resident" 
+                    checked={isUnknownResident} 
+                    onCheckedChange={setIsUnknownResident} 
+                  />
+                  <label htmlFor="unknown-resident" className="text-xs text-muted-foreground cursor-pointer font-medium">
+                    모름
+                  </label>
+                </div>
+              </div>
+              <Input
+                placeholder={newClientType === "individual" ? "000000-0000000" : "000-00-00000"}
+                value={newClientResidentNum}
+                onChange={(e) => setNewClientResidentNum(e.target.value)}
+                disabled={isUnknownResident}
+                className={isUnknownResident ? "bg-gray-100 dark:bg-gray-800 text-gray-400" : ""}
+              />
+            </div>
+
+            {/* 4. 주소 + 모름 체크 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">주소</label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="unknown-address" 
+                    checked={isUnknownAddress} 
+                    onCheckedChange={setIsUnknownAddress} 
+                  />
+                  <label htmlFor="unknown-address" className="text-xs text-muted-foreground cursor-pointer font-medium">
+                    모름
+                  </label>
+                </div>
+              </div>
+              <Input
+                placeholder="주소를 입력하세요"
+                value={newClientAddress}
+                onChange={(e) => setNewClientAddress(e.target.value)}
+                disabled={isUnknownAddress}
+                className={isUnknownAddress ? "bg-gray-100 dark:bg-gray-800 text-gray-400" : ""}
+              />
+            </div>
+
+            <Button className="w-full mt-4" onClick={handleCreateClient} disabled={isSubmitting}>
               {isSubmitting ? "등록 중..." : "등록 완료"}
             </Button>
           </div>

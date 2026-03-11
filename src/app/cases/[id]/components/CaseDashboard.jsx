@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -15,10 +17,19 @@ import CalendarView from "@/components/Calendar";
 import { BarChart3, DollarSign, PieChart, CreditCard, Percent } from "lucide-react";
 import { toast } from "sonner";
 
-export default function CaseDashboard({ caseId, caseData }) {
+// 💡 추가: 기일 등록 모달 임포트
+import ScheduleFormModal from "./modals/ScheduleFormModal";
+
+export default function CaseDashboard({ caseId, caseData, parties, clients }) {
   const [loadingSchedules, setLoadingSchedules] = useState(true);
   const [schedules, setSchedules] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  
+  // 💡 추가: 일정 추가 모달창 상태 관리
+  const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [selectedDateForNewSchedule, setSelectedDateForNewSchedule] = useState(null);
+
   const [recoveryData, setRecoveryData] = useState({
     principalAmount: caseData?.principal_amount || 0,
     totalAmount: 0,
@@ -53,9 +64,13 @@ export default function CaseDashboard({ caseId, caseData }) {
         59
       ).toISOString();
 
+      // 💡 수정: lawsuit 정보를 같이 가져오도록 조인 추가
       const { data, error } = await supabase
         .from("test_schedules")
-        .select("*")
+        .select(`
+          *,
+          lawsuit:test_case_lawsuits(*)
+        `)
         .eq("case_id", caseId)
         .gte("event_date", startDate)
         .lte("event_date", endDate)
@@ -64,6 +79,7 @@ export default function CaseDashboard({ caseId, caseData }) {
       if (error) throw error;
       setSchedules(data || []);
     } catch (error) {
+      console.error("일정 조회 실패:", error);
       toast.error("일정 정보 조회에 실패했습니다");
     } finally {
       setLoadingSchedules(false);
@@ -115,8 +131,15 @@ export default function CaseDashboard({ caseId, caseData }) {
     }
   };
 
+  // 💡 수정: "준비 중입니다" 알림 대신 진짜 모달창 띄우기
   const handleAddSchedule = (date) => {
-    toast.info("일정 추가 기능은 준비 중입니다");
+    if (date) {
+      setSelectedDateForNewSchedule(date);
+    } else {
+      setSelectedDateForNewSchedule(null);
+    }
+    setEditingSchedule(null);
+    setShowAddScheduleModal(true);
   };
 
   const handleToggleScheduleCompletion = async (schedule) => {
@@ -136,6 +159,8 @@ export default function CaseDashboard({ caseId, caseData }) {
   };
 
   const handleDeleteSchedule = async (schedule) => {
+    if (!confirm("이 일정을 삭제하시겠습니까?")) return;
+    
     try {
       const { error } = await supabase.from("test_schedules").delete().eq("id", schedule.id);
 
@@ -149,12 +174,23 @@ export default function CaseDashboard({ caseId, caseData }) {
   };
 
   const handleViewSchedule = (schedule) => {
-    // 일정 상세 보기 기능은 Calendar 컴포넌트 내에서 처리
+    // 일정을 클릭하면 수정 모달창을 띄우도록 연결
+    setEditingSchedule(schedule);
+    setSelectedDateForNewSchedule(null);
+    setShowAddScheduleModal(true);
   };
 
   const handleRefreshSchedules = (month) => {
     setCurrentMonth(month);
     fetchSchedules();
+  };
+
+  // 💡 추가: 모달에서 저장이 완료되었을 때 실행될 함수
+  const onScheduleSuccess = async () => {
+    toast.success("일정이 성공적으로 저장되었습니다!");
+    setShowAddScheduleModal(false);
+    setEditingSchedule(null);
+    await fetchSchedules(); // 달력 데이터 즉시 새로고침
   };
 
   return (
@@ -247,6 +283,7 @@ export default function CaseDashboard({ caseId, caseData }) {
         </CardFooter>
       </Card>
 
+      {/* 달력 컴포넌트 */}
       <CalendarView
         schedules={schedules}
         onAddSchedule={handleAddSchedule}
@@ -256,8 +293,24 @@ export default function CaseDashboard({ caseId, caseData }) {
         isLoading={loadingSchedules}
         onRefresh={handleRefreshSchedules}
         title="사건 일정 달력"
-        description="소송 기일, 분납 일정 등을 달력 형태로 확인할 수 있습니다."
+        description="소송 기일, 분납 일정 등을 달력 형태로 확인할 수 있습니다. 날짜를 클릭하여 추가하거나 항목을 클릭하여 수정하세요."
       />
+
+      {/* 💡 기일 추가 모달창 컴포넌트 렌더링 */}
+      {showAddScheduleModal && (
+        <ScheduleFormModal
+          open={showAddScheduleModal}
+          onOpenChange={setShowAddScheduleModal}
+          onSuccess={onScheduleSuccess}
+          // lawsuit prop을 넘기지 않으면 모달 내에서 소송을 직접 선택하게 됩니다.
+          lawsuit={editingSchedule?.lawsuit || null} 
+          editingSchedule={editingSchedule}
+          caseDetails={caseData}
+          clients={clients}
+          defaultDate={selectedDateForNewSchedule} // 클릭한 날짜 기본 세팅
+          caseId={caseId} // 사건 ID 명시적 전달
+        />
+      )}
     </div>
   );
 }

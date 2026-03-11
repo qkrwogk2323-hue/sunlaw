@@ -192,23 +192,10 @@ export default function LawsuitManager({ caseId, onDataChange, caseData, parties
   const fetchSubmissions = async (lawsuitId) => {
     setLoadingSubmissions(true);
     try {
-      // test_lawsuit_submissions 테이블이 아직 생성되지 않았거나 쿼리 문제가 있을 수 있음
+      // 💡 에러의 핵심 원인 해결: 조인(created_by_user) 부분을 제거하고 깔끔하게 데이터만 불러옵니다.
       const { data, error } = await supabase
         .from("test_lawsuit_submissions")
-        .select(
-          `
-          id,
-          lawsuit_id,
-          submission_type,
-          document_type,
-          submission_date,
-          description,
-          file_url,
-          created_at,
-          created_by,
-          created_by_user:created_by(id, name, email)
-        `
-        )
+        .select("*")
         .eq("lawsuit_id", lawsuitId)
         .order("created_at", { ascending: false });
 
@@ -219,7 +206,6 @@ export default function LawsuitManager({ caseId, onDataChange, caseData, parties
         return;
       }
 
-      console.log("송달/제출 내역 조회 결과:", data);
       setSubmissions(data || []);
     } catch (error) {
       console.error("송달/제출 내역 조회 중 예외 발생:", error);
@@ -246,7 +232,6 @@ export default function LawsuitManager({ caseId, onDataChange, caseData, parties
         return;
       }
 
-      console.log("관련 소송 조회 결과:", data);
       setRelatedLawsuits(data || []);
     } catch (error) {
       console.error("관련 소송 조회 중 예외 발생:", error);
