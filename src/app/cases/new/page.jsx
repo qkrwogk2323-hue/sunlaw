@@ -479,9 +479,6 @@ export default function NewCasePage() {
     setSubmitting(true);
 
     try {
-      // 사용자 세션 확인 (NextAuth 세션에 의존)
-      // NextAuth에서 이미 로그인 상태를 확인했으므로 Supabase 세션 체크는 생략
-
       // 1. 사건 기본 정보 저장
       const caseData = {
         case_type: formData.case_type || "debt",
@@ -492,117 +489,56 @@ export default function NewCasePage() {
         updated_at: new Date().toISOString(),
       };
 
-      console.log("저장할 사건 데이터:", caseData);
-
-      // 테이블 이름 확인
       const tableName = "test_cases";
-      console.log(`테이블 이름: ${tableName}`);
 
       try {
-        // RLS 정책 문제를 해결하기 위해 테이블 스키마를 명시적으로 지정
         const { data: newCase, error: caseError } = await supabase
           .from(tableName)
           .insert(caseData)
-          .select() // 생성된 레코드 반환
+          .select() 
           .single();
 
         if (caseError) {
           console.error("사건 저장 오류:", caseError);
-
-          // 테이블이 없는 경우
-          if (caseError.code === "42P01") {
-            throw new Error(
-              `테이블이 존재하지 않습니다: ${tableName}. Supabase에서 테이블을 생성해주세요.`
-            );
-          }
-
-          // RLS 정책 위반 오류인 경우
-          if (caseError.code === "42501") {
-            throw new Error(
-              "RLS 정책 위반: Supabase에서 해당 테이블의 RLS 정책을 확인하거나 비활성화해주세요."
-            );
-          }
-
+          if (caseError.code === "42P01") throw new Error(`테이블이 존재하지 않습니다: ${tableName}. Supabase에서 테이블을 생성해주세요.`);
+          if (caseError.code === "42501") throw new Error("RLS 정책 위반: Supabase에서 해당 테이블의 RLS 정책을 확인하거나 비활성화해주세요.");
           throw new Error(`사건 저장 실패: ${caseError.message} (코드: ${caseError.code})`);
         }
 
-        if (!newCase) {
-          throw new Error("사건이 저장되었지만 반환된 데이터가 없습니다.");
-        }
-
-        console.log("저장된 사건:", newCase);
+        if (!newCase) throw new Error("사건이 저장되었지만 반환된 데이터가 없습니다.");
 
         // 2. 이자 정보 저장 (이자가 있는 경우에만)
         if (formData.interests.length > 0) {
           try {
-            const interestsData = formData.interests.map((interest) => {
-              return {
-                case_id: newCase.id,
-                start_date: interest.start_date || null,
-                end_date: interest.end_date || null,
-                rate: interest.rate ? parseFloat(interest.rate) : null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              };
-            });
-
-            const { error: interestsError } = await supabase
-              .from("test_case_interests")
-              .insert(interestsData);
-
-            if (interestsError) {
-              console.error("이자 정보 저장 오류:", interestsError);
-              if (interestsError.code === "42P01") {
-                console.warn(
-                  "이자 정보 테이블이 존재하지 않습니다. 이자 정보는 저장되지 않았습니다."
-                );
-              } else {
-                throw new Error(
-                  `이자 정보 저장 실패: ${interestsError.message} (코드: ${interestsError.code})`
-                );
-              }
-            }
+            const interestsData = formData.interests.map((interest) => ({
+              case_id: newCase.id,
+              start_date: interest.start_date || null,
+              end_date: interest.end_date || null,
+              rate: interest.rate ? parseFloat(interest.rate) : null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }));
+            const { error: interestsError } = await supabase.from("test_case_interests").insert(interestsData);
+            if (interestsError) console.error("이자 정보 저장 오류:", interestsError);
           } catch (interestError) {
             console.error("이자 정보 처리 오류:", interestError);
-            // 이자 정보 저장 실패는 전체 프로세스를 중단하지 않음
           }
         }
 
         // 3. 비용 정보 저장 (비용이 있는 경우에만)
         if (formData.expenses.length > 0) {
           try {
-            const expensesData = formData.expenses.map((expense) => {
-              return {
-                case_id: newCase.id,
-                expense_type:
-                  expense.expense_type === "기타"
-                    ? expense.custom_type || "기타 비용"
-                    : expense.expense_type,
-                amount: expense.amount ? parseFloat(expense.amount) : null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              };
-            });
-
-            const { error: expensesError } = await supabase
-              .from("test_case_expenses")
-              .insert(expensesData);
-
-            if (expensesError) {
-              console.error("비용 정보 저장 오류:", expensesError);
-              if (expensesError.code === "42P01") {
-                console.warn(
-                  "비용 정보 테이블이 존재하지 않습니다. 비용 정보는 저장되지 않았습니다."
-                );
-              } else {
-                throw new Error(
-                  `비용 정보 저장 실패: ${expensesError.message} (코드: ${expensesError.code})`
-                );
-              }
-            }
+            const expensesData = formData.expenses.map((expense) => ({
+              case_id: newCase.id,
+              expense_type: expense.expense_type === "기타" ? expense.custom_type || "기타 비용" : expense.expense_type,
+              amount: expense.amount ? parseFloat(expense.amount) : null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }));
+            const { error: expensesError } = await supabase.from("test_case_expenses").insert(expensesData);
+            if (expensesError) console.error("비용 정보 저장 오류:", expensesError);
           } catch (expenseError) {
             console.error("비용 정보 처리 오류:", expenseError);
-            // 비용 정보 저장 실패는 전체 프로세스를 중단하지 않음
           }
         }
 
@@ -613,9 +549,9 @@ export default function NewCasePage() {
               return {
                 case_id: newCase.id,
                 client_type: client.client_type,
-                individual_id: client.client_type === "individual" ? client.individual_id : null,
-                organization_id:
-                  client.client_type === "organization" ? client.organization_id : null,
+                // 💡 치명적 버그 수정: ID가 빈칸("")이면 강제로 null로 치환하여 22P02 에러 방지
+                individual_id: client.client_type === "individual" && client.individual_id ? client.individual_id : null,
+                organization_id: client.client_type === "organization" && client.organization_id ? client.organization_id : null,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               };
@@ -627,61 +563,35 @@ export default function NewCasePage() {
 
             if (clientsError) {
               console.error("의뢰인 정보 저장 오류:", clientsError);
-              if (clientsError.code === "42P01") {
-                console.warn(
-                  "의뢰인 정보 테이블이 존재하지 않습니다. 의뢰인 정보는 저장되지 않았습니다."
-                );
-              } else {
-                throw new Error(
-                  `의뢰인 정보 저장 실패: ${clientsError.message} (코드: ${clientsError.code})`
-                );
-              }
+              throw new Error(`의뢰인 정보 저장 실패: ${clientsError.message} (코드: ${clientsError.code})`);
             }
           } catch (clientError) {
             console.error("의뢰인 정보 처리 오류:", clientError);
-            // 의뢰인 정보 저장 실패는 전체 프로세스를 중단하지 않음
           }
         }
 
         // 5. 당사자 정보 저장
         try {
-          const partiesData = formData.parties.map((party) => {
-            return {
-              case_id: newCase.id,
-              party_type: party.party_type,
-              entity_type: party.entity_type,
-              name: party.name || null,
-              company_name: party.entity_type === "corporation" ? party.company_name : null,
-              corporate_number: party.entity_type === "corporation" ? party.corporate_number : null,
-              position: party.entity_type === "corporation" ? party.position : null,
-              phone: party.unknown_phone ? null : party.phone,
-              address: party.unknown_address ? null : party.address,
-              email: party.unknown_email ? null : party.email,
-              resident_number: party.unknown_resident_number ? null : party.resident_number,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-          });
+          const partiesData = formData.parties.map((party) => ({
+            case_id: newCase.id,
+            party_type: party.party_type,
+            entity_type: party.entity_type,
+            name: party.name || null,
+            company_name: party.entity_type === "corporation" ? party.company_name : null,
+            corporate_number: party.entity_type === "corporation" ? party.corporate_number : null,
+            position: party.entity_type === "corporation" ? party.position : null,
+            phone: party.unknown_phone ? null : party.phone,
+            address: party.unknown_address ? null : party.address,
+            email: party.unknown_email ? null : party.email,
+            resident_number: party.unknown_resident_number ? null : party.resident_number,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
 
-          const { error: partiesError } = await supabase
-            .from("test_case_parties")
-            .insert(partiesData);
-
-          if (partiesError) {
-            console.error("당사자 정보 저장 오류:", partiesError);
-            if (partiesError.code === "42P01") {
-              console.warn(
-                "당사자 정보 테이블이 존재하지 않습니다. 당사자 정보는 저장되지 않았습니다."
-              );
-            } else {
-              throw new Error(
-                `당사자 정보 저장 실패: ${partiesError.message} (코드: ${partiesError.code})`
-              );
-            }
-          }
+          const { error: partiesError } = await supabase.from("test_case_parties").insert(partiesData);
+          if (partiesError) console.error("당사자 정보 저장 오류:", partiesError);
         } catch (partyError) {
           console.error("당사자 정보 처리 오류:", partyError);
-          // 당사자 정보 저장 실패는 전체 프로세스를 중단하지 않음
         }
 
         // 성공 시 사건 목록 페이지로 이동
@@ -695,16 +605,10 @@ export default function NewCasePage() {
       }
     } catch (error) {
       console.error("사건 등록 오류:", error);
-
-      // 에러 메시지 개선
       if (error.message && error.message.includes("RLS 정책 위반")) {
-        toast.error("권한 오류", {
-          description: "데이터베이스 접근 권한이 없습니다. 관리자에게 문의하세요.",
-        });
+        toast.error("권한 오류", { description: "데이터베이스 접근 권한이 없습니다. 관리자에게 문의하세요." });
       } else {
-        toast.error("사건 등록 중 오류가 발생했습니다.", {
-          description: error.message,
-        });
+        toast.error("사건 등록 중 오류가 발생했습니다.", { description: error.message });
       }
     } finally {
       setSubmitting(false);

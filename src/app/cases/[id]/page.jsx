@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,15 +72,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 export default function CasePage() {
+  const pathname = usePathname();
   const router = useRouter();
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const caseId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const { id: caseId } = useParams();
   const { user } = useUser();
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [resolvedCaseId, setResolvedCaseId] = useState(null);
   const [parties, setParties] = useState([]);
   const [clients, setClients] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -131,27 +129,8 @@ export default function CasePage() {
   // 추가된 상태 변수
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const isUuid = (value) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value || ""
-    );
-
-  const normalizeTab = (tabValue) => {
-    if (tabValue === "lawsuit" || tabValue === "lawsuits") return "lawsuits";
-    if (tabValue === "recovery") return "recovery";
-    return "dashboard";
-  };
-
-  useEffect(() => {
-    setActiveTab(normalizeTab(searchParams.get("tab")));
-  }, [searchParams]);
-
   // 케이스 정보 가져오기
-  const resolveCaseId = async (rawId) => {
-    if (!rawId || !isUuid(rawId)) {
-      return null;
-    }
+const resolveCaseId = async (rawId) => {
     // 1차: test_cases.id 로 직접 조회
     const { data: directCase, error: directCaseError } = await supabase
       .from("test_cases")
@@ -175,28 +154,15 @@ export default function CasePage() {
   const fetchCaseDetails = async () => {
     setLoading(true);
     try {
-      if (caseId === "clients") {
-        router.replace("/clients");
-        return;
-      }
-
       const effectiveCaseId = await resolveCaseId(caseId);
       if (!effectiveCaseId) {
-        setResolvedCaseId(null);
-        setCaseData(null);
+        toast.error("사건 정보를 찾을 수 없습니다");
+        router.push("/cases");
         return;
       }
-
-      setResolvedCaseId(effectiveCaseId);
-
       // 잘못된 id(예: lawsuit id)로 들어온 경우 정식 case id URL로 교정
       if (effectiveCaseId !== caseId) {
-        const nextTab = normalizeTab(searchParams.get("tab"));
-        router.replace(
-          nextTab !== "dashboard"
-            ? `/cases/${effectiveCaseId}?tab=${nextTab}`
-            : `/cases/${effectiveCaseId}`
-        );
+        router.replace(`/cases/${effectiveCaseId}`);
       }
       // 사건 본체
       const { data, error } = await supabase
@@ -206,7 +172,8 @@ export default function CasePage() {
         .single();
       if (error) throw error;
       if (!data) {
-        setCaseData(null);
+        toast.error("사건 정보를 찾을 수 없습니다");
+        router.push("/cases");
         return;
       }
       // status_id가 있으면 constants에서 상태 정보 가져오기
@@ -229,8 +196,8 @@ export default function CasePage() {
         .select(
           `
           *,
-          individual_id(id, name, email, phone_number, resident_number, address),
-          organization_id(
+          individual_id:users!fk_case_clients_individual(id, name, email, phone_number, resident_number, address),
+          organization_id:test_organizations!fk_case_clients_org(
             id,
             name,
             representative_name,
@@ -393,7 +360,7 @@ export default function CasePage() {
       fetchNotifications();
       fetchNotificationCount();
     }
-  }, [caseId, user, searchParams]);
+  }, [caseId, user]);
   if (loading) {
     return (
       <div className="container p-4 mx-auto">
@@ -545,7 +512,8 @@ export default function CasePage() {
         return;
       }
       const newClient = {
-        case_id: caseId,
+        case_id: caseData?.id || caseId,
+        client_type: "individual",
         individual_id: userId,
         organization_id: null,
         position: "",
@@ -556,8 +524,8 @@ export default function CasePage() {
         .select(
           `
           *,
-          individual_id(id, name),
-          organization_id(id, name, representative_name)
+          individual_id:users!fk_case_clients_individual(id, name),
+          organization_id:test_organizations!fk_case_clients_org(id, name, representative_name)
         `
         )
         .single();
@@ -590,7 +558,8 @@ export default function CasePage() {
         return;
       }
       const newClient = {
-        case_id: caseId,
+        case_id: caseData?.id || caseId,
+        client_type: "organization",
         individual_id: null,
         organization_id: orgId,
         position: "",
@@ -601,8 +570,8 @@ export default function CasePage() {
         .select(
           `
           *,
-          individual_id(id, name),
-          organization_id(id, name, representative_name)
+          individual_id:users!fk_case_clients_individual(id, name),
+          organization_id:test_organizations!fk_case_clients_org(id, name, representative_name)
         `
         )
         .single();
@@ -1536,21 +1505,17 @@ export default function CasePage() {
                   <div className="p-5">
                     <TabsContent value="dashboard" className="mt-0">
                       <CaseDashboard
-                        caseId={resolvedCaseId || caseId}
+                        caseId={caseId}
                         caseData={caseData}
                         parties={parties}
                         clients={clients}
                       />
                     </TabsContent>
                     <TabsContent value="lawsuits" className="mt-0">
-                      <LawsuitManager
-                        caseId={resolvedCaseId || caseId}
-                        parties={parties}
-                        viewMode={true}
-                      />
+                      <LawsuitManager caseId={caseId} parties={parties} viewMode={true} />
                     </TabsContent>
                     <TabsContent value="recovery" className="mt-0">
-                      <RecoveryActivities caseId={resolvedCaseId || caseId} parties={parties} />
+                      <RecoveryActivities caseId={caseId} parties={parties} />
                     </TabsContent>
                   </div>
                 </Tabs>

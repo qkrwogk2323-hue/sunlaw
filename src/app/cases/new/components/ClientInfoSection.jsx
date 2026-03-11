@@ -17,11 +17,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function ClientInfoSection({ formData, setFormData, users, organizations }) {
-  // 검색 관련 상태 추가
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null); // 수정 중인 의뢰인 인덱스
-  const [clientTypeChanged, setClientTypeChanged] = useState(false); // 클라이언트 유형 변경 감지용
+  const [editingIndex, setEditingIndex] = useState(null); 
+  const [clientTypeChanged, setClientTypeChanged] = useState(false); 
 
   const addClient = () => {
     setFormData((prev) => ({
@@ -36,7 +35,7 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
         },
       ],
     }));
-    // 새로 추가된 의뢰인을 수정 모드로 설정
+    // 새로 추가된 의뢰인만 딱 집어서 수정 모드로 설정
     setEditingIndex(formData.clients.length);
     toast.success("의뢰인이 추가되었습니다");
   };
@@ -50,7 +49,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
         clients: updatedClients,
       };
     });
-    // 수정 중이던 의뢰인이 삭제되면 수정 모드 해제
     if (editingIndex === index) {
       setEditingIndex(null);
       setSearchTerm("");
@@ -67,7 +65,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
         [field]: value,
       };
 
-      // 개인/그룹 유형이 변경된 경우 ID 필드 초기화
       if (field === "client_type") {
         if (value === "individual") {
           updatedClients[index].organization_id = "";
@@ -75,7 +72,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
           updatedClients[index].individual_id = "";
         }
         updatedClients[index].position = "";
-        // 렌더링 중 setState 호출 대신 플래그 설정
         setClientTypeChanged(true);
       }
 
@@ -86,7 +82,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
     });
   };
 
-  // 클라이언트 유형 변경 감지 및 처리
   useEffect(() => {
     if (clientTypeChanged) {
       setSearchResults([]);
@@ -95,7 +90,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
     }
   }, [clientTypeChanged]);
 
-  // 실시간 검색 처리
   useEffect(() => {
     if (!searchTerm.trim() || editingIndex === null) {
       setSearchResults([]);
@@ -106,7 +100,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
     const type = client.client_type;
 
     if (type === "individual") {
-      // 개인 검색 - 이름, 이메일로만 검색
       const filteredUsers = users.filter(
         (user) =>
           user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,7 +107,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
       );
       setSearchResults(filteredUsers);
     } else {
-      // 법인/단체 검색 - 이름으로만 검색
       const filteredOrgs = organizations.filter((org) =>
         org.name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -122,17 +114,14 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
     }
   }, [searchTerm, editingIndex, formData.clients, users, organizations]);
 
-  // 검색어 변경 핸들러
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // 검색 결과에서 선택 처리
   const handleSelectSearchResult = (index, id) => {
     const client = formData.clients[index];
     const field = client.client_type === "individual" ? "individual_id" : "organization_id";
 
-    // 선택한 항목의 정보 가져오기
     let selectedEntity;
     if (client.client_type === "individual") {
       selectedEntity = users.find((user) => user.id === id);
@@ -140,7 +129,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
       selectedEntity = organizations.find((org) => org.id === id);
     }
 
-    // 직위 정보 설정 (개인인 경우 position, 조직인 경우 representative_position)
     let position = "";
     if (client.client_type === "individual" && selectedEntity?.position) {
       position = selectedEntity.position;
@@ -148,14 +136,12 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
       position = selectedEntity.representative_position;
     }
 
-    // ID와 직위 설정
     handleClientChange(index, field, id);
     handleClientChange(index, "position", position);
 
-    // 검색 상태 초기화 및 수정 모드 종료
     setSearchResults([]);
     setSearchTerm("");
-    setEditingIndex(null);
+    setEditingIndex(null); // 선택 완료 후 수정 모드 즉시 종료
 
     toast.success(
       client.client_type === "individual"
@@ -164,51 +150,35 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
     );
   };
 
-  // 수정 모드 전환
   const handleEdit = (index) => {
     setEditingIndex(index);
     setSearchTerm("");
     setSearchResults([]);
   };
 
-  // 전화번호 포맷팅 함수
   const formatPhoneNumber = (phone) => {
     if (!phone) return "";
-
-    // 숫자만 추출
     const numbers = phone.replace(/\D/g, "");
-
-    // 길이에 따라 포맷팅
     if (numbers.length === 11) {
       return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
     } else if (numbers.length === 10) {
       return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
     }
-
     return phone;
   };
 
-  // 생년월일 포맷팅 함수
   const formatBirthDate = (birthDate) => {
     if (!birthDate) return "";
-
-    // ISO 형식(YYYY-MM-DD)이면 YYYY년 MM월 DD일 형식으로 변환
     if (birthDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = birthDate.split("-");
       return `${year}년 ${month}월 ${day}일`;
     }
-
     return birthDate;
   };
 
-  // 사용자 이니셜 가져오기
   const getInitials = (name) => {
     if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase();
   };
 
   return (
@@ -261,7 +231,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                   : "hover:border-gray-300 dark:hover:border-gray-600"
               }`}
             >
-              {/* 삭제 버튼 */}
               <Button
                 type="button"
                 variant="ghost"
@@ -272,7 +241,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                 <Trash2 className="h-4 w-4" />
               </Button>
 
-              {/* 의뢰인 유형 배지 - 항상 표시 */}
               <div className="mb-4">
                 {client.client_type === "individual" ? (
                   <Badge className="border-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200">
@@ -287,10 +255,8 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                 )}
               </div>
 
-              {/* 수정 모드이거나 선택된 항목이 없는 경우 검색 UI 표시 */}
-              {editingIndex === index ||
-              (client.client_type === "individual" && !client.individual_id) ||
-              (client.client_type === "organization" && !client.organization_id) ? (
+              {/* 💡 핵심 수정: 오직 '수정 버튼'을 누른 딱 한 개의 창(editingIndex)만 검색창이 열리도록 변경 (섀도우 버그 완벽 차단) */}
+              {editingIndex === index ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
@@ -334,8 +300,8 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                         <Input
                           placeholder={
                             client.client_type === "individual"
-                              ? "이름 또는 이메일로 검색"
-                              : "회사명으로 검색"
+                              ? "기존 등록된 이름/이메일로 검색"
+                              : "기존 등록된 회사명으로 검색"
                           }
                           value={searchTerm}
                           onChange={handleSearchChange}
@@ -343,7 +309,6 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                         />
                       </div>
 
-                      {/* 검색 결과 표시 - 스타일 개선 */}
                       {searchResults.length > 0 && (
                         <div className="absolute z-50 mt-1 w-full max-w-md border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg bg-white dark:bg-gray-800 overflow-hidden">
                           <div className="p-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
@@ -367,16 +332,8 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                                           {result.name}
                                         </div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 mt-1">
-                                          {result.email && (
-                                            <span className="inline-flex items-center">
-                                              {result.email}
-                                            </span>
-                                          )}
-                                          {result.birth_date && (
-                                            <span className="inline-flex items-center">
-                                              {formatBirthDate(result.birth_date)}
-                                            </span>
-                                          )}
+                                          {result.email && <span>{result.email}</span>}
+                                          {result.birth_date && <span>{formatBirthDate(result.birth_date)}</span>}
                                         </div>
                                       </div>
                                     </div>
@@ -407,14 +364,13 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                   </div>
                 </div>
               ) : (
-                // 선택된 의뢰인 정보 표시 (편집 모드 아닐 때)
+                // 💡 선택 모드가 아닐 때의 표시 방식 수정 (안 골랐을 때 경고 표시)
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                       {client.client_type === "individual"
-                        ? users.find((u) => u.id === client.individual_id)?.name || "이름 없음"
-                        : organizations.find((o) => o.id === client.organization_id)?.name ||
-                          "이름 없음"}
+                        ? (client.individual_id ? users.find((u) => u.id === client.individual_id)?.name || "이름 없음" : <span className="text-red-500 text-sm font-normal">선택된 개인이 없습니다 (우측 수정 버튼 클릭)</span>)
+                        : (client.organization_id ? organizations.find((o) => o.id === client.organization_id)?.name || "기업명 없음" : <span className="text-red-500 text-sm font-normal">선택된 기업이 없습니다 (우측 수정 버튼 클릭)</span>)}
                     </h3>
                     <Button
                       type="button"
@@ -422,94 +378,49 @@ export default function ClientInfoSection({ formData, setFormData, users, organi
                       size="sm"
                       className="h-8 w-8 p-0 text-gray-500 hover:text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
                       onClick={() => handleEdit(index)}
-                      title="의뢰인 정보 수정"
+                      title="의뢰인 검색 및 선택"
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  {client.client_type === "individual" ? (
+                  {/* 선택된 데이터가 있을 때만 하단 상세 정보 노출 */}
+                  {client.client_type === "individual" && client.individual_id && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       {users.find((u) => u.id === client.individual_id)?.email && (
                         <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            이메일:
-                          </span>
+                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">이메일:</span>
                           <span className="font-medium text-gray-700 dark:text-gray-300">
                             {users.find((u) => u.id === client.individual_id)?.email}
                           </span>
                         </div>
                       )}
-                      {users.find((u) => u.id === client.individual_id)?.birth_date && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            생년월일:
-                          </span>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {formatBirthDate(
-                              users.find((u) => u.id === client.individual_id)?.birth_date
-                            )}
-                          </span>
-                        </div>
-                      )}
                       {users.find((u) => u.id === client.individual_id)?.phone_number && (
                         <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            전화번호:
-                          </span>
+                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">전화번호:</span>
                           <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {formatPhoneNumber(
-                              users.find((u) => u.id === client.individual_id)?.phone_number
-                            )}
-                          </span>
-                        </div>
-                      )}
-                      {client.position && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            직위:
-                          </span>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {client.position}
+                            {formatPhoneNumber(users.find((u) => u.id === client.individual_id)?.phone_number)}
                           </span>
                         </div>
                       )}
                     </div>
-                  ) : (
+                  )}
+
+                  {client.client_type === "organization" && client.organization_id && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      {organizations.find((o) => o.id === client.organization_id)
-                        ?.business_number && (
+                      {organizations.find((o) => o.id === client.organization_id)?.business_number && (
                         <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            법인번호:
-                          </span>
+                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">법인번호:</span>
                           <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {
-                              organizations.find((o) => o.id === client.organization_id)
-                                ?.business_number
-                            }
+                            {organizations.find((o) => o.id === client.organization_id)?.business_number}
                           </span>
                         </div>
                       )}
                       {organizations.find((o) => o.id === client.organization_id)?.phone && (
                         <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            전화번호:
-                          </span>
+                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">전화번호:</span>
                           <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {formatPhoneNumber(
-                              organizations.find((o) => o.id === client.organization_id)?.phone
-                            )}
-                          </span>
-                        </div>
-                      )}
-                      {client.position && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[80px]">
-                            담당자 직위:
-                          </span>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {client.position}
+                            {formatPhoneNumber(organizations.find((o) => o.id === client.organization_id)?.phone)}
                           </span>
                         </div>
                       )}

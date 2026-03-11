@@ -112,14 +112,10 @@ export default function RecoveryActivities({
   const fetchActivities = async () => {
     setLoading(true);
     try {
+      // 💡 수정됨: 에러를 유발하는 users 억지 조인(Join) 부분 삭제
       let query = supabase
         .from("test_recovery_activities")
-        .select(
-          `
-          *,
-          created_by_user:users(id, name, email)
-        `
-        )
+        .select("*") // 기존에 있던 `created_by_user:users(...)` 찌꺼기 제거
         .eq("case_id", caseId)
         .order("date", { ascending: false });
 
@@ -136,7 +132,7 @@ export default function RecoveryActivities({
       setActivities(data || []);
     } catch (error) {
       console.error("회수 활동 조회 실패:", error);
-      toast.error("회수 활동 조회 실패", {
+      toast.error("회수 활동 데이터를 불러오지 못했습니다.", {
         description: error.message,
       });
     } finally {

@@ -126,8 +126,8 @@ export default function RecoveryActivityModal({
           `
           *,
           clients:test_case_clients(
-            individual_id(id, name, email),
-            organization_id(id, name)
+            individual_id:users!fk_case_clients_individual(id, name, email),
+            organization_id:test_organizations!fk_case_clients_org(id, name)
           ),
           parties:test_case_parties(*)
         `
