@@ -1,4 +1,4 @@
-# SunLaw
+# Vein Spiral
 
 민사소송 및 채권 관리를 위한 웹 애플리케이션입니다. 내부적으로 사건 관리 및 업무 소통을 하고, 고객에게는 채권의 소송 정보와 회수 정보 등을 제공합니다.
 
@@ -24,8 +24,8 @@
 1. 저장소 클론
 
 ```bash
-git clone https://github.com/yourusername/sunlaw.git
-cd sunlaw
+git clone https://github.com/yourusername/veinspiral.git
+cd veinspiral
 ```
 
 2. 의존성 설치
@@ -61,6 +61,6 @@ pnpm dev
 ## 라이선스
 
 이 프로젝트는 개인 및 내부용으로 개발되었으며, 라이센스 정보는 법적 자문을 통해 결정할 예정입니다.
-# sunlaw
-# sunlaw
-# sunlaw
+# veinspiral
+# veinspiral
+# veinspiral

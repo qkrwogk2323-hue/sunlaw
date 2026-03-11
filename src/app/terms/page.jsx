@@ -8,9 +8,9 @@ export default function TermsOfService() {
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 md:p-8 mb-8">
           <p className="mb-6 text-gray-600 dark:text-gray-400">
-            SunLaw('SunLaw', 'https://sunlaw.local')을 이용해 주셔서 감사합니다. 본 약관은 다양한
-            SunLaw 서비스의 이용과 관련하여 SunLaw 서비스를 제공하는 SunLaw와 이를 이용하는 SunLaw
-            서비스 회원(이하 '회원') 또는 비회원과의 관계를 설명하며, 아울러 여러분의 SunLaw 서비스
+            베인스파이럴('Vein Spiral', 'https://www.veinspiral.com/')을 이용해 주셔서 감사합니다. 본 약관은 다양한
+            Vein Spiral 서비스의 이용과 관련하여 베인스파이럴이 제공하는 Vein Spiral과 이를 이용하는 Vein Spiral
+            서비스 회원(이하 '회원') 또는 비회원과의 관계를 설명하며, 아울러 여러분의 Vein Spiral 서비스
             이용에 도움이 될 수 있는 유익한 정보를 포함하고 있습니다.
           </p>
 
@@ -19,7 +19,7 @@ export default function TermsOfService() {
               제1조 (목적)
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
-              이 약관은 SunLaw(이하 '회사')가 제공하는 모든 서비스(이하 '서비스')의 이용조건 및
+              이 약관은 베인스파이럴(이하 '회사')가 제공하는 모든 서비스(이하 '서비스')의 이용조건 및
               절차, 회사와 회원 간의 권리, 의무, 책임사항과 기타 필요한 사항을 규정함을 목적으로
               합니다.
             </p>

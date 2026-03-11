@@ -8,7 +8,7 @@ export default function PrivacyPolicy() {
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 md:p-8 mb-8">
           <p className="mb-6 text-gray-600 dark:text-gray-400">
-            SunLaw('SunLaw', 'https://sunlaw.local')은 개인정보보호법에 따라 이용자의 개인정보 보호 및
+            베인스파이럴('Vein Spiral', 'https://www.veinspiral.com/')은 개인정보보호법에 따라 이용자의 개인정보 보호 및
             권익을 보호하고 개인정보와 관련한 이용자의 고충을 원활하게 처리할 수 있도록 다음과 같은
             처리방침을 두고 있습니다.
           </p>
@@ -117,10 +117,10 @@ export default function PrivacyPolicy() {
               <p>
                 <strong>개인정보 보호책임자</strong>
               </p>
-              <p>이름: SunLaw 관리자</p>
-              <p>직위: 관리자</p>
-              <p>이메일: privacy@sunlaw.local</p>
-              <p>전화번호: 미정</p>
+              <p>이름: 박재하</p>
+              <p>직위: 대표자</p>
+              <p>이메일: ceo@veinspiral.com</p>
+              <p>주소: 업데이트 예정</p>
             </div>
           </section>
 

@@ -174,7 +174,7 @@ export const authOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30일
   },
-  secret: process.env.NEXTAUTH_SECRET || "sunlawnextauthsecret",
+  secret: process.env.NEXTAUTH_SECRET || "veinspiralnextauthsecret",
   debug: true, // 디버깅 모드 항상 활성화
 };
 

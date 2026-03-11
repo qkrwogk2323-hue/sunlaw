@@ -26,7 +26,6 @@ import {
   PersonStandingIcon,
   User,
   Bell,
-  Scale,
   CalendarRange,
   Building2,
   UserCog,
@@ -85,15 +84,21 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white/80 dark:bg-gray-950/80 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40 backdrop-blur-sm shadow-sm">
+    <nav className="bg-[#0F172A]/95 border-b border-[#1E293B] sticky top-0 z-40 backdrop-blur-sm shadow-sm">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* 로고 */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
-            <Scale className="h-5 w-5" />
+          {/* 변경점: 배경색(bg-[#E2E8F0]), 테두리(border), 그림자(shadow-md) 제거 */}
+          <div className="w-10 h-10 overflow-hidden flex items-center justify-center">
+            {/* 핵심 수정 부분: scale-[2.5] 를 추가해서 2.5배 뻥튀기! (숫자는 조절 가능) */}
+            <img 
+              src="/logo.png" 
+              alt="Vein Spiral Logo" 
+              className="w-full h-full object-contain p-0 scale-[2.5]" 
+            />
           </div>
-          <span className="font-bold text-xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-            SunLaw
+          <span className="font-bold text-xl text-[#E2E8F0]">
+            Vein Spiral
           </span>
         </Link>
 
@@ -106,8 +111,8 @@ export default function Navbar() {
               className={cn(
                 "flex items-center rounded-lg transition-all",
                 isActive("/")
-                  ? "bg-blue-500 hover:bg-blue-600 text-white"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]"
+                  : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
               )}
             >
               <Home className="mr-2 h-4 w-4" />홈
@@ -123,8 +128,8 @@ export default function Navbar() {
                 className={cn(
                   "flex items-center rounded-lg transition-all",
                   isActive("/my-cases")
-                    ? "bg-blue-500 hover:bg-blue-600 text-white"
-                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]"
+                    : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                 )}
               >
                 <ClipboardList className="mr-2 h-4 w-4" />
@@ -142,8 +147,8 @@ export default function Navbar() {
                 className={cn(
                   "flex items-center rounded-lg transition-all",
                   isActive("/assigned-cases")
-                    ? "bg-indigo-500 hover:bg-indigo-600 text-white"
-                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
+                    : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                 )}
               >
                 <FileText className="mr-2 h-4 w-4" />
@@ -162,8 +167,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/clients")
-                      ? "bg-purple-500 hover:bg-purple-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <Users className="mr-2 h-4 w-4" />
@@ -177,8 +182,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/cases")
-                      ? "bg-indigo-500 hover:bg-indigo-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <FileText className="mr-2 h-4 w-4" />
@@ -192,8 +197,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/admin/amendment-orders")
-                      ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <Gavel className="mr-2 h-4 w-4" />
@@ -213,8 +218,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/my-cases")
-                      ? "bg-blue-500 hover:bg-blue-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <ClipboardList className="mr-2 h-4 w-4" />
@@ -228,8 +233,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/assigned-cases")
-                      ? "bg-indigo-500 hover:bg-indigo-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <FileText className="mr-2 h-4 w-4" />
@@ -243,8 +248,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/clients")
-                      ? "bg-purple-500 hover:bg-purple-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <Users className="mr-2 h-4 w-4" />
@@ -258,8 +263,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/cases")
-                      ? "bg-indigo-500 hover:bg-indigo-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <FileText className="mr-2 h-4 w-4" />
@@ -273,8 +278,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/admin/amendment-orders")
-                      ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <Gavel className="mr-2 h-4 w-4" />
@@ -288,8 +293,8 @@ export default function Navbar() {
                   className={cn(
                     "flex items-center rounded-lg transition-all",
                     isActive("/admin/opinions")
-                      ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
+                      : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                   )}
                 >
                   <Gavel className="mr-2 h-4 w-4" />
@@ -304,8 +309,8 @@ export default function Navbar() {
                     className={cn(
                       "flex items-center rounded-lg transition-all",
                       isActive("/admin")
-                        ? "bg-teal-500 hover:bg-teal-600 text-white"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                        ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]"
+                        : "text-[#E2E8F0]/85 hover:bg-[#1E293B] hover:text-[#38BDF8]"
                     )}
                   >
                     <Settings className="mr-1 h-4 w-4" />
@@ -313,7 +318,7 @@ export default function Navbar() {
                     <ChevronDown className="ml-1 h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-48 border border-[#334155] bg-[#1E293B] text-[#E2E8F0]">
                   <DropdownMenuItem asChild>
                     <Link href="/admin/case-handlers" className="flex w-full items-center">
                       <UserCog className="mr-2 h-4 w-4" />
@@ -357,11 +362,11 @@ export default function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="rounded-full overflow-hidden p-0 w-9 h-9 bg-blue-50 dark:bg-blue-900/30 ring-1 ring-gray-200 dark:ring-gray-700"
+                  className="rounded-full overflow-hidden p-0 w-9 h-9 bg-[#1E293B] ring-1 ring-[#334155]"
                 >
                   <Avatar className="rounded-full w-9 h-9">
                     <AvatarImage src={getProfileImage()} alt={getUserDisplayName()} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                    <AvatarFallback className="bg-gradient-to-br from-[#0EA5A4] to-[#38BDF8] text-[#0F172A]">
                       {getUserDisplayName()
                         .split(" ")
                         .map((n) => n[0])
@@ -372,18 +377,18 @@ export default function Navbar() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 mt-1 p-2">
+              <DropdownMenuContent align="end" className="w-56 mt-1 p-2 border border-[#334155] bg-[#1E293B] text-[#E2E8F0]">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium">{getUserDisplayName()}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-xs text-[#E2E8F0]/65 truncate">
                       {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center text-red-500 dark:text-red-400"
+                  className="cursor-pointer flex items-center text-red-400"
                   onClick={signOut}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -396,7 +401,7 @@ export default function Navbar() {
               <Link href="/login">
                 <Button
                   size="sm"
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-0 text-white shadow-md"
+                  className="bg-[#0EA5A4] hover:bg-[#0b8f8e] border-0 text-[#0F172A] shadow-md"
                 >
                   로그인
                 </Button>
@@ -416,12 +421,12 @@ export default function Navbar() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[80%] sm:w-[350px]">
+            <SheetContent side="left" className="w-[80%] sm:w-[350px] border-r border-[#334155] bg-[#0F172A] text-[#E2E8F0]">
               {user && (
                 <div className="flex items-center mb-6 mt-4">
                   <Avatar className="rounded-full w-9 h-9 mr-3">
                     <AvatarImage src={getProfileImage()} alt={getUserDisplayName()} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                    <AvatarFallback className="bg-gradient-to-br from-[#0EA5A4] to-[#38BDF8] text-[#0F172A]">
                       {getUserDisplayName()
                         .split(" ")
                         .map((n) => n[0])
@@ -432,7 +437,7 @@ export default function Navbar() {
                   </Avatar>
                   <div>
                     <p className="font-medium">{getUserDisplayName()}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                    <p className="text-xs text-gray-500 text-[#E2E8F0]/65">{user.email}</p>
                   </div>
                 </div>
               )}
@@ -443,7 +448,7 @@ export default function Navbar() {
                     variant={isActive("/") ? "default" : "ghost"}
                     className={cn(
                       "w-full justify-start",
-                      isActive("/") ? "bg-blue-500 hover:bg-blue-600 text-white" : ""
+                      isActive("/") ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]" : ""
                     )}
                   >
                     <Home className="mr-2 h-5 w-5" />홈
@@ -457,7 +462,7 @@ export default function Navbar() {
                       variant={isActive("/my-cases") ? "default" : "ghost"}
                       className={cn(
                         "w-full justify-start",
-                        isActive("/my-cases") ? "bg-blue-500 hover:bg-blue-600 text-white" : ""
+                        isActive("/my-cases") ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]" : ""
                       )}
                     >
                       <ClipboardList className="mr-2 h-5 w-5" />
@@ -474,7 +479,7 @@ export default function Navbar() {
                       className={cn(
                         "w-full justify-start",
                         isActive("/assigned-cases")
-                          ? "bg-indigo-500 hover:bg-indigo-600 text-white"
+                          ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
                           : ""
                       )}
                     >
@@ -492,7 +497,7 @@ export default function Navbar() {
                         variant={isActive("/clients") ? "default" : "ghost"}
                         className={cn(
                           "w-full justify-start",
-                          isActive("/clients") ? "bg-purple-500 hover:bg-purple-600 text-white" : ""
+                          isActive("/clients") ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]" : ""
                         )}
                       >
                         <Users className="mr-2 h-5 w-5" />
@@ -504,7 +509,7 @@ export default function Navbar() {
                         variant={isActive("/cases") ? "default" : "ghost"}
                         className={cn(
                           "w-full justify-start",
-                          isActive("/cases") ? "bg-indigo-500 hover:bg-indigo-600 text-white" : ""
+                          isActive("/cases") ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]" : ""
                         )}
                       >
                         <FileText className="mr-2 h-5 w-5" />
@@ -517,7 +522,7 @@ export default function Navbar() {
                         className={cn(
                           "w-full justify-start",
                           isActive("/admin/amendment-orders")
-                            ? "bg-amber-500 hover:bg-amber-600 text-white"
+                            ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
                             : ""
                         )}
                       >
@@ -536,7 +541,7 @@ export default function Navbar() {
                         variant={isActive("/my-cases") ? "default" : "ghost"}
                         className={cn(
                           "w-full justify-start",
-                          isActive("/my-cases") ? "bg-blue-500 hover:bg-blue-600 text-white" : ""
+                          isActive("/my-cases") ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]" : ""
                         )}
                       >
                         <ClipboardList className="mr-2 h-5 w-5" />
@@ -549,7 +554,7 @@ export default function Navbar() {
                         className={cn(
                           "w-full justify-start",
                           isActive("/assigned-cases")
-                            ? "bg-indigo-500 hover:bg-indigo-600 text-white"
+                            ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
                             : ""
                         )}
                       >
@@ -562,7 +567,7 @@ export default function Navbar() {
                         variant={isActive("/clients") ? "default" : "ghost"}
                         className={cn(
                           "w-full justify-start",
-                          isActive("/clients") ? "bg-purple-500 hover:bg-purple-600 text-white" : ""
+                          isActive("/clients") ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]" : ""
                         )}
                       >
                         <Users className="mr-2 h-5 w-5" />
@@ -574,7 +579,7 @@ export default function Navbar() {
                         variant={isActive("/cases") ? "default" : "ghost"}
                         className={cn(
                           "w-full justify-start",
-                          isActive("/cases") ? "bg-indigo-500 hover:bg-indigo-600 text-white" : ""
+                          isActive("/cases") ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]" : ""
                         )}
                       >
                         <FileText className="mr-2 h-5 w-5" />
@@ -587,7 +592,7 @@ export default function Navbar() {
                         className={cn(
                           "w-full justify-start",
                           isActive("/admin/amendment-orders")
-                            ? "bg-amber-500 hover:bg-amber-600 text-white"
+                            ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
                             : ""
                         )}
                       >
@@ -596,8 +601,8 @@ export default function Navbar() {
                       </Button>
                     </Link>
 
-                    <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
-                      <h3 className="px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                    <div className="mt-4 border-t border-[#334155] border-[#334155] pt-4">
+                      <h3 className="px-4 text-xs font-semibold text-gray-500 text-[#E2E8F0]/65 mb-2">
                         관리자 메뉴
                       </h3>
                       <div className="space-y-1">
@@ -607,7 +612,7 @@ export default function Navbar() {
                             className={cn(
                               "w-full justify-start",
                               isActive("/admin/case-handlers")
-                                ? "bg-teal-500 hover:bg-teal-600 text-white"
+                                ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]"
                                 : ""
                             )}
                           >
@@ -621,7 +626,7 @@ export default function Navbar() {
                             className={cn(
                               "w-full justify-start",
                               isActive("/admin/clients")
-                                ? "bg-indigo-500 hover:bg-indigo-600 text-white"
+                                ? "bg-[#38BDF8] hover:bg-[#22b3f3] text-[#0F172A]"
                                 : ""
                             )}
                           >
@@ -635,7 +640,7 @@ export default function Navbar() {
                             className={cn(
                               "w-full justify-start",
                               isActive("/organizations")
-                                ? "bg-teal-500 hover:bg-teal-600 text-white"
+                                ? "bg-[#0EA5A4] hover:bg-[#0b8f8e] text-[#0F172A]"
                                 : ""
                             )}
                           >
@@ -649,7 +654,7 @@ export default function Navbar() {
                             className={cn(
                               "w-full justify-start",
                               isActive("/certificate")
-                                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                ? "bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border border-[#334155]"
                                 : ""
                             )}
                           >
@@ -669,7 +674,7 @@ export default function Navbar() {
                   {user && (
                     <Button
                       variant="ghost"
-                      className="text-red-500 dark:text-red-400"
+                      className="text-red-400"
                       onClick={() => {
                         closeMenu();
                         signOut();
@@ -699,7 +704,7 @@ function AdminMenu({ user }) {
 
   return (
     <div className="py-2">
-      <h3 className="mb-2 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
+      <h3 className="mb-2 px-4 text-xs font-semibold text-gray-500 text-[#E2E8F0]/65">
         관리자 메뉴
       </h3>
       <nav className="grid gap-1 px-2">

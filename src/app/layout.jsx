@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "SunLaw - 사건/고객/업무 관리 시스템",
-  description: "법률사무소 내부 운영 및 고객 포털을 위한 웹 애플리케이션",
+  title: "Vein Spiral | 스마트한 법률사건 관리",
+  description: "효율적인 법률사건 관리와 채권회수의 시작, Vein Spiral",
 };
 
 export default function RootLayout({ children }) {
@@ -28,7 +28,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <ThemeProvider>
             <UserProvider>
-              <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-950 dark:to-gray-900">
+              <div className="min-h-screen flex flex-col vs-shell">
                 <Navbar />
                 <main className="flex-1 pt-2">{children}</main>
               </div>

@@ -112,8 +112,8 @@ export default function LoginPage() {
       <div className="container mx-auto py-20">
         <Card className="max-w-md mx-auto">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">로그인</CardTitle>
-            <CardDescription>소셜 계정으로 간편하게 로그인하세요</CardDescription>
+            <CardTitle className="text-2xl">Vein Spiral 로그인</CardTitle>
+            <CardDescription>베인스파이럴에 소셜 계정으로 간편하게 로그인하세요</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
