@@ -7,6 +7,7 @@ import { supabase } from "@/utils/supabase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatCurrency as formatUtil } from "@/utils/format";
+import { useUser } from "@/contexts/UserContext";
 import {
   AlertCircle,
   CheckCircle2,
@@ -25,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -45,8 +45,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const DEFAULT_PAGE_SIZE = 10;
+// 💡 콤보박스를 그리기 위한 UI 컴포넌트 추가
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import DebtDetailModal from "./[id]/components/modals/DebtDetailModal";
+import LawsuitManager from "./[id]/components/LawsuitManager";
+
+// 💡 기본 표기 개수를 5개로 변경했습니다!
+const DEFAULT_PAGE_SIZE = 5;
+
 const PARTY_ROLE_GROUPS = {
   creditor: ["creditor", "plaintiff", "applicant"],
   debtor: ["debtor", "defendant", "respondent"],
@@ -58,9 +73,7 @@ const isUuid = (value) =>
   );
 
 const normalizeSearchText = (value) =>
-  String(value || "")
-    .trim()
-    .toLowerCase();
+  String(value || "").trim().toLowerCase();
 
 const formatPartyName = (party) => {
   if (!party) return "미등록";
@@ -78,6 +91,7 @@ const getCaseStatusBadge = (status) => {
       </Badge>
     );
   }
+
   let IconComponent = AlertCircle;
   let className = "bg-gray-100 text-gray-700 border-gray-200";
   let name = "알 수 없음";
@@ -99,6 +113,7 @@ const getCaseStatusBadge = (status) => {
     default:
       break;
   }
+
   return (
     <Badge className={cn("text-xs whitespace-nowrap min-w-[65px] flex justify-center py-1 border", className)}>
       <IconComponent className="mr-1 h-3 w-3" />
@@ -120,6 +135,7 @@ const renderLawsuitTypeBadge = (type) => {
 function CasesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useUser();
 
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -128,6 +144,12 @@ function CasesContent() {
   const [searchType, setSearchType] = useState("case_number");
   const [allCases, setAllCases] = useState([]);
 
+  const [showDebtModal, setShowDebtModal] = useState(false);
+  const [selectedCaseForDebt, setSelectedCaseForDebt] = useState(null);
+  
+  const [showLawsuitModal, setShowLawsuitModal] = useState(false);
+  const [selectedCaseForLawsuit, setSelectedCaseForLawsuit] = useState(null);
+
   const pushStateToUrl = useCallback(
     ({ nextSearchTerm, nextSearchType, nextPage, nextPageSize }) => {
       const params = new URLSearchParams();
@@ -135,14 +157,16 @@ function CasesContent() {
       params.set("type", nextSearchType || "case_number");
       if ((nextPage || 1) > 1) params.set("page", String(nextPage));
       if ((nextPageSize || DEFAULT_PAGE_SIZE) !== DEFAULT_PAGE_SIZE) params.set("pageSize", String(nextPageSize));
+
       const query = params.toString();
       router.push(query ? `/cases?${query}` : "/cases");
     },
     [router]
   );
 
-  const fetchCases = useCallback(async () => {
-    setLoading(true);
+  const fetchCases = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+
     try {
       const { data: caseRows, error: caseError } = await supabase
         .from("test_cases")
@@ -181,9 +205,6 @@ function CasesContent() {
         organizationIds.length > 0 ? supabase.from("test_organizations").select("id, name").in("id", organizationIds) : Promise.resolve({ data: [], error: null }),
       ]);
 
-      if (usersResult.error) throw usersResult.error;
-      if (organizationsResult.error) throw organizationsResult.error;
-
       const userMap = new Map((usersResult.data || []).map((item) => [item.id, item]));
       const organizationMap = new Map((organizationsResult.data || []).map((item) => [item.id, item]));
 
@@ -220,9 +241,7 @@ function CasesContent() {
         }).filter(Boolean);
 
         const latestLawsuit = [...caseLawsuits].sort((a, b) => {
-          const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
-          const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
-          return bTime - aTime;
+          return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
         })[0];
 
         return {
@@ -230,13 +249,11 @@ function CasesContent() {
           case_id: caseItem.id,
           status: caseItem.status || "pending",
           case_type: caseItem.case_type || "debt",
-          filing_date: caseItem.filing_date || null,
           principal_amount: Number(caseItem.principal_amount) || 0,
           created_at: caseItem.created_at,
           updated_at: caseItem.updated_at,
           creditor_name: formatPartyName(creditor),
           debtor_name: formatPartyName(debtor),
-          party_names: caseParties.map(formatPartyName).filter(Boolean).join(", "),
           clientName: clientNames.length > 0 ? clientNames.join(", ") : "미등록",
           case_number: latestLawsuit?.case_number || "",
           court_name: latestLawsuit?.court_name || "",
@@ -247,20 +264,24 @@ function CasesContent() {
       setAllCases(normalizedCases);
     } catch (error) {
       console.error("사건 목록 불러오기 오류:", error);
-      toast.error("사건 목록을 불러오는 중 오류가 발생했습니다");
-      setAllCases([]);
+      if (!silent) {
+        toast.error("사건 목록을 불러오는 중 오류가 발생했습니다");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchCases(); }, [fetchCases]);
+  useEffect(() => {
+    fetchCases();
+  }, [fetchCases]);
 
   useEffect(() => {
     const nextType = searchParams.get("type") === "party_name" ? "party_name" : "case_number";
     const nextTerm = searchParams.get("q") || "";
     const nextPage = Math.max(1, Number(searchParams.get("page")) || 1);
-    const nextPageSize = Math.max(1, Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE);
+    const nextPageSize = Math.max(5, Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE);
+    
     setSearchType(nextType);
     setSearchTerm(nextTerm);
     setPage(nextPage);
@@ -269,26 +290,19 @@ function CasesContent() {
 
   const filteredCases = useMemo(() => {
     const normalizedTerm = normalizeSearchText(searchTerm);
-    const source = [...allCases].sort((a, b) => {
-      const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
-      const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
-      return bTime - aTime;
-    });
+    const source = [...allCases].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     if (!normalizedTerm) return source;
 
     if (searchType === "party_name") {
       return source.filter((caseItem) => {
-        const searchable = [caseItem.creditor_name, caseItem.debtor_name, caseItem.party_names, caseItem.clientName].map(normalizeSearchText).join(" ");
+        const searchable = [caseItem.creditor_name, caseItem.debtor_name, caseItem.clientName].map(normalizeSearchText).join(" ");
         return searchable.includes(normalizedTerm);
       });
     }
 
-    const exactMatches = source.filter((caseItem) => normalizeSearchText(caseItem.case_number) === normalizedTerm);
-    if (exactMatches.length > 0) return exactMatches;
-
     return source.filter((caseItem) => {
-      const searchable = [caseItem.case_number, caseItem.court_name, caseItem.id].map(normalizeSearchText).join(" ");
+      const searchable = [caseItem.case_number, caseItem.court_name].map(normalizeSearchText).join(" ");
       return searchable.includes(normalizedTerm);
     });
   }, [allCases, searchTerm, searchType]);
@@ -301,17 +315,9 @@ function CasesContent() {
     return filteredCases.slice(start, start + pageSize);
   }, [filteredCases, currentPage, pageSize]);
 
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     pushStateToUrl({ nextSearchTerm: searchTerm, nextSearchType: searchType, nextPage: 1, nextPageSize: pageSize });
-  };
-
-  const handleTabChange = (value) => {
-    setSearchType(value);
-    setSearchTerm("");
-    pushStateToUrl({ nextSearchTerm: "", nextSearchType: value, nextPage: 1, nextPageSize: pageSize });
   };
 
   const handlePageChange = (nextPage) => {
@@ -323,17 +329,63 @@ function CasesContent() {
   const openCaseDetail = (caseId, tab) => {
     const params = new URLSearchParams();
     if (tab) params.set("tab", tab);
-    const query = params.toString();
-    router.push(query ? `/cases/${caseId}?${query}` : `/cases/${caseId}`);
+    router.push(`/cases/${caseId}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
-  const getCaseSummaryText = (caseItem) => {
-    if (searchType === "party_name") return `${caseItem.creditor_name} / ${caseItem.debtor_name}`;
-    if (caseItem.clientName && caseItem.clientName !== "미등록") return caseItem.clientName;
-    return `${caseItem.creditor_name} / ${caseItem.debtor_name}`;
+  const handleOpenDebtModal = async (caseId) => {
+    try {
+      const { data: caseData, error } = await supabase.from("test_cases").select("*").eq("id", caseId).single();
+      if (error) throw error;
+      
+      const { data: interests } = await supabase.from("test_case_interests").select("*").eq("case_id", caseId);
+      const { data: expenses } = await supabase.from("test_case_expenses").select("*").eq("case_id", caseId);
+      
+      setSelectedCaseForDebt({
+        ...caseData,
+        interests: interests || [],
+        expenses: expenses || [],
+      });
+      setShowDebtModal(true);
+    } catch (error) {
+      toast.error("채권 정보를 불러올 수 없습니다.");
+    }
   };
 
-  const getSearchPlaceholder = () => searchType === "case_number" ? "사건번호 입력 (예: 2024가단123456)" : "당사자 이름 입력 (개인 또는 회사명)";
+  const handleUpdateDebtInfo = async (debtInfo) => {
+    if (!selectedCaseForDebt) return;
+    try {
+      const targetCaseId = selectedCaseForDebt.id;
+      const { error: caseError } = await supabase.from("test_cases").update({ principal_amount: debtInfo.principal_amount }).eq("id", targetCaseId);
+      if (caseError) throw caseError;
+      
+      await supabase.from("test_case_interests").delete().eq("case_id", targetCaseId);
+      if (debtInfo.interests && debtInfo.interests.length > 0) {
+        const interestsToInsert = debtInfo.interests.map((interest) => ({
+          case_id: targetCaseId, start_date: interest.start_date, end_date: interest.end_date, rate: interest.rate,
+        }));
+        await supabase.from("test_case_interests").insert(interestsToInsert);
+      }
+      
+      await supabase.from("test_case_expenses").delete().eq("case_id", targetCaseId);
+      if (debtInfo.expenses && debtInfo.expenses.length > 0) {
+        const expensesToInsert = debtInfo.expenses.map((expense) => ({
+          case_id: targetCaseId, expense_type: expense.expense_type === "기타" && expense.custom_type ? expense.custom_type : expense.expense_type, amount: expense.amount,
+        }));
+        await supabase.from("test_case_expenses").insert(expensesToInsert);
+      }
+      
+      toast.success("채권 정보가 안전하게 저장되었습니다.");
+      setShowDebtModal(false);
+      fetchCases(true); 
+    } catch (error) {
+      toast.error("채권 정보 업데이트에 실패했습니다");
+    }
+  };
+
+  const handleOpenLawsuitModal = (caseId) => {
+    setSelectedCaseForLawsuit(caseId);
+    setShowLawsuitModal(true);
+  };
 
   const PaginationComponent = ({ activePage, pages, onChange }) => {
     const getPageButtons = () => {
@@ -360,7 +412,7 @@ function CasesContent() {
   };
 
   return (
-    <div className="container py-6 px-4 md:px-6">
+    <div className="container py-6 px-4 md:px-6 relative">
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div><h1 className="text-2xl font-semibold tracking-tight">사건 검색</h1></div>
@@ -373,18 +425,21 @@ function CasesContent() {
             </Link>
           </div>
         </div>
-        <Tabs value={searchType} onValueChange={handleTabChange} className="mt-4">
+
+        <Tabs value={searchType} onValueChange={(val) => { setSearchType(val); setSearchTerm(""); pushStateToUrl({ nextSearchTerm: "", nextSearchType: val, nextPage: 1, nextPageSize: pageSize }); }} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="case_number">사건번호</TabsTrigger>
             <TabsTrigger value="party_name">당사자 이름</TabsTrigger>
           </TabsList>
+
           <form onSubmit={handleSearchSubmit} className="flex w-full mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <Input type="search" placeholder={getSearchPlaceholder()} className="pl-9 w-full" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Input type="search" placeholder={searchType === "case_number" ? "사건번호 입력" : "당사자 이름 입력"} className="pl-9 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
-            <Button type="submit" className="ml-2" disabled={!searchTerm.trim() && !searchParams.get("q")}>검색</Button>
+            <Button type="submit" className="ml-2">검색</Button>
           </form>
+
           <Card className="border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl overflow-hidden shadow-md">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">
@@ -396,8 +451,8 @@ function CasesContent() {
                 <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><RefreshCw className="h-4 w-4 animate-spin" />사건 목록을 불러오는 중입니다.</div>
               ) : visibleCases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"><Search className="h-8 w-8 text-gray-400 dark:text-gray-500" /></div>
-                  <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">결과가 없습니다</h3>
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"><Search className="h-8 w-8 text-gray-400" /></div>
+                  <h3 className="text-xl font-medium mb-2">결과가 없습니다</h3>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -413,28 +468,38 @@ function CasesContent() {
                     </TableHeader>
                     <TableBody>
                       {visibleCases.map((caseItem) => (
-                        <TableRow key={caseItem.id} className="border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" onClick={() => openCaseDetail(caseItem.id)}>
+                        <TableRow key={caseItem.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50" onClick={() => openCaseDetail(caseItem.id)}>
                           <TableCell className="py-3 pl-4">{getCaseStatusBadge(caseItem.status)}</TableCell>
                           <TableCell className="py-3">
                             <div className="flex flex-col">
-                              <span className="text-sm truncate max-w-[240px]">{getCaseSummaryText(caseItem)}</span>
+                              <span className="text-sm truncate max-w-[240px]">{`${caseItem.creditor_name} / ${caseItem.debtor_name}`}</span>
                               {searchType === "party_name" && <span className="text-xs text-muted-foreground mt-1">의뢰인: {caseItem.clientName}</span>}
                             </div>
                           </TableCell>
-                          <TableCell className="py-3"><span className="font-medium text-sm md:text-base">{formatUtil(caseItem.principal_amount || 0)}</span></TableCell>
+                          <TableCell className="py-3"><span className="font-medium">{formatUtil(caseItem.principal_amount || 0)}</span></TableCell>
                           <TableCell className="py-3">
                             <div className="flex flex-col gap-1">
                               {renderLawsuitTypeBadge(caseItem.lawsuit_type)}
-                              <div className="text-sm text-gray-500">{[caseItem.court_name, caseItem.case_number].filter(Boolean).join(" ") || "등록된 소송 정보 없음"}</div>
+                              <div className="text-sm text-gray-500">{[caseItem.court_name, caseItem.case_number].filter(Boolean).join(" ") || "정보 없음"}</div>
                             </div>
                           </TableCell>
                           <TableCell className="text-center py-3 pr-4">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={(event) => event.stopPropagation()}><MoreHorizontal className="h-4 w-4 text-gray-500" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4 text-gray-500" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onClick={(event) => { event.stopPropagation(); openCaseDetail(caseItem.id); }} className="cursor-pointer"><ExternalLink className="h-4 w-4 mr-2 text-blue-500" /><span>상세페이지 이동</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openCaseDetail(caseItem.id); }} className="cursor-pointer">
+                                  <ExternalLink className="h-4 w-4 mr-2 text-blue-500" /><span>상세페이지 이동</span>
+                                </DropdownMenuItem>
+                                
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenLawsuitModal(caseItem.id); }} className="cursor-pointer">
+                                  <Scale className="h-4 w-4 mr-2 text-indigo-500" /><span>소송정보 빠른보기</span>
+                                </DropdownMenuItem>
+                                
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenDebtModal(caseItem.id); }} className="cursor-pointer">
+                                  <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" /><span>채권정보 빠른보기</span>
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -444,9 +509,38 @@ function CasesContent() {
                   </Table>
                 </div>
               )}
+              
+              {/* 💡 페이지네이션과 리스트 개수 선택기가 들어가는 하단 바 */}
               {!loading && totalResults > 0 && (
-                <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-4 flex-col sm:flex-row">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">총 {totalResults}개 중 {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalResults)}개 표시</div>
+                <div className="p-4 border-t flex items-center justify-between gap-4 flex-col md:flex-row">
+                  <div className="flex items-center gap-3 flex-wrap justify-center">
+                    <div className="text-sm text-gray-500">
+                      총 {totalResults}개 중 {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalResults)}개 표시
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">페이지당:</span>
+                      <Select
+                        value={String(pageSize)}
+                        onValueChange={(val) => {
+                          const newSize = Number(val);
+                          setPageSize(newSize);
+                          setPage(1);
+                          pushStateToUrl({ nextSearchTerm: searchTerm, nextSearchType: searchType, nextPage: 1, nextPageSize: newSize });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-[75px] text-xs bg-white dark:bg-slate-900">
+                          <SelectValue placeholder={String(pageSize)} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">5개</SelectItem>
+                          <SelectItem value="10">10개</SelectItem>
+                          <SelectItem value="20">20개</SelectItem>
+                          <SelectItem value="30">30개</SelectItem>
+                          <SelectItem value="50">50개</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <PaginationComponent activePage={currentPage} pages={totalPages} onChange={handlePageChange} />
                 </div>
               )}
@@ -454,6 +548,41 @@ function CasesContent() {
           </Card>
         </Tabs>
       </div>
+
+      <DebtDetailModal
+        open={showDebtModal}
+        onOpenChange={(isOpen) => {
+          setShowDebtModal(isOpen);
+          if (!isOpen) setTimeout(() => setSelectedCaseForDebt(null), 300);
+        }}
+        caseData={selectedCaseForDebt || {}}
+        user={user}
+        onUpdateDebtInfo={handleUpdateDebtInfo}
+      />
+
+      <Dialog open={showLawsuitModal} onOpenChange={(isOpen) => {
+        setShowLawsuitModal(isOpen);
+        if (!isOpen) setTimeout(() => setSelectedCaseForLawsuit(null), 300);
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-slate-50 dark:bg-slate-900 border-0 p-6 shadow-2xl">
+          <DialogHeader className="mb-2 border-b pb-4">
+            <DialogTitle className="text-xl font-bold flex items-center">
+              <Scale className="w-5 h-5 mr-2 text-indigo-500" />
+              소송 상세 정보
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            {selectedCaseForLawsuit ? (
+              <LawsuitManager 
+                caseId={selectedCaseForLawsuit} 
+                onDataChange={() => fetchCases(true)} 
+              />
+            ) : (
+              <div className="py-10 text-center text-muted-foreground">닫는 중...</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
