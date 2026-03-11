@@ -79,6 +79,117 @@ import { ChatView } from "./components/ChatView";
 import { ComposeDialog } from "./components/ComposeDialog";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 
+const formatPartyDisplayName = (party) => {
+  if (!party) return "";
+
+  if (["corporation", "organization", "company"].includes(party.entity_type)) {
+    return party.company_name || party.name || "";
+  }
+
+  return party.name || party.company_name || "";
+};
+
+const buildHydratedCases = async (caseIds = [], existingCases = null) => {
+  const normalizedCaseIds = [...new Set((caseIds || []).filter(Boolean))];
+
+  if (normalizedCaseIds.length === 0 && !existingCases) {
+    return [];
+  }
+
+  let caseRows = existingCases || [];
+
+  if (!existingCases) {
+    const { data, error } = await supabase
+      .from("test_cases")
+      .select("id, case_type, status, filing_date, created_at, updated_at")
+      .in("id", normalizedCaseIds);
+
+    if (error) throw error;
+    caseRows = data || [];
+  }
+
+  const effectiveCaseIds = caseRows.map((caseItem) => caseItem.id).filter(Boolean);
+
+  if (effectiveCaseIds.length === 0) {
+    return [];
+  }
+
+  const { data: partiesData, error: partiesError } = await supabase
+    .from("test_case_parties")
+    .select("id, case_id, party_type, name, company_name, entity_type")
+    .in("case_id", effectiveCaseIds);
+
+  if (partiesError) throw partiesError;
+
+  const partiesByCase = new Map();
+  (partiesData || []).forEach((party) => {
+    if (!partiesByCase.has(party.case_id)) {
+      partiesByCase.set(party.case_id, []);
+    }
+    partiesByCase.get(party.case_id).push(party);
+  });
+
+  return caseRows.map((caseItem) => {
+    const caseParties = partiesByCase.get(caseItem.id) || [];
+    const creditor = caseParties.find((party) =>
+      ["creditor", "plaintiff", "applicant"].includes(party.party_type)
+    );
+    const debtor = caseParties.find((party) =>
+      ["debtor", "defendant", "respondent"].includes(party.party_type)
+    );
+
+    return {
+      ...caseItem,
+      parties: caseParties,
+      creditor_name: formatPartyDisplayName(creditor),
+      debtor_name: formatPartyDisplayName(debtor),
+    };
+  });
+};
+
+const hydrateOpinionsWithRelations = async (opinionRows = []) => {
+  if (!opinionRows || opinionRows.length === 0) {
+    return [];
+  }
+
+  const userIds = [
+    ...new Set(
+      opinionRows
+        .flatMap((row) => [row.created_by, row.receiver_id])
+        .filter(Boolean)
+    ),
+  ];
+
+  const caseIds = [
+    ...new Set(opinionRows.map((row) => row.case_id).filter(Boolean)),
+  ];
+
+  const [usersResult, hydratedCases] = await Promise.all([
+    userIds.length > 0
+      ? supabase.from("users").select("id, name, email").in("id", userIds)
+      : Promise.resolve({ data: [], error: null }),
+    buildHydratedCases(caseIds),
+  ]);
+
+  if (usersResult.error) throw usersResult.error;
+
+  const userMap = new Map((usersResult.data || []).map((item) => [item.id, item]));
+  const caseMap = new Map((hydratedCases || []).map((item) => [item.id, item]));
+
+  return opinionRows.map((opinion) => {
+    const relatedCase = opinion.case_id ? caseMap.get(opinion.case_id) || null : null;
+
+    return {
+      ...opinion,
+      created_by_user: userMap.get(opinion.created_by) || null,
+      receiver: userMap.get(opinion.receiver_id) || null,
+      test_cases: relatedCase,
+      creditor_name: opinion.creditor_name || relatedCase?.creditor_name || "",
+      debtor_name: opinion.debtor_name || relatedCase?.debtor_name || "",
+    };
+  });
+};
+
 export default function OpinionsPage() {
   const router = useRouter();
   const { user } = useUser();
@@ -110,64 +221,42 @@ export default function OpinionsPage() {
 
   // 의견 목록 불러오기
   const fetchOpinions = async () => {
+    if (!user?.id) {
+      setOpinions([]);
+      return;
+    }
+
     try {
       setLoading(true);
       setRefreshing(true);
 
-      // 받은 메시지와 보낸 메시지 모두 가져오기
-      const { data: opinionsData, error } = await supabase
+      const { data: opinionRows, error } = await supabase
         .from("test_case_opinions")
-        .select(
-          `
-          *,
-          created_by_user:created_by(id, name, email),
-          receiver:receiver_id(id, name, email),
-          test_cases:case_id(
-            id, 
-            case_type, 
-            status, 
-            parties:test_case_parties(id, party_type, name, company_name, entity_type)
-          )
-        `
-        )
+        .select("*")
         .or(`created_by.eq.${user.id},receiver_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // 사건 정보가 있는 경우 채권자/채무자 정보 처리
-      const processedOpinions =
-        opinionsData?.map((opinion) => {
-          if (opinion.test_cases) {
-            const creditor = opinion.test_cases.parties?.find(
-              (party) => party.party_type === "creditor"
-            );
-            const debtor = opinion.test_cases.parties?.find(
-              (party) => party.party_type === "debtor"
-            );
+      const visibleOpinions = (opinionRows || []).filter((opinion) => {
+        if (opinion.created_by === user.id && opinion.sender_deleted) {
+          return false;
+        }
 
-            // 이미 opinion에 creditor_name과 debtor_name이 있으면 그대로 사용, 없으면 parties에서 가져옴
-            if (!opinion.creditor_name && creditor) {
-              opinion.creditor_name =
-                creditor.entity_type === "corporation" ? creditor.company_name : creditor.name;
-            }
+        if (opinion.receiver_id === user.id && opinion.receiver_deleted) {
+          return false;
+        }
 
-            if (!opinion.debtor_name && debtor) {
-              opinion.debtor_name =
-                debtor.entity_type === "corporation" ? debtor.company_name : debtor.name;
-            }
-          }
-          return opinion;
-        }) || [];
+        return true;
+      });
+
+      const processedOpinions = await hydrateOpinionsWithRelations(visibleOpinions);
 
       setOpinions(processedOpinions);
 
-      // 선택된 의견이 존재하는 경우 새로 불러온 데이터에서 해당 의견을 다시 선택
       if (selectedOpinion) {
         const updatedSelectedOpinion = processedOpinions.find((op) => op.id === selectedOpinion.id);
-        if (updatedSelectedOpinion) {
-          setSelectedOpinion(updatedSelectedOpinion);
-        }
+        setSelectedOpinion(updatedSelectedOpinion || null);
       }
     } catch (error) {
       console.error("의견 목록 불러오기 오류:", error);
@@ -199,48 +288,17 @@ export default function OpinionsPage() {
     try {
       const { data, error } = await supabase
         .from("test_cases")
-        .select(
-          `
-          id, 
-          case_type, 
-          status, 
-          filing_date,
-          parties:test_case_parties(id, party_type, name, company_name, entity_type)
-        `
-        )
+        .select("id, case_type, status, filing_date, created_at, updated_at")
         .order("created_at", { ascending: false })
         .limit(30);
 
       if (error) throw error;
 
-      // 당사자 정보 처리
-      const processedCases =
-        data?.map((caseItem) => {
-          const creditor = caseItem.parties?.find((party) => party.party_type === "creditor");
-          const debtor = caseItem.parties?.find((party) => party.party_type === "debtor");
-
-          // 당사자명 설정 (법인인 경우 회사명, 개인인 경우 이름)
-          const creditorName = creditor
-            ? creditor.entity_type === "corporation"
-              ? creditor.company_name
-              : creditor.name
-            : "";
-          const debtorName = debtor
-            ? debtor.entity_type === "corporation"
-              ? debtor.company_name
-              : debtor.name
-            : "";
-
-          return {
-            ...caseItem,
-            creditor_name: creditorName,
-            debtor_name: debtorName,
-          };
-        }) || [];
-
+      const processedCases = await buildHydratedCases([], data || []);
       setCases(processedCases);
     } catch (error) {
       console.error("사건 목록 불러오기 오류:", error);
+      setCases([]);
     }
   };
 
@@ -252,52 +310,30 @@ export default function OpinionsPage() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data: handlerRows, error: handlerError } = await supabase
         .from("test_case_handlers")
-        .select(
-          `
-          case_id,
-          test_cases:case_id(
-            id, 
-            case_type, 
-            status, 
-            filing_date,
-            parties:test_case_parties(id, party_type, name, company_name, entity_type)
-          )
-        `
-        )
+        .select("case_id")
         .eq("user_id", handlerId);
 
-      if (error) throw error;
+      if (handlerError) throw handlerError;
 
-      // 중복 제거 및 null 값 필터링
-      const filteredCases = data
-        .filter((item) => item.test_cases)
-        .map((item) => {
-          const caseItem = item.test_cases;
-          const creditor = caseItem.parties?.find((party) => party.party_type === "creditor");
-          const debtor = caseItem.parties?.find((party) => party.party_type === "debtor");
+      const caseIds = [...new Set((handlerRows || []).map((item) => item.case_id).filter(Boolean))];
 
-          // 당사자명 설정
-          const creditorName = creditor
-            ? creditor.entity_type === "corporation"
-              ? creditor.company_name
-              : creditor.name
-            : "";
-          const debtorName = debtor
-            ? debtor.entity_type === "corporation"
-              ? debtor.company_name
-              : debtor.name
-            : "";
+      if (caseIds.length === 0) {
+        setReceiverCases([]);
+        return;
+      }
 
-          return {
-            ...caseItem,
-            creditor_name: creditorName,
-            debtor_name: debtorName,
-          };
-        });
+      const { data: caseRows, error: caseError } = await supabase
+        .from("test_cases")
+        .select("id, case_type, status, filing_date, created_at, updated_at")
+        .in("id", caseIds)
+        .order("created_at", { ascending: false });
 
-      setReceiverCases(filteredCases || []);
+      if (caseError) throw caseError;
+
+      const hydratedCases = await buildHydratedCases([], caseRows || []);
+      setReceiverCases(hydratedCases);
     } catch (error) {
       console.error("담당자 사건 목록 불러오기 오류:", error);
       setReceiverCases([]);
@@ -504,6 +540,16 @@ export default function OpinionsPage() {
     try {
       setSendingReply(true);
 
+      const replyReceiverId =
+        selectedOpinion.created_by === user.id
+          ? selectedOpinion.receiver_id
+          : selectedOpinion.created_by;
+
+      if (!replyReceiverId) {
+        toast.error("수신자 정보를 확인할 수 없습니다.");
+        return;
+      }
+
       // 원본 제목에서 "Re: " 부분을 제거하고 새 제목 생성
       const originalTitle = selectedOpinion.title.replace(/^(Re: )+/, "");
       const newTitle = `Re: ${originalTitle}`;
@@ -515,7 +561,7 @@ export default function OpinionsPage() {
           case_id: selectedOpinion.case_id,
           parent_id: selectedOpinion.id,
           created_by: user.id,
-          receiver_id: selectedOpinion.created_by,
+          receiver_id: replyReceiverId,
           title: newTitle,
           message: replyMessage.trim(), // 인용 없이 메시지만 전송
           creditor_name: selectedOpinion.creditor_name,
@@ -537,10 +583,15 @@ export default function OpinionsPage() {
         setCurrentTab("sent");
 
         // 데이터에 created_by_user와 receiver 정보를 추가
+        const replyReceiver =
+          selectedOpinion.created_by === user.id
+            ? selectedOpinion.receiver
+            : selectedOpinion.created_by_user;
+
         const enrichedSentOpinion = {
           ...sentOpinion,
           created_by_user: { id: user.id, name: user.name, email: user.email },
-          receiver: selectedOpinion.created_by_user,
+          receiver: replyReceiver,
         };
 
         setSelectedOpinion(enrichedSentOpinion);

@@ -323,7 +323,7 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/admin/clients" className="flex w-full items-center">
                       <UserPlus className="mr-2 h-4 w-4" />
-                      의뢰인 관리
+                      사용자 관리
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -626,7 +626,7 @@ export default function Navbar() {
                             )}
                           >
                             <UserPlus className="mr-2 h-5 w-5" />
-                            의뢰인 관리
+                            사용자 관리
                           </Button>
                         </Link>
                         <Link href="/organizations" onClick={closeMenu}>

@@ -39,9 +39,22 @@ export default function NotificationCenter() {
   const fetchNotifications = async () => {
     if (!user) return;
 
+    if (user?.isDevBypass) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+
+    if (!user?.id && !user?.supabaseId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      // 최신 알림 30개 가져오기
       const { data, error } = await supabase
         .from("test_individual_notifications")
         .select("*")
@@ -53,17 +66,28 @@ export default function NotificationCenter() {
 
       setNotifications(data || []);
 
-      // 읽지 않은 알림 개수 계산
-      const unreadNotifications = data ? data.filter((n) => !n.is_read).length : 0;
+      const unreadNotifications = data
+        ? data.filter((n) => !n.is_read).length
+        : 0;
       setUnreadCount(unreadNotifications);
     } catch (error) {
       console.error("알림 로드 실패:", error);
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
   };
 
   const markAsRead = async (notificationId) => {
+    if (user?.isDevBypass) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("test_individual_notifications")
@@ -85,6 +109,12 @@ export default function NotificationCenter() {
   };
 
   const markAllAsRead = async () => {
+    if (user?.isDevBypass) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("test_individual_notifications")

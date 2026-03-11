@@ -180,19 +180,28 @@ export default function MyCasesContent() {
     setCases(paginatedCases);
   };
 
+  const executeSearch = (nextSearchTerm = "") => {
+    const normalizedSearchTerm = nextSearchTerm;
+    setSearchTerm(normalizedSearchTerm);
+    updateUrlParams(1, normalizedSearchTerm, selectedTab, selectedOrg);
+    filterAndPaginateCases(
+      selectedTab === "personal" ? personalCases : organizationCases,
+      normalizedSearchTerm,
+      1
+    );
+    setCurrentPage(1);
+  };
+
   // 검색 핸들러
-  const handleSearch = (e) => {
-    if (e.key === "Enter" || e.type === "click") {
-      const newSearchTerm = e.target.value || "";
-      setSearchTerm(newSearchTerm);
-      updateUrlParams(1, newSearchTerm, selectedTab, selectedOrg);
-      filterAndPaginateCases(
-        selectedTab === "personal" ? personalCases : organizationCases,
-        newSearchTerm,
-        1
-      );
-      setCurrentPage(1);
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      executeSearch(searchTerm);
     }
+  };
+
+  const handleSearchClick = () => {
+    executeSearch(searchTerm);
   };
 
   // 페이지 변경 핸들러
@@ -1067,14 +1076,15 @@ export default function MyCasesContent() {
           <Input
             placeholder="사건명, 사건번호, 당사자명 검색..."
             className="pr-8"
-            defaultValue={searchTerm}
-            onKeyDown={handleSearch}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
           />
           <Button
             size="sm"
             variant="ghost"
             className="absolute right-0 top-0 h-full px-3"
-            onClick={handleSearch}
+            onClick={handleSearchClick}
           >
             검색
           </Button>

@@ -208,23 +208,36 @@ export function CasesTable({
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [selectedCaseTitle, setSelectedCaseTitle] = useState("");
 
+  const getCaseRouteId = (caseItem) => caseItem?.case_id || caseItem?.id;
+
+  const openCasePage = (caseItem, tab) => {
+    const routeId = getCaseRouteId(caseItem);
+    if (!routeId) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (tab) {
+      params.set("tab", tab);
+    }
+
+    const query = params.toString();
+    router.push(query ? `/cases/${routeId}?${query}` : `/cases/${routeId}`);
+  };
+
   // 메뉴 버튼 클릭 핸들러 함수
   const handleMenuAction = (action, caseItem, e) => {
     e.stopPropagation(); // 이벤트 버블링 방지
 
     switch (action) {
       case "detail":
-        router.push(`/cases/${caseItem.id}`);
+        openCasePage(caseItem);
         break;
       case "lawsuit":
-        setSelectedCaseId(caseItem.id);
-        setSelectedCaseTitle(`${caseItem.creditor_name} vs ${caseItem.debtor_name}`);
-        setShowLawsuitModal(true);
+        openCasePage(caseItem, "lawsuits");
         break;
       case "recovery":
-        setSelectedCaseId(caseItem.id);
-        setSelectedCaseTitle(`${caseItem.creditor_name} vs ${caseItem.debtor_name}`);
-        setShowRecoveryModal(true);
+        openCasePage(caseItem, "recovery");
         break;
       default:
         break;
@@ -488,7 +501,7 @@ export function CasesTable({
                     <TableRow
                       key={caseItem.id}
                       className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/cases/${caseItem.id}`)}
+                      onClick={() => openCasePage(caseItem)}
                     >
                       <TableCell className="flex justify-center items-center my-3">
                         {getCaseStatusBadge(caseItem.status)}

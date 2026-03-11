@@ -159,7 +159,7 @@ export default function Home() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Link href="/debts" className="w-full">
+                <Link href="/cases" className="w-full">
                   <Button
                     variant="outline"
                     className="w-full bg-white/90 dark:bg-slate-800/90 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
