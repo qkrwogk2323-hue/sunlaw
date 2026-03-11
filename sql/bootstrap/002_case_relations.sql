@@ -202,3 +202,43 @@ create index if not exists idx_test_case_lawsuits_case_number on public.test_cas
 create index if not exists idx_test_notifications_user_id on public.test_individual_notifications(user_id);
 create index if not exists idx_test_schedules_case_id on public.test_schedules(case_id);
 create index if not exists idx_test_recovery_case_id on public.test_recovery_activities(case_id);
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'fk_case_opinions_case') then
+    alter table public.test_case_opinions
+      add constraint fk_case_opinions_case
+      foreign key (case_id) references public.test_cases(id) on delete set null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'fk_case_opinions_parent') then
+    alter table public.test_case_opinions
+      add constraint fk_case_opinions_parent
+      foreign key (parent_id) references public.test_case_opinions(id) on delete set null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'fk_case_opinions_created_by') then
+    alter table public.test_case_opinions
+      add constraint fk_case_opinions_created_by
+      foreign key (created_by) references public.users(id) on delete set null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'fk_case_opinions_receiver') then
+    alter table public.test_case_opinions
+      add constraint fk_case_opinions_receiver
+      foreign key (receiver_id) references public.users(id) on delete set null;
+  end if;
+end $$;
+
+create index if not exists idx_case_opinions_case_id on public.test_case_opinions(case_id);
+create index if not exists idx_case_opinions_created_by on public.test_case_opinions(created_by);
+create index if not exists idx_case_opinions_receiver_id on public.test_case_opinions(receiver_id);
+create index if not exists idx_case_opinions_created_at on public.test_case_opinions(created_at desc);

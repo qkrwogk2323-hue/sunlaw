@@ -40,8 +40,8 @@ const DEV_USERS = {
   client: {
     id: "00000000-0000-4000-8000-000000000003",
     email: "dev-client@sunlaw.local",
-    name: "개발용 고객",
-    nickname: "개발용 고객",
+    name: "개발용 의뢰인",
+    nickname: "개발용 의뢰인",
     role: "client",
     employee_type: null,
   },

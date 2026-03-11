@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase";
@@ -39,11 +38,9 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getStatusById } from "@/utils/constants";
-
 import RecoveryActivities from "./components/RecoveryActivities";
 import CaseDashboard from "./components/CaseDashboard";
 import LawsuitManager from "./components/LawsuitManager";
-
 // 모달 컴포넌트 import
 import ClientDetailModal from "./components/modals/ClientDetailModal";
 import PartyDetailModal from "./components/modals/PartyDetailModal";
@@ -55,7 +52,6 @@ import AddLawsuitModal from "./components/modals/AddLawsuitModal";
 import ScheduleFormModal from "./components/modals/ScheduleFormModal";
 import RecoveryActivityModal from "./components/modals/RecoveryActivityModal";
 import AddSubmissionModal from "./components/modals/AddSubmissionModal";
-
 import {
   Dialog,
   DialogContent,
@@ -64,7 +60,6 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,13 +71,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
 export default function CasePage() {
   const pathname = usePathname();
   const router = useRouter();
   const { id: caseId } = useParams();
   const { user } = useUser();
-
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -90,7 +83,6 @@ export default function CasePage() {
   const [clients, setClients] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
-
   // 모달 상태 관리
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
@@ -108,7 +100,6 @@ export default function CasePage() {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [editingSubmission, setEditingSubmission] = useState(null);
   const [editingRecovery, setEditingRecovery] = useState(null);
-
   // 추가 상태 관리
   const [selectedStatus, setSelectedStatus] = useState("");
   const [userSearchTerm, setUserSearchTerm] = useState("");
@@ -117,7 +108,6 @@ export default function CasePage() {
   const [orgSearchTerm, setOrgSearchTerm] = useState("");
   const [orgSearchLoading, setOrgSearchLoading] = useState(false);
   const [orgSearchResults, setOrgSearchResults] = useState([]);
-
   // 상태 변수 추가
   const [partyType, setPartyType] = useState("plaintiff");
   const [entityType, setEntityType] = useState("individual");
@@ -131,38 +121,61 @@ export default function CasePage() {
   const [residentNumber, setResidentNumber] = useState("");
   const [corporateNumber, setCorporateNumber] = useState("");
   const [position, setPosition] = useState("");
-
   // 당사자 수정 관련 상태 변수
   const [editMode, setEditMode] = useState(false);
   const [editPartyId, setEditPartyId] = useState(null);
-
   // 알림 개수 관리
   const [notificationCount, setNotificationCount] = useState(0);
-
   // 추가된 상태 변수
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   // 케이스 정보 가져오기
+const resolveCaseId = async (rawId) => {
+    // 1차: test_cases.id 로 직접 조회
+    const { data: directCase, error: directCaseError } = await supabase
+      .from("test_cases")
+      .select("id")
+      .eq("id", rawId)
+      .maybeSingle();
+    if (!directCaseError && directCase?.id) {
+      return directCase.id;
+    }
+    // 2차: 혹시 rawId가 lawsuit id면 case_id 찾아서 반환
+    const { data: lawsuitRow, error: lawsuitError } = await supabase
+      .from("test_case_lawsuits")
+      .select("id, case_id")
+      .eq("id", rawId)
+      .maybeSingle();
+    if (!lawsuitError && lawsuitRow?.case_id) {
+      return lawsuitRow.case_id;
+    }
+    return null;
+  };
   const fetchCaseDetails = async () => {
     setLoading(true);
     try {
-      // 사건 정보 및 관련 데이터 가져오기
+      const effectiveCaseId = await resolveCaseId(caseId);
+      if (!effectiveCaseId) {
+        toast.error("사건 정보를 찾을 수 없습니다");
+        router.push("/cases");
+        return;
+      }
+      // 잘못된 id(예: lawsuit id)로 들어온 경우 정식 case id URL로 교정
+      if (effectiveCaseId !== caseId) {
+        router.replace(`/cases/${effectiveCaseId}`);
+      }
+      // 사건 본체
       const { data, error } = await supabase
         .from("test_cases")
         .select("*")
-        .eq("id", caseId)
+        .eq("id", effectiveCaseId)
         .single();
-
       if (error) throw error;
-
-      // 사건 정보가 없는 경우
       if (!data) {
         toast.error("사건 정보를 찾을 수 없습니다");
         router.push("/cases");
         return;
       }
-
       // status_id가 있으면 constants에서 상태 정보 가져오기
       if (data.status_id) {
         const statusInfo = getStatusById(data.status_id);
@@ -171,16 +184,13 @@ export default function CasePage() {
           color: statusInfo.color,
         };
       }
-
-      // 당사자 정보 가져오기
+      // 당사자 정보
       const { data: partiesData, error: partiesError } = await supabase
         .from("test_case_parties")
         .select("*")
-        .eq("case_id", caseId);
-
+        .eq("case_id", effectiveCaseId);
       if (partiesError) throw partiesError;
-
-      // 의뢰인 정보 가져오기
+      // 의뢰인 정보
       const { data: clientsData, error: clientsError } = await supabase
         .from("test_case_clients")
         .select(
@@ -188,41 +198,33 @@ export default function CasePage() {
           *,
           individual_id(id, name, email, phone_number, resident_number, address),
           organization_id(
-            id, 
-            name, 
-            representative_name, 
-            representative_position, 
-            business_number, 
-            phone, 
-            email, 
+            id,
+            name,
+            representative_name,
+            representative_position,
+            business_number,
+            phone,
+            email,
             address
           )
         `
         )
-        .eq("case_id", caseId);
-
+        .eq("case_id", effectiveCaseId);
       if (clientsError) throw clientsError;
-
-      // 이자 정보 가져오기
+      // 이자 정보
       const { data: interestsData, error: interestsError } = await supabase
         .from("test_case_interests")
         .select("*")
-        .eq("case_id", caseId);
-
+        .eq("case_id", effectiveCaseId);
       if (interestsError) throw interestsError;
-
-      // 비용 정보 가져오기
+      // 비용 정보
       const { data: expensesData, error: expensesError } = await supabase
         .from("test_case_expenses")
         .select("*")
-        .eq("case_id", caseId);
-
+        .eq("case_id", effectiveCaseId);
       if (expensesError) throw expensesError;
-
       // 의뢰인 정보 가공
-      const processedClients = clientsData.map((client) => {
-        console.log("원본 의뢰인 데이터:", client);
-
+      const processedClients = (clientsData || []).map((client) => {
         return {
           ...client,
           client_type: client.individual_id ? "individual" : "organization",
@@ -239,14 +241,12 @@ export default function CasePage() {
           resident_number: client.individual_id?.resident_number || "",
         };
       });
-
-      // 이자 정보 처리 - 사용자 화면에 표시할 이자 금액 계산 추가
-      const processedInterests = interestsData.map((interest) => {
+      // 이자 정보 처리
+      const processedInterests = (interestsData || []).map((interest) => {
         let amount = 0;
         if (interest.start_date && interest.end_date && interest.rate && data.principal_amount) {
           const days = differenceInDays(new Date(interest.end_date), new Date(interest.start_date));
           if (days > 0) {
-            // 일할 계산: 원금 * 이자율 * (일수 / 365)
             amount = Math.round(
               Number(data.principal_amount) * (Number(interest.rate) / 100) * (days / 365)
             );
@@ -257,14 +257,11 @@ export default function CasePage() {
           amount: amount.toString(),
         };
       });
-
-      // caseData에 이자와 비용 정보 포함
       const enrichedCaseData = {
         ...data,
         interests: processedInterests || [],
         expenses: expensesData || [],
       };
-
       setCaseData(enrichedCaseData);
       setParties(partiesData || []);
       setClients(processedClients || []);
@@ -272,7 +269,6 @@ export default function CasePage() {
       console.error("케이스 정보 가져오기 실패:", error);
       console.error("오류 상세 정보:", JSON.stringify(error, null, 2));
       console.error("오류 stack:", error.stack);
-
       toast.error("케이스 정보 가져오기 실패", {
         description: error.message || "알 수 없는 오류가 발생했습니다",
       });
@@ -280,45 +276,50 @@ export default function CasePage() {
       setLoading(false);
     }
   };
-
   // 알림 정보 가져오기
   const fetchNotifications = async () => {
-    console.log(caseId);
     setLoadingNotifications(true);
     try {
+      const effectiveCaseId = await resolveCaseId(caseId);
+      if (!effectiveCaseId) {
+        setNotifications([]);
+        return;
+      }
+      // test_case_notifications 대신 실제 존재하는 개인 알림 테이블 사용
       const { data, error } = await supabase
-        .from("test_case_notifications")
+        .from("test_individual_notifications")
         .select("*")
-        .eq("case_id", caseId)
+        .eq("case_id", effectiveCaseId)
         .order("created_at", { ascending: false })
         .limit(5);
-
       if (error) throw error;
       setNotifications(data || []);
     } catch (error) {
       console.error("알림 정보 조회 실패:", error);
+      setNotifications([]);
     } finally {
       setLoadingNotifications(false);
     }
   };
-
   // 알림 개수 가져오기
   const fetchNotificationCount = async () => {
     try {
+      const effectiveCaseId = await resolveCaseId(caseId);
+      if (!effectiveCaseId) {
+        setNotificationCount(0);
+        return;
+      }
       const { count, error } = await supabase
-        .from("test_case_notifications")
+        .from("test_individual_notifications")
         .select("*", { count: "exact", head: true })
-        .eq("case_id", caseId);
-
+        .eq("case_id", effectiveCaseId);
       if (error) throw error;
-
       setNotificationCount(count || 0);
     } catch (error) {
       console.error("알림 개수 조회 실패:", error);
       setNotificationCount(0);
     }
   };
-
   // 알림 유형에 따른 아이콘 가져오기
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -334,7 +335,6 @@ export default function CasePage() {
         return <Bell className="w-4 h-4 text-gray-500" />;
     }
   };
-
   // 알림 생성 시간 포맷팅
   const formatNotificationTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -344,7 +344,6 @@ export default function CasePage() {
     const diffMin = Math.floor(diffSec / 60);
     const diffHour = Math.floor(diffMin / 60);
     const diffDay = Math.floor(diffHour / 24);
-
     if (diffDay > 0) {
       return `${diffDay}일 전`;
     } else if (diffHour > 0) {
@@ -355,7 +354,6 @@ export default function CasePage() {
       return "방금 전";
     }
   };
-
   useEffect(() => {
     if (caseId && user) {
       fetchCaseDetails();
@@ -363,7 +361,6 @@ export default function CasePage() {
       fetchNotificationCount();
     }
   }, [caseId, user]);
-
   if (loading) {
     return (
       <div className="container p-4 mx-auto">
@@ -386,7 +383,6 @@ export default function CasePage() {
       </div>
     );
   }
-
   if (!caseData) {
     return (
       <div className="container p-4 mx-auto">
@@ -400,7 +396,6 @@ export default function CasePage() {
       </div>
     );
   }
-
   // 상태에 따른 배지 색상 매핑
   const getStatusColor = (status) => {
     const statusMap = {
@@ -408,10 +403,8 @@ export default function CasePage() {
       in_progress: "bg-violet-500 hover:bg-violet-600",
       completed: "bg-green-500 hover:bg-green-600",
     };
-
     return statusMap[status] || "bg-slate-500 hover:bg-slate-600";
   };
-
   // 당사자 유형에 따른 색상
   const getPartyTypeColor = (type) => {
     const typeMap = {
@@ -422,19 +415,14 @@ export default function CasePage() {
       applicant: "text-purple-600",
       respondent: "text-orange-600",
     };
-
     return typeMap[type] || "text-gray-600";
   };
-
   // 의뢰인 관리 함수
   const handleRemoveClient = async (clientId) => {
     if (!confirm("이 의뢰인을 삭제하시겠습니까?")) return;
-
     try {
       const { error } = await supabase.from("test_case_clients").delete().eq("id", clientId);
-
       if (error) throw error;
-
       // 의뢰인 목록 갱신
       setClients(clients.filter((client) => client.id !== clientId));
       toast.success("의뢰인이 삭제되었습니다");
@@ -445,13 +433,11 @@ export default function CasePage() {
       });
     }
   };
-
   const handleUserSearch = async () => {
     if (!userSearchTerm) {
       toast.warning("검색어를 입력해주세요");
       return;
     }
-
     try {
       setUserSearchLoading(true);
       const { data, error } = await supabase
@@ -459,7 +445,6 @@ export default function CasePage() {
         .select("*")
         .or(`name.ilike.%${userSearchTerm}%,email.ilike.%${userSearchTerm}%`)
         .limit(10);
-
       if (error) {
         if (error.code === "42P01") {
           // 테이블이 존재하지 않는 경우
@@ -482,13 +467,11 @@ export default function CasePage() {
       setUserSearchLoading(false);
     }
   };
-
   const handleOrgSearch = async () => {
     if (!orgSearchTerm) {
       toast.warning("검색어를 입력해주세요");
       return;
     }
-
     try {
       setOrgSearchLoading(true);
       const { data, error } = await supabase
@@ -496,7 +479,6 @@ export default function CasePage() {
         .select("*")
         .ilike("name", `%${orgSearchTerm}%`)
         .limit(10);
-
       if (error) {
         if (error.code === "42P01") {
           // 테이블이 존재하지 않는 경우
@@ -519,26 +501,22 @@ export default function CasePage() {
       setOrgSearchLoading(false);
     }
   };
-
   const handleAddUserClient = async (userId) => {
     try {
       // 이미 등록된 의뢰인인지 확인
       const isAlreadyClient = clients.some(
         (client) => client.client_type === "individual" && client.individual_id?.id === userId
       );
-
       if (isAlreadyClient) {
         toast.info("이미 등록된 의뢰인입니다");
         return;
       }
-
       const newClient = {
         case_id: caseId,
         individual_id: userId,
         organization_id: null,
         position: "",
       };
-
       const { data, error } = await supabase
         .from("test_case_clients")
         .insert(newClient)
@@ -550,19 +528,15 @@ export default function CasePage() {
         `
         )
         .single();
-
       if (error) throw error;
-
       // 클라이언트 객체 가공
       const processedClient = {
         ...data,
         client_type: "individual",
         individual_name: data.individual_id?.name,
       };
-
       // 의뢰인 목록 갱신
       setClients([...clients, processedClient]);
-
       toast.success("의뢰인이 추가되었습니다");
       setShowClientModal(false);
     } catch (error) {
@@ -572,26 +546,22 @@ export default function CasePage() {
       });
     }
   };
-
   const handleAddOrgClient = async (orgId) => {
     try {
       // 이미 등록된 의뢰인인지 확인
       const isAlreadyClient = clients.some(
         (client) => client.client_type === "organization" && client.organization_id?.id === orgId
       );
-
       if (isAlreadyClient) {
         toast.info("이미 등록된 의뢰인입니다");
         return;
       }
-
       const newClient = {
         case_id: caseId,
         individual_id: null,
         organization_id: orgId,
         position: "",
       };
-
       const { data, error } = await supabase
         .from("test_case_clients")
         .insert(newClient)
@@ -603,9 +573,7 @@ export default function CasePage() {
         `
         )
         .single();
-
       if (error) throw error;
-
       // 클라이언트 객체 가공
       const processedClient = {
         ...data,
@@ -613,10 +581,8 @@ export default function CasePage() {
         organization_name: data.organization_id?.name,
         representative_name: data.organization_id?.representative_name,
       };
-
       // 의뢰인 목록 갱신
       setClients([...clients, processedClient]);
-
       toast.success("의뢰인이 추가되었습니다");
       setShowClientModal(false);
     } catch (error) {
@@ -626,12 +592,10 @@ export default function CasePage() {
       });
     }
   };
-
   // 당사자 관리 함수
   const handleEditParty = async (partyId, partyData) => {
     try {
       setLoading(true);
-
       const {
         partyType,
         entityType,
@@ -644,32 +608,27 @@ export default function CasePage() {
         corporateNumber,
         position,
       } = partyData;
-
       // 필수 필드 검증
       if (!partyType) {
         toast.error("당사자 유형을 선택해주세요.");
         setLoading(false);
         return;
       }
-
       if (!entityType) {
         toast.error("개인/법인 구분을 선택해주세요.");
         setLoading(false);
         return;
       }
-
       if (entityType === "individual" && !name) {
         toast.error("이름을 입력해주세요.");
         setLoading(false);
         return;
       }
-
       if (entityType === "corporation" && !companyName) {
         toast.error("법인/단체명을 입력해주세요.");
         setLoading(false);
         return;
       }
-
       // 당사자 수정
       const { error } = await supabase
         .from("test_case_parties")
@@ -687,14 +646,12 @@ export default function CasePage() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", partyId);
-
       if (error) {
         console.error("Error updating party:", error);
         toast.error("당사자 수정 중 오류가 발생했습니다.");
         setLoading(false);
         return;
       }
-
       // 성공적으로 당사자가 수정되면 목록 새로고침
       fetchCaseDetails();
       setEditMode(false);
@@ -708,7 +665,6 @@ export default function CasePage() {
       setLoading(false);
     }
   };
-
   // 당사자 수정 모달 열기
   const openEditPartyModal = (party) => {
     setEditMode(true);
@@ -725,15 +681,11 @@ export default function CasePage() {
     setPosition(party.position || "");
     setShowPartyModal(true);
   };
-
   const handleRemoveParty = async (partyId) => {
     if (!confirm("이 당사자를 삭제하시겠습니까?")) return;
-
     try {
       const { error } = await supabase.from("test_case_parties").delete().eq("id", partyId);
-
       if (error) throw error;
-
       // 당사자 목록 갱신
       setParties(parties.filter((party) => party.id !== partyId));
       toast.success("당사자가 삭제되었습니다");
@@ -744,32 +696,26 @@ export default function CasePage() {
       });
     }
   };
-
   // 상태 관리 함수
   const handleStatusChange = (value) => {
     setSelectedStatus(value);
   };
-
   const handleUpdateStatus = async () => {
     if (!selectedStatus) {
       toast.error("상태를 선택해주세요");
       return;
     }
-
     try {
       const { error } = await supabase
         .from("test_cases")
         .update({ status: selectedStatus })
         .eq("id", caseId);
-
       if (error) throw error;
-
       // 케이스 정보 갱신
       setCaseData({
         ...caseData,
         status: selectedStatus,
       });
-
       toast.success("상태가 변경되었습니다");
       setShowStatusModal(false);
     } catch (error) {
@@ -779,12 +725,10 @@ export default function CasePage() {
       });
     }
   };
-
   // 당사자 관리 함수에 추가
   const handleAddParty = async (partyData) => {
     try {
       setLoading(true);
-
       const {
         partyType,
         entityType,
@@ -797,7 +741,6 @@ export default function CasePage() {
         corporateNumber,
         position,
       } = partyData;
-
       console.log("당사자 저장 데이터:", {
         partyType,
         entityType,
@@ -810,32 +753,27 @@ export default function CasePage() {
         corporateNumber,
         position,
       });
-
       // 필수 필드 검증
       if (!partyType) {
         toast.error("당사자 유형을 선택해주세요.");
         setLoading(false);
         return;
       }
-
       if (!entityType) {
         toast.error("개인/법인 구분을 선택해주세요.");
         setLoading(false);
         return;
       }
-
       if (entityType === "individual" && !name) {
         toast.error("이름을 입력해주세요.");
         setLoading(false);
         return;
       }
-
       if (entityType === "corporation" && !companyName) {
         toast.error("법인/단체명을 입력해주세요.");
         setLoading(false);
         return;
       }
-
       // 당사자 추가
       const { data: newParty, error } = await supabase
         .from("test_case_parties")
@@ -857,16 +795,13 @@ export default function CasePage() {
           },
         ])
         .select();
-
       if (error) {
         console.error("Error adding party:", error);
         toast.error("당사자 추가 중 오류가 발생했습니다.");
         setLoading(false);
         return;
       }
-
       console.log("저장된 당사자:", newParty);
-
       // 성공적으로 당사자가 추가되면 목록 새로고침
       fetchCaseDetails();
       setShowPartyModal(false);
@@ -879,7 +814,6 @@ export default function CasePage() {
       setLoading(false);
     }
   };
-
   // 당사자 추가 후 폼 초기화
   const resetPartyForm = () => {
     setPartyType("plaintiff");
@@ -893,7 +827,6 @@ export default function CasePage() {
     setCorporateNumber("");
     setPosition("");
   };
-
   // 모달 닫기 시 상태 초기화
   const handlePartyModalOpenChange = (open) => {
     if (!open) {
@@ -901,12 +834,10 @@ export default function CasePage() {
     }
     setShowPartyModal(open);
   };
-
   // 채권금액 상세 정보 업데이트 핸들러
   const handleUpdateDebtInfo = async (debtInfo) => {
     try {
       setLoading(true);
-
       // 1. 사건의 principal_amount 필드만 업데이트
       const { error: caseError } = await supabase
         .from("test_cases")
@@ -914,17 +845,13 @@ export default function CasePage() {
           principal_amount: debtInfo.principal_amount,
         })
         .eq("id", caseId);
-
       if (caseError) throw caseError;
-
       // 2. 기존 이자 정보 모두 삭제하고 다시 저장
       const { error: deleteInterestsError } = await supabase
         .from("test_case_interests")
         .delete()
         .eq("case_id", caseId);
-
       if (deleteInterestsError) throw deleteInterestsError;
-
       // 3. 이자 정보가 있으면 새로 저장
       if (debtInfo.interests && debtInfo.interests.length > 0) {
         const interestsToInsert = debtInfo.interests.map((interest) => ({
@@ -935,22 +862,17 @@ export default function CasePage() {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }));
-
         const { error: insertInterestsError } = await supabase
           .from("test_case_interests")
           .insert(interestsToInsert);
-
         if (insertInterestsError) throw insertInterestsError;
       }
-
       // 4. 기존 비용 정보 모두 삭제하고 다시 저장
       const { error: deleteExpensesError } = await supabase
         .from("test_case_expenses")
         .delete()
         .eq("case_id", caseId);
-
       if (deleteExpensesError) throw deleteExpensesError;
-
       // 5. 비용 정보가 있으면 새로 저장
       if (debtInfo.expenses && debtInfo.expenses.length > 0) {
         const expensesToInsert = debtInfo.expenses.map((expense) => ({
@@ -963,14 +885,11 @@ export default function CasePage() {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }));
-
         const { error: insertExpensesError } = await supabase
           .from("test_case_expenses")
           .insert(expensesToInsert);
-
         if (insertExpensesError) throw insertExpensesError;
       }
-
       // 데이터 새로고침
       await fetchCaseDetails();
       toast.success("채권 정보가 업데이트되었습니다");
@@ -983,7 +902,6 @@ export default function CasePage() {
       setLoading(false);
     }
   };
-
   // 사용자 검색 시 엔터키 처리
   const handleUserSearchKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -991,7 +909,6 @@ export default function CasePage() {
       handleUserSearch();
     }
   };
-
   // 조직 검색 시 엔터키 처리
   const handleOrgSearchKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -999,14 +916,12 @@ export default function CasePage() {
       handleOrgSearch();
     }
   };
-
   // 소송 생성 또는 수정 후 콜백 함수
   const onLawsuitCreated = async () => {
     // 소송 정보가 변경되면 사건 정보를 새로 불러옵니다
     toast.success("소송 정보가 저장되었습니다");
     await fetchCaseDetails();
   };
-
   // 일정 추가 후 콜백 함수
   const onScheduleAdded = async () => {
     // 일정 정보가 변경되면 사건 정보를 새로 불러옵니다
@@ -1015,7 +930,6 @@ export default function CasePage() {
     setEditingLawsuit(null);
     setEditingSchedule(null);
   };
-
   // 회수 활동 추가 후 콜백 함수
   const onRecoveryAdded = async () => {
     // 회수 활동 정보가 변경되면 사건 정보를 새로 불러옵니다
@@ -1023,7 +937,6 @@ export default function CasePage() {
     await fetchCaseDetails();
     setEditingRecovery(null);
   };
-
   // 제출 서류 추가 후 콜백 함수
   const onSubmissionAdded = async () => {
     // 제출 서류 정보가 변경되면 사건 정보를 새로 불러옵니다
@@ -1032,28 +945,22 @@ export default function CasePage() {
     setEditingLawsuit(null);
     setEditingSubmission(null);
   };
-
   // 사건 삭제 함수 추가
   const handleDeleteCase = async () => {
     if (!caseId) return;
-
     try {
       setIsDeleting(true);
-
       // 단계별 삭제 프로세스 시작
       console.log(`사건 ID ${caseId} 삭제 프로세스 시작`);
-
       // 1. 제출 문서 및 관련 파일 삭제
       const { data: submissionData, error: submissionQueryError } = await supabase
         .from("test_lawsuit_submissions")
         .select("id, file_url")
         .eq("lawsuit_id", caseId);
-
       if (submissionQueryError) {
         console.error("제출 문서 조회 오류:", submissionQueryError);
       } else if (submissionData && submissionData.length > 0) {
         console.log(`${submissionData.length}개의 제출 문서 삭제 중...`);
-
         // 첨부 파일 삭제
         for (const submission of submissionData) {
           if (submission.file_url) {
@@ -1069,7 +976,6 @@ export default function CasePage() {
             }
           }
         }
-
         // 제출 문서 삭제
         const { error: submissionDeleteError } = await supabase
           .from("test_lawsuit_submissions")
@@ -1078,48 +984,40 @@ export default function CasePage() {
             "id",
             submissionData.map((s) => s.id)
           );
-
         if (submissionDeleteError) {
           console.error("제출 문서 삭제 오류:", submissionDeleteError);
         } else {
           console.log("제출 문서 삭제 완료");
         }
       }
-
       // 2. 소송 관련 데이터 삭제
       const { error: lawsuitPartyDeleteError } = await supabase
         .from("test_lawsuit_parties")
         .delete()
         .eq("lawsuit_id", caseId);
-
       if (lawsuitPartyDeleteError) {
         console.error("소송 당사자 관계 삭제 오류:", lawsuitPartyDeleteError);
       } else {
         console.log("소송 당사자 관계 삭제 완료");
       }
-
       const { error: lawsuitDeleteError } = await supabase
         .from("test_case_lawsuits")
         .delete()
         .eq("case_id", caseId);
-
       if (lawsuitDeleteError) {
         console.error("소송 삭제 오류:", lawsuitDeleteError);
       } else {
         console.log("소송 데이터 삭제 완료");
       }
-
       // 3. 회수 활동 및 관련 파일 삭제
       const { data: recoveryData, error: recoveryQueryError } = await supabase
         .from("test_recovery_activities")
         .select("id, file_url")
         .eq("case_id", caseId);
-
       if (recoveryQueryError) {
         console.error("회수 활동 조회 오류:", recoveryQueryError);
       } else if (recoveryData && recoveryData.length > 0) {
         console.log(`${recoveryData.length}개의 회수 활동 삭제 중...`);
-
         // 첨부 파일 삭제
         for (const activity of recoveryData) {
           if (activity.file_url) {
@@ -1135,7 +1033,6 @@ export default function CasePage() {
             }
           }
         }
-
         // 회수 활동 삭제
         const { error: recoveryDeleteError } = await supabase
           .from("test_recovery_activities")
@@ -1144,119 +1041,98 @@ export default function CasePage() {
             "id",
             recoveryData.map((r) => r.id)
           );
-
         if (recoveryDeleteError) {
           console.error("회수 활동 삭제 오류:", recoveryDeleteError);
         } else {
           console.log("회수 활동 삭제 완료");
         }
       }
-
       // 4. 알림 삭제
       const { error: caseNotificationDeleteError } = await supabase
         .from("test_case_notifications")
         .delete()
         .eq("case_id", caseId);
-
       if (caseNotificationDeleteError) {
         console.error("사건 알림 삭제 오류:", caseNotificationDeleteError);
       } else {
         console.log("사건 알림 삭제 완료");
       }
-
       const { error: individualNotificationDeleteError } = await supabase
         .from("test_individual_notifications")
         .delete()
         .eq("case_id", caseId);
-
       if (individualNotificationDeleteError) {
         console.error("개인 알림 삭제 오류:", individualNotificationDeleteError);
       } else {
         console.log("개인 알림 삭제 완료");
       }
-
       // 5. 기일 삭제
       const { error: scheduleDeleteError } = await supabase
         .from("test_schedules")
         .delete()
         .eq("lawsuit_id", caseId);
-
       if (scheduleDeleteError) {
         console.error("기일 삭제 오류:", scheduleDeleteError);
       } else {
         console.log("기일 데이터 삭제 완료");
       }
-
       // 6. 사건 관련 기타 데이터 삭제
       const { error: handlerDeleteError } = await supabase
         .from("test_case_handlers")
         .delete()
         .eq("case_id", caseId);
-
       if (handlerDeleteError) {
         console.error("사건 담당자 삭제 오류:", handlerDeleteError);
       } else {
         console.log("사건 담당자 삭제 완료");
       }
-
       const { error: clientDeleteError } = await supabase
         .from("test_case_clients")
         .delete()
         .eq("case_id", caseId);
-
       if (clientDeleteError) {
         console.error("의뢰인 삭제 오류:", clientDeleteError);
       } else {
         console.log("의뢰인 삭제 완료");
       }
-
       const { error: partyDeleteError } = await supabase
         .from("test_case_parties")
         .delete()
         .eq("case_id", caseId);
-
       if (partyDeleteError) {
         console.error("당사자 삭제 오류:", partyDeleteError);
       } else {
         console.log("당사자 삭제 완료");
       }
-
       const { error: interestDeleteError } = await supabase
         .from("test_case_interests")
         .delete()
         .eq("case_id", caseId);
-
       if (interestDeleteError) {
         console.error("이자 정보 삭제 오류:", interestDeleteError);
       } else {
         console.log("이자 정보 삭제 완료");
       }
-
       const { error: expenseDeleteError } = await supabase
         .from("test_case_expenses")
         .delete()
         .eq("case_id", caseId);
-
       if (expenseDeleteError) {
         console.error("비용 정보 삭제 오류:", expenseDeleteError);
       } else {
         console.log("비용 정보 삭제 완료");
       }
-
       // 7. 마지막으로 사건 자체 삭제
       const { error: caseDeleteError } = await supabase
         .from("test_cases")
         .delete()
         .eq("id", caseId);
-
       if (caseDeleteError) {
         console.error("사건 삭제 오류:", caseDeleteError);
         throw caseDeleteError;
       }
-
       console.log("사건 삭제 완료");
       toast.success("사건이 성공적으로 삭제되었습니다");
-
       // 사건 목록 페이지로 이동
       router.push("/cases");
     } catch (error) {
@@ -1269,7 +1145,6 @@ export default function CasePage() {
       setDeleteDialogOpen(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-900">
       <div className="container p-6 mx-auto">
@@ -1284,7 +1159,6 @@ export default function CasePage() {
             돌아가기
           </Button>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 사이드바 */}
           <div className="md:col-span-1">
@@ -1306,7 +1180,6 @@ export default function CasePage() {
                       <RefreshCw className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-
                   <div className="space-y-2">
                     {loadingNotifications ? (
                       <div className="space-y-2">
@@ -1394,7 +1267,6 @@ export default function CasePage() {
                     </Button>
                   )}
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">채권금액</p>
                   <div className="flex items-center">
@@ -1421,16 +1293,13 @@ export default function CasePage() {
                     </Button>
                   </div>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">등록일</p>
                   <p className="font-medium text-gray-800 dark:text-gray-200">
                     {formatDate(caseData.created_at)}
                   </p>
                 </div>
-
                 <Separator className="my-2 bg-gray-200 dark:bg-gray-700" />
-
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <p className="text-sm text-gray-500 dark:text-gray-400">의뢰인</p>
@@ -1445,7 +1314,6 @@ export default function CasePage() {
                       </Button>
                     )}
                   </div>
-
                   <div className="space-y-2">
                     {clients.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic">
@@ -1467,11 +1335,9 @@ export default function CasePage() {
                         </div>
                       ))
                     )}
-
                     {clients.length > 3 && (
                       <p className="text-xs text-muted-foreground">외 {clients.length - 3}명</p>
                     )}
-
                     {clients.length > 0 && (
                       <Button
                         variant="outline"
@@ -1484,7 +1350,6 @@ export default function CasePage() {
                     )}
                   </div>
                 </div>
-
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <p className="text-sm text-gray-500 dark:text-gray-400">당사자</p>
@@ -1499,7 +1364,6 @@ export default function CasePage() {
                       </Button>
                     )}
                   </div>
-
                   <div className="space-y-2">
                     {parties.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic">
@@ -1516,7 +1380,6 @@ export default function CasePage() {
                           const isMainPartyB = ["plaintiff", "creditor", "applicant"].includes(
                             b.party_type
                           );
-
                           if (isMainPartyA && !isMainPartyB) return -1;
                           if (!isMainPartyA && isMainPartyB) return 1;
                           return 0;
@@ -1550,11 +1413,9 @@ export default function CasePage() {
                           </div>
                         ))
                     )}
-
                     {parties.length > 3 && (
                       <p className="text-xs text-muted-foreground">외 {parties.length - 3}명</p>
                     )}
-
                     {parties.length > 0 && (
                       <Button
                         variant="outline"
@@ -1567,9 +1428,7 @@ export default function CasePage() {
                     )}
                   </div>
                 </div>
-
                 <Separator className="my-2 bg-gray-200 dark:bg-gray-700" />
-
                 <div className="mt-4">
                   <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                     <AlertDialogTrigger asChild>
@@ -1613,7 +1472,6 @@ export default function CasePage() {
               </CardContent>
             </Card>
           </div>
-
           {/* 메인 컨텐츠 */}
           <div className="md:col-span-3">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl overflow-hidden">
@@ -1642,7 +1500,6 @@ export default function CasePage() {
                       회수활동
                     </TabsTrigger>
                   </TabsList>
-
                   <div className="p-5">
                     <TabsContent value="dashboard" className="mt-0">
                       <CaseDashboard
@@ -1652,11 +1509,9 @@ export default function CasePage() {
                         clients={clients}
                       />
                     </TabsContent>
-
                     <TabsContent value="lawsuits" className="mt-0">
                       <LawsuitManager caseId={caseId} parties={parties} viewMode={true} />
                     </TabsContent>
-
                     <TabsContent value="recovery" className="mt-0">
                       <RecoveryActivities caseId={caseId} parties={parties} />
                     </TabsContent>
@@ -1666,7 +1521,6 @@ export default function CasePage() {
             </Card>
           </div>
         </div>
-
         {/* 모달 컴포넌트 사용 */}
         <ClientDetailModal
           open={showClientDetailModal}
@@ -1675,7 +1529,6 @@ export default function CasePage() {
           onRemoveClient={handleRemoveClient}
           user={user}
         />
-
         <PartyDetailModal
           open={showPartyDetailModal}
           onOpenChange={setShowPartyDetailModal}
@@ -1685,7 +1538,6 @@ export default function CasePage() {
           user={user}
           getPartyTypeColor={getPartyTypeColor}
         />
-
         <ClientManageModal
           open={showClientModal}
           onOpenChange={setShowClientModal}
@@ -1704,7 +1556,6 @@ export default function CasePage() {
           handleUserSearchKeyDown={handleUserSearchKeyDown}
           handleOrgSearchKeyDown={handleOrgSearchKeyDown}
         />
-
         <StatusChangeModal
           open={showStatusModal}
           onOpenChange={setShowStatusModal}
@@ -1713,7 +1564,6 @@ export default function CasePage() {
           handleStatusChange={handleStatusChange}
           handleUpdateStatus={handleUpdateStatus}
         />
-
         <PartyManageModal
           open={showPartyModal}
           onOpenChange={handlePartyModalOpenChange}
@@ -1743,7 +1593,6 @@ export default function CasePage() {
           editPartyId={editPartyId}
           clients={clients}
         />
-
         {/* 채권금액 상세보기 모달 */}
         <DebtDetailModal
           open={showDebtDetailModal}
@@ -1752,7 +1601,6 @@ export default function CasePage() {
           user={user}
           onUpdateDebtInfo={handleUpdateDebtInfo}
         />
-
         <AddLawsuitModal
           open={openLawsuitModal}
           onOpenChange={setOpenLawsuitModal}
@@ -1762,7 +1610,6 @@ export default function CasePage() {
           caseDetails={caseData}
           clients={clients}
         />
-
         <ScheduleFormModal
           open={openScheduleModal}
           onOpenChange={setOpenScheduleModal}
@@ -1772,7 +1619,6 @@ export default function CasePage() {
           caseDetails={caseData}
           clients={clients}
         />
-
         <RecoveryActivityModal
           open={openRecoveryModal}
           onOpenChange={setOpenRecoveryModal}
@@ -1785,7 +1631,6 @@ export default function CasePage() {
           caseDetails={caseData}
           clients={clients}
         />
-
         <AddSubmissionModal
           open={openSubmissionModal}
           onOpenChange={setOpenSubmissionModal}
