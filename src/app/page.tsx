@@ -123,14 +123,14 @@ export default async function MarketingPage() {
             </div>
           ) : null}
 
-          <div className="w-full max-w-5xl">
+          <div className="w-full max-w-7xl">
             <div className="overflow-hidden rounded-[2rem] border border-white/12 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(8,32,58,0.96))] p-2 sm:p-3 shadow-[0_28px_64px_rgba(8,47,73,0.3)]">
               <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950">
                 <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(180deg,rgba(2,6,23,0.64),rgba(2,6,23,0))]" />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(2,6,23,0),rgba(2,6,23,0.82))]" />
-                <div className="h-[170px] sm:h-[210px] lg:h-[240px]">
+                <div className="h-[180px] sm:h-[220px] lg:h-[260px]">
                   <video
-                    className="h-full w-full scale-[1.16] object-cover object-[center_4%]"
+                    className="h-full w-full scale-[1.12] object-cover object-[center_10%]"
                     src="/vein-spiral-demo.mp4"
                     autoPlay
                     muted
