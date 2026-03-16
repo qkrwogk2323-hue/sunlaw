@@ -5,6 +5,21 @@ import { createClient } from '@supabase/supabase-js';
 import { createAuthenticatedSmokeAdminClient, maskEmail, resolveAuthenticatedSmokeAccount } from './authenticated-smoke-account.mjs';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = resolve(currentDir, '../..');
+
+function loadOptionalEnvFile(filePath) {
+  try {
+    process.loadEnvFile?.(filePath);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+}
+
+loadOptionalEnvFile(resolve(workspaceRoot, '.env.local'));
+loadOptionalEnvFile(resolve(workspaceRoot, '.env'));
 const storageStatePath = resolve(currentDir, '../../playwright/.auth/authenticated-smoke.json');
 
 function requireEnv(name) {

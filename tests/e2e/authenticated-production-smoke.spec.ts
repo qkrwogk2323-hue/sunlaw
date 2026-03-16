@@ -198,8 +198,8 @@ test('seeded session can open organization request history', async ({ page }) =>
 test('seeded session can open client access search', async ({ page }) => {
   await page.goto('/client-access');
 
-  await expect(page.getByRole('heading', { name: '조직 검색부터 연결 요청까지 한 번에 이어집니다.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '조직 검색', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '초대번호가 있으면 바로 입력하고, 없으면 조직가입신청으로 이어집니다.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '초대번호가 없으면 조직가입신청하기' })).toBeVisible();
   await expect(page.getByRole('button', { name: '검색하기' })).toBeVisible();
 });
 
