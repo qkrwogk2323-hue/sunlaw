@@ -6,11 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath } from '@/lib/client-account';
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
   const auth = await getCurrentAuth();
   if (auth) {
     redirect(getAuthenticatedHomePath(auth));
   }
+
+  const resolved = searchParams ? await searchParams : undefined;
+  const error = resolved?.error;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-16">
@@ -23,6 +30,11 @@ export default async function LoginPage() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          {error ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-700">
+              {error}
+            </div>
+          ) : null}
           <LoginButton />
           <div className="rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-500">
             처음 이용하신다면 <Link href={'/start/signup' as Route} className="font-medium text-sky-700">회원가입하기</Link>에서 계정을 만든 뒤 의뢰인 가입 또는 조직 개설 신청으로 이어갈 수 있습니다.
