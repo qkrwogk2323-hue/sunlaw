@@ -33,9 +33,38 @@ const requestStatusTones: Record<string, 'green' | 'amber' | 'red' | 'slate'> = 
   cancelled: 'slate'
 };
 
+function getVerificationTone(status: string | null) {
+  return status ? verificationTones[status] ?? 'slate' : 'slate';
+}
+
+function getVerificationLabel(status: string | null) {
+  return status ? verificationLabels[status] ?? status : '-';
+}
+
 export default async function OrganizationRequestPage({ searchParams }: { searchParams?: Promise<{ submitted?: string; error?: string }> }) {
   const auth = await getCurrentAuth();
-  const requests = auth ? await listMySignupRequests() : [];
+  let requests: Array<{
+    id: string;
+    organization_name: string;
+    business_number: string | null;
+    status: string;
+    business_registration_verification_status: string | null;
+    business_registration_verification_note: string | null;
+    business_registration_document_name: string | null;
+    reviewed_note: string | null;
+    note: string | null;
+  }> = [];
+  let requestHistoryUnavailable = false;
+
+  if (auth) {
+    try {
+      requests = await listMySignupRequests();
+    } catch (error) {
+      requestHistoryUnavailable = true;
+      console.error('Failed to render organization signup request history', error);
+    }
+  }
+
   const resolved = searchParams ? await searchParams : undefined;
   const submitted = resolved?.submitted;
   const error = resolved?.error;
@@ -75,15 +104,16 @@ export default async function OrganizationRequestPage({ searchParams }: { search
           <Card>
             <CardHeader><CardTitle>나의 신청 내역</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {requests.length ? requests.map((request: any) => (
+              {requestHistoryUnavailable ? <p className="text-sm text-amber-700">신청 내역을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p> : null}
+              {(!requestHistoryUnavailable && requests.length) ? requests.map((request) => (
                 <div key={request.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="font-medium text-slate-900">{request.organization_name}</p>
                     <Badge tone={requestStatusTones[request.status] ?? 'slate'}>{requestStatusLabels[request.status] ?? request.status}</Badge>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge tone={verificationTones[request.business_registration_verification_status] ?? 'slate'}>
-                      {verificationLabels[request.business_registration_verification_status] ?? request.business_registration_verification_status ?? '-'}
+                    <Badge tone={getVerificationTone(request.business_registration_verification_status)}>
+                      {getVerificationLabel(request.business_registration_verification_status)}
                     </Badge>
                     <Badge tone="blue">사업자번호 {formatBusinessNumber(request.business_number)}</Badge>
                   </div>
@@ -97,7 +127,8 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                   </p>
                   <p className="text-slate-500">메모: {request.reviewed_note ?? request.note ?? '-'}</p>
                 </div>
-              )) : <p className="text-sm text-slate-500">아직 제출한 신청이 없습니다.</p>}
+              )) : null}
+              {!requestHistoryUnavailable && !requests.length ? <p className="text-sm text-slate-500">아직 제출한 신청이 없습니다.</p> : null}
             </CardContent>
           </Card>
         ) : null}

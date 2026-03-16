@@ -28,8 +28,10 @@ import {
 
 const organizationSignupDocumentBucket = 'organization-signup-documents';
 const maxOrganizationSignupDocumentSize = 10 * 1024 * 1024;
+const allowedOrganizationSignupDocumentMimeTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 const allowedOrganizationSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg', 'jpeg']);
 
+type OrganizationSignupDocumentMimeType = 'application/pdf' | 'image/png' | 'image/jpeg';
 type OrganizationSignupVerificationStatus = 'matched' | 'mismatch' | 'unreadable';
 
 function resolveRequesterEmail(auth: { user: { email?: string | null }; profile: { email?: string | null } }) {
@@ -78,7 +80,52 @@ function buildOrganizationSignupDocumentPath(requesterProfileId: string, fileNam
   return `requester/${requesterProfileId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
 }
 
-function validateOrganizationSignupDocument(file: File) {
+function detectOrganizationSignupDocumentType(fileBytes: Uint8Array): OrganizationSignupDocumentMimeType | null {
+  if (
+    fileBytes.length >= 8
+    && fileBytes[0] === 0x89
+    && fileBytes[1] === 0x50
+    && fileBytes[2] === 0x4e
+    && fileBytes[3] === 0x47
+    && fileBytes[4] === 0x0d
+    && fileBytes[5] === 0x0a
+    && fileBytes[6] === 0x1a
+    && fileBytes[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+
+  if (fileBytes.length >= 3 && fileBytes[0] === 0xff && fileBytes[1] === 0xd8 && fileBytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (
+    fileBytes.length >= 5
+    && fileBytes[0] === 0x25
+    && fileBytes[1] === 0x50
+    && fileBytes[2] === 0x44
+    && fileBytes[3] === 0x46
+    && fileBytes[4] === 0x2d
+  ) {
+    return 'application/pdf';
+  }
+
+  return null;
+}
+
+function getAllowedOrganizationSignupDocumentExtensionsByType(type: OrganizationSignupDocumentMimeType) {
+  if (type === 'application/pdf') {
+    return new Set(['pdf']);
+  }
+
+  if (type === 'image/png') {
+    return new Set(['png']);
+  }
+
+  return new Set(['jpg', 'jpeg']);
+}
+
+async function validateOrganizationSignupDocument(file: File) {
   if (file.size <= 0) {
     throw new Error('사업자등록증 파일을 업로드해 주세요.');
   }
@@ -91,6 +138,23 @@ function validateOrganizationSignupDocument(file: File) {
   if (!allowedOrganizationSignupDocumentExtensions.has(extension)) {
     throw new Error('사업자등록증은 PDF, PNG, JPG 파일만 업로드할 수 있습니다.');
   }
+
+  const signature = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const detectedType = detectOrganizationSignupDocumentType(signature);
+  if (!detectedType) {
+    throw new Error('실제 파일 형식을 확인할 수 없습니다. PDF, PNG, JPG 파일만 업로드해 주세요.');
+  }
+
+  if (!getAllowedOrganizationSignupDocumentExtensionsByType(detectedType).has(extension)) {
+    throw new Error('파일 확장자와 실제 파일 형식이 일치하지 않습니다. 파일을 다시 확인해 주세요.');
+  }
+
+  const mimeType = file.type.toLowerCase();
+  if (mimeType && (!allowedOrganizationSignupDocumentMimeTypes.has(mimeType) || mimeType !== detectedType)) {
+    throw new Error('파일 정보와 실제 파일 형식이 일치하지 않습니다. 다른 파일로 다시 시도해 주세요.');
+  }
+
+  return detectedType;
 }
 
 function extractBusinessNumberCandidates(text: string) {
@@ -113,13 +177,15 @@ function extractBusinessNumberCandidates(text: string) {
   return Array.from(matches);
 }
 
-async function verifyOrganizationSignupDocument(file: File, normalizedBusinessNumber: string): Promise<{
+async function verifyOrganizationSignupDocument(
+  file: File,
+  normalizedBusinessNumber: string,
+  detectedType: OrganizationSignupDocumentMimeType
+): Promise<{
   status: OrganizationSignupVerificationStatus;
   note: string;
   verifiedNumber: string | null;
 }> {
-  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
-
   if (!isValidKoreanBusinessNumber(normalizedBusinessNumber)) {
     return {
       status: 'mismatch',
@@ -128,18 +194,10 @@ async function verifyOrganizationSignupDocument(file: File, normalizedBusinessNu
     };
   }
 
-  if (file.type.startsWith('image/')) {
+  if (detectedType.startsWith('image/')) {
     return {
       status: 'unreadable',
       note: '이미지 파일은 현재 자동 판독이 지원되지 않아 관리자 수기 확인이 필요합니다.',
-      verifiedNumber: null
-    };
-  }
-
-  if (extension !== 'pdf') {
-    return {
-      status: 'unreadable',
-      note: '자동 대조는 현재 PDF 문서에 한해 시도됩니다. 관리자 검토가 필요합니다.',
       verifiedNumber: null
     };
   }
@@ -562,15 +620,15 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
       note: formData.get('note')
     });
 
-    validateOrganizationSignupDocument(parsed.businessRegistrationDocument);
+    const detectedDocumentType = await validateOrganizationSignupDocument(parsed.businessRegistrationDocument);
 
     const requesterEmail = resolveRequesterEmail(auth);
     const normalizedBusinessNumber = normalizeBusinessNumber(parsed.businessNumber);
-    const verification = await verifyOrganizationSignupDocument(parsed.businessRegistrationDocument, normalizedBusinessNumber);
+    const verification = await verifyOrganizationSignupDocument(parsed.businessRegistrationDocument, normalizedBusinessNumber, detectedDocumentType);
     storagePath = buildOrganizationSignupDocumentPath(auth.user.id, parsed.businessRegistrationDocument.name);
 
     const { error: uploadError } = await admin.storage.from(organizationSignupDocumentBucket).upload(storagePath, parsed.businessRegistrationDocument, {
-      contentType: parsed.businessRegistrationDocument.type || undefined,
+      contentType: detectedDocumentType,
       upsert: false
     });
 
@@ -590,7 +648,7 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
       note: parsed.note || null,
       business_registration_document_path: storagePath,
       business_registration_document_name: parsed.businessRegistrationDocument.name,
-      business_registration_document_mime_type: parsed.businessRegistrationDocument.type || null,
+      business_registration_document_mime_type: detectedDocumentType,
       business_registration_document_size: parsed.businessRegistrationDocument.size,
       business_registration_verification_status: verification.status,
       business_registration_verification_note: verification.note,

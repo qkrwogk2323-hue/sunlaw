@@ -22,42 +22,43 @@ export function registerPublicRouteSmokeTests() {
     await page.locator('a[href="/start/signup"]').click();
 
     await expect(page).toHaveURL(/\/start\/signup$/);
-    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 가입 방식을 선택하세요' })).toBeVisible();
   });
 
   test('signup guide asks anonymous users to sign up first', async ({ page }) => {
     await page.goto('/start/signup');
 
     await expect(page.getByRole('heading', { name: '회원가입 후 필요한 가입 경로를 이어서 선택하세요.' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 가입 방식을 선택하세요' })).toBeVisible();
     await expect(page.getByRole('button', { name: '카카오로 시작하기' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '일반회원가입' })).toBeVisible();
   });
 
   test('signup guide defers organization flow until after signup', async ({ page }) => {
     await page.goto('/start/signup?flow=organization');
 
-    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 가입 방식을 선택하세요' })).toBeVisible();
     await expect(page.getByRole('button', { name: '카카오로 시작하기' })).toBeVisible();
   });
 
   test('signup guide renders the client flow login step', async ({ page }) => {
     await page.goto('/start/signup?flow=client');
 
-    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 가입 방식을 선택하세요' })).toBeVisible();
     await expect(page.getByRole('button', { name: '카카오로 시작하기' })).toBeVisible();
   });
 
   test('signup guide renders the connection flow details', async ({ page }) => {
     await page.goto('/start/signup?flow=connection');
 
-    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 가입 방식을 선택하세요' })).toBeVisible();
     await expect(page.getByRole('button', { name: '카카오로 시작하기' })).toBeVisible();
   });
 
   test('login page exposes the signup guide entry', async ({ page }) => {
     await page.goto('/login');
 
-    await expect(page.getByRole('heading', { name: '카카오로 로그인' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
     await expect(page.getByRole('link', { name: '회원가입하기' })).toHaveAttribute('href', '/start/signup');
   });
 
@@ -80,28 +81,28 @@ export function registerPublicRouteSmokeTests() {
     await page.goto('/dashboard');
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: '카카오로 로그인' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
   });
 
   test('anonymous users are redirected to login before invitation acceptance', async ({ page }) => {
     await page.goto('/invite/test-token');
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: '카카오로 로그인' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
   });
 
   test('auth callback preserves the requested next path without a code', async ({ page }) => {
     await page.goto('/auth/callback?next=/start/signup?flow=connection');
 
     await expect(page).toHaveURL(/\/start\/signup\?flow=connection$/);
-    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 가입 방식을 선택하세요' })).toBeVisible();
   });
 
   test('oauth code landing on the homepage is rerouted through auth callback handling', async ({ page }) => {
     await page.goto('/?code=test-oauth-code');
 
     await expect(page).toHaveURL(/\/login\?error=/);
-    await expect(page.getByRole('heading', { name: '카카오로 로그인' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
   });
 
   test('unknown routes show the not found experience', async ({ page }) => {

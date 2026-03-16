@@ -42,7 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const platformScenarioOrganizations = platformOrganizations.filter((organization) => organization.name?.includes('(가상조직)'));
 
   if (!auth.memberships.length && auth.profile.platform_role !== 'platform_admin') {
-    redirect('/organization-request' as Route);
+    redirect('/start/signup' as Route);
   }
 
   return (

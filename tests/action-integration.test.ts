@@ -267,6 +267,47 @@ describe('server action integration', () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/team');
   });
 
+  it('rejects organization signup files whose actual signature does not match the claimed document type', async () => {
+    const upload = vi.fn(async () => ({ error: null }));
+    const remove = vi.fn(async () => ({ error: null }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn()
+    });
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      storage: {
+        from: vi.fn(() => ({ upload, remove }))
+      },
+      from: vi.fn()
+    });
+
+    const formData = new FormData();
+    formData.set('name', '시그니처 검증 테스트 조직');
+    formData.set('kind', 'law_firm');
+    formData.set('businessNumber', '220-81-62517');
+    formData.set('representativeName', '');
+    formData.set('representativeTitle', '');
+    formData.set('email', '');
+    formData.set('phone', '');
+    formData.set('addressLine1', '');
+    formData.set('addressLine2', '');
+    formData.set('postalCode', '');
+    formData.set('websiteUrl', '');
+    formData.set('note', '');
+    formData.set('requestedModules', 'client_portal');
+    formData.set('businessRegistrationDocument', new File(['not-a-real-pdf'], 'business-license.pdf', { type: 'application/pdf' }));
+
+    const { submitOrganizationSignupRequestAction } = await import('@/lib/actions/organization-actions');
+
+    await expect(submitOrganizationSignupRequestAction(formData)).rejects.toSatisfy((error: unknown) => {
+      expectRedirectError(error, '/organization-request?error=%EC%8B%A4%EC%A0%9C%20%ED%8C%8C%EC%9D%BC%20%ED%98%95%EC%8B%9D%EC%9D%84%20%ED%99%95%EC%9D%B8%ED%95%A0%20%EC%88%98%20%EC%97%86%EC%8A%B5%EB%8B%88%EB%8B%A4.%20PDF%2C%20PNG%2C%20JPG%20%ED%8C%8C%EC%9D%BC%EB%A7%8C%20%EC%97%85%EB%A1%9C%EB%93%9C%ED%95%B4%20%EC%A3%BC%EC%84%B8%EC%9A%94.');
+      return true;
+    });
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+  });
+
   it('updates membership permissions through the shared manager guard', async () => {
     const writeClient = createMembershipUpdateClient();
     mocks.createSupabaseServerClient.mockResolvedValue(writeClient.client);
@@ -551,7 +592,7 @@ describe('server action integration', () => {
     formData.set('postalCode', '');
     formData.set('websiteUrl', '');
     formData.set('note', '');
-    formData.set('businessRegistrationDocument', new File(['dummy'], 'registration.pdf', { type: 'application/pdf' }));
+    formData.set('businessRegistrationDocument', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37])], 'registration.pdf', { type: 'application/pdf' }));
 
     const { submitOrganizationSignupRequestAction } = await import('@/lib/actions/organization-actions');
 

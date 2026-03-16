@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clientSignupSchema,
+  generalSignupSchema,
   invitationCreateSchema,
   organizationSignupSchema,
   supportRequestSchema
 } from '@/lib/validators';
+import { isValidResidentRegistrationNumber } from '@/lib/format';
 
 function createFile(name: string, size: number, type: string) {
   return new File([new Uint8Array(size)], name, { type });
@@ -75,6 +78,48 @@ describe('supportRequestSchema', () => {
     });
 
     expect(parsed.expiresHours).toBe(4);
+  });
+});
+
+describe('resident registration validation', () => {
+  it('accepts a checksum-valid resident registration number', () => {
+    expect(isValidResidentRegistrationNumber('9001011234568')).toBe(true);
+  });
+
+  it('rejects mismatched consent or invalid resident data for client signup', () => {
+    const result = clientSignupSchema.safeParse({
+      legalName: '홍길동',
+      residentNumber: '9001011234567',
+      phone: '01012345678',
+      addressLine1: '',
+      addressLine2: '',
+      postalCode: '',
+      privacyConsent: true,
+      serviceConsent: false
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    const messages = result.error.issues.map((issue) => issue.message);
+    expect(messages).toContain('유효한 주민등록번호를 입력해 주세요.');
+    expect(messages).toContain('시스템 이용 동의가 필요합니다.');
+  });
+
+  it('accepts a valid general signup payload', () => {
+    const result = generalSignupSchema.safeParse({
+      email: 'member@example.com',
+      password: 'safePass123',
+      legalName: '홍길동',
+      residentNumber: '9001011234568',
+      phone: '01012345678',
+      addressLine1: '',
+      addressLine2: '',
+      postalCode: '',
+      privacyConsent: true,
+      serviceConsent: true
+    });
+
+    expect(result.success).toBe(true);
   });
 });
 

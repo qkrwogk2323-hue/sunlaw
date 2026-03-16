@@ -1,3 +1,4 @@
+import { getCurrentAuth } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function listAccessibleOrganizations() {
@@ -68,11 +69,20 @@ export async function getOrganizationWorkspace(organizationId: string) {
 }
 
 export async function listMySignupRequests() {
+  const auth = await getCurrentAuth();
+  if (!auth) return [];
+
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('organization_signup_requests')
-    .select('*')
+    .select('id, organization_name, business_number, status, business_registration_verification_status, business_registration_verification_note, business_registration_document_name, reviewed_note, note')
+    .eq('requester_profile_id', auth.user.id)
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load organization signup history', error);
+    return [];
+  }
 
   return data ?? [];
 }

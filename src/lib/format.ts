@@ -103,6 +103,24 @@ export function normalizeResidentRegistrationNumber(value?: string | null) {
   return `${value ?? ''}`.replace(/\D/g, '');
 }
 
+export function isValidResidentRegistrationNumber(value?: string | null) {
+  const digits = normalizeResidentRegistrationNumber(value);
+  if (!/^\d{13}$/.test(digits)) {
+    return false;
+  }
+
+  const month = Number(digits.slice(2, 4));
+  const day = Number(digits.slice(4, 6));
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+
+  const weights = [2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5];
+  const checksum = weights.reduce((sum, weight, index) => sum + Number(digits[index]) * weight, 0);
+  const verifier = (11 - (checksum % 11)) % 10;
+  return verifier === Number(digits[12]);
+}
+
 export function formatResidentRegistrationNumberMasked(value?: string | null) {
   const digits = normalizeResidentRegistrationNumber(value);
   if (digits.length !== 13) return '***-******';

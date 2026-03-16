@@ -60,7 +60,7 @@ export function getAuthenticatedHomePath(auth: AuthContext): Route {
   }
 
   if (!auth.memberships.length && auth.profile.platform_role !== 'platform_admin') {
-    return '/organization-request' as Route;
+    return '/start/signup' as Route;
   }
 
   return '/dashboard' as Route;

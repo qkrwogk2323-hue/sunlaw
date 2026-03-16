@@ -77,8 +77,8 @@ export default async function OrganizationRequestsPage() {
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Badge tone={verificationTones[request.business_registration_verification_status] ?? 'slate'}>
-                  문서 대조 {verificationLabels[request.business_registration_verification_status] ?? request.business_registration_verification_status ?? '-'}
+                <Badge tone={request.business_registration_verification_status ? verificationTones[request.business_registration_verification_status] ?? 'slate' : 'slate'}>
+                  문서 대조 {request.business_registration_verification_status ? verificationLabels[request.business_registration_verification_status] ?? request.business_registration_verification_status : '-'}
                 </Badge>
                 {request.business_registration_verified_number ? <Badge tone="blue">추출 번호 {formatBusinessNumber(request.business_registration_verified_number)}</Badge> : null}
               </div>

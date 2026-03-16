@@ -61,7 +61,7 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
               <CardTitle className="text-2xl">먼저 의뢰인 가입을 완료해 주세요.</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm leading-7 text-amber-900">조직 연결 요청은 의뢰인 가입 정보가 등록된 계정만 보낼 수 있습니다. 이름, 주민등록번호, 주소, 연락처 등록 후 다시 시도해 주세요.</p>
+              <p className="text-sm leading-7 text-amber-900">조직 연결 요청은 의뢰인 가입 정보가 등록된 계정만 보낼 수 있습니다. 이름, 주민등록번호, 연락처와 필수 동의 등록 후 다시 시도해 주세요.</p>
               <Link href={'/start/signup?flow=client' as Route} className={buttonStyles({ className: 'min-h-12 rounded-[1.25rem] px-4' })}>
                 의뢰인 가입으로 돌아가기
               </Link>

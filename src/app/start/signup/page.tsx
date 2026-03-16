@@ -3,6 +3,7 @@ import type { Route } from 'next';
 import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Link2, Users } from 'lucide-react';
 import { getCurrentAuth } from '@/lib/auth';
 import { clientAccountStatusLabel, isClientAccountPending } from '@/lib/client-account';
+import { GeneralSignupForm } from '@/components/forms/general-signup-form';
 import { LoginButtonWithNext } from '@/components/login-button';
 import { ClientSignupForm } from '@/components/forms/client-signup-form';
 import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entry-form';
@@ -34,7 +35,7 @@ export default async function SignupGuidePage({
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">회원가입 안내</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">회원가입 후 필요한 가입 경로를 이어서 선택하세요.</h1>
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            먼저 카카오 로그인으로 계정을 만든 뒤, 의뢰인 가입, 조직 생성 신청, 조직 초대코드 연결 중 필요한 경로로 이어집니다.
+            카카오 또는 일반회원가입으로 계정을 만든 뒤, 의뢰인 가입, 조직 생성 신청, 조직 초대코드 연결 중 필요한 경로로 이어집니다.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <StepChip step="1" title="회원가입" active={!auth} />
@@ -47,12 +48,12 @@ export default async function SignupGuidePage({
           <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <Card className="rounded-[1.8rem] border-sky-200 bg-[linear-gradient(180deg,#f8fbff,#eef6ff)]">
               <CardHeader className="border-none pb-2">
-                <CardTitle className="text-2xl">1단계. 카카오 로그인으로 회원가입 시작</CardTitle>
+                <CardTitle className="text-2xl">1단계. 가입 방식을 선택하세요</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   {[
-                    ['1', '카카오 로그인으로 기본 계정 생성'],
+                    ['1', '카카오 또는 일반회원가입으로 기본 계정 생성'],
                     ['2', '로그인 직후 가입 경로 선택'],
                     ['3', '의뢰인 가입, 조직 생성 신청, 직원 연결 진행']
                   ].map(([step, title]) => (
@@ -63,7 +64,7 @@ export default async function SignupGuidePage({
                   ))}
                 </div>
                 <p className="text-sm leading-7 text-slate-600">
-                  회원가입이 완료되면 이 화면으로 다시 돌아와서 의뢰인 가입, 조직 생성 신청, 조직 직원 연결 중 필요한 경로를 선택합니다.
+                  카카오와 일반회원가입 모두 가입이 끝나면 이 화면으로 다시 돌아와서 의뢰인 가입, 조직 생성 신청, 조직 직원 연결 중 필요한 경로를 선택합니다.
                 </p>
                 <LoginButtonWithNext next={signupNext} idleLabel="카카오로 시작하기" forceLoginPrompt={false} />
               </CardContent>
@@ -71,21 +72,11 @@ export default async function SignupGuidePage({
 
             <Card className="rounded-[1.8rem]">
               <CardHeader className="border-none pb-2">
-                <CardTitle className="text-2xl">회원가입 후 가능한 경로</CardTitle>
+                <CardTitle className="text-2xl">일반회원가입</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <p className="font-medium text-slate-900">의뢰인 가입</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">본인정보를 입력한 뒤 초대번호를 입력하거나, 초대번호가 없으면 조직가입신청으로 이어집니다.</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <p className="font-medium text-slate-900">조직 생성 신청</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">법률사무소, 추심사, 금융사 등 조직 단위 워크스페이스 개설을 신청합니다.</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <p className="font-medium text-slate-900">조직 연결 신청 가입하기</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">조직에서 받은 초대번호 또는 초대 링크가 있다면 직원 계정으로 바로 연결할 수 있습니다.</p>
-                </div>
+                <p className="text-sm leading-7 text-slate-600">이메일과 비밀번호로 회원가입해도 이후 의뢰인 가입, 조직 생성 신청, 조직 직원 연결 흐름은 동일하게 이어집니다.</p>
+                <GeneralSignupForm />
               </CardContent>
             </Card>
           </div>
@@ -182,8 +173,8 @@ export default async function SignupGuidePage({
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   {[
-                    ['1', '카카오 로그인으로 본인 세션 확보'],
-                    ['2', '이름, 주민등록번호, 주소, 연락처 입력'],
+                    ['1', '로그인 또는 일반회원가입으로 본인 세션 확보'],
+                    ['2', '이름, 주민등록번호, 연락처와 필수 동의 입력'],
                     ['3', '승인 대기 상태로 전환'],
                     ['4', '초대번호 입력 또는 조직가입신청 진행']
                   ].map(([step, title]) => (
@@ -249,7 +240,7 @@ export default async function SignupGuidePage({
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
                   {[
-                    ['1', '회원가입 완료', '카카오 로그인으로 계정을 만든 뒤 이 화면으로 돌아옵니다.'],
+                    ['1', '회원가입 완료', '카카오 또는 일반회원가입으로 계정을 만든 뒤 이 화면으로 돌아옵니다.'],
                     ['2', '초대번호 입력', '조직에서 받은 초대번호 또는 초대 링크를 입력합니다.'],
                     ['3', '직원 계정 연결', '초대를 수락하면 해당 조직의 직원으로 바로 연결됩니다.']
                   ].map(([step, title, body]) => (

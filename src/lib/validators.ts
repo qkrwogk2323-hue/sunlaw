@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { formatResidentRegistrationNumberMasked, isValidKoreanBusinessNumber, normalizeBusinessNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
+import { formatResidentRegistrationNumberMasked, isValidKoreanBusinessNumber, isValidResidentRegistrationNumber, normalizeBusinessNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 
 const caseTypeEnum = z.enum(['civil', 'debt_collection', 'execution', 'injunction', 'criminal', 'advisory', 'other']);
@@ -63,11 +63,38 @@ export const clientSignupSchema = z.object({
   residentNumber: z.string().trim().min(1, '주민등록번호를 입력해 주세요.')
     .transform((value) => normalizeResidentRegistrationNumber(value))
     .refine((value) => value.length === 13, '주민등록번호 13자리를 입력해 주세요.')
-    .refine((value) => formatResidentRegistrationNumberMasked(value) !== '***-******', '유효한 주민등록번호 형식이 아닙니다.'),
+    .refine((value) => formatResidentRegistrationNumberMasked(value) !== '***-******', '유효한 주민등록번호 형식이 아닙니다.')
+    .refine((value) => isValidResidentRegistrationNumber(value), '유효한 주민등록번호를 입력해 주세요.'),
   phone: z.string().trim().min(8, '연락처를 입력해 주세요.').max(30),
-  addressLine1: z.string().trim().min(5, '기본 주소를 입력해 주세요.').max(200),
+  addressLine1: z.string().trim().max(200).optional().or(z.literal('')),
   addressLine2: z.string().trim().max(200).optional().or(z.literal('')),
-  postalCode: z.string().trim().min(3, '우편번호를 입력해 주세요.').max(20)
+  postalCode: z.string().trim().max(20).optional().or(z.literal('')),
+  privacyConsent: z.literal(true, {
+    errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
+  }),
+  serviceConsent: z.literal(true, {
+    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
+  })
+});
+
+export const generalSignupSchema = z.object({
+  email: z.string().trim().email('이메일을 입력해 주세요.'),
+  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.').max(72, '비밀번호는 72자 이하로 입력해 주세요.'),
+  legalName: z.string().trim().min(2, '이름을 입력해 주세요.').max(80),
+  residentNumber: z.string().trim().min(1, '주민등록번호를 입력해 주세요.')
+    .transform((value) => normalizeResidentRegistrationNumber(value))
+    .refine((value) => value.length === 13, '주민등록번호 13자리를 입력해 주세요.')
+    .refine((value) => isValidResidentRegistrationNumber(value), '유효한 주민등록번호를 입력해 주세요.'),
+  phone: z.string().trim().min(8, '연락처를 입력해 주세요.').max(30),
+  addressLine1: z.string().trim().max(200).optional().or(z.literal('')),
+  addressLine2: z.string().trim().max(200).optional().or(z.literal('')),
+  postalCode: z.string().trim().max(20).optional().or(z.literal('')),
+  privacyConsent: z.literal(true, {
+    errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
+  }),
+  serviceConsent: z.literal(true, {
+    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
+  })
 });
 
 export const clientServiceRequestSchema = z.object({
