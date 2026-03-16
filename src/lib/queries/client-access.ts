@@ -1,25 +1,32 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+function escapeIlikeValue(value: string) {
+  return value.replace(/[\\%_,]/g, (token) => `\\${token}`);
+}
+
 export async function searchPublicOrganizations(query?: string) {
   const admin = createSupabaseAdminClient();
-  const normalizedQuery = query?.trim().toLowerCase() ?? '';
+  const normalizedQuery = query?.trim() ?? '';
 
-  const { data } = await admin
+  let queryBuilder = admin
     .from('organizations')
     .select('id, name, slug, kind, lifecycle_status, is_directory_public')
     .neq('lifecycle_status', 'soft_deleted')
-    .eq('is_directory_public', true)
+    .eq('is_directory_public', true);
+
+  if (normalizedQuery) {
+    const escapedQuery = escapeIlikeValue(normalizedQuery);
+    queryBuilder = queryBuilder.or(`name.ilike.%${escapedQuery}%,slug.ilike.%${escapedQuery}%`);
+  }
+
+  const { data, error } = await queryBuilder
     .order('name', { ascending: true })
     .limit(24);
 
-  const organizations = data ?? [];
-  if (!normalizedQuery) return organizations;
+  if (error) throw error;
 
-  return organizations.filter((organization) => {
-    const target = `${organization.name ?? ''} ${organization.slug ?? ''}`.toLowerCase();
-    return target.includes(normalizedQuery);
-  });
+  return data ?? [];
 }
 
 export async function listMyClientAccessRequests() {

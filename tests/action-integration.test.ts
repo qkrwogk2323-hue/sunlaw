@@ -183,6 +183,7 @@ describe('server action integration', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mocks.requireAuthenticatedUser.mockResolvedValue(authContext);
     mocks.requireOrganizationActionAccess.mockResolvedValue({
       auth: authContext,
       membership: authContext.memberships[0]
@@ -364,7 +365,7 @@ describe('server action integration', () => {
     expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
   });
 
-  it('keeps approved client access accounts pending until a case link is completed', async () => {
+  it('does not demote an existing client account when an additional access request is approved', async () => {
     const requestStatusUpdateEq = vi.fn(async () => ({ error: null }));
     const requestStatusUpdate = vi.fn(() => ({ eq: requestStatusUpdateEq }));
     const requestLookupMaybeSingle = vi.fn(async () => ({
@@ -422,13 +423,101 @@ describe('server action integration', () => {
 
     await reviewClientAccessRequestAction(formData);
 
-    expect(profileUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      is_client_account: true,
-      client_account_status: 'pending_initial_approval'
-    }));
+    expect(profileUpdate).not.toHaveBeenCalled();
     expect(notificationInsert).toHaveBeenCalledWith(expect.objectContaining({
       action_label: '연결 상태 보기',
       action_href: '/start/pending'
+    }));
+  });
+
+  it('does not activate a client profile when case attachment keeps portal access disabled', async () => {
+    const requestLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '66666666-6666-4666-8666-666666666666',
+        requester_profile_id: 'client-profile-1',
+        requester_name: '의뢰인',
+        requester_email: 'client@example.com',
+        target_organization_id: '22222222-2222-4222-8222-222222222222',
+        status: 'approved'
+      },
+      error: null
+    }));
+    const requestLookupEqOrg = vi.fn(() => ({ maybeSingle: requestLookupMaybeSingle }));
+    const requestLookupEqId = vi.fn(() => ({ eq: requestLookupEqOrg }));
+    const requestLookupSelect = vi.fn(() => ({ eq: requestLookupEqId }));
+
+    const caseLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '77777777-7777-4777-8777-777777777777',
+        organization_id: '22222222-2222-4222-8222-222222222222',
+        title: '채권 회수 사건',
+        lifecycle_status: 'active'
+      },
+      error: null
+    }));
+    const caseLookupNeq = vi.fn(() => ({ maybeSingle: caseLookupMaybeSingle }));
+    const caseLookupEqOrg = vi.fn(() => ({ neq: caseLookupNeq }));
+    const caseLookupEqId = vi.fn(() => ({ eq: caseLookupEqOrg }));
+    const caseLookupSelect = vi.fn(() => ({ eq: caseLookupEqId }));
+
+    const existingByProfileMaybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const existingByProfileEqProfile = vi.fn(() => ({ maybeSingle: existingByProfileMaybeSingle }));
+    const existingByProfileEqCase = vi.fn(() => ({ eq: existingByProfileEqProfile }));
+
+    const existingByEmailMaybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const existingByEmailEqEmail = vi.fn(() => ({ maybeSingle: existingByEmailMaybeSingle }));
+    const existingByEmailEqCase = vi.fn(() => ({ eq: existingByEmailEqEmail }));
+
+    const caseClientsSelect = vi.fn()
+      .mockReturnValueOnce({ eq: existingByProfileEqCase })
+      .mockReturnValueOnce({ eq: existingByEmailEqCase });
+    const caseClientsInsert = vi.fn(async () => ({ error: null }));
+    const notificationInsert = vi.fn(async () => ({ error: null }));
+    const profileUpdateEq = vi.fn(async () => ({ error: null }));
+    const profileUpdate = vi.fn(() => ({ eq: profileUpdateEq }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'client_access_requests') {
+          return { select: requestLookupSelect };
+        }
+        if (table === 'cases') {
+          return { select: caseLookupSelect };
+        }
+        if (table === 'case_clients') {
+          return {
+            select: caseClientsSelect,
+            insert: caseClientsInsert
+          };
+        }
+        if (table === 'notifications') {
+          return { insert: notificationInsert };
+        }
+        if (table === 'profiles') {
+          return { update: profileUpdate };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('requestId', '66666666-6666-4666-8666-666666666666');
+    formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
+    formData.set('caseId', '77777777-7777-4777-8777-777777777777');
+    formData.set('relationLabel', '의뢰인');
+
+    const { attachClientAccessRequestToCaseAction } = await import('@/lib/actions/organization-actions');
+
+    await attachClientAccessRequestToCaseAction(formData);
+
+    expect(caseClientsInsert).toHaveBeenCalledWith(expect.objectContaining({
+      is_portal_enabled: false
+    }));
+    expect(profileUpdate).not.toHaveBeenCalled();
+    expect(notificationInsert).toHaveBeenCalledWith(expect.objectContaining({
+      action_label: null,
+      action_href: null
     }));
   });
 
@@ -602,5 +691,114 @@ describe('server action integration', () => {
       expectRedirectError(error, `/organization-request?error=${expectedMessage}`);
       return true;
     });
+  });
+
+  it('keeps a successful organization signup submission even if notifications fail afterwards', async () => {
+    const requestInsertSingle = vi.fn(async () => ({
+      data: { id: 'signup-request-1' },
+      error: null
+    }));
+    const requestInsertSelect = vi.fn(() => ({ single: requestInsertSingle }));
+    const requestInsert = vi.fn(() => ({ select: requestInsertSelect }));
+    const upload = vi.fn(async () => ({ error: null }));
+    const remove = vi.fn(async () => ({ error: null }));
+    const notificationInsert = vi.fn(async () => ({ error: new Error('notification failure') }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'organization_signup_requests') {
+          return { insert: requestInsert };
+        }
+
+        throw new Error(`Unexpected server table: ${table}`);
+      }),
+      rpc: vi.fn()
+    });
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      storage: {
+        from: vi.fn(() => ({ upload, remove }))
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'notifications') {
+          return { insert: notificationInsert };
+        }
+        if (table === 'profiles') {
+          return { select: vi.fn() };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('name', '알림 실패 테스트 조직');
+    formData.set('kind', 'law_firm');
+    formData.set('businessNumber', '220-81-62517');
+    formData.set('representativeName', '대표자');
+    formData.set('representativeTitle', '대표');
+    formData.set('email', 'org@example.com');
+    formData.set('phone', '01012345678');
+    formData.set('addressLine1', '서울시');
+    formData.set('addressLine2', '101호');
+    formData.set('postalCode', '01234');
+    formData.set('websiteUrl', 'https://example.com');
+    formData.set('note', '테스트');
+    formData.set('requestedModules', 'client_portal');
+    formData.set('businessRegistrationDocument', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x32, 0x33])], 'registration.pdf', { type: 'application/pdf' }));
+
+    const { submitOrganizationSignupRequestAction } = await import('@/lib/actions/organization-actions');
+
+    await expect(submitOrganizationSignupRequestAction(formData)).rejects.toSatisfy((error: unknown) => {
+      expectRedirectError(error, '/organization-request?submitted=1');
+      return true;
+    });
+
+    expect(upload).toHaveBeenCalled();
+    expect(requestInsert).toHaveBeenCalled();
+    expect(notificationInsert).toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('treats an already-approved organization signup as idempotent instead of creating another organization', async () => {
+    const requestMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: 'request-1',
+        requester_profile_id: 'requester-1',
+        status: 'approved',
+        approved_organization_id: 'existing-org-1'
+      },
+      error: null
+    }));
+    const requestEq = vi.fn(() => ({ maybeSingle: requestMaybeSingle }));
+    const requestSelect = vi.fn(() => ({ eq: requestEq }));
+    const organizationInsert = vi.fn(async () => ({ data: null, error: null }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'organization_signup_requests') {
+          return { select: requestSelect };
+        }
+        if (table === 'organizations') {
+          return { insert: organizationInsert };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('requestId', 'request-1');
+    formData.set('decision', 'approved');
+    formData.set('reviewNote', '재시도');
+
+    const { reviewOrganizationSignupRequestAction } = await import('@/lib/actions/organization-actions');
+
+    await expect(reviewOrganizationSignupRequestAction(formData)).rejects.toSatisfy((error: unknown) => {
+      expectRedirectError(error, '/organizations/existing-org-1');
+      return true;
+    });
+
+    expect(organizationInsert).not.toHaveBeenCalled();
   });
 });

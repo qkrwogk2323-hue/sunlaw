@@ -35,6 +35,15 @@ const allowedOrganizationSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg'
 type OrganizationSignupDocumentMimeType = 'application/pdf' | 'image/png' | 'image/jpeg';
 type OrganizationSignupVerificationStatus = 'matched' | 'mismatch' | 'unreadable';
 
+function isPostgresUniqueViolation(error: unknown) {
+  return Boolean(
+    error
+    && typeof error === 'object'
+    && 'code' in error
+    && `${(error as { code?: string }).code ?? ''}` === '23505'
+  );
+}
+
 function resolveRequesterEmail(auth: { user: { email?: string | null }; profile: { email?: string | null } }) {
   const email = `${auth.user.email ?? auth.profile.email ?? ''}`.trim().toLowerCase();
 
@@ -237,6 +246,49 @@ function buildOrganizationSlug(name: string) {
   return `${base}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+async function findOrganizationForSignupRequest(requestId: string) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('id, slug')
+    .eq('source_signup_request_id', requestId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function claimOrganizationSignupReviewLock(requestId: string, reviewerProfileId: string) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from('organization_signup_requests')
+    .update({
+      approval_locked_by_profile_id: reviewerProfileId,
+      approval_locked_at: new Date().toISOString()
+    })
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .is('approval_locked_by_profile_id', null)
+    .select('*')
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function clearOrganizationSignupReviewLock(requestId: string, reviewerProfileId: string) {
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from('organization_signup_requests')
+    .update({
+      approval_locked_by_profile_id: null,
+      approval_locked_at: null
+    })
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .eq('approval_locked_by_profile_id', reviewerProfileId);
+}
+
 async function createOrganizationCore({
   createdBy,
   name,
@@ -251,6 +303,7 @@ async function createOrganizationCore({
   postalCode,
   websiteUrl,
   requestedModules,
+  sourceSignupRequestId,
   setDefaultOrganization = true
 }: {
   createdBy: string;
@@ -266,10 +319,10 @@ async function createOrganizationCore({
   postalCode?: string | null;
   websiteUrl?: string | null;
   requestedModules?: string[];
+  sourceSignupRequestId?: string | null;
   setDefaultOrganization?: boolean;
 }) {
   const supabase = createSupabaseAdminClient();
-  const slug = buildOrganizationSlug(name);
 
   const enabledModules = Object.fromEntries([
     ['billing', true],
@@ -278,48 +331,73 @@ async function createOrganizationCore({
     ['reports', true]
   ]);
 
-  const { data: organization, error: organizationError } = await supabase
-    .from('organizations')
-    .insert({
-      slug,
-      name,
-      kind,
-      business_number: businessNumber || null,
-      representative_name: representativeName || null,
-      representative_title: representativeTitle || null,
-      email: email || null,
-      phone: phone || null,
-      address_line1: addressLine1 || null,
-      address_line2: addressLine2 || null,
-      postal_code: postalCode || null,
-      website_url: websiteUrl || null,
-      enabled_modules: enabledModules,
-      onboarding_status: 'approved',
-      created_by: createdBy
-    })
-    .select('id, slug')
-    .single();
+  let organization = sourceSignupRequestId ? await findOrganizationForSignupRequest(sourceSignupRequestId) : null;
 
-  if (organizationError || !organization) {
-    throw organizationError ?? new Error('Failed to create organization');
+  if (!organization) {
+    const slug = buildOrganizationSlug(name);
+    const { data: createdOrganization, error: organizationError } = await supabase
+      .from('organizations')
+      .insert({
+        slug,
+        name,
+        kind,
+        business_number: businessNumber || null,
+        representative_name: representativeName || null,
+        representative_title: representativeTitle || null,
+        email: email || null,
+        phone: phone || null,
+        address_line1: addressLine1 || null,
+        address_line2: addressLine2 || null,
+        postal_code: postalCode || null,
+        website_url: websiteUrl || null,
+        enabled_modules: enabledModules,
+        onboarding_status: 'approved',
+        created_by: createdBy,
+        source_signup_request_id: sourceSignupRequestId || null
+      })
+      .select('id, slug')
+      .single();
+
+    if (organizationError) {
+      if (!sourceSignupRequestId || !isPostgresUniqueViolation(organizationError)) {
+        throw organizationError;
+      }
+
+      organization = await findOrganizationForSignupRequest(sourceSignupRequestId);
+      if (!organization) {
+        throw organizationError;
+      }
+    } else if (!createdOrganization) {
+      throw new Error('Failed to create organization');
+    } else {
+      organization = createdOrganization;
+    }
   }
 
-  const { error: membershipError } = await supabase.from('organization_memberships').insert({
+  const { error: membershipError } = await supabase.from('organization_memberships').upsert({
     organization_id: organization.id,
     profile_id: createdBy,
     role: 'org_owner',
+    status: 'active',
     actor_category: 'admin',
     permission_template_key: 'admin_general',
     case_scope_policy: 'all_org_cases',
     title: '대표 관리자',
     is_primary: true,
     permissions: getDefaultTemplatePermissions('admin_general')
+  }, {
+    onConflict: 'organization_id,profile_id'
   });
 
   if (membershipError) throw membershipError;
 
   if (setDefaultOrganization) {
-    await supabase.from('profiles').update({ default_organization_id: organization.id }).eq('id', createdBy);
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ default_organization_id: organization.id })
+      .eq('id', createdBy);
+
+    if (profileError) throw profileError;
   }
 
   return organization;
@@ -603,6 +681,7 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   let storagePath: string | null = null;
+  let requestPersisted = false;
   try {
     const parsed = organizationSignupSchema.parse({
       name: formData.get('name'),
@@ -658,49 +737,54 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
     }).select('id').single();
 
     if (error) throw error;
+    requestPersisted = true;
 
-    const { error: notificationError } = await admin.from('notifications').insert({
-      recipient_profile_id: auth.user.id,
-      kind: 'generic',
-      title: '조직 개설 신청이 접수되었습니다.',
-      body: `현재 단계 구현 필요사항 메모: 사업자등록번호 체크섬 검증, 사업자등록증 업로드 보관, PDF 텍스트 기반 1차 자동 대조까지 적용되었습니다. 정부24/홈택스 API 연동 전까지는 이미지 파일과 판독 불가 문서는 운영팀이 최종 확인합니다.${requestRow?.id ? ` 신청 번호: ${requestRow.id}` : ''}`,
-      payload: {
-        category: 'organization_signup_submission',
-        request_id: requestRow?.id ?? null,
-        verification_status: verification.status
-      },
-      action_label: '알림 보기',
-      action_href: '/notifications'
-    });
+    try {
+      const { error: notificationError } = await admin.from('notifications').insert({
+        recipient_profile_id: auth.user.id,
+        kind: 'generic',
+        title: '조직 개설 신청이 접수되었습니다.',
+        body: `현재 단계 구현 필요사항 메모: 사업자등록번호 체크섬 검증, 사업자등록증 업로드 보관, PDF 텍스트 기반 1차 자동 대조까지 적용되었습니다. 정부24/홈택스 API 연동 전까지는 이미지 파일과 판독 불가 문서는 운영팀이 최종 확인합니다.${requestRow?.id ? ` 신청 번호: ${requestRow.id}` : ''}`,
+        payload: {
+          category: 'organization_signup_submission',
+          request_id: requestRow?.id ?? null,
+          verification_status: verification.status
+        },
+        action_label: '알림 보기',
+        action_href: '/notifications'
+      });
 
-    if (notificationError) throw notificationError;
+      if (notificationError) throw notificationError;
 
-    const platformAdminIds = (await listActivePlatformAdminIds()).filter((profileId) => profileId !== auth.user.id);
-    if (platformAdminIds.length) {
-      const { error: adminNotificationError } = await admin.from('notifications').insert(
-        platformAdminIds.map((profileId) => ({
-          recipient_profile_id: profileId,
-          kind: 'generic',
-          title: '새 조직 개설 신청이 접수되었습니다.',
-          body: `${parsed.name} 조직 신청이 접수되었습니다. 사업자등록번호 자동 대조 결과는 ${verification.status} 상태입니다. 검토 대기열에서 확인해 주세요.`,
-          payload: {
-            category: 'organization_signup_review',
-            request_id: requestRow?.id ?? null,
-            verification_status: verification.status,
-            organization_name: parsed.name
-          },
-          requires_action: true,
-          action_label: '조직 신청 검토',
-          action_href: '/admin/organization-requests',
-          action_entity_type: 'organization_signup_request',
-          action_target_id: requestRow?.id ?? null
-        }))
-      );
+      const platformAdminIds = (await listActivePlatformAdminIds()).filter((profileId) => profileId !== auth.user.id);
+      if (platformAdminIds.length) {
+        const { error: adminNotificationError } = await admin.from('notifications').insert(
+          platformAdminIds.map((profileId) => ({
+            recipient_profile_id: profileId,
+            kind: 'generic',
+            title: '새 조직 개설 신청이 접수되었습니다.',
+            body: `${parsed.name} 조직 신청이 접수되었습니다. 사업자등록번호 자동 대조 결과는 ${verification.status} 상태입니다. 검토 대기열에서 확인해 주세요.`,
+            payload: {
+              category: 'organization_signup_review',
+              request_id: requestRow?.id ?? null,
+              verification_status: verification.status,
+              organization_name: parsed.name
+            },
+            requires_action: true,
+            action_label: '조직 신청 검토',
+            action_href: '/admin/organization-requests',
+            action_entity_type: 'organization_signup_request',
+            action_target_id: requestRow?.id ?? null
+          }))
+        );
 
-      if (adminNotificationError) throw adminNotificationError;
+        if (adminNotificationError) throw adminNotificationError;
+      }
+    } catch (notificationError) {
+      console.warn('organization signup notification delivery failed', notificationError);
     }
   } catch (error) {
-    if (storagePath) {
+    if (!requestPersisted && storagePath) {
       await admin.storage.from(organizationSignupDocumentBucket).remove([storagePath]).catch(() => undefined);
     }
 
@@ -716,7 +800,6 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
 
 export async function updateOrganizationSignupRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   const requestId = `${formData.get('requestId') ?? ''}`.trim();
 
@@ -728,7 +811,7 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
   let previousStoragePath: string | null = null;
 
   try {
-    const { data: existingRequest, error: existingRequestError } = await supabase
+    const { data: existingRequest, error: existingRequestError } = await admin
       .from('organization_signup_requests')
       .select('*')
       .eq('id', requestId)
@@ -809,7 +892,7 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
       verifiedAt = new Date().toISOString();
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from('organization_signup_requests')
       .update({
         requester_email: requesterEmail,
@@ -855,7 +938,7 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
 }
 
 export async function cancelOrganizationSignupRequestAction(formData: FormData) {
-  const auth = await requireAuthenticatedUser();
+  await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
   const requestId = `${formData.get('requestId') ?? ''}`.trim();
 
@@ -864,16 +947,9 @@ export async function cancelOrganizationSignupRequestAction(formData: FormData) 
   }
 
   try {
-    const { error } = await supabase
-      .from('organization_signup_requests')
-      .update({
-        status: 'cancelled',
-        reviewed_note: '신청자 취소',
-        reviewed_at: new Date().toISOString()
-      })
-      .eq('id', requestId)
-      .eq('requester_profile_id', auth.user.id)
-      .eq('status', 'pending');
+    const { error } = await supabase.rpc('cancel_organization_signup_request_atomic', {
+      p_request_id: requestId
+    });
 
     if (error) throw error;
   } catch (error) {
@@ -888,7 +964,6 @@ export async function cancelOrganizationSignupRequestAction(formData: FormData) 
 
 export async function reviewOrganizationSignupRequestAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 조직 개설 신청을 검토할 수 있습니다.');
-  const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   const requestId = `${formData.get('requestId') ?? ''}`;
   const decision = `${formData.get('decision') ?? ''}`;
@@ -898,14 +973,69 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
     throw new Error('잘못된 요청입니다.');
   }
 
-  const { data: requestRow, error: requestError } = await supabase
+  const { data: initialRequestRow, error: requestError } = await admin
     .from('organization_signup_requests')
     .select('*')
     .eq('id', requestId)
-    .single();
+    .maybeSingle();
 
-  if (requestError || !requestRow) throw requestError ?? new Error('요청을 찾을 수 없습니다.');
-  if (!requestRow.requester_profile_id) throw new Error('신청자 프로필이 연결되어 있지 않습니다.');
+  if (requestError || !initialRequestRow) throw requestError ?? new Error('요청을 찾을 수 없습니다.');
+  if (!initialRequestRow.requester_profile_id) throw new Error('신청자 프로필이 연결되어 있지 않습니다.');
+
+  if (initialRequestRow.status === 'approved' && initialRequestRow.approved_organization_id) {
+    revalidatePath('/admin/organization-requests');
+    revalidatePath('/organizations');
+    revalidatePath('/organization-request');
+    revalidatePath('/notifications');
+    redirect(`/organizations/${initialRequestRow.approved_organization_id}`);
+  }
+
+  if (initialRequestRow.status !== 'pending') {
+    throw new Error('이미 처리된 요청입니다.');
+  }
+
+  let requestRow = initialRequestRow;
+  let ownsReviewLock = initialRequestRow.approval_locked_by_profile_id === auth.user.id;
+
+  if (!ownsReviewLock) {
+    if (initialRequestRow.approval_locked_by_profile_id && initialRequestRow.approval_locked_by_profile_id !== auth.user.id) {
+      throw new Error('다른 관리자가 현재 이 신청을 처리 중입니다. 잠시 후 다시 확인해 주세요.');
+    }
+
+    const claimedRow = await claimOrganizationSignupReviewLock(requestId, auth.user.id);
+    if (!claimedRow) {
+      const { data: refreshedRequest, error: refreshedRequestError } = await admin
+        .from('organization_signup_requests')
+        .select('*')
+        .eq('id', requestId)
+        .maybeSingle();
+
+      if (refreshedRequestError || !refreshedRequest) {
+        throw refreshedRequestError ?? new Error('요청을 다시 불러오지 못했습니다.');
+      }
+
+      if (refreshedRequest.status === 'approved' && refreshedRequest.approved_organization_id) {
+        revalidatePath('/admin/organization-requests');
+        revalidatePath('/organizations');
+        revalidatePath('/organization-request');
+        revalidatePath('/notifications');
+        redirect(`/organizations/${refreshedRequest.approved_organization_id}`);
+      }
+
+      if (refreshedRequest.status !== 'pending') {
+        throw new Error('이미 처리된 요청입니다.');
+      }
+
+      if (refreshedRequest.approval_locked_by_profile_id && refreshedRequest.approval_locked_by_profile_id !== auth.user.id) {
+        throw new Error('다른 관리자가 현재 이 신청을 처리 중입니다. 잠시 후 다시 확인해 주세요.');
+      }
+
+      requestRow = refreshedRequest;
+    } else {
+      requestRow = claimedRow;
+      ownsReviewLock = true;
+    }
+  }
 
   const resolvedAt = new Date().toISOString();
 
@@ -938,69 +1068,105 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
     if (requesterNotificationError) throw requesterNotificationError;
   };
 
-  if (decision === 'approved') {
-    const organization = await createOrganizationCore({
-      createdBy: requestRow.requester_profile_id,
-      name: requestRow.organization_name,
-      kind: requestRow.organization_kind,
-      businessNumber: requestRow.business_number,
-      representativeName: requestRow.representative_name,
-      representativeTitle: requestRow.representative_title,
-      email: requestRow.requester_email,
-      phone: requestRow.contact_phone,
-      websiteUrl: requestRow.website_url,
-      requestedModules: requestRow.requested_modules || []
-    });
+  try {
+    if (decision === 'approved') {
+      const organization = await createOrganizationCore({
+        createdBy: requestRow.requester_profile_id,
+        name: requestRow.organization_name,
+        kind: requestRow.organization_kind,
+        businessNumber: requestRow.business_number,
+        representativeName: requestRow.representative_name,
+        representativeTitle: requestRow.representative_title,
+        email: requestRow.requester_email,
+        phone: requestRow.contact_phone,
+        websiteUrl: requestRow.website_url,
+        requestedModules: requestRow.requested_modules || [],
+        sourceSignupRequestId: requestRow.id
+      });
 
-    const { error: updateError } = await supabase
+      const { data: finalizedRequest, error: updateError } = await admin
+        .from('organization_signup_requests')
+        .update({
+          status: 'approved',
+          reviewed_by: auth.user.id,
+          reviewed_note: reviewNote || null,
+          reviewed_at: resolvedAt,
+          approved_organization_id: organization.id,
+          approval_locked_by_profile_id: null,
+          approval_locked_at: null
+        })
+        .eq('id', requestId)
+        .eq('status', 'pending')
+        .eq('approval_locked_by_profile_id', auth.user.id)
+        .select('*')
+        .maybeSingle();
+
+      if (updateError) throw updateError;
+
+      if (!finalizedRequest) {
+        const { data: refreshedRequest, error: refreshedRequestError } = await admin
+          .from('organization_signup_requests')
+          .select('*')
+          .eq('id', requestId)
+          .maybeSingle();
+
+        if (refreshedRequestError || !refreshedRequest) {
+          throw refreshedRequestError ?? new Error('승인 상태를 다시 확인하지 못했습니다.');
+        }
+
+        if (refreshedRequest.status !== 'approved' || refreshedRequest.approved_organization_id !== organization.id) {
+          throw new Error('승인 상태를 확정하지 못했습니다. 다시 시도해 주세요.');
+        }
+      }
+
+      ownsReviewLock = false;
+      await resolvePendingReviewNotifications();
+      await notifyRequester(
+        '조직 개설 신청이 승인되었습니다.',
+        `${requestRow.organization_name} 조직 개설 신청이 승인되었습니다. 이제 조직 워크스페이스를 사용할 수 있습니다.${reviewNote ? ` 검토 메모: ${reviewNote}` : ''}`,
+        '/organizations'
+      );
+
+      revalidatePath('/admin/organization-requests');
+      revalidatePath('/organizations');
+      revalidatePath('/organization-request');
+      revalidatePath('/notifications');
+      redirect(`/organizations/${organization.id}`);
+    }
+
+    const { error: updateError } = await admin
       .from('organization_signup_requests')
       .update({
-        status: 'approved',
+        status: 'rejected',
         reviewed_by: auth.user.id,
-        reviewed_note: reviewNote || null,
+        reviewed_note: reviewNote || '반려',
         reviewed_at: resolvedAt,
-        approved_organization_id: organization.id
+        approval_locked_by_profile_id: null,
+        approval_locked_at: null
       })
-      .eq('id', requestId);
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .eq('approval_locked_by_profile_id', auth.user.id);
 
     if (updateError) throw updateError;
 
+    ownsReviewLock = false;
     await resolvePendingReviewNotifications();
     await notifyRequester(
-      '조직 개설 신청이 승인되었습니다.',
-      `${requestRow.organization_name} 조직 개설 신청이 승인되었습니다. 이제 조직 워크스페이스를 사용할 수 있습니다.${reviewNote ? ` 검토 메모: ${reviewNote}` : ''}`,
-      '/organizations'
+      '조직 개설 신청이 반려되었습니다.',
+      `${requestRow.organization_name} 조직 개설 신청이 반려되었습니다.${reviewNote ? ` 반려 사유: ${reviewNote}` : ''}`,
+      '/organization-request'
     );
 
     revalidatePath('/admin/organization-requests');
-    revalidatePath('/organizations');
     revalidatePath('/organization-request');
     revalidatePath('/notifications');
-    redirect(`/organizations/${organization.id}`);
+  } catch (error) {
+    if (ownsReviewLock) {
+      await clearOrganizationSignupReviewLock(requestId, auth.user.id);
+    }
+    throw error;
   }
-
-  const { error: updateError } = await supabase
-    .from('organization_signup_requests')
-    .update({
-      status: 'rejected',
-      reviewed_by: auth.user.id,
-      reviewed_note: reviewNote || '반려',
-      reviewed_at: resolvedAt
-    })
-    .eq('id', requestId);
-
-  if (updateError) throw updateError;
-
-  await resolvePendingReviewNotifications();
-  await notifyRequester(
-    '조직 개설 신청이 반려되었습니다.',
-    `${requestRow.organization_name} 조직 개설 신청이 반려되었습니다.${reviewNote ? ` 반려 사유: ${reviewNote}` : ''}`,
-    '/organization-request'
-  );
-
-  revalidatePath('/admin/organization-requests');
-  revalidatePath('/organization-request');
-  revalidatePath('/notifications');
 }
 
 export async function createStaffInvitationAction(formData: FormData) {
@@ -1242,20 +1408,6 @@ export async function reviewClientAccessRequestAction(formData: FormData) {
 
   const orgName = (requestRow.organization as any)?.name ?? '선택한 조직';
 
-  if (parsed.decision === 'approved' && requestRow.requester_profile_id) {
-    const { error: markPendingError } = await adminClient
-      .from('profiles')
-      .update({
-        is_client_account: true,
-        client_account_status: 'pending_initial_approval',
-        client_account_status_changed_at: resolvedAt,
-        client_account_status_reason: `${orgName} 조직 연결 요청 승인 후 사건 연결 대기`
-      })
-      .eq('id', requestRow.requester_profile_id);
-
-    if (markPendingError) throw markPendingError;
-  }
-
   const { error: notificationError } = await adminClient.from('notifications').insert({
     organization_id: parsed.organizationId,
     recipient_profile_id: requestRow.requester_profile_id,
@@ -1377,15 +1529,17 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
     recipient_profile_id: requestRow.requester_profile_id,
     kind: 'generic',
     title: '사건 연결이 완료되었습니다.',
-    body: `${caseRow.title} 사건에서 협업이 시작되었습니다. 포털에서 진행 상황을 확인할 수 있습니다.`,
+    body: portalEnabled
+      ? `${caseRow.title} 사건에서 협업이 시작되었습니다. 포털에서 진행 상황을 확인할 수 있습니다.`
+      : `${caseRow.title} 사건 연결이 완료되었습니다. 포털 접근은 아직 활성화되지 않았습니다.`,
     payload: { request_id: parsed.requestId, case_id: parsed.caseId, organization_id: parsed.organizationId },
-    action_label: '사건 보기',
-    action_href: `/portal/cases/${parsed.caseId}`
+    action_label: portalEnabled ? '사건 보기' : null,
+    action_href: portalEnabled ? `/portal/cases/${parsed.caseId}` : null
   });
 
   if (notificationError) throw notificationError;
 
-  if (requestRow.requester_profile_id) {
+  if (portalEnabled && requestRow.requester_profile_id) {
     const activatedAt = new Date().toISOString();
     const { error: profileError } = await adminClient
       .from('profiles')
