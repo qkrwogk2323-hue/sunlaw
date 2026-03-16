@@ -32,6 +32,24 @@ const allowedOrganizationSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg'
 
 type OrganizationSignupVerificationStatus = 'matched' | 'mismatch' | 'unreadable';
 
+function resolveRequesterEmail(auth: { user: { email?: string | null }; profile: { email?: string | null } }) {
+  const email = `${auth.user.email ?? auth.profile.email ?? ''}`.trim().toLowerCase();
+
+  if (!email) {
+    throw new Error('로그인 계정에 이메일 정보가 없어 요청을 제출할 수 없습니다. 카카오 계정 이메일 제공에 동의한 뒤 다시 시도해 주세요.');
+  }
+
+  return email;
+}
+
+function getActionErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
@@ -525,30 +543,32 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const parsed = organizationSignupSchema.parse({
-    name: formData.get('name'),
-    kind: formData.get('kind') || 'law_firm',
-    businessNumber: formData.get('businessNumber'),
-    businessRegistrationDocument: formData.get('businessRegistrationDocument'),
-    representativeName: formData.get('representativeName'),
-    representativeTitle: formData.get('representativeTitle'),
-    email: formData.get('email'),
-    phone: formData.get('phone'),
-    addressLine1: formData.get('addressLine1'),
-    addressLine2: formData.get('addressLine2'),
-    postalCode: formData.get('postalCode'),
-    websiteUrl: formData.get('websiteUrl'),
-    requestedModules: formData.getAll('requestedModules').map(String),
-    note: formData.get('note')
-  });
-
-  validateOrganizationSignupDocument(parsed.businessRegistrationDocument);
-
-  const normalizedBusinessNumber = normalizeBusinessNumber(parsed.businessNumber);
-  const verification = await verifyOrganizationSignupDocument(parsed.businessRegistrationDocument, normalizedBusinessNumber);
-  const storagePath = buildOrganizationSignupDocumentPath(auth.user.id, parsed.businessRegistrationDocument.name);
-
+  let storagePath: string | null = null;
   try {
+    const parsed = organizationSignupSchema.parse({
+      name: formData.get('name'),
+      kind: formData.get('kind') || 'law_firm',
+      businessNumber: formData.get('businessNumber'),
+      businessRegistrationDocument: formData.get('businessRegistrationDocument'),
+      representativeName: formData.get('representativeName'),
+      representativeTitle: formData.get('representativeTitle'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      addressLine1: formData.get('addressLine1'),
+      addressLine2: formData.get('addressLine2'),
+      postalCode: formData.get('postalCode'),
+      websiteUrl: formData.get('websiteUrl'),
+      requestedModules: formData.getAll('requestedModules').map(String),
+      note: formData.get('note')
+    });
+
+    validateOrganizationSignupDocument(parsed.businessRegistrationDocument);
+
+    const requesterEmail = resolveRequesterEmail(auth);
+    const normalizedBusinessNumber = normalizeBusinessNumber(parsed.businessNumber);
+    const verification = await verifyOrganizationSignupDocument(parsed.businessRegistrationDocument, normalizedBusinessNumber);
+    storagePath = buildOrganizationSignupDocumentPath(auth.user.id, parsed.businessRegistrationDocument.name);
+
     const { error: uploadError } = await admin.storage.from(organizationSignupDocumentBucket).upload(storagePath, parsed.businessRegistrationDocument, {
       contentType: parsed.businessRegistrationDocument.type || undefined,
       upsert: false
@@ -558,7 +578,7 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
 
     const { data: requestRow, error } = await supabase.from('organization_signup_requests').insert({
       requester_profile_id: auth.user.id,
-      requester_email: auth.profile.email,
+      requester_email: requesterEmail,
       organization_name: parsed.name,
       organization_kind: parsed.kind,
       business_number: normalizedBusinessNumber,
@@ -621,8 +641,12 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
       if (adminNotificationError) throw adminNotificationError;
     }
   } catch (error) {
-    await admin.storage.from(organizationSignupDocumentBucket).remove([storagePath]);
-    throw error;
+    if (storagePath) {
+      await admin.storage.from(organizationSignupDocumentBucket).remove([storagePath]).catch(() => undefined);
+    }
+
+    const message = getActionErrorMessage(error, '조직 개설 신청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    redirect(`/organization-request?error=${encodeURIComponent(message)}`);
   }
 
   revalidatePath('/organization-request');
@@ -845,87 +869,93 @@ export async function switchDefaultOrganizationAction(formData: FormData) {
 
 export async function submitClientAccessRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
-  if (!auth.profile.is_client_account) {
-    throw new Error('의뢰인 가입 정보를 먼저 등록한 뒤 조직 연결 요청을 보낼 수 있습니다.');
-  }
-
-  const parsed = clientAccessRequestSchema.parse({
-    organizationId: formData.get('organizationId'),
-    organizationKey: formData.get('organizationKey'),
-    requestNote: formData.get('requestNote')
-  });
-
   const adminClient = createSupabaseAdminClient();
+  try {
+    if (!auth.profile.is_client_account) {
+      throw new Error('의뢰인 가입 정보를 먼저 등록한 뒤 조직 연결 요청을 보낼 수 있습니다.');
+    }
 
-  const { data: organization, error: organizationError } = await adminClient
-    .from('organizations')
-    .select('id, name, slug')
-    .eq('id', parsed.organizationId)
-    .neq('lifecycle_status', 'soft_deleted')
-    .maybeSingle();
+    const parsed = clientAccessRequestSchema.parse({
+      organizationId: formData.get('organizationId'),
+      organizationKey: formData.get('organizationKey'),
+      requestNote: formData.get('requestNote')
+    });
 
-  if (organizationError || !organization) {
-    throw organizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
-  }
+    const requesterEmail = resolveRequesterEmail(auth);
 
-  if ((organization.slug ?? '').toLowerCase() !== parsed.organizationKey.toLowerCase()) {
-    throw new Error('조직 키가 일치하지 않습니다.');
-  }
+    const { data: organization, error: organizationError } = await adminClient
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('id', parsed.organizationId)
+      .neq('lifecycle_status', 'soft_deleted')
+      .maybeSingle();
 
-  const { data: existingPending } = await adminClient
-    .from('client_access_requests')
-    .select('id')
-    .eq('target_organization_id', parsed.organizationId)
-    .eq('requester_profile_id', auth.user.id)
-    .eq('status', 'pending')
-    .maybeSingle();
+    if (organizationError || !organization) {
+      throw organizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
+    }
 
-  if (existingPending?.id) {
-    throw new Error('이미 처리 대기 중인 연결 요청이 있습니다.');
-  }
+    if ((organization.slug ?? '').toLowerCase() !== parsed.organizationKey.toLowerCase()) {
+      throw new Error('조직 키가 일치하지 않습니다.');
+    }
 
-  const { data: requestRow, error } = await adminClient
-    .from('client_access_requests')
-    .insert({
-      target_organization_id: parsed.organizationId,
-      target_organization_key: organization.slug,
-      requester_profile_id: auth.user.id,
-      requester_name: auth.profile.full_name,
-      requester_email: auth.profile.email,
-      request_note: parsed.requestNote || null
-    })
-    .select('id')
-    .single();
+    const { data: existingPending } = await adminClient
+      .from('client_access_requests')
+      .select('id')
+      .eq('target_organization_id', parsed.organizationId)
+      .eq('requester_profile_id', auth.user.id)
+      .eq('status', 'pending')
+      .maybeSingle();
 
-  if (error || !requestRow) throw error ?? new Error('협업 연결 요청을 저장하지 못했습니다.');
+    if (existingPending?.id) {
+      throw new Error('이미 처리 대기 중인 연결 요청이 있습니다.');
+    }
 
-  const { data: managers } = await adminClient
-    .from('organization_memberships')
-    .select('profile_id')
-    .eq('organization_id', parsed.organizationId)
-    .in('role', ['org_owner', 'org_manager'])
-    .eq('status', 'active');
+    const { data: requestRow, error } = await adminClient
+      .from('client_access_requests')
+      .insert({
+        target_organization_id: parsed.organizationId,
+        target_organization_key: organization.slug,
+        requester_profile_id: auth.user.id,
+        requester_name: auth.profile.full_name,
+        requester_email: requesterEmail,
+        request_note: parsed.requestNote || null
+      })
+      .select('id')
+      .single();
 
-  const managerRows = (managers ?? [])
-    .map((item: any) => item.profile_id)
-    .filter(Boolean)
-    .map((profileId: string) => ({
-      organization_id: parsed.organizationId,
-      recipient_profile_id: profileId,
-      kind: 'generic',
-      title: '새 의뢰인 협업 요청이 도착했습니다.',
-      body: `${auth.profile.full_name}님이 ${organization.name} 조직에 협업 연결을 요청했습니다.`,
-      payload: { requester_profile_id: auth.user.id, target_organization_id: parsed.organizationId, request_id: requestRow.id },
-      requires_action: true,
-      action_label: '연결 요청 검토',
-      action_href: '/clients',
-      action_entity_type: 'client_access_request',
-      action_target_id: requestRow.id
-    }));
+    if (error || !requestRow) throw error ?? new Error('협업 연결 요청을 저장하지 못했습니다.');
 
-  if (managerRows.length) {
-    const { error: notificationError } = await adminClient.from('notifications').insert(managerRows);
-    if (notificationError) throw notificationError;
+    const { data: managers } = await adminClient
+      .from('organization_memberships')
+      .select('profile_id')
+      .eq('organization_id', parsed.organizationId)
+      .in('role', ['org_owner', 'org_manager'])
+      .eq('status', 'active');
+
+    const managerRows = (managers ?? [])
+      .map((item: any) => item.profile_id)
+      .filter(Boolean)
+      .map((profileId: string) => ({
+        organization_id: parsed.organizationId,
+        recipient_profile_id: profileId,
+        kind: 'generic',
+        title: '새 의뢰인 협업 요청이 도착했습니다.',
+        body: `${auth.profile.full_name}님이 ${organization.name} 조직에 협업 연결을 요청했습니다.`,
+        payload: { requester_profile_id: auth.user.id, target_organization_id: parsed.organizationId, request_id: requestRow.id },
+        requires_action: true,
+        action_label: '연결 요청 검토',
+        action_href: '/clients',
+        action_entity_type: 'client_access_request',
+        action_target_id: requestRow.id
+      }));
+
+    if (managerRows.length) {
+      const { error: notificationError } = await adminClient.from('notifications').insert(managerRows);
+      if (notificationError) throw notificationError;
+    }
+  } catch (error) {
+    const message = getActionErrorMessage(error, '조직가입신청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    redirect(`/client-access?error=${encodeURIComponent(message)}` as Route);
   }
 
   revalidatePath('/client-access');

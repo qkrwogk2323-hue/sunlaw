@@ -524,4 +524,42 @@ describe('server action integration', () => {
       p_rule_json: { share: 0.3 }
     }));
   });
+
+  it('redirects organization signup back with an inline error when the signed-in account has no email', async () => {
+    mocks.requireAuthenticatedUser.mockResolvedValueOnce({
+      ...authContext,
+      user: {
+        ...authContext.user,
+        email: undefined
+      },
+      profile: {
+        ...authContext.profile,
+        email: null
+      }
+    });
+
+    const formData = new FormData();
+    formData.set('name', '테스트 조직');
+    formData.set('kind', 'law_firm');
+    formData.set('businessNumber', '123-45-67891');
+    formData.set('representativeName', '');
+    formData.set('representativeTitle', '');
+    formData.set('email', '');
+    formData.set('phone', '');
+    formData.set('addressLine1', '');
+    formData.set('addressLine2', '');
+    formData.set('postalCode', '');
+    formData.set('websiteUrl', '');
+    formData.set('note', '');
+    formData.set('businessRegistrationDocument', new File(['dummy'], 'registration.pdf', { type: 'application/pdf' }));
+
+    const { submitOrganizationSignupRequestAction } = await import('@/lib/actions/organization-actions');
+
+    const expectedMessage = encodeURIComponent('로그인 계정에 이메일 정보가 없어 요청을 제출할 수 없습니다. 카카오 계정 이메일 제공에 동의한 뒤 다시 시도해 주세요.');
+
+    await expect(submitOrganizationSignupRequestAction(formData)).rejects.toSatisfy((error: unknown) => {
+      expectRedirectError(error, `/organization-request?error=${expectedMessage}`);
+      return true;
+    });
+  });
 });

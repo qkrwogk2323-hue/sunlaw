@@ -23,9 +23,10 @@ function requestStatusLabel(status: string) {
   return '검토 대기';
 }
 
-export default async function ClientAccessPage({ searchParams }: { searchParams?: Promise<{ q?: string }> }) {
+export default async function ClientAccessPage({ searchParams }: { searchParams?: Promise<{ q?: string; error?: string }> }) {
   const resolved = searchParams ? await searchParams : undefined;
   const query = resolved?.q?.trim() ?? '';
+  const error = resolved?.error;
   const auth = await getCurrentAuth();
   const [visibleOrganizations, myRequests] = await Promise.all([
     searchPublicOrganizations(query),
@@ -47,6 +48,12 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
             </div>
           ) : null}
         </div>
+
+        {error ? (
+          <Card className="rounded-[1.8rem] border-rose-200 bg-rose-50">
+            <CardContent className="px-6 py-4 text-sm leading-7 text-rose-700">{error}</CardContent>
+          </Card>
+        ) : null}
 
         {auth && !auth.profile.is_client_account ? (
           <Card className="rounded-[1.8rem] border-amber-200 bg-amber-50">

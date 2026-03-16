@@ -33,10 +33,12 @@ const requestStatusTones: Record<string, 'green' | 'amber' | 'red' | 'slate'> = 
   cancelled: 'slate'
 };
 
-export default async function OrganizationRequestPage({ searchParams }: { searchParams?: Promise<{ submitted?: string }> }) {
+export default async function OrganizationRequestPage({ searchParams }: { searchParams?: Promise<{ submitted?: string; error?: string }> }) {
   const auth = await getCurrentAuth();
   const requests = auth ? await listMySignupRequests() : [];
-  const submitted = searchParams ? (await searchParams).submitted : undefined;
+  const resolved = searchParams ? await searchParams : undefined;
+  const submitted = resolved?.submitted;
+  const error = resolved?.error;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
@@ -56,6 +58,7 @@ export default async function OrganizationRequestPage({ searchParams }: { search
             <CardHeader><CardTitle>조직 개설 신청서</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {submitted ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">조직 개설 신청이 접수되었습니다.</p> : null}
+              {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
               <OrganizationSignupForm />
             </CardContent>
           </Card>
