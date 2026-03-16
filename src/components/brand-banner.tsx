@@ -30,6 +30,11 @@ export function BrandBanner({ href, className, theme = 'dark' }: { href?: Route;
     window.requestAnimationFrame(() => setIsPressed(true));
   }
 
+  function replayHomepageDemoIfNeeded(targetHref?: Route) {
+    if (targetHref !== ('/' as Route)) return;
+    window.dispatchEvent(new CustomEvent('vs:homepage-demo-replay'));
+  }
+
   const content = (
     <div
       data-pressed={isPressed ? 'true' : 'false'}
@@ -65,6 +70,7 @@ export function BrandBanner({ href, className, theme = 'dark' }: { href?: Route;
         triggerReaction();
         if (pathname === href) {
           event.preventDefault();
+          replayHomepageDemoIfNeeded(href);
           window.setTimeout(() => router.refresh(), 120);
         }
       }}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { ArrowRight, BellRing, Building2, ClipboardList, FolderKanban, Landmark, MessageSquareText, Scale, ShieldCheck, Wallet } from 'lucide-react';
 import { BrandBanner } from '@/components/brand-banner';
+import { HomepageDemoVideo } from '@/components/homepage-demo-video';
 import { buttonStyles } from '@/components/ui/button';
 import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { signOutAction } from '@/lib/actions/auth-actions';
@@ -129,14 +130,7 @@ export default async function MarketingPage() {
                 <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(180deg,rgba(2,6,23,0.64),rgba(2,6,23,0))]" />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(2,6,23,0),rgba(2,6,23,0.82))]" />
                 <div className="h-[180px] sm:h-[220px] lg:h-[260px]">
-                  <video
-                    className="h-full w-full scale-[1.12] object-cover object-[center_10%]"
-                    src="/vein-spiral-demo.mp4"
-                    autoPlay
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
+                  <HomepageDemoVideo />
                 </div>
               </div>
             </div>
