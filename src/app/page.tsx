@@ -122,6 +122,36 @@ export default async function MarketingPage() {
               </Link>
             </div>
           ) : null}
+
+          <div className="w-full max-w-6xl">
+            <div className="overflow-hidden rounded-[2rem] border border-white/12 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(8,32,58,0.96))] p-3 shadow-[0_28px_64px_rgba(8,47,73,0.3)]">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 pb-3 text-left sm:px-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/72">Product Walkthrough</p>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">실제 업무 흐름을 메인에서 바로 볼 수 있는 데모 화면입니다.</h2>
+                </div>
+                <span className="hidden rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-medium text-slate-200 sm:inline-flex">
+                  미리보기 영상
+                </span>
+              </div>
+
+              <div className="relative mt-3 overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950">
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-[linear-gradient(180deg,rgba(2,6,23,0.5),rgba(2,6,23,0))]" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(2,6,23,0),rgba(2,6,23,0.46))]" />
+                <div className="aspect-[16/10] max-h-[680px] min-h-[260px] sm:min-h-[320px] lg:aspect-[16/9]">
+                  <video
+                    className="h-full w-full object-cover object-top"
+                    src="/vein-spiral-demo.mp4"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
