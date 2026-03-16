@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 type LoginButtonProps = {
   idleLabel?: string;
   loadingLabel?: string;
+  forceLoginPrompt?: boolean;
 };
 
 export function LoginButton({
   idleLabel = '카카오로 로그인',
-  loadingLabel = '연결 중...'
+  loadingLabel = '연결 중...',
+  forceLoginPrompt = true
 }: LoginButtonProps) {
   const [loading, setLoading] = useState(false);
 
@@ -24,9 +26,13 @@ export function LoginButton({
         provider: 'kakao',
         options: {
           redirectTo,
-          queryParams: {
-            prompt: 'login'
-          }
+          ...(forceLoginPrompt
+            ? {
+                queryParams: {
+                  prompt: 'login'
+                }
+              }
+            : {})
         }
       });
 
@@ -52,7 +58,8 @@ type LoginButtonWithNextProps = LoginButtonProps & {
 export function LoginButtonWithNext({
   next,
   idleLabel = '카카오로 로그인',
-  loadingLabel = '연결 중...'
+  loadingLabel = '연결 중...',
+  forceLoginPrompt = true
 }: LoginButtonWithNextProps) {
   const [loading, setLoading] = useState(false);
 
@@ -69,9 +76,13 @@ export function LoginButtonWithNext({
         provider: 'kakao',
         options: {
           redirectTo: redirectUrl.toString(),
-          queryParams: {
-            prompt: 'login'
-          }
+          ...(forceLoginPrompt
+            ? {
+                queryParams: {
+                  prompt: 'login'
+                }
+              }
+            : {})
         }
       });
 

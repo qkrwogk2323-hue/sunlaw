@@ -65,7 +65,7 @@ export default async function SignupGuidePage({
                 <p className="text-sm leading-7 text-slate-600">
                   회원가입이 완료되면 이 화면으로 다시 돌아와서 의뢰인 가입, 조직 생성 신청, 조직 직원 연결 중 필요한 경로를 선택합니다.
                 </p>
-                <LoginButtonWithNext next={signupNext} idleLabel="카카오로 회원가입" />
+                <LoginButtonWithNext next={signupNext} idleLabel="카카오로 시작하기" forceLoginPrompt={false} />
               </CardContent>
             </Card>
 
