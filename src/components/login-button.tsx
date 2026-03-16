@@ -4,6 +4,16 @@ import { useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
 
+const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
+
+function writePostAuthNextCookie(next?: string) {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) {
+    return;
+  }
+
+  document.cookie = `${POST_AUTH_NEXT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=600; samesite=lax`;
+}
+
 type LoginButtonProps = {
   idleLabel?: string;
   loadingLabel?: string;
@@ -68,6 +78,7 @@ export function LoginButtonWithNext({
     try {
       const supabase = createSupabaseBrowserClient();
       const redirectUrl = new URL('/auth/callback', window.location.origin);
+      writePostAuthNextCookie(next);
       if (next) {
         redirectUrl.searchParams.set('next', next);
       }
