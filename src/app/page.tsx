@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { redirect } from 'next/navigation';
 import { ArrowRight, BellRing, Building2, ClipboardList, FolderKanban, Landmark, MessageSquareText, Scale, ShieldCheck, Wallet } from 'lucide-react';
 import { BrandBanner } from '@/components/brand-banner';
 import { HomepageDemoVideo } from '@/components/homepage-demo-video';
@@ -46,7 +47,24 @@ function greetingLabel(fullName?: string | null) {
   return `${name} 님! 반갑습니다.`;
 }
 
-export default async function MarketingPage() {
+export default async function MarketingPage({
+  searchParams
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  if (typeof resolvedSearchParams?.code === 'string' && resolvedSearchParams.code) {
+    const callbackSearchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(resolvedSearchParams)) {
+      if (typeof value === 'string' && value) {
+        callbackSearchParams.set(key, value);
+      }
+    }
+
+    redirect(`/auth/callback?${callbackSearchParams.toString()}` as Route);
+  }
+
   const auth = await getCurrentAuth();
   const startHref = (auth ? '/dashboard' : '/start') as Route;
   const organizationId = auth ? getEffectiveOrganizationId(auth) : null;

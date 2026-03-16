@@ -97,6 +97,13 @@ export function registerPublicRouteSmokeTests() {
     await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
   });
 
+  test('oauth code landing on the homepage is rerouted through auth callback handling', async ({ page }) => {
+    await page.goto('/?code=test-oauth-code');
+
+    await expect(page).toHaveURL(/\/login\?error=/);
+    await expect(page.getByRole('heading', { name: '카카오로 로그인' })).toBeVisible();
+  });
+
   test('unknown routes show the not found experience', async ({ page }) => {
     await page.goto('/definitely-missing-route');
 
