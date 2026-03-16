@@ -1,0 +1,21 @@
+node_modules
+
+# macOS
+.DS_Store
+
+# local environment
+.env.local
+.env.*.local
+
+# Next.js build output
+.next
+out
+playwright-report
+test-results
+playwright/.auth
+
+# Supabase local temp
+supabase/.temp
+
+# TypeScript build info
+*.tsbuildinfo

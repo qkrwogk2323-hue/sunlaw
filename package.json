@@ -1,0 +1,46 @@
+{
+  "name": "vein-spiral-p0-foundation",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "check:migrations": "node ./scripts/check-migrations.mjs",
+    "check:all": "pnpm check:migrations && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "pnpm test:e2e:public-smoke",
+    "test:e2e:public-smoke": "playwright test --config=playwright.config.ts",
+    "test:e2e:prod-smoke": "pnpm build && playwright test --config=playwright.prod-smoke.config.ts",
+    "test:e2e:auth-prod-smoke": "pnpm build && playwright test --config=playwright.authenticated-prod-smoke.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.49.1",
+    "clsx": "^2.1.1",
+    "docx": "^9.5.1",
+    "lucide-react": "^0.482.0",
+    "next": "16.1.6",
+    "pdf-lib": "^1.17.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/postcss": "^4.0.14",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "16.1.6",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.14",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.0"
+  }
+}
