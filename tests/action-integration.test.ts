@@ -475,4 +475,53 @@ describe('server action integration', () => {
 
     await expect(requestDocumentReviewAction('doc-1')).rejects.toThrow('현재 상태에서는 결재를 다시 요청할 수 없습니다.');
   });
+
+  it('creates collection compensation plans atomically through the RPC helper', async () => {
+    const casesSingle = vi.fn(async () => ({
+      data: {
+        id: '55555555-5555-4555-8555-555555555555',
+        organization_id: '22222222-2222-4222-8222-222222222222',
+        title: '추심 사건'
+      },
+      error: null
+    }));
+    const casesEq = vi.fn(() => ({ single: casesSingle }));
+    const casesSelect = vi.fn(() => ({ eq: casesEq }));
+    const rpc = vi.fn(async () => ({ error: null }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'cases') {
+          return { select: casesSelect };
+        }
+
+        throw new Error(`Unexpected server table: ${table}`);
+      }),
+      rpc
+    });
+
+    const formData = new FormData();
+    formData.set('caseId', '55555555-5555-4555-8555-555555555555');
+    formData.set('targetKind', 'membership');
+    formData.set('beneficiaryMembershipId', '66666666-6666-4666-8666-666666666666');
+    formData.set('beneficiaryCaseOrganizationId', '');
+    formData.set('title', '기본 보수 규칙');
+    formData.set('description', '초기 초안');
+    formData.set('settlementCycle', 'monthly');
+    formData.set('fixedAmount', '100000');
+    formData.set('baseMetric', 'recovered_amount');
+    formData.set('effectiveFrom', '2026-03-16');
+    formData.set('ruleJson', JSON.stringify({ share: 0.3 }));
+
+    const { addCollectionCompensationPlanAction } = await import('@/lib/actions/collection-actions');
+
+    await addCollectionCompensationPlanAction(formData);
+
+    expect(rpc).toHaveBeenCalledWith('create_collection_compensation_plan_atomic', expect.objectContaining({
+      p_case_id: '55555555-5555-4555-8555-555555555555',
+      p_organization_id: '22222222-2222-4222-8222-222222222222',
+      p_title: '기본 보수 규칙',
+      p_rule_json: { share: 0.3 }
+    }));
+  });
 });

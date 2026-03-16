@@ -316,6 +316,320 @@ begin
     $function$;
   $sql$;
 
+  execute $sql$
+    create or replace function app.create_collection_compensation_plan_atomic(
+      p_case_id uuid,
+      p_organization_id uuid,
+      p_target_kind public.compensation_target_kind,
+      p_beneficiary_membership_id uuid,
+      p_beneficiary_case_organization_id uuid,
+      p_title text,
+      p_description text,
+      p_settlement_cycle text,
+      p_fixed_amount numeric,
+      p_rate numeric,
+      p_base_metric text,
+      p_effective_from date,
+      p_rule_json jsonb
+    )
+    returns uuid
+    language plpgsql
+    security definer
+    set search_path = public
+    as $function$
+    declare
+      v_collection_org_case_organization_id uuid;
+      v_plan_id uuid;
+    begin
+      if not app.is_org_staff(p_organization_id) or not app.has_permission(p_organization_id, 'collection_compensation_manage_plan') then
+        raise exception 'insufficient privileges to manage collection compensation plans';
+      end if;
+
+      select co.id
+      into v_collection_org_case_organization_id
+      from public.case_organizations co
+      where co.case_id = p_case_id
+        and co.organization_id = p_organization_id
+        and co.role in ('collection_org', 'managing_org')
+      limit 1;
+
+      if v_collection_org_case_organization_id is null then
+        raise exception 'collection organization not found';
+      end if;
+
+      insert into public.collection_compensation_plans (
+        case_id,
+        collection_org_case_organization_id,
+        target_kind,
+        beneficiary_membership_id,
+        beneficiary_case_organization_id,
+        title,
+        description,
+        settlement_cycle,
+        created_by,
+        updated_by
+      )
+      values (
+        p_case_id,
+        v_collection_org_case_organization_id,
+        p_target_kind,
+        p_beneficiary_membership_id,
+        p_beneficiary_case_organization_id,
+        p_title,
+        p_description,
+        p_settlement_cycle,
+        auth.uid(),
+        auth.uid()
+      )
+      returning id into v_plan_id;
+
+      insert into public.collection_compensation_plan_versions (
+        collection_compensation_plan_id,
+        status,
+        fixed_amount,
+        rate,
+        base_metric,
+        effective_from,
+        rule_json
+      )
+      values (
+        v_plan_id,
+        'draft',
+        p_fixed_amount,
+        p_rate,
+        p_base_metric,
+        p_effective_from,
+        coalesce(p_rule_json, '{}'::jsonb)
+      );
+
+      return v_plan_id;
+    end;
+    $function$;
+  $sql$;
+
+  execute 'drop policy if exists cases_insert on public.cases';
+
+  execute $sql$
+    create policy cases_insert on public.cases
+    for insert to authenticated
+    with check (
+      app.is_org_staff(organization_id)
+      and created_by = auth.uid()
+      and app.has_permission(organization_id, 'case_create')
+    )
+  $sql$;
+
+  execute 'drop policy if exists cases_update on public.cases';
+
+  execute $sql$
+    create policy cases_update on public.cases
+    for update to authenticated
+    using (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'case_edit')
+        or app.has_permission(organization_id, 'case_stage_manage')
+      )
+    )
+    with check (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'case_edit')
+        or app.has_permission(organization_id, 'case_stage_manage')
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists case_handlers_write on public.case_handlers';
+
+  execute $sql$
+    create policy case_handlers_write on public.case_handlers
+    for all to authenticated
+    using (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'case_create')
+        or app.has_permission(organization_id, 'case_assign')
+        or app.has_permission(organization_id, 'case_edit')
+      )
+    )
+    with check (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'case_create')
+        or app.has_permission(organization_id, 'case_assign')
+        or app.has_permission(organization_id, 'case_edit')
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists case_clients_write on public.case_clients';
+
+  execute $sql$
+    create policy case_clients_write on public.case_clients
+    for all to authenticated
+    using (app.is_org_staff(organization_id) and app.has_permission(organization_id, 'case_edit'))
+    with check (app.is_org_staff(organization_id) and app.has_permission(organization_id, 'case_edit'))
+  $sql$;
+
+  execute 'drop policy if exists case_parties_write on public.case_parties';
+
+  execute $sql$
+    create policy case_parties_write on public.case_parties
+    for all to authenticated
+    using (app.is_org_staff(organization_id) and app.has_permission(organization_id, 'case_edit'))
+    with check (app.is_org_staff(organization_id) and app.has_permission(organization_id, 'case_edit'))
+  $sql$;
+
+  execute 'drop policy if exists case_party_private_write on public.case_party_private_profiles';
+
+  execute $sql$
+    create policy case_party_private_write on public.case_party_private_profiles
+    for all to authenticated
+    using (app.is_org_staff(organization_id) and app.has_permission(organization_id, 'case_edit'))
+    with check (app.is_org_staff(organization_id) and app.has_permission(organization_id, 'case_edit'))
+  $sql$;
+
+  execute 'drop policy if exists case_documents_write on public.case_documents';
+
+  execute $sql$
+    create policy case_documents_write on public.case_documents
+    for all to authenticated
+    using (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'document_create')
+        or app.has_permission(organization_id, 'document_edit')
+        or app.has_permission(organization_id, 'document_approve')
+      )
+    )
+    with check (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'document_create')
+        or app.has_permission(organization_id, 'document_edit')
+        or app.has_permission(organization_id, 'document_approve')
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists case_document_reviews_insert on public.case_document_reviews';
+
+  execute $sql$
+    create policy case_document_reviews_insert on public.case_document_reviews
+    for insert to authenticated
+    with check (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'document_create')
+        or app.has_permission(organization_id, 'document_approve')
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists case_schedules_write on public.case_schedules';
+
+  execute $sql$
+    create policy case_schedules_write on public.case_schedules
+    for all to authenticated
+    using (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'schedule_create')
+        or app.has_permission(organization_id, 'schedule_edit')
+        or app.has_permission(organization_id, 'schedule_manage')
+        or app.has_permission(organization_id, 'billing_manage')
+        or app.has_permission(organization_id, 'case_create')
+      )
+    )
+    with check (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'schedule_create')
+        or app.has_permission(organization_id, 'schedule_edit')
+        or app.has_permission(organization_id, 'schedule_manage')
+        or app.has_permission(organization_id, 'billing_manage')
+        or app.has_permission(organization_id, 'case_create')
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists case_recovery_write on public.case_recovery_activities';
+
+  execute $sql$
+    create policy case_recovery_write on public.case_recovery_activities
+    for all to authenticated
+    using (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'collection_contact_manage')
+        or app.has_permission(organization_id, 'collection_manage')
+      )
+    )
+    with check (
+      app.is_org_staff(organization_id)
+      and (
+        app.has_permission(organization_id, 'collection_contact_manage')
+        or app.has_permission(organization_id, 'collection_manage')
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists case_organizations_write on public.case_organizations';
+
+  execute $sql$
+    create policy case_organizations_write on public.case_organizations
+    for all to authenticated
+    using (
+      app.is_platform_admin()
+      or exists (
+        select 1
+        from public.cases c
+        where c.id = case_id
+          and c.lifecycle_status <> 'soft_deleted'
+          and app.is_org_staff(c.organization_id)
+          and (
+            app.has_permission(c.organization_id, 'case_create')
+            or app.has_permission(c.organization_id, 'case_assign')
+          )
+      )
+    )
+    with check (
+      app.is_platform_admin()
+      or exists (
+        select 1
+        from public.cases c
+        where c.id = case_id
+          and c.lifecycle_status <> 'soft_deleted'
+          and app.is_org_staff(c.organization_id)
+          and (
+            app.has_permission(c.organization_id, 'case_create')
+            or app.has_permission(c.organization_id, 'case_assign')
+          )
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists billing_entries_write on public.billing_entries';
+
+  execute $sql$
+    create policy billing_entries_write on public.billing_entries
+    for all to authenticated using (
+      app.is_platform_admin()
+      or (
+        billing_owner_case_organization_id is not null
+        and app.has_permission((select organization_id from public.case_organizations where id = billing_owner_case_organization_id), 'billing_manage')
+      )
+    )
+    with check (
+      app.is_platform_admin()
+      or (
+        billing_owner_case_organization_id is not null
+        and app.has_permission((select organization_id from public.case_organizations where id = billing_owner_case_organization_id), 'billing_manage')
+      )
+    )
+  $sql$;
+
   execute 'drop policy if exists fee_agreements_write on public.fee_agreements';
 
   execute $sql$
@@ -327,6 +641,80 @@ begin
     with check (
       app.is_platform_admin()
       or app.has_permission((select organization_id from public.case_organizations where id = billing_owner_case_organization_id), 'billing_manage')
+    )
+  $sql$;
+
+  execute 'drop policy if exists invoices_write on public.invoices';
+
+  execute $sql$
+    create policy invoices_write on public.invoices
+    for all to authenticated using (
+      app.is_platform_admin()
+      or app.has_permission((select organization_id from public.case_organizations where id = billing_owner_case_organization_id), 'billing_manage')
+    )
+    with check (
+      app.is_platform_admin()
+      or app.has_permission((select organization_id from public.case_organizations where id = billing_owner_case_organization_id), 'billing_manage')
+    )
+  $sql$;
+
+  execute 'drop policy if exists invoice_items_write on public.invoice_items';
+
+  execute $sql$
+    create policy invoice_items_write on public.invoice_items
+    for all to authenticated using (
+      exists (
+        select 1
+        from public.invoices i
+        join public.case_organizations co on co.id = i.billing_owner_case_organization_id
+        where i.id = invoice_id
+          and (
+            app.is_platform_admin()
+            or app.has_permission(co.organization_id, 'billing_manage')
+          )
+      )
+    )
+    with check (
+      exists (
+        select 1
+        from public.invoices i
+        join public.case_organizations co on co.id = i.billing_owner_case_organization_id
+        where i.id = invoice_id
+          and (
+            app.is_platform_admin()
+            or app.has_permission(co.organization_id, 'billing_manage')
+          )
+      )
+    )
+  $sql$;
+
+  execute 'drop policy if exists comp_plan_versions_write on public.collection_compensation_plan_versions';
+
+  execute $sql$
+    create policy comp_plan_versions_write on public.collection_compensation_plan_versions
+    for all to authenticated using (
+      exists (
+        select 1
+        from public.collection_compensation_plans p
+        join public.case_organizations co on co.id = p.collection_org_case_organization_id
+        where p.id = collection_compensation_plan_id
+          and (
+            app.is_platform_admin()
+            or app.has_permission(co.organization_id, 'collection_compensation_manage_plan')
+          )
+      )
+    )
+    with check (
+      exists (
+        select 1
+        from public.collection_compensation_plans p
+        join public.case_organizations co on co.id = p.collection_org_case_organization_id
+        where p.id = collection_compensation_plan_id
+          and (
+            app.is_platform_admin()
+            or app.has_permission(co.organization_id, 'collection_compensation_manage_plan')
+          )
+      )
     )
   $sql$;
 

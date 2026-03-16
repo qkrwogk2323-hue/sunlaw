@@ -39,36 +39,6 @@ export async function addCollectionCompensationPlanAction(formData: FormData) {
     errorMessage: '보수 규칙 관리 권한이 없습니다.'
   });
 
-  const { data: collectionOrg } = await supabase
-    .from('case_organizations')
-    .select('id')
-    .eq('case_id', parsed.caseId)
-    .eq('organization_id', caseRecord.organization_id)
-    .in('role', ['collection_org', 'managing_org'])
-    .limit(1)
-    .maybeSingle();
-
-  if (!collectionOrg?.id) throw new Error('이 사건에 연결된 추심 조직을 찾을 수 없습니다.');
-
-  const { data: plan, error: planError } = await supabase
-    .from('collection_compensation_plans')
-    .insert({
-      case_id: parsed.caseId,
-      collection_org_case_organization_id: collectionOrg.id,
-      target_kind: parsed.targetKind,
-      beneficiary_membership_id: parsed.beneficiaryMembershipId || null,
-      beneficiary_case_organization_id: parsed.beneficiaryCaseOrganizationId || null,
-      title: parsed.title,
-      description: parsed.description || null,
-      settlement_cycle: parsed.settlementCycle,
-      created_by: auth.user.id,
-      updated_by: auth.user.id
-    })
-    .select('id')
-    .single();
-
-  if (planError || !plan) throw planError ?? new Error('보수 규칙 생성에 실패했습니다.');
-
   let ruleJson: Record<string, unknown> = {};
   if (parsed.ruleJson) {
     try {
@@ -78,19 +48,23 @@ export async function addCollectionCompensationPlanAction(formData: FormData) {
     }
   }
 
-  const { error: versionError } = await supabase
-    .from('collection_compensation_plan_versions')
-    .insert({
-      collection_compensation_plan_id: plan.id,
-      status: 'draft',
-      fixed_amount: parsed.fixedAmount ?? null,
-      rate: parsed.rate ?? null,
-      base_metric: parsed.baseMetric || null,
-      effective_from: parsed.effectiveFrom || null,
-      rule_json: ruleJson
-    });
+  const { error } = await supabase.rpc('create_collection_compensation_plan_atomic', {
+    p_case_id: parsed.caseId,
+    p_organization_id: caseRecord.organization_id,
+    p_target_kind: parsed.targetKind,
+    p_beneficiary_membership_id: parsed.beneficiaryMembershipId || null,
+    p_beneficiary_case_organization_id: parsed.beneficiaryCaseOrganizationId || null,
+    p_title: parsed.title,
+    p_description: parsed.description || null,
+    p_settlement_cycle: parsed.settlementCycle,
+    p_fixed_amount: parsed.fixedAmount ?? null,
+    p_rate: parsed.rate ?? null,
+    p_base_metric: parsed.baseMetric || null,
+    p_effective_from: parsed.effectiveFrom || null,
+    p_rule_json: ruleJson
+  });
 
-  if (versionError) throw versionError;
+  if (error) throw error;
 
   revalidatePath('/collections');
 }

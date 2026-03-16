@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -30,8 +31,22 @@ export async function POST(request: Request) {
   }
 
   const membership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
-  if (!membership && auth.profile.platform_role !== 'platform_admin') {
+  const isPlatformAdmin = auth.profile.platform_role === 'platform_admin';
+
+  if (!membership && !isPlatformAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  if (caseId && !isPlatformAdmin && !hasPermission(auth, organizationId, 'request_create')) {
+    return NextResponse.json({ error: '작업 요청 생성 권한이 없습니다.' }, { status: 403 });
+  }
+
+  if (caseId && selectedItems.some((item) => Boolean(item.dueAt)) && !isPlatformAdmin && !hasPermission(auth, organizationId, 'schedule_create')) {
+    return NextResponse.json({ error: '일정 생성 권한이 없습니다.' }, { status: 403 });
+  }
+
+  if (recipientMode !== 'self' && !isPlatformAdmin && !hasPermission(auth, organizationId, 'notification_create')) {
+    return NextResponse.json({ error: '알림 생성 권한이 없습니다.' }, { status: 403 });
   }
 
   const supabase = await createSupabaseServerClient();

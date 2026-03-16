@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+// @ts-expect-error TypeScript does not infer declarations for the local .mjs helper in this test setup.
 import { createAuthenticatedSmokeAdminClient, resolveAuthenticatedSmokeRecipient } from './authenticated-smoke-account.mjs';
 
 const homePath = '/dashboard';
@@ -16,9 +17,8 @@ function createAdminClient() {
 }
 
 async function getSmokeRecipient() {
-  smokeRecipientPromise ??= resolveAuthenticatedSmokeRecipient();
-
-  return smokeRecipientPromise;
+  const recipientPromise = smokeRecipientPromise ??= resolveAuthenticatedSmokeRecipient();
+  return recipientPromise;
 }
 
 async function seedNotification(label: string) {
