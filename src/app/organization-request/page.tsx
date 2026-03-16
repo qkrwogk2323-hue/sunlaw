@@ -1,6 +1,8 @@
 import { OrganizationSignupForm } from '@/components/forms/organization-signup-form';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cancelOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
 import { getCurrentAuth } from '@/lib/auth';
 import { formatBusinessNumber } from '@/lib/format';
 import { listMySignupRequests } from '@/lib/queries/organizations';
@@ -41,18 +43,26 @@ function getVerificationLabel(status: string | null) {
   return status ? verificationLabels[status] ?? status : '-';
 }
 
-export default async function OrganizationRequestPage({ searchParams }: { searchParams?: Promise<{ submitted?: string; error?: string }> }) {
+export default async function OrganizationRequestPage({ searchParams }: { searchParams?: Promise<{ submitted?: string; updated?: string; cancelled?: string; edit?: string; error?: string }> }) {
   const auth = await getCurrentAuth();
   let requests: Array<{
     id: string;
     organization_name: string;
+    organization_kind: string;
+    requester_email: string | null;
     business_number: string | null;
+    representative_name: string | null;
+    representative_title: string | null;
+    contact_phone: string | null;
+    website_url: string | null;
+    requested_modules: string[] | null;
     status: string;
     business_registration_verification_status: string | null;
     business_registration_verification_note: string | null;
     business_registration_document_name: string | null;
     reviewed_note: string | null;
     note: string | null;
+    created_at: string;
   }> = [];
   let requestHistoryUnavailable = false;
 
@@ -67,7 +77,13 @@ export default async function OrganizationRequestPage({ searchParams }: { search
 
   const resolved = searchParams ? await searchParams : undefined;
   const submitted = resolved?.submitted;
+  const updated = resolved?.updated;
+  const cancelled = resolved?.cancelled;
   const error = resolved?.error;
+  const editRequestId = resolved?.edit ?? null;
+  const activePendingRequest = requests.find((request) => request.status === 'pending') ?? null;
+  const editingRequest = editRequestId ? requests.find((request) => request.id === editRequestId && request.status === 'pending') ?? null : null;
+  const showForm = Boolean(auth && (!activePendingRequest || editingRequest));
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
@@ -84,11 +100,51 @@ export default async function OrganizationRequestPage({ searchParams }: { search
 
         {auth ? (
           <Card>
-            <CardHeader><CardTitle>조직 개설 신청서</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{editingRequest ? '조직 개설 신청 수정' : '조직 개설 신청서'}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {submitted ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">조직 개설 신청이 접수되었습니다.</p> : null}
+              {submitted ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">신청이 완료되었습니다! 승인을 대기해주세요.</p> : null}
+              {updated ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">신청 내용이 수정되었습니다. 승인 결과를 기다려 주세요.</p> : null}
+              {cancelled ? <p className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">조직 생성 신청이 취소되었습니다.</p> : null}
               {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-              <OrganizationSignupForm />
+              {activePendingRequest && !editingRequest ? (
+                <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold text-slate-900">신청 대기 상태입니다.</p>
+                    <p className="text-sm leading-7 text-slate-700">현재 제출한 조직 생성 신청이 운영팀 검토를 기다리고 있습니다. 필요하면 신청 내용을 수정하거나 취소할 수 있습니다.</p>
+                  </div>
+                  <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-700">
+                    <p className="font-medium text-slate-900">현재 신청명</p>
+                    <p className="mt-1">{activePendingRequest.organization_name}</p>
+                    <p className="mt-3 text-slate-500">사업자번호: {formatBusinessNumber(activePendingRequest.business_number)}</p>
+                    <p className="text-slate-500">제출 문서: {activePendingRequest.business_registration_document_name ?? '-'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <a href={`/organization-request?edit=${activePendingRequest.id}`} className={buttonStyles({ className: 'min-h-11 rounded-[1rem] px-4' })}>수정하기</a>
+                    <form action={cancelOrganizationSignupRequestAction}>
+                      <input type="hidden" name="requestId" value={activePendingRequest.id} />
+                      <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-[1rem] px-4' })}>취소하기</button>
+                    </form>
+                  </div>
+                </div>
+              ) : null}
+              {showForm ? (
+                <OrganizationSignupForm
+                  requestId={editingRequest?.id}
+                  defaultValues={editingRequest ? {
+                    name: editingRequest.organization_name,
+                    kind: editingRequest.organization_kind,
+                    businessNumber: editingRequest.business_number,
+                    representativeName: editingRequest.representative_name,
+                    representativeTitle: editingRequest.representative_title,
+                    email: editingRequest.requester_email,
+                    phone: editingRequest.contact_phone,
+                    websiteUrl: editingRequest.website_url,
+                    requestedModules: editingRequest.requested_modules,
+                    note: editingRequest.note
+                  } : undefined}
+                  existingDocumentName={editingRequest?.business_registration_document_name}
+                />
+              ) : null}
             </CardContent>
           </Card>
         ) : (

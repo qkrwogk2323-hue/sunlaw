@@ -2,7 +2,7 @@
 
 import type { ChangeEvent } from 'react';
 import { useState } from 'react';
-import { submitOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
+import { submitOrganizationSignupRequestAction, updateOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -99,9 +99,30 @@ async function validateSelectedOrganizationSignupDocument(file: File) {
   return null;
 }
 
-export function OrganizationSignupForm() {
+export function OrganizationSignupForm({
+  requestId,
+  defaultValues,
+  existingDocumentName
+}: {
+  requestId?: string;
+  defaultValues?: {
+    name?: string | null;
+    kind?: string | null;
+    businessNumber?: string | null;
+    representativeName?: string | null;
+    representativeTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    websiteUrl?: string | null;
+    requestedModules?: string[] | null;
+    note?: string | null;
+  };
+  existingDocumentName?: string | null;
+}) {
   const [documentError, setDocumentError] = useState<string | null>(null);
-  const [selectedDocumentSummary, setSelectedDocumentSummary] = useState<string | null>(null);
+  const [selectedDocumentSummary, setSelectedDocumentSummary] = useState<string | null>(existingDocumentName ?? null);
+  const isEditMode = Boolean(requestId);
+  const selectedModules = new Set(defaultValues?.requestedModules ?? ['client_portal']);
 
   const handleDocumentChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -126,21 +147,22 @@ export function OrganizationSignupForm() {
   };
 
   return (
-    <form action={submitOrganizationSignupRequestAction} className="grid gap-3 md:grid-cols-2">
-      <Input name="name" placeholder="조직명" required />
-      <select name="kind" defaultValue="law_firm" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+    <form action={isEditMode ? updateOrganizationSignupRequestAction : submitOrganizationSignupRequestAction} className="grid gap-3 md:grid-cols-2">
+      {requestId ? <input type="hidden" name="requestId" value={requestId} /> : null}
+      <Input name="name" placeholder="조직명" defaultValue={defaultValues?.name ?? ''} required />
+      <select name="kind" defaultValue={defaultValues?.kind ?? 'law_firm'} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="law_firm">법률사무소/법무법인</option>
         <option value="collection_company">추심회사</option>
         <option value="mixed_practice">혼합형 조직</option>
         <option value="corporate_legal_team">기업 법무팀</option>
         <option value="other">기타</option>
       </select>
-      <Input name="businessNumber" placeholder="사업자등록번호 (예: 123-45-67890)" required />
-      <Input name="representativeName" placeholder="대표자명" />
-      <Input name="representativeTitle" placeholder="대표자 직함" />
-      <Input name="email" placeholder="대표 이메일" type="email" />
-      <Input name="phone" placeholder="대표 전화번호" />
-      <Input name="websiteUrl" placeholder="웹사이트 URL" />
+      <Input name="businessNumber" placeholder="사업자등록번호 (예: 123-45-67890)" defaultValue={defaultValues?.businessNumber ?? ''} required />
+      <Input name="representativeName" placeholder="대표자명" defaultValue={defaultValues?.representativeName ?? ''} />
+      <Input name="representativeTitle" placeholder="대표자 직함" defaultValue={defaultValues?.representativeTitle ?? ''} />
+      <Input name="email" placeholder="대표 이메일" type="email" defaultValue={defaultValues?.email ?? ''} />
+      <Input name="phone" placeholder="대표 전화번호" defaultValue={defaultValues?.phone ?? ''} />
+      <Input name="websiteUrl" placeholder="웹사이트 URL" defaultValue={defaultValues?.websiteUrl ?? ''} />
       <Input name="addressLine1" placeholder="주소" className="md:col-span-2" />
       <Input name="addressLine2" placeholder="상세주소" className="md:col-span-2" />
       <Input name="postalCode" placeholder="우편번호" />
@@ -150,15 +172,15 @@ export function OrganizationSignupForm() {
           name="businessRegistrationDocument"
           type="file"
           accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-          required
+          required={!isEditMode}
           onChange={handleDocumentChange}
           aria-invalid={documentError ? 'true' : 'false'}
           className={`block w-full rounded-lg border border-dashed bg-white px-3 py-3 text-sm shadow-sm outline-none transition ${documentError ? 'border-rose-300 text-rose-700 focus:border-rose-500' : 'border-slate-300 text-slate-600 focus:border-slate-900'}`}
         />
-        {selectedDocumentSummary ? <p className="text-xs font-medium text-emerald-700">선택한 파일: {selectedDocumentSummary}</p> : null}
+        {selectedDocumentSummary ? <p className="text-xs font-medium text-emerald-700">{isEditMode ? '현재 또는 새로 선택한 파일' : '선택한 파일'}: {selectedDocumentSummary}</p> : null}
         {documentError ? <p className="text-xs font-medium text-rose-600" role="alert">{documentError}</p> : null}
         <p className="text-xs leading-6 text-slate-500">
-          PDF, PNG, JPG 파일만 업로드할 수 있으며 파일 크기는 10MB 이하여야 합니다. 파일을 선택하면 제출 전에 형식과 용량을 먼저 확인합니다.
+          PDF, PNG, JPG 파일만 업로드할 수 있으며 파일 크기는 10MB 이하여야 합니다. {isEditMode ? '새 파일을 올리지 않으면 기존 제출 문서를 그대로 유지합니다.' : '파일을 선택하면 제출 전에 형식과 용량을 먼저 확인합니다.'}
         </p>
       </div>
       <div className="space-y-2 rounded-xl border border-slate-200 p-4 md:col-span-2">
@@ -166,15 +188,15 @@ export function OrganizationSignupForm() {
         <div className="grid gap-2 md:grid-cols-3">
           {moduleOptions.map((option) => (
             <label key={option.key} className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="requestedModules" value={option.key} defaultChecked={option.key === 'client_portal'} className="size-4 rounded border-slate-300" />
+              <input type="checkbox" name="requestedModules" value={option.key} defaultChecked={selectedModules.has(option.key)} className="size-4 rounded border-slate-300" />
               {option.label}
             </label>
           ))}
         </div>
       </div>
-      <Textarea name="note" placeholder="검토 메모 또는 온보딩 요청사항" className="md:col-span-2" />
+      <Textarea name="note" placeholder="검토 메모 또는 온보딩 요청사항" defaultValue={defaultValues?.note ?? ''} className="md:col-span-2" />
       <div className="md:col-span-2">
-        <SubmitButton pendingLabel="신청 중..." disabled={Boolean(documentError)}>조직 개설 신청</SubmitButton>
+        <SubmitButton pendingLabel={isEditMode ? '수정 중...' : '신청 중...'} disabled={Boolean(documentError)}>{isEditMode ? '신청 내용 수정' : '조직 개설 신청'}</SubmitButton>
       </div>
     </form>
   );

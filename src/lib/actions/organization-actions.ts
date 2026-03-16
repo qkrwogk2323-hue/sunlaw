@@ -1,6 +1,7 @@
 'use server';
 
 import type { Route } from 'next';
+import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
@@ -711,6 +712,178 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
   revalidatePath('/organizations');
   revalidatePath('/admin/organization-requests');
   redirect('/organization-request?submitted=1');
+}
+
+export async function updateOrganizationSignupRequestAction(formData: FormData) {
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
+  const requestId = `${formData.get('requestId') ?? ''}`.trim();
+
+  if (!requestId) {
+    redirect(`/organization-request?error=${encodeURIComponent('수정할 신청 정보를 찾을 수 없습니다.')}` as Route);
+  }
+
+  let nextStoragePath: string | null = null;
+  let previousStoragePath: string | null = null;
+
+  try {
+    const { data: existingRequest, error: existingRequestError } = await supabase
+      .from('organization_signup_requests')
+      .select('*')
+      .eq('id', requestId)
+      .eq('requester_profile_id', auth.user.id)
+      .single();
+
+    if (existingRequestError || !existingRequest) {
+      throw existingRequestError ?? new Error('수정할 신청 내역을 찾을 수 없습니다.');
+    }
+
+    if (existingRequest.status !== 'pending') {
+      throw new Error('검토 대기 상태의 신청만 수정할 수 있습니다.');
+    }
+
+    const parsed = organizationCreateSchema.extend({
+      requestId: z.string().uuid(),
+      note: z.string().trim().max(1000).optional().or(z.literal('')),
+      businessNumber: z.string().trim().min(1, '사업자등록번호를 입력해 주세요.')
+        .refine((value) => normalizeBusinessNumber(value).length === 10, '사업자등록번호는 숫자 10자리여야 합니다.')
+        .refine((value) => isValidKoreanBusinessNumber(value), '유효한 사업자등록번호를 입력해 주세요.'),
+      businessRegistrationDocument: z.any().optional()
+    }).parse({
+      requestId,
+      name: formData.get('name'),
+      kind: formData.get('kind') || 'law_firm',
+      businessNumber: formData.get('businessNumber'),
+      businessRegistrationDocument: formData.get('businessRegistrationDocument'),
+      representativeName: formData.get('representativeName'),
+      representativeTitle: formData.get('representativeTitle'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      addressLine1: formData.get('addressLine1'),
+      addressLine2: formData.get('addressLine2'),
+      postalCode: formData.get('postalCode'),
+      websiteUrl: formData.get('websiteUrl'),
+      requestedModules: formData.getAll('requestedModules').map(String),
+      note: formData.get('note')
+    });
+
+    const requesterEmail = resolveRequesterEmail(auth);
+    const normalizedBusinessNumber = normalizeBusinessNumber(parsed.businessNumber);
+    const replacementDocument = parsed.businessRegistrationDocument instanceof File && parsed.businessRegistrationDocument.size > 0
+      ? parsed.businessRegistrationDocument
+      : null;
+
+    let documentMimeType = existingRequest.business_registration_document_mime_type as string | null;
+    let documentName = existingRequest.business_registration_document_name as string | null;
+    let documentSize = existingRequest.business_registration_document_size as number | null;
+    let verificationStatus = existingRequest.business_registration_verification_status as string | null;
+    let verificationNote = existingRequest.business_registration_verification_note as string | null;
+    let verifiedNumber = existingRequest.business_registration_verified_number as string | null;
+    let verifiedAt = existingRequest.business_registration_verified_at as string | null;
+
+    if (replacementDocument) {
+      const detectedDocumentType = await validateOrganizationSignupDocument(replacementDocument);
+      const verification = await verifyOrganizationSignupDocument(replacementDocument, normalizedBusinessNumber, detectedDocumentType);
+      nextStoragePath = buildOrganizationSignupDocumentPath(auth.user.id, replacementDocument.name);
+
+      const { error: uploadError } = await admin.storage.from(organizationSignupDocumentBucket).upload(nextStoragePath, replacementDocument, {
+        contentType: detectedDocumentType,
+        upsert: false
+      });
+
+      if (uploadError) throw uploadError;
+
+      previousStoragePath = existingRequest.business_registration_document_path as string | null;
+      documentMimeType = detectedDocumentType;
+      documentName = replacementDocument.name;
+      documentSize = replacementDocument.size;
+      verificationStatus = verification.status;
+      verificationNote = verification.note;
+      verifiedNumber = verification.verifiedNumber;
+      verifiedAt = new Date().toISOString();
+    } else if (normalizedBusinessNumber !== existingRequest.business_number) {
+      verificationStatus = 'pending_review';
+      verificationNote = '사업자등록번호가 변경되어 운영팀이 제출 문서를 다시 확인해야 합니다.';
+      verifiedNumber = null;
+      verifiedAt = new Date().toISOString();
+    }
+
+    const { error: updateError } = await supabase
+      .from('organization_signup_requests')
+      .update({
+        requester_email: requesterEmail,
+        organization_name: parsed.name,
+        organization_kind: parsed.kind,
+        business_number: normalizedBusinessNumber,
+        representative_name: parsed.representativeName || null,
+        representative_title: parsed.representativeTitle || null,
+        contact_phone: parsed.phone || null,
+        website_url: parsed.websiteUrl || null,
+        requested_modules: parsed.requestedModules,
+        note: parsed.note || null,
+        business_registration_document_path: nextStoragePath ?? existingRequest.business_registration_document_path,
+        business_registration_document_name: documentName,
+        business_registration_document_mime_type: documentMimeType,
+        business_registration_document_size: documentSize,
+        business_registration_verification_status: verificationStatus,
+        business_registration_verification_note: verificationNote,
+        business_registration_verified_number: verifiedNumber,
+        business_registration_verified_at: verifiedAt
+      })
+      .eq('id', requestId)
+      .eq('requester_profile_id', auth.user.id)
+      .eq('status', 'pending');
+
+    if (updateError) throw updateError;
+
+    if (previousStoragePath) {
+      await admin.storage.from(organizationSignupDocumentBucket).remove([previousStoragePath]).catch(() => undefined);
+    }
+  } catch (error) {
+    if (nextStoragePath) {
+      await admin.storage.from(organizationSignupDocumentBucket).remove([nextStoragePath]).catch(() => undefined);
+    }
+
+    const message = getActionErrorMessage(error, '조직 개설 신청 수정에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    redirect(`/organization-request?edit=${encodeURIComponent(requestId)}&error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath('/organization-request');
+  revalidatePath('/admin/organization-requests');
+  redirect('/organization-request?updated=1');
+}
+
+export async function cancelOrganizationSignupRequestAction(formData: FormData) {
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+  const requestId = `${formData.get('requestId') ?? ''}`.trim();
+
+  if (!requestId) {
+    redirect(`/organization-request?error=${encodeURIComponent('취소할 신청 정보를 찾을 수 없습니다.')}` as Route);
+  }
+
+  try {
+    const { error } = await supabase
+      .from('organization_signup_requests')
+      .update({
+        status: 'cancelled',
+        reviewed_note: '신청자 취소',
+        reviewed_at: new Date().toISOString()
+      })
+      .eq('id', requestId)
+      .eq('requester_profile_id', auth.user.id)
+      .eq('status', 'pending');
+
+    if (error) throw error;
+  } catch (error) {
+    const message = getActionErrorMessage(error, '조직 개설 신청 취소에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    redirect(`/organization-request?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath('/organization-request');
+  revalidatePath('/admin/organization-requests');
+  redirect('/organization-request?cancelled=1');
 }
 
 export async function reviewOrganizationSignupRequestAction(formData: FormData) {

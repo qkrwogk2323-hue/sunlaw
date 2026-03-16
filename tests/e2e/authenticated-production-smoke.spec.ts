@@ -53,6 +53,24 @@ async function deleteNotification(notificationId: string) {
   }
 }
 
+async function getLatestOrganizationSignupRequest() {
+  const admin = createAdminClient();
+  const recipient = await getSmokeRecipient();
+  const { data, error } = await admin
+    .from('organization_signup_requests')
+    .select('id, status, organization_name')
+    .eq('requester_profile_id', recipient.profileId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? null;
+}
+
 function notificationCardByTitle(page: Parameters<typeof test>[0] extends never ? never : any, title: string, buttonLabel: string) {
   return page.locator(
     `xpath=//p[normalize-space()='${title}']/ancestor::div[contains(@class,'rounded-[1.5rem]')][1][.//button[normalize-space()='${buttonLabel}']]`
@@ -191,8 +209,24 @@ test('seeded session can open organization request history', async ({ page }) =>
   await page.goto('/organization-request');
 
   await expect(page.getByRole('heading', { name: '조직 개설 신청', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '조직 개설 신청서', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /조직 개설 신청서|조직 개설 신청 수정/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: '나의 신청 내역' })).toBeVisible();
+});
+
+test('organization request page shows the new completion and pending UX', async ({ page }) => {
+  const latestRequest = await getLatestOrganizationSignupRequest();
+
+  await page.goto('/organization-request?submitted=1');
+
+  await expect(page.getByText('신청이 완료되었습니다! 승인을 대기해주세요.')).toBeVisible();
+
+  if (latestRequest?.status === 'pending') {
+    await expect(page.getByText('신청 대기 상태입니다.')).toBeVisible();
+    await expect(page.getByRole('link', { name: '수정하기' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '취소하기' })).toBeVisible();
+  } else {
+    await expect(page.getByRole('heading', { name: '조직 개설 신청서', exact: true })).toBeVisible();
+  }
 });
 
 test('seeded session can open client access search', async ({ page }) => {
