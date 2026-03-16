@@ -25,7 +25,7 @@ export default async function LoginPage() {
         <CardContent className="space-y-4">
           <LoginButton />
           <div className="rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-500">
-            처음 이용하신다면 <Link href={'/start/signup' as Route} className="font-medium text-sky-700">회원가입 안내</Link>에서 조직 또는 의뢰인 흐름을 선택할 수 있습니다.
+            처음 이용하신다면 <Link href={'/start/signup' as Route} className="font-medium text-sky-700">회원가입하기</Link>에서 계정을 만든 뒤 의뢰인 가입 또는 조직 개설 신청으로 이어갈 수 있습니다.
           </div>
         </CardContent>
       </Card>

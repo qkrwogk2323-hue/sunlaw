@@ -24,25 +24,71 @@ export default async function SignupGuidePage({
   const auth = await getCurrentAuth();
   const resolved = searchParams ? await searchParams : undefined;
   const flow = resolved?.flow ?? '';
-  const clientNext = '/start/signup?flow=client';
+  const signupNext = '/start/signup';
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-16">
       <div className="space-y-8">
         <div className="space-y-4 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">회원가입 안내</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">이용 방식과 다음 단계를 한 화면에서 확인하세요.</h1>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">회원가입 후 필요한 가입 경로를 이어서 선택하세요.</h1>
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            use-funnel 방식처럼 단계는 분리하되, 현재 선택과 다음 행동이 항상 보이도록 구성했습니다.
+            먼저 카카오 로그인으로 계정을 만든 뒤, 의뢰인 가입 또는 조직 개설 신청으로 이어집니다. 이미 조직 키를 받은 경우에는 연결 요청으로 바로 갈 수 있습니다.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <StepChip step="1" title="경로 선택" active={!flow} />
-            <StepChip step="2" title="정보 입력 또는 요청" active={Boolean(flow)} />
-            <StepChip step="3" title="승인 후 진입" active={Boolean(auth?.profile.is_client_account)} />
+            <StepChip step="1" title="회원가입" active={!auth} />
+            <StepChip step="2" title="경로 선택" active={Boolean(auth) && !flow} />
+            <StepChip step="3" title="정보 입력 또는 요청" active={Boolean(auth) && Boolean(flow)} />
           </div>
         </div>
 
-        {!flow ? (
+        {!auth ? (
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <Card className="rounded-[1.8rem] border-sky-200 bg-[linear-gradient(180deg,#f8fbff,#eef6ff)]">
+              <CardHeader className="border-none pb-2">
+                <CardTitle className="text-2xl">1단계. 카카오 로그인으로 회원가입 시작</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  {[
+                    ['1', '카카오 로그인으로 기본 계정 생성'],
+                    ['2', '로그인 직후 가입 경로 선택'],
+                    ['3', '의뢰인 가입 또는 조직 개설 신청 진행']
+                  ].map(([step, title]) => (
+                    <div key={step} className="flex items-center gap-3 rounded-2xl border border-sky-200 bg-white px-4 py-3">
+                      <div className="inline-flex size-9 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">{step}</div>
+                      <p className="text-sm font-medium text-slate-900">{title}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm leading-7 text-slate-600">
+                  회원가입이 완료되면 이 화면으로 다시 돌아와서 의뢰인 가입으로 갈지, 조직 개설 신청으로 갈지 선택합니다.
+                </p>
+                <LoginButtonWithNext next={signupNext} />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[1.8rem]">
+              <CardHeader className="border-none pb-2">
+                <CardTitle className="text-2xl">회원가입 후 가능한 경로</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <p className="font-medium text-slate-900">의뢰인 가입</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">본인정보를 입력하고 승인 대기 상태로 전환한 뒤, 조직 연결 요청을 이어갑니다.</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <p className="font-medium text-slate-900">조직 개설 신청</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">법률사무소, 추심사, 금융사 등 조직 단위 워크스페이스 개설을 신청합니다.</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <p className="font-medium text-slate-900">조직 연결 요청</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">이미 조직 키를 받았다면 연결 요청으로 바로 이동할 수 있습니다.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : !flow ? (
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="vs-mesh-card rounded-[1.8rem]">
               <CardHeader className="border-none pb-2">
@@ -94,7 +140,7 @@ export default async function SignupGuidePage({
           </div>
         ) : null}
 
-        {flow === 'organization' ? (
+        {auth && flow === 'organization' ? (
           <Card className="rounded-[1.8rem]">
             <CardHeader className="border-none pb-2">
               <CardTitle className="text-2xl">조직 개설 흐름</CardTitle>
@@ -126,7 +172,7 @@ export default async function SignupGuidePage({
           </Card>
         ) : null}
 
-        {flow === 'client' ? (
+        {auth && flow === 'client' ? (
           <div className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
             <Card className="rounded-[1.8rem] border-emerald-200 bg-[linear-gradient(180deg,#f6fff9,#ebfff2)]">
               <CardHeader className="border-none pb-2">
@@ -152,17 +198,7 @@ export default async function SignupGuidePage({
               </CardContent>
             </Card>
 
-            {!auth ? (
-              <Card className="rounded-[1.8rem]">
-                <CardHeader className="border-none pb-2">
-                  <CardTitle className="text-2xl">1단계. 로그인으로 본인 확인 시작</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm leading-7 text-slate-600">의뢰인 가입은 먼저 카카오 로그인으로 본인 세션을 만든 뒤 진행합니다. 로그인 후 이 화면으로 다시 돌아와 민감정보 입력을 이어갑니다.</p>
-                  <LoginButtonWithNext next={clientNext} />
-                </CardContent>
-              </Card>
-            ) : !auth.profile.is_client_account ? (
+            {!auth.profile.is_client_account ? (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">2단계. 본인정보 등록을 완료하면 기본 상태가 승인 대기로 전환됩니다.</div>
                 <ClientSignupForm />
@@ -198,7 +234,7 @@ export default async function SignupGuidePage({
           </div>
         ) : null}
 
-        {flow === 'connection' ? (
+        {auth && flow === 'connection' ? (
           <Card className="rounded-[1.8rem] border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff7e8)]">
             <CardHeader className="border-none pb-2">
               <CardTitle className="text-2xl">조직 연결 요청 흐름</CardTitle>

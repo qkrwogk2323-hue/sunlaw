@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { ArrowRight, Building2, Link2, LogIn, UserPlus, Users } from 'lucide-react';
+import { ArrowRight, Link2, LogIn, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
 
@@ -38,12 +38,8 @@ export default function StartPage() {
               <span className="inline-flex items-center gap-2"><LogIn className="size-5" /> 로그인하기</span>
               <ArrowRight className="size-4" />
             </Link>
-            <Link href={'/start/signup?flow=organization' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
-              <span className="inline-flex items-center gap-2"><Building2 className="size-5" /> 조직 개설 시작</span>
-              <ArrowRight className="size-4" />
-            </Link>
-            <Link href={'/start/signup?flow=client' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
-              <span className="inline-flex items-center gap-2"><UserPlus className="size-5" /> 의뢰인 가입 시작</span>
+            <Link href={'/start/signup' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
+              <span className="inline-flex items-center gap-2"><UserPlus className="size-5" /> 회원가입하기</span>
               <ArrowRight className="size-4" />
             </Link>
             <Link href={'/start/signup?flow=connection' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
@@ -51,7 +47,7 @@ export default function StartPage() {
               <ArrowRight className="size-4" />
             </Link>
             <p className="text-sm leading-7 text-slate-500">
-              조직 개설, 의뢰인 가입, 조직 연결 요청은 서로 다른 흐름입니다. 한 번에 섞지 않고 각각 별도 단계로 안내합니다.
+              회원가입은 먼저 카카오 로그인으로 계정을 만든 뒤, 의뢰인 가입 또는 조직 개설 신청으로 나뉘어 진행됩니다.
             </p>
           </CardContent>
         </Card>

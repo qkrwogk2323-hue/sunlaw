@@ -13,55 +13,52 @@ export function registerPublicRouteSmokeTests() {
 
     await expect(page.getByRole('heading', { name: '랜딩에서 다음 단계까지, 지금 해야 할 선택을 분명하게 안내합니다.' })).toBeVisible();
     await expect(page.getByRole('link', { name: /로그인하기/i })).toHaveAttribute('href', '/login');
-    await expect(page.getByRole('link', { name: /조직 개설 시작/i })).toHaveAttribute('href', '/start/signup?flow=organization');
-    await expect(page.getByRole('link', { name: /의뢰인 가입 시작/i })).toHaveAttribute('href', '/start/signup?flow=client');
+    await expect(page.getByRole('link', { name: /회원가입하기/i })).toHaveAttribute('href', '/start/signup');
+    await expect(page.getByRole('link', { name: /조직 연결 요청/i })).toHaveAttribute('href', '/start/signup?flow=connection');
   });
 
   test('start page links into the signup guide', async ({ page }) => {
     await page.goto('/start');
-    await page.locator('a[href="/start/signup?flow=organization"]').click();
+    await page.locator('a[href="/start/signup"]').click();
 
-    await expect(page).toHaveURL(/\/start\/signup\?flow=organization$/);
-    await expect(page.getByRole('heading', { name: '조직 개설 흐름' })).toBeVisible();
+    await expect(page).toHaveURL(/\/start\/signup$/);
+    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
   });
 
-  test('signup guide exposes both organization and client entry flows', async ({ page }) => {
+  test('signup guide asks anonymous users to sign up first', async ({ page }) => {
     await page.goto('/start/signup');
 
-    await expect(page.getByRole('heading', { name: '이용 방식과 다음 단계를 한 화면에서 확인하세요.' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /조직 개설 단계 보기/i })).toHaveAttribute('href', '/start/signup?flow=organization');
-    await expect(page.getByRole('link', { name: /의뢰인 가입 단계 보기/i })).toHaveAttribute('href', '/start/signup?flow=client');
-    await expect(page.getByRole('link', { name: /연결 요청 단계 보기/i })).toHaveAttribute('href', '/start/signup?flow=connection');
+    await expect(page.getByRole('heading', { name: '회원가입 후 필요한 가입 경로를 이어서 선택하세요.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '카카오로 로그인' })).toBeVisible();
   });
 
-  test('signup guide renders the organization flow details', async ({ page }) => {
+  test('signup guide defers organization flow until after signup', async ({ page }) => {
     await page.goto('/start/signup?flow=organization');
 
-    await expect(page.getByRole('heading', { name: '이용 방식과 다음 단계를 한 화면에서 확인하세요.' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '조직 개설 흐름' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /조직 개설 신청으로 이동/i })).toHaveAttribute('href', '/organization-request');
+    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '카카오로 로그인' })).toBeVisible();
   });
 
   test('signup guide renders the client flow login step', async ({ page }) => {
     await page.goto('/start/signup?flow=client');
 
-    await expect(page.getByRole('heading', { name: '의뢰인 가입 흐름' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '1단계. 로그인으로 본인 확인 시작' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
     await expect(page.getByRole('button', { name: '카카오로 로그인' })).toBeVisible();
   });
 
   test('signup guide renders the connection flow details', async ({ page }) => {
     await page.goto('/start/signup?flow=connection');
 
-    await expect(page.getByRole('heading', { name: '조직 연결 요청 흐름' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /조직 연결 요청으로 이동/i })).toHaveAttribute('href', '/client-access');
+    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '카카오로 로그인' })).toBeVisible();
   });
 
   test('login page exposes the signup guide entry', async ({ page }) => {
     await page.goto('/login');
 
     await expect(page.getByRole('heading', { name: '카카오로 로그인' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '회원가입 안내' })).toHaveAttribute('href', '/start/signup');
+    await expect(page.getByRole('link', { name: '회원가입하기' })).toHaveAttribute('href', '/start/signup');
   });
 
   test('organization request page asks anonymous users to sign in', async ({ page }) => {
@@ -97,7 +94,7 @@ export function registerPublicRouteSmokeTests() {
     await page.goto('/auth/callback?next=/start/signup?flow=connection');
 
     await expect(page).toHaveURL(/\/start\/signup\?flow=connection$/);
-    await expect(page.getByRole('heading', { name: '조직 연결 요청 흐름' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1단계. 카카오 로그인으로 회원가입 시작' })).toBeVisible();
   });
 
   test('unknown routes show the not found experience', async ({ page }) => {
