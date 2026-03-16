@@ -24,7 +24,7 @@ export function HomepageDemoVideo() {
   return (
     <video
       ref={videoRef}
-      className="h-full w-full scale-[1.12] object-cover object-[center_10%]"
+      className="h-full w-full scale-[1.04] object-cover object-[center_16%]"
       src="/vein-spiral-demo.mp4"
       autoPlay
       muted
