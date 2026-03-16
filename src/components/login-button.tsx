@@ -4,7 +4,15 @@ import { useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
 
-export function LoginButton() {
+type LoginButtonProps = {
+  idleLabel?: string;
+  loadingLabel?: string;
+};
+
+export function LoginButton({
+  idleLabel = '카카오로 로그인',
+  loadingLabel = '연결 중...'
+}: LoginButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -32,12 +40,20 @@ export function LoginButton() {
 
   return (
     <Button type="button" size="lg" onClick={handleLogin} isLoading={loading}>
-      {loading ? '연결 중...' : '카카오로 로그인'}
+      {loading ? loadingLabel : idleLabel}
     </Button>
   );
 }
 
-export function LoginButtonWithNext({ next }: { next?: string }) {
+type LoginButtonWithNextProps = LoginButtonProps & {
+  next?: string;
+};
+
+export function LoginButtonWithNext({
+  next,
+  idleLabel = '카카오로 로그인',
+  loadingLabel = '연결 중...'
+}: LoginButtonWithNextProps) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -69,7 +85,7 @@ export function LoginButtonWithNext({ next }: { next?: string }) {
 
   return (
     <Button type="button" size="lg" onClick={handleLogin} isLoading={loading}>
-      {loading ? '연결 중...' : '카카오로 로그인'}
+      {loading ? loadingLabel : idleLabel}
     </Button>
   );
 }
