@@ -191,7 +191,7 @@ async function createOrganizationCore({
   requestedModules?: string[];
   setDefaultOrganization?: boolean;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const slug = buildOrganizationSlug(name);
 
   const enabledModules = Object.fromEntries([
@@ -982,18 +982,17 @@ export async function reviewClientAccessRequestAction(formData: FormData) {
   const orgName = (requestRow.organization as any)?.name ?? '선택한 조직';
 
   if (parsed.decision === 'approved' && requestRow.requester_profile_id) {
-    const { error: activateProfileError } = await adminClient
+    const { error: markPendingError } = await adminClient
       .from('profiles')
       .update({
         is_client_account: true,
-        client_account_status: 'active',
+        client_account_status: 'pending_initial_approval',
         client_account_status_changed_at: resolvedAt,
-        client_account_status_reason: `${orgName} 조직 연결 요청 승인`,
-        client_last_approved_at: resolvedAt
+        client_account_status_reason: `${orgName} 조직 연결 요청 승인 후 사건 연결 대기`
       })
       .eq('id', requestRow.requester_profile_id);
 
-    if (activateProfileError) throw activateProfileError;
+    if (markPendingError) throw markPendingError;
   }
 
   const { error: notificationError } = await adminClient.from('notifications').insert({
@@ -1003,11 +1002,11 @@ export async function reviewClientAccessRequestAction(formData: FormData) {
     title: parsed.decision === 'approved' ? '협업 요청이 승인되었습니다.' : '협업 요청이 반려되었습니다.',
     body:
       parsed.decision === 'approved'
-        ? `${orgName}에서 협업 연결 요청을 승인했습니다. 이제 포털에서 연결 상태를 확인하고 사건 연결 안내를 기다릴 수 있습니다.`
+        ? `${orgName}에서 협업 연결 요청을 승인했습니다. 사건 연결이 완료되면 포털 접근이 자동으로 활성화됩니다.`
         : `${orgName}에서 협업 연결 요청을 반려했습니다.${parsed.reviewNote ? ` 메모: ${parsed.reviewNote}` : ''}`,
     payload: { request_id: parsed.requestId, target_organization_id: parsed.organizationId, decision: parsed.decision },
-    action_label: parsed.decision === 'approved' ? '포털 열기' : null,
-    action_href: parsed.decision === 'approved' ? '/portal' : null
+    action_label: parsed.decision === 'approved' ? '연결 상태 보기' : null,
+    action_href: parsed.decision === 'approved' ? '/start/pending' : null
   });
 
   if (notificationError) throw notificationError;

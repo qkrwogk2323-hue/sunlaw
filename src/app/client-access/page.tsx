@@ -6,6 +6,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { getCurrentAuth } from '@/lib/auth';
 import { clientAccountStatusLabel, isClientAccountPending } from '@/lib/client-account';
 import { ClientAccessRequestForm } from '@/components/forms/client-access-request-form';
+import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entry-form';
 import { searchPublicOrganizations, listMyClientAccessRequests } from '@/lib/queries/client-access';
 import { Badge } from '@/components/ui/badge';
 
@@ -36,9 +37,9 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
       <div className="space-y-8">
         <div className="vs-brand-panel rounded-[2rem] p-8 text-white shadow-[0_28px_60px_rgba(8,47,73,0.28)]">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/72">조직 연결 요청</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight">조직 검색부터 연결 요청까지 한 번에 이어집니다.</h1>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight">초대번호가 있으면 바로 입력하고, 없으면 조직가입신청으로 이어집니다.</h1>
           <p className="mt-4 max-w-3xl text-sm leading-8 text-slate-200/88">
-            조직명 또는 조직 키로 협업할 조직을 찾고, 연결 요청을 보낸 뒤 승인 결과를 기다립니다. 승인 전에는 대기 상태 화면이, 승인 후에는 포털 진입이 열립니다.
+            사건 허브로 바로 연결되려면 조직에서 전달한 초대번호 또는 초대 링크가 필요합니다. 아직 초대번호가 없다면 조직명 또는 조직 키로 조직가입신청을 보내고 승인 결과를 기다릴 수 있습니다.
           </p>
           {auth?.profile.is_client_account ? (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-sky-100">
@@ -67,8 +68,8 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
               <CardTitle className="text-2xl">현재 단계에서 필요한 행동</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm leading-7 text-sky-900">
-              <p>1. 협업할 조직의 조직 키를 확인합니다.</p>
-              <p>2. 아래 검색 결과에서 연결 요청을 보냅니다.</p>
+              <p>1. 초대번호가 있다면 먼저 입력해서 바로 연결을 시도합니다.</p>
+              <p>2. 초대번호가 없다면 아래에서 조직을 검색하고 조직가입신청을 보냅니다.</p>
               <p>3. 승인 결과는 대기 상태 화면과 알림에서 확인합니다.</p>
               <Link href={'/start/pending' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-12 rounded-[1.25rem] px-4' })}>
                 대기 상태 화면으로 이동
@@ -77,9 +78,17 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
           </Card>
         ) : null}
 
+        {auth?.profile.is_client_account ? (
+          <InvitationCodeEntryForm
+            title="초대번호를 먼저 입력하세요"
+            description="조직에서 받은 초대번호나 초대 링크가 있다면 여기서 바로 입력하세요. 초대번호가 없을 때만 아래 조직가입신청하기를 이용하면 됩니다."
+            submitLabel="초대번호 확인하고 계속하기"
+          />
+        ) : null}
+
         <Card className="rounded-[1.8rem]">
           <CardHeader className="border-none pb-2">
-            <CardTitle className="text-2xl">조직 검색</CardTitle>
+            <CardTitle className="text-2xl">초대번호가 없으면 조직가입신청하기</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -146,7 +155,7 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
 
         {auth ? (
           <Card className="rounded-[1.8rem]">
-            <CardHeader><CardTitle>내 협업 요청 현황</CardTitle></CardHeader>
+            <CardHeader><CardTitle>내 조직가입신청 현황</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {myRequests.length ? myRequests.map((request: any) => (
                 <div key={request.id} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
@@ -161,7 +170,7 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
                   <p className="mt-2 text-xs text-slate-400">검토 메모: {request.review_note ?? '-'}</p>
                   {request.status === 'approved' ? <p className="mt-2 text-xs font-medium text-emerald-700">조직 승인 완료. 이제 담당자가 사건 연결을 진행하면 포털에서 바로 확인할 수 있습니다.</p> : null}
                 </div>
-              )) : <p className="text-sm text-slate-500">아직 보낸 협업 요청이 없습니다.</p>}
+              )) : <p className="text-sm text-slate-500">아직 보낸 조직가입신청이 없습니다.</p>}
             </CardContent>
           </Card>
         ) : null}

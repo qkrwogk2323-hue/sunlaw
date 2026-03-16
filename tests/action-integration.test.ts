@@ -11,11 +11,14 @@ const mocks = vi.hoisted(() => ({
   requireOrganizationActionAccess: vi.fn(),
   requirePlatformAdminAction: vi.fn(),
   requireAuthenticatedUser: vi.fn(),
+  getCurrentAuth: vi.fn(),
   hasActivePlatformAdminView: vi.fn(),
   createSupabaseServerClient: vi.fn(),
   createSupabaseAdminClient: vi.fn(),
   createInvitationToken: vi.fn(() => 'invite-token-123456'),
-  hashInvitationToken: vi.fn(() => 'hashed-invite-token')
+  hashInvitationToken: vi.fn(() => 'hashed-invite-token'),
+  writeSupportSessionCookie: vi.fn(),
+  clearSupportSessionCookie: vi.fn()
 }));
 
 vi.mock('next/cache', () => ({
@@ -30,6 +33,7 @@ vi.mock('@/lib/auth', () => ({
   requireOrganizationActionAccess: mocks.requireOrganizationActionAccess,
   requirePlatformAdminAction: mocks.requirePlatformAdminAction,
   requireAuthenticatedUser: mocks.requireAuthenticatedUser,
+  getCurrentAuth: mocks.getCurrentAuth,
   hasActivePlatformAdminView: mocks.hasActivePlatformAdminView,
   isManagementRole: (role?: string | null) => role === 'org_owner' || role === 'org_manager'
 }));
@@ -45,6 +49,11 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/lib/invitations', () => ({
   createInvitationToken: mocks.createInvitationToken,
   hashInvitationToken: mocks.hashInvitationToken
+}));
+
+vi.mock('@/lib/support-cookie', () => ({
+  writeSupportSessionCookie: mocks.writeSupportSessionCookie,
+  clearSupportSessionCookie: mocks.clearSupportSessionCookie
 }));
 
 const authContext = {
@@ -179,6 +188,7 @@ describe('server action integration', () => {
       membership: authContext.memberships[0]
     });
     mocks.requirePlatformAdminAction.mockResolvedValue(authContext);
+    mocks.getCurrentAuth.mockResolvedValue(authContext);
   });
 
   it('creates a case through the shared organization guard', async () => {
@@ -311,5 +321,158 @@ describe('server action integration', () => {
       errorMessage: '의뢰인을 사건에 연결할 권한이 없습니다.'
     });
     expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('keeps approved client access accounts pending until a case link is completed', async () => {
+    const requestStatusUpdateEq = vi.fn(async () => ({ error: null }));
+    const requestStatusUpdate = vi.fn(() => ({ eq: requestStatusUpdateEq }));
+    const requestLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '88888888-8888-4888-8888-888888888888',
+        requester_profile_id: 'client-profile-1',
+        requester_name: '의뢰인',
+        target_organization_id: '22222222-2222-4222-8222-222222222222',
+        status: 'pending',
+        organization: { name: '테스트 조직' }
+      },
+      error: null
+    }));
+    const requestLookupEqOrg = vi.fn(() => ({ maybeSingle: requestLookupMaybeSingle }));
+    const requestLookupEqId = vi.fn(() => ({ eq: requestLookupEqOrg }));
+    const requestLookupSelect = vi.fn(() => ({ eq: requestLookupEqId }));
+    const profileUpdateEq = vi.fn(async () => ({ error: null }));
+    const profileUpdate = vi.fn(() => ({ eq: profileUpdateEq }));
+    const notificationResolveIs = vi.fn(async () => ({ error: null }));
+    const notificationResolveTarget = vi.fn(() => ({ is: notificationResolveIs }));
+    const notificationResolveEntity = vi.fn(() => ({ eq: notificationResolveTarget }));
+    const notificationResolveOrg = vi.fn(() => ({ eq: notificationResolveEntity }));
+    const notificationResolve = vi.fn(() => ({ eq: notificationResolveOrg }));
+    const notificationInsert = vi.fn(async () => ({ error: null }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'client_access_requests') {
+          return {
+            select: requestLookupSelect,
+            update: requestStatusUpdate
+          };
+        }
+        if (table === 'profiles') {
+          return { update: profileUpdate };
+        }
+        if (table === 'notifications') {
+          return {
+            update: notificationResolve,
+            insert: notificationInsert
+          };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('requestId', '88888888-8888-4888-8888-888888888888');
+    formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
+    formData.set('decision', 'approved');
+    formData.set('reviewNote', '승인');
+
+    const { reviewClientAccessRequestAction } = await import('@/lib/actions/organization-actions');
+
+    await reviewClientAccessRequestAction(formData);
+
+    expect(profileUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      is_client_account: true,
+      client_account_status: 'pending_initial_approval'
+    }));
+    expect(notificationInsert).toHaveBeenCalledWith(expect.objectContaining({
+      action_label: '연결 상태 보기',
+      action_href: '/start/pending'
+    }));
+  });
+
+  it('rejects support access requests for users outside the target organization', async () => {
+    const organizationSingle = vi.fn(async () => ({
+      data: { id: '22222222-2222-4222-8222-222222222222', name: '테스트 조직' },
+      error: null
+    }));
+    const organizationEq = vi.fn(() => ({ single: organizationSingle }));
+    const organizationSelect = vi.fn(() => ({ eq: organizationEq }));
+
+    const profileMaybeSingle = vi.fn(async () => ({
+      data: { id: 'outside-profile', email: 'outside@example.com', full_name: '외부 사용자' },
+      error: null
+    }));
+    const profileEq = vi.fn(() => ({ maybeSingle: profileMaybeSingle }));
+    const profileSelect = vi.fn(() => ({ eq: profileEq }));
+    const membershipMaybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const membershipEqStatus = vi.fn(() => ({ maybeSingle: membershipMaybeSingle }));
+    const membershipEqProfile = vi.fn(() => ({ eq: membershipEqStatus }));
+    const membershipEqOrg = vi.fn(() => ({ eq: membershipEqProfile }));
+    const membershipSelect = vi.fn(() => ({ eq: membershipEqOrg }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'organizations') {
+          return { select: organizationSelect };
+        }
+
+        throw new Error(`Unexpected server table: ${table}`);
+      })
+    });
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'profiles') {
+          return { select: profileSelect };
+        }
+        if (table === 'organization_memberships') {
+          return { select: membershipSelect };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
+    formData.set('targetEmail', 'outside@example.com');
+    formData.set('reason', '조직 외부 계정 여부 점검을 위한 지원 요청');
+    formData.set('expiresHours', '4');
+
+    const { createSupportRequestAction } = await import('@/lib/actions/support-actions');
+
+    await expect(createSupportRequestAction(formData)).rejects.toThrow('지원 접속 대상은 해당 조직의 활성 구성원이어야 합니다.');
+  });
+
+  it('blocks duplicate document review requests when a document is already pending', async () => {
+    const documentSingle = vi.fn(async () => ({
+      data: {
+        id: 'doc-1',
+        case_id: 'case-1',
+        organization_id: '22222222-2222-4222-8222-222222222222',
+        approval_requested_by: authContext.user.id,
+        title: '위임장',
+        approval_status: 'pending_review',
+        row_version: 3
+      },
+      error: null
+    }));
+    const documentEq = vi.fn(() => ({ single: documentSingle }));
+    const documentSelect = vi.fn(() => ({ eq: documentEq }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'case_documents') {
+          return { select: documentSelect };
+        }
+
+        throw new Error(`Unexpected server table: ${table}`);
+      })
+    });
+
+    const { requestDocumentReviewAction } = await import('@/lib/actions/case-actions');
+
+    await expect(requestDocumentReviewAction('doc-1')).rejects.toThrow('현재 상태에서는 결재를 다시 요청할 수 없습니다.');
   });
 });

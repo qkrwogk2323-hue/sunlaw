@@ -11,10 +11,10 @@ export function registerPublicRouteSmokeTests() {
   test('start page renders core entry actions', async ({ page }) => {
     await page.goto('/start');
 
-    await expect(page.getByRole('heading', { name: '랜딩에서 다음 단계까지, 지금 해야 할 선택을 분명하게 안내합니다.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '로그인과 회원가입부터 시작하고, 그다음 경로를 정확하게 나눕니다.' })).toBeVisible();
     await expect(page.getByRole('link', { name: /로그인하기/i })).toHaveAttribute('href', '/login');
     await expect(page.getByRole('link', { name: /회원가입하기/i })).toHaveAttribute('href', '/start/signup');
-    await expect(page.getByRole('link', { name: /조직 연결 요청/i })).toHaveAttribute('href', '/start/signup?flow=connection');
+    await expect(page.getByRole('link', { name: /조직 연결 요청/i })).toHaveCount(0);
   });
 
   test('start page links into the signup guide', async ({ page }) => {
@@ -71,7 +71,7 @@ export function registerPublicRouteSmokeTests() {
   test('client access page renders public search before login', async ({ page }) => {
     await page.goto('/client-access');
 
-    await expect(page.getByRole('heading', { name: '조직 검색부터 연결 요청까지 한 번에 이어집니다.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '초대번호가 있으면 바로 입력하고, 없으면 조직가입신청으로 이어집니다.' })).toBeVisible();
     await expect(page.getByRole('searchbox', { name: '' })).toHaveAttribute('placeholder', '조직명 또는 조직 키를 입력해 주세요');
     await expect(page.getByRole('button', { name: '검색하기' })).toBeVisible();
   });

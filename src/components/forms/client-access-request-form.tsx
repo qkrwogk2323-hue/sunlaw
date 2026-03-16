@@ -28,7 +28,7 @@ export function ClientAccessRequestForm({
         <div className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-500">{disabledLabel ?? '현재 요청을 보낼 수 없습니다.'}</div>
       ) : (
         <SubmitButton variant="secondary" pendingLabel="요청 전송 중..." className="w-full justify-center rounded-[1.2rem]">
-          협업 연결 요청 보내기
+          조직가입신청 보내기
         </SubmitButton>
       )}
     </form>

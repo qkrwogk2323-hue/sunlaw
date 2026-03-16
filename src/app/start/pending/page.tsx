@@ -7,6 +7,7 @@ import { clientAccountStatusDescription, clientAccountStatusLabel, isClientAccou
 import { listMyClientServiceRequests } from '@/lib/queries/client-account';
 import { listMyClientAccessRequests } from '@/lib/queries/client-access';
 import { ClientServiceRequestForm } from '@/components/forms/client-service-request-form';
+import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entry-form';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
@@ -69,7 +70,7 @@ export default async function ClientPendingPage({
 
         {resolved?.submitted ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            본인정보 등록이 접수되었습니다. 이제 협업할 조직을 선택하거나 현재 요청 상태를 확인해 주세요.
+            본인정보 등록이 접수되었습니다. 이제 조직에서 받은 초대번호를 입력하거나, 아직 초대번호가 없다면 조직가입신청하기로 다음 단계를 이어가세요.
           </div>
         ) : null}
 
@@ -91,14 +92,21 @@ export default async function ClientPendingPage({
                     <Link2 className="size-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">협업할 조직 연결 요청</p>
-                    <p className="mt-1 text-sm text-slate-600">조직 개설과는 다른 흐름입니다. 조직 키를 확인해 협업 요청을 보내야 승인 검토가 시작됩니다.</p>
+                    <p className="font-medium text-slate-900">먼저 초대번호를 입력하세요.</p>
+                    <p className="mt-1 text-sm text-slate-600">사건 허브로 바로 연결되려면 조직에서 전달한 초대번호 또는 초대 링크가 필요합니다. 초대번호가 없으면 아래의 조직가입신청하기로 요청을 남길 수 있습니다.</p>
                   </div>
                 </div>
-                <Link href={'/client-access' as Route} className={`${buttonStyles({ className: 'mt-4 w-full justify-between rounded-[1.2rem]' })}`}>
-                  조직 연결 요청하러 가기
-                  <ArrowRight className="size-4" />
-                </Link>
+                <div className="mt-4 space-y-3">
+                  <InvitationCodeEntryForm
+                    title="의뢰인용 초대번호 입력"
+                    description="조직 담당자가 전달한 초대번호나 초대 링크를 입력하면 사건 허브 연결 초대 수락 화면으로 이동합니다."
+                    submitLabel="초대번호 입력하고 계속하기"
+                  />
+                  <Link href={'/client-access' as Route} className={`${buttonStyles({ variant: 'secondary', className: 'w-full justify-between rounded-[1.2rem]' })}`}>
+                    조직가입신청하기
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -143,7 +151,7 @@ export default async function ClientPendingPage({
                 </div>
               )) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-sm text-slate-500">
-                  아직 보낸 조직 연결 요청이 없습니다. 협업할 조직을 선택해야 승인 검토가 시작됩니다.
+                  아직 보낸 조직가입신청 내역이 없습니다. 초대번호가 없다면 협업할 조직을 찾아 요청을 남겨 주세요.
                 </div>
               )}
             </CardContent>

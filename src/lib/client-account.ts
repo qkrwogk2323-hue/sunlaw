@@ -29,11 +29,11 @@ export function clientAccountStatusLabel(status: ClientAccountStatus) {
 
 export function clientAccountStatusDescription(status: ClientAccountStatus) {
   if (status === 'pending_initial_approval') {
-    return '본인정보 등록은 끝났습니다. 이제 협업할 조직을 선택하고 승인 결과를 기다리면 됩니다.';
+    return '본인정보 등록은 끝났습니다. 이제 조직에서 받은 초대번호를 입력하거나 조직가입신청을 남기고 승인 결과를 기다리면 됩니다.';
   }
 
   if (status === 'pending_reapproval') {
-    return '이전 조직 연결이 해제되어 업무 화면 접근이 잠시 멈춘 상태입니다. 새 연결 요청 또는 고객센터 문의가 필요합니다.';
+    return '이전 조직 연결이 해제되어 업무 화면 접근이 잠시 멈춘 상태입니다. 새 초대번호 입력, 조직가입신청, 또는 고객센터 문의가 필요합니다.';
   }
 
   return '로그인 후 포털과 연결 상태 화면으로 바로 진입할 수 있습니다.';
