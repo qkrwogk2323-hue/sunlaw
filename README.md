@@ -78,6 +78,7 @@ pnpm dev
 
 - 기준 계정 secret 이름은 `E2E_AUTH_SMOKE_EMAIL`로 고정합니다.
 - 이 secret은 사람 계정이 아니라 release gate 전용 seeded `platform_support` 계정을 가리켜야 합니다.
+- `SUPABASE_SERVICE_ROLE_KEY`가 설정된 환경에서는 `E2E_AUTH_SMOKE_EMAIL`이 비어 있어도 active `platform_support` 계정을 자동 탐색합니다. 다만 CI와 release gate에서는 계정 고정을 위해 명시 설정을 권장합니다.
 - 기준 계정은 활성 상태여야 하고, 기본 조직이 연결돼 있어 `/dashboard`와 `/notifications`를 모두 정상 렌더할 수 있어야 합니다.
 - 기준 보호 경로는 `/notifications`로 고정합니다.
 - 기준 홈 경로는 `/dashboard`로 고정합니다.
@@ -88,7 +89,7 @@ pnpm dev
 
 ## Authenticated Smoke Env
 
-- `E2E_AUTH_SMOKE_EMAIL`: release gate 전용 seeded `platform_support` 계정 이메일
+- `E2E_AUTH_SMOKE_EMAIL`: release gate 전용 seeded `platform_support` 계정 이메일. 비어 있으면 service role 기준 자동 탐색 시도
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase 프로젝트 URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key
 - `SUPABASE_SERVICE_ROLE_KEY`: 권장. admin-generated OTP로 seeded session을 만들 때 사용

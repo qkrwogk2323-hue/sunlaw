@@ -18,7 +18,7 @@ insert into public.organizations (
 )
 values
   (
-    'virtual-law-org',
+    '11111111-1111-4111-8111-111111111124',
     'saeon-garam-beop',
     '새온가람법(가상조직)',
     'law_firm',
@@ -33,7 +33,7 @@ values
     '04513'
   ),
   (
-    'virtual-collection-org',
+    '22222222-2222-4222-8222-222222222224',
     'nuri-chaeum-won',
     '누리채움원(가상조직)',
     'collection_company',
@@ -48,7 +48,7 @@ values
     '07326'
   ),
   (
-    'virtual-other-org',
+    '33333333-3333-4333-8333-333333333324',
     'daon-haneul-lab',
     '다온하늘랩(가상조직)',
     'other',

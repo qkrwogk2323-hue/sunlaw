@@ -81,7 +81,7 @@ export default async function CaseDetailPage({
   const canManage = Boolean(membership);
   const canAssign = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'case_assign'));
   const canReview = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'document_approve'));
-  const canBillingIssue = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'billing_issue'));
+  const canBillingIssue = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'billing_manage'));
   const canPaymentConfirm = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'billing_payment_confirm'));
   const canCollection = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'collection_view'));
   const currentTab: TabKey = (tab === 'collection' ? 'collection' : (tabs.includes(tab as any) ? (tab as TabKey) : 'overview'));

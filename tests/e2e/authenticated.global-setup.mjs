@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import { createAuthenticatedSmokeAdminClient, maskEmail, resolveAuthenticatedSmokeAccount } from './authenticated-smoke-account.mjs';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const storageStatePath = resolve(currentDir, '../../playwright/.auth/authenticated-smoke.json');
@@ -25,7 +26,7 @@ function resolveStorageKey(supabaseUrl) {
 export default async function globalSetup(config) {
   const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
   const supabaseAnonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  const email = requireEnv('E2E_AUTH_SMOKE_EMAIL');
+  const { email, source } = await resolveAuthenticatedSmokeAccount();
   const password = process.env.E2E_AUTH_SMOKE_PASSWORD;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const baseURL = config.projects[0]?.use?.baseURL;
@@ -33,6 +34,8 @@ export default async function globalSetup(config) {
   if (typeof baseURL !== 'string') {
     throw new Error('Authenticated production smoke requires a string baseURL.');
   }
+
+  console.log(`[auth-smoke] using ${source} account ${maskEmail(email)}`);
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -46,13 +49,7 @@ export default async function globalSetup(config) {
   let error;
 
   if (serviceRoleKey) {
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-        persistSession: false
-      }
-    });
+    const admin = createAuthenticatedSmokeAdminClient();
 
     const generated = await admin.auth.admin.generateLink({
       type: 'magiclink',

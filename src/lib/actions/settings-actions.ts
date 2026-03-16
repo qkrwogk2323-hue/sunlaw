@@ -254,21 +254,32 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
   if (logError || !logRow) throw logError ?? new Error('변경 로그를 찾을 수 없습니다.');
 
   if (logRow.target_type === 'platform_setting') {
-    await admin.from('platform_settings').upsert({
-      key: logRow.target_key,
-      value_json: logRow.old_value_json ?? null,
-      updated_by: auth.user.id,
-      updated_at: new Date().toISOString()
-    });
+    if (logRow.old_value_json == null) {
+      await admin.from('platform_settings').delete().eq('key', logRow.target_key);
+    } else {
+      await admin.from('platform_settings').upsert({
+        key: logRow.target_key,
+        value_json: logRow.old_value_json,
+        updated_by: auth.user.id,
+        updated_at: new Date().toISOString()
+      });
+    }
     revalidateTag('settings:platform', 'max');
   } else if (logRow.target_type === 'organization_setting' && logRow.organization_id) {
-    await admin.from('organization_settings').upsert({
-      organization_id: logRow.organization_id,
-      key: logRow.target_key,
-      value_json: logRow.old_value_json ?? null,
-      updated_by: auth.user.id,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'organization_id,key' });
+    if (logRow.old_value_json == null) {
+      await admin.from('organization_settings')
+        .delete()
+        .eq('organization_id', logRow.organization_id)
+        .eq('key', logRow.target_key);
+    } else {
+      await admin.from('organization_settings').upsert({
+        organization_id: logRow.organization_id,
+        key: logRow.target_key,
+        value_json: logRow.old_value_json,
+        updated_by: auth.user.id,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'organization_id,key' });
+    }
     revalidateTag(`settings:org:${logRow.organization_id}`, 'max');
   } else if (logRow.target_type === 'feature_flag') {
     const oldValue = (logRow.old_value_json ?? {}) as any;

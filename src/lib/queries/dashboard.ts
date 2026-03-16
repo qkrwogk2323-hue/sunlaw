@@ -1,9 +1,15 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
 
 export async function getDashboardSnapshot(organizationId?: string | null) {
+  const auth = await getCurrentAuth();
+  const canViewPartnerContacts = Boolean(
+    auth
+    && (await hasActivePlatformAdminView(auth)
+      || auth.memberships.some((membership) => membership.organization_id === organizationId && isManagementRole(membership.role)))
+  );
   const supabase = await createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
   const now = new Date();
   const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -182,36 +188,28 @@ export async function getDashboardSnapshot(organizationId?: string | null) {
   let partnerContacts: any[] = [];
 
   if (organizationId && availableCaseIds.length) {
-    const [{ data: caseClients }, { data: caseOrganizations }] = await Promise.all([
-      admin
+    const { data: caseClients } = await supabase
         .from('case_clients')
         .select('id, case_id, profile_id, client_name, relation_label, cases(title)')
         .eq('organization_id', organizationId)
         .in('case_id', availableCaseIds)
-        .order('created_at', { ascending: false }),
-      admin
+        .order('created_at', { ascending: false });
+
+    clientContacts = caseClients ?? [];
+
+    if (canViewPartnerContacts) {
+      const admin = createSupabaseAdminClient();
+      const { data: caseOrganizations } = await admin
         .from('case_organizations')
         .select('id, case_id, organization_id, role, organization:organizations(id, name)')
         .in('case_id', availableCaseIds)
         .neq('organization_id', organizationId)
-        .eq('status', 'active')
-    ]);
+        .eq('status', 'active');
 
-    clientContacts = caseClients ?? [];
+      const partnerOrgIds = [...new Set((caseOrganizations ?? []).map((item: any) => item.organization_id).filter(Boolean))];
 
-    const partnerOrgIds = [...new Set((caseOrganizations ?? []).map((item: any) => item.organization_id).filter(Boolean))];
-
-    if (partnerOrgIds.length) {
-      const { data: partnerMembers } = await admin
-        .from('organization_memberships')
-        .select('id, organization_id, role, title, profile:profiles(id, full_name, email)')
-        .in('organization_id', partnerOrgIds)
-        .eq('status', 'active')
-        .order('created_at', { ascending: true });
-
-      partnerContacts = (caseOrganizations ?? []).flatMap((caseOrganization: any) => {
-        const members = (partnerMembers ?? []).filter((member: any) => member.organization_id === caseOrganization.organization_id);
-        return members.map((member: any) => ({
+      if (partnerOrgIds.length) {
+        partnerContacts = (caseOrganizations ?? []).map((caseOrganization: any) => ({
           case_organization_id: caseOrganization.id,
           case_id: caseOrganization.case_id,
           organization_id: caseOrganization.organization_id,
@@ -219,11 +217,11 @@ export async function getDashboardSnapshot(organizationId?: string | null) {
             ? caseOrganization.organization[0]?.name ?? '협업사'
             : caseOrganization.organization?.name ?? '협업사',
           role: caseOrganization.role,
-          membership_id: member.id,
-          member_role: member.title || member.role || '구성원',
-          profile: Array.isArray(member.profile) ? member.profile[0] ?? null : member.profile ?? null
+          membership_id: caseOrganization.id,
+          member_role: caseOrganization.role,
+          profile: null
         }));
-      });
+      }
     }
   }
 

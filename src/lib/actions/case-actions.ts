@@ -6,6 +6,7 @@ import { isManagementRole, requireOrganizationActionAccess } from '@/lib/auth';
 import { buildCaseReference, makeSlug } from '@/lib/format';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
+import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
@@ -415,48 +416,26 @@ export async function addPartyAction(caseId: string, formData: FormData) {
     isPrimary: formData.get('isPrimary') === 'on'
   });
 
-  const { data: party, error } = await supabase
-    .from('case_parties')
-    .insert({
-      organization_id: caseRecord.organization_id,
-      case_id: caseRecord.id,
-      party_role: parsed.partyRole,
-      entity_type: parsed.entityType,
-      display_name: parsed.displayName,
-      company_name: parsed.companyName || null,
-      registration_number_masked: parsed.registrationNumber ? `${parsed.registrationNumber.slice(0, 3)}****` : null,
-      resident_number_last4: parsed.residentNumber ? parsed.residentNumber.slice(-4) : null,
-      phone: parsed.phone || null,
-      email: parsed.email || null,
-      address_summary: parsed.addressSummary || null,
-      notes: parsed.notes || null,
-      is_primary: parsed.isPrimary,
-      created_by: auth.user.id,
-      updated_by: auth.user.id
-    })
-    .select('id')
-    .single();
+  const { error } = await supabase.rpc('add_case_party_atomic', {
+    p_organization_id: caseRecord.organization_id,
+    p_case_id: caseRecord.id,
+    p_party_role: parsed.partyRole,
+    p_entity_type: parsed.entityType,
+    p_display_name: parsed.displayName,
+    p_company_name: parsed.companyName || null,
+    p_registration_number_masked: parsed.registrationNumber ? `${parsed.registrationNumber.slice(0, 3)}****` : null,
+    p_resident_number_last4: parsed.residentNumber ? parsed.residentNumber.slice(-4) : null,
+    p_phone: parsed.phone || null,
+    p_email: parsed.email || null,
+    p_address_summary: parsed.addressSummary || null,
+    p_notes: parsed.notes || null,
+    p_is_primary: parsed.isPrimary,
+    p_resident_number_ciphertext: parsed.residentNumber ? encryptString(parsed.residentNumber) : null,
+    p_registration_number_ciphertext: parsed.registrationNumber ? encryptString(parsed.registrationNumber) : null,
+    p_address_detail_ciphertext: parsed.addressDetail ? encryptString(parsed.addressDetail) : null
+  });
 
-  if (error || !party) {
-    throw error ?? new Error('당사자 등록 실패');
-  }
-
-  if (parsed.residentNumber || parsed.addressDetail || parsed.registrationNumber) {
-    const { error: privateError } = await supabase.from('case_party_private_profiles').insert({
-      organization_id: caseRecord.organization_id,
-      case_id: caseRecord.id,
-      case_party_id: party.id,
-      resident_number_ciphertext: parsed.residentNumber ? encryptString(parsed.residentNumber) : null,
-      registration_number_ciphertext: parsed.registrationNumber ? encryptString(parsed.registrationNumber) : null,
-      address_detail_ciphertext: parsed.addressDetail ? encryptString(parsed.addressDetail) : null,
-      created_by: auth.user.id,
-      updated_by: auth.user.id
-    });
-
-    if (privateError) {
-      throw privateError;
-    }
-  }
+  if (error) throw error;
 
   revalidatePath(`/cases/${caseId}`);
 }
@@ -488,110 +467,53 @@ export async function linkClientAction(caseId: string, formData: FormData) {
     .eq('email', parsed.email)
     .maybeSingle();
 
-  const { data: caseClient, error } = await supabase.from('case_clients').insert({
-    organization_id: caseRecord.organization_id,
-    case_id: caseRecord.id,
-    profile_id: targetProfile?.id ?? null,
-    client_name: parsed.clientName || targetProfile?.full_name || parsed.email,
-    client_email_snapshot: parsed.email,
-    relation_label: parsed.relationLabel || null,
-    is_portal_enabled: Boolean(targetProfile?.id && parsed.portalEnabled),
-    created_by: auth.user.id,
-    updated_by: auth.user.id
-  }).select('id').single();
-
-  if (error || !caseClient) {
-    throw error;
+  const needsFinancialManage = Boolean(parsed.feeAgreementTitle || (parsed.billingEntryTitle && parsed.billingEntryAmount != null));
+  if (needsFinancialManage && !hasPermission(auth, caseRecord.organization_id, 'billing_manage')) {
+    throw new Error('비용 항목 또는 약정을 함께 등록하려면 청구/입금 관리 권한이 필요합니다.');
   }
 
-  if (parsed.feeAgreementTitle) {
-    const { error: agreementError } = await supabase.from('fee_agreements').insert({
-      organization_id: caseRecord.organization_id,
-      case_id: caseRecord.id,
-      bill_to_party_kind: 'case_client',
-      bill_to_case_client_id: caseClient.id,
-      bill_to_case_organization_id: null,
-      billing_owner_case_organization_id: null,
-      agreement_type: parsed.feeAgreementType,
-      title: parsed.feeAgreementTitle,
-      description: `${parsed.email}${parsed.relationLabel ? ` · ${parsed.relationLabel}` : ''}`,
-      fixed_amount: parsed.feeAgreementAmount ?? null,
-      rate: null,
-      effective_from: new Date().toISOString().slice(0, 10),
-      effective_to: null,
-      is_active: true,
-      terms_json: null,
-      created_by: auth.user.id,
-      updated_by: auth.user.id
-    });
+  const { data: linkedClientRows, error } = await supabase.rpc('link_case_client_atomic', {
+    p_organization_id: caseRecord.organization_id,
+    p_case_id: caseRecord.id,
+    p_case_title: caseRecord.title,
+    p_target_profile_id: targetProfile?.id ?? null,
+    p_client_name: parsed.clientName || targetProfile?.full_name || parsed.email,
+    p_client_email_snapshot: parsed.email,
+    p_relation_label: parsed.relationLabel || null,
+    p_portal_enabled: parsed.portalEnabled,
+    p_fee_agreement_title: parsed.feeAgreementTitle || null,
+    p_fee_agreement_type: parsed.feeAgreementType,
+    p_fee_agreement_amount: parsed.feeAgreementAmount ?? null,
+    p_billing_entry_title: parsed.billingEntryTitle || null,
+    p_billing_entry_amount: parsed.billingEntryAmount ?? null,
+    p_billing_entry_due_on: parsed.billingEntryDueOn || null
+  });
 
-    if (agreementError) {
-      throw agreementError;
-    }
-  }
+  if (error) throw error;
 
   if (parsed.billingEntryTitle && parsed.billingEntryAmount != null) {
-    const { error: entryError } = await supabase.from('billing_entries').insert({
-      organization_id: caseRecord.organization_id,
-      case_id: caseRecord.id,
-      bill_to_party_kind: 'case_client',
-      bill_to_case_client_id: caseClient.id,
-      bill_to_case_organization_id: null,
-      billing_owner_case_organization_id: null,
-      entry_kind: 'retainer_fee',
-      title: parsed.billingEntryTitle,
-      amount: parsed.billingEntryAmount,
-      tax_amount: 0,
-      due_on: parsed.billingEntryDueOn || null,
-      status: 'draft',
-      notes: `${parsed.email}${parsed.relationLabel ? ` · ${parsed.relationLabel}` : ''}`,
-      created_by: auth.user.id,
-      updated_by: auth.user.id
-    });
-
-    if (entryError) {
-      throw entryError;
-    }
-
-    await createBillingFollowUp({
+    await notifyBillingStakeholders({
       supabase,
       organizationId: caseRecord.organization_id,
       caseId: caseRecord.id,
       actorId: auth.user.id,
-      actorName: auth.profile.full_name,
-      title: parsed.billingEntryTitle,
-      notes: `${parsed.email} 연결과 함께 비용 항목이 등록되었습니다.`,
-      dueAt: parsed.billingEntryDueOn || null,
-      isImportant: true,
-      notificationTitle: `비용 확인: ${parsed.billingEntryTitle}`,
-      notificationBody: `${caseRecord.title} 사건에서 ${parsed.email} 대상 비용 항목이 등록되었습니다. 비용 메뉴와 일정 확인에서 확인해 주세요.`,
+      title: `비용 확인: ${parsed.billingEntryTitle}`,
+      body: `${caseRecord.title} 사건에서 ${parsed.email} 대상 비용 항목이 등록되었습니다. 비용 메뉴와 일정 확인에서 확인해 주세요.`,
       payload: {
-        source: 'client_link_billing_entry'
-      },
-      scheduleKind: 'deadline'
+        source: 'client_link_billing_entry',
+        entry_title: parsed.billingEntryTitle,
+        due_on: parsed.billingEntryDueOn || null
+      }
     });
   }
 
-  if (targetProfile?.id && parsed.portalEnabled) {
-    const activatedAt = new Date().toISOString();
-    const { error: profileError } = await adminClient
-      .from('profiles')
-      .update({
-        is_client_account: true,
-        client_account_status: 'active',
-        client_account_status_changed_at: activatedAt,
-        client_account_status_reason: `${caseRecord.title} 사건 포털 연결 활성화`,
-        client_last_approved_at: activatedAt
-      })
-      .eq('id', targetProfile.id);
-
-    if (profileError) throw profileError;
-
+  const linkedClient = linkedClientRows?.[0] ?? null;
+  if (linkedClient?.activated_profile_id) {
     await notifyProfiles(supabase, [
       {
         organization_id: caseRecord.organization_id,
         case_id: caseRecord.id,
-        recipient_profile_id: targetProfile.id,
+        recipient_profile_id: linkedClient.activated_profile_id,
         kind: 'generic',
         title: `새 사건이 연결되었습니다: ${caseRecord.title}`,
         body: '고객 포털에서 사건 진행상황을 확인할 수 있습니다.',
@@ -718,7 +640,7 @@ export async function requestDocumentReviewAction(documentId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: document } = await supabase
     .from('case_documents')
-    .select('id, case_id, organization_id, approval_requested_by, title')
+    .select('id, case_id, organization_id, approval_requested_by, title, approval_status, row_version')
     .eq('id', documentId)
     .single();
 
@@ -731,8 +653,12 @@ export async function requestDocumentReviewAction(documentId: string) {
     errorMessage: '조직 구성원만 결재를 요청할 수 있습니다.'
   });
 
+  if (!['draft', 'stale'].includes(document.approval_status)) {
+    throw new Error('현재 상태에서는 결재를 다시 요청할 수 없습니다.');
+  }
+
   const now = new Date().toISOString();
-  const { error: updateError } = await supabase
+  const { data: updatedDocument, error: updateError } = await supabase
     .from('case_documents')
     .update({
       approval_status: 'pending_review',
@@ -741,11 +667,14 @@ export async function requestDocumentReviewAction(documentId: string) {
       approval_requested_at: now,
       updated_by: auth.user.id
     })
-    .eq('id', documentId);
+    .eq('id', documentId)
+    .eq('row_version', document.row_version)
+    .in('approval_status', ['draft', 'stale'])
+    .select('id')
+    .maybeSingle();
 
-  if (updateError) {
-    throw updateError;
-  }
+  if (updateError) throw updateError;
+  if (!updatedDocument) throw new Error('문서 상태가 변경되어 결재 요청을 완료하지 못했습니다. 새로고침 후 다시 시도해 주세요.');
 
   const { error: reviewError } = await supabase.from('case_document_reviews').insert({
     organization_id: document.organization_id,
@@ -754,7 +683,7 @@ export async function requestDocumentReviewAction(documentId: string) {
     request_status: 'pending_review',
     requested_by: auth.user.id,
     requested_by_name: auth.profile.full_name,
-    snapshot_version: 0
+    snapshot_version: document.row_version
   });
 
   if (reviewError) {
@@ -795,7 +724,7 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
   const supabase = await createSupabaseServerClient();
   const { data: document } = await supabase
     .from('case_documents')
-    .select('id, case_id, organization_id, approval_requested_by, title, row_version')
+    .select('id, case_id, organization_id, approval_requested_by, title, approval_status, row_version')
     .eq('id', documentId)
     .single();
 
@@ -813,8 +742,12 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
     reviewNote: formData.get('reviewNote')
   });
 
+  if (document.approval_status !== 'pending_review') {
+    throw new Error('대기 중인 결재 요청만 처리할 수 있습니다.');
+  }
+
   const now = new Date().toISOString();
-  const { error: updateError } = await supabase
+  const { data: updatedDocument, error: updateError } = await supabase
     .from('case_documents')
     .update({
       approval_status: parsed.decision,
@@ -824,11 +757,14 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
       review_note: parsed.reviewNote || null,
       updated_by: auth.user.id
     })
-    .eq('id', documentId);
+    .eq('id', documentId)
+    .eq('approval_status', 'pending_review')
+    .eq('row_version', document.row_version)
+    .select('id')
+    .maybeSingle();
 
-  if (updateError) {
-    throw updateError;
-  }
+  if (updateError) throw updateError;
+  if (!updatedDocument) throw new Error('다른 사용자가 먼저 결재를 처리했습니다. 문서를 새로고침해 최신 상태를 확인해 주세요.');
 
   const { error: reviewError } = await supabase.from('case_document_reviews').insert({
     organization_id: document.organization_id,
@@ -1093,7 +1029,7 @@ export async function addRequestAction(caseId: string, formData: FormData) {
 export async function addBillingEntryAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
-    permission: 'billing_issue',
+    permission: 'billing_manage',
     errorMessage: '청구/입금 관리 권한이 없습니다.'
   });
 
@@ -1215,7 +1151,7 @@ export async function addCaseOrganizationAction(caseId: string, formData: FormDa
 export async function addFeeAgreementAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
-    permission: 'billing_issue',
+    permission: 'billing_manage',
     errorMessage: '약정 등록 권한이 없습니다.'
   });
 

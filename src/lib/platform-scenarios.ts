@@ -15,21 +15,21 @@ export type PlatformScenarioMember = {
 
 export const PLATFORM_SCENARIO_ORGANIZATIONS: Record<PlatformScenarioMode, OrganizationOption> = {
   law_admin: {
-    id: 'virtual-law-org',
+    id: '11111111-1111-4111-8111-111111111124',
     slug: 'saeon-garam-beop',
     name: '새온가람법(가상조직)',
     kind: 'law_firm',
     enabled_modules: { billing: true, collections: false, client_portal: true, reports: true }
   },
   collection_admin: {
-    id: 'virtual-collection-org',
+    id: '22222222-2222-4222-8222-222222222224',
     slug: 'nuri-chaeum-won',
     name: '누리채움원(가상조직)',
     kind: 'collection_company',
     enabled_modules: { billing: true, collections: true, client_portal: true, reports: true }
   },
   other_admin: {
-    id: 'virtual-other-org',
+    id: '33333333-3333-4333-8333-333333333324',
     slug: 'daon-haneul-lab',
     name: '다온하늘랩(가상조직)',
     kind: 'other',

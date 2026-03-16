@@ -47,6 +47,18 @@ export async function createSupportRequestAction(formData: FormData) {
     throw new Error('조직을 찾을 수 없습니다.');
   }
 
+  const { data: activeMembership } = await adminClient
+    .from('organization_memberships')
+    .select('id')
+    .eq('organization_id', organization.id)
+    .eq('profile_id', targetProfile.id)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (!activeMembership) {
+    throw new Error('지원 접속 대상은 해당 조직의 활성 구성원이어야 합니다.');
+  }
+
   const expiresAt = new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString();
 
   const { data: requestRow, error } = await supabase

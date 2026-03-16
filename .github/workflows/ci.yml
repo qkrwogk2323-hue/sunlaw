@@ -126,11 +126,17 @@ jobs:
         run: |
           test -n "$NEXT_PUBLIC_SUPABASE_URL" || (echo "Missing NEXT_PUBLIC_SUPABASE_URL secret" && exit 1)
           test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || (echo "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY secret" && exit 1)
-          test -n "$E2E_AUTH_SMOKE_EMAIL" || (echo "Missing E2E_AUTH_SMOKE_EMAIL secret" && exit 1)
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -z "$E2E_AUTH_SMOKE_PASSWORD" ]; then
             echo "Missing SUPABASE_SERVICE_ROLE_KEY secret and E2E_AUTH_SMOKE_PASSWORD secret"
             exit 1
           fi
+          if [ -z "$E2E_AUTH_SMOKE_EMAIL" ] && [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Missing E2E_AUTH_SMOKE_EMAIL secret and no service role is available for auto-discovery"
+            exit 1
+          fi
+
+      - name: Resolve authenticated smoke account
+        run: node --input-type=module -e "import { maskEmail, resolveAuthenticatedSmokeAccount } from './tests/e2e/authenticated-smoke-account.mjs'; const { email, source } = await resolveAuthenticatedSmokeAccount(); console.log('[auth-smoke] resolved ' + source + ' account ' + maskEmail(email));"
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium

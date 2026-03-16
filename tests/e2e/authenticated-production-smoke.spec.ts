@@ -1,65 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
 import { expect, test } from '@playwright/test';
+import { createAuthenticatedSmokeAdminClient, resolveAuthenticatedSmokeRecipient } from './authenticated-smoke-account.mjs';
 
 const homePath = '/dashboard';
 const homeHeading = '오늘 바로 움직일 것들';
 const protectedPath = '/notifications';
 const protectedHeading = '알림 정리함';
-const smokeEmail = process.env.E2E_AUTH_SMOKE_EMAIL;
-
-let smokeRecipientPromise: Promise<{ profileId: string; organizationId: string | null }> | null = null;
+let smokeRecipientPromise: Promise<{ profileId: string; organizationId: string | null; email: string }> | null = null;
 
 function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Authenticated smoke notification seeding requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
+  return createAuthenticatedSmokeAdminClient();
 }
 
 async function getSmokeRecipient() {
-  if (!smokeEmail) {
-    throw new Error('Authenticated smoke requires E2E_AUTH_SMOKE_EMAIL.');
-  }
-
-  smokeRecipientPromise ??= (async () => {
-    const admin = createAdminClient();
-    const { data: profile, error: profileError } = await admin
-      .from('profiles')
-      .select('id, default_organization_id')
-      .eq('email', smokeEmail)
-      .single();
-
-    if (profileError || !profile) {
-      throw profileError ?? new Error(`Smoke profile not found for ${smokeEmail}.`);
-    }
-
-    const { data: membership, error: membershipError } = await admin
-      .from('organization_memberships')
-      .select('organization_id')
-      .eq('profile_id', profile.id)
-      .eq('status', 'active')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (membershipError) {
-      throw membershipError;
-    }
-
-    return {
-      profileId: profile.id,
-      organizationId: profile.default_organization_id ?? membership?.organization_id ?? null
-    };
-  })();
+  smokeRecipientPromise ??= resolveAuthenticatedSmokeRecipient();
 
   return smokeRecipientPromise;
 }
