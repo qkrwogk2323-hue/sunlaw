@@ -8,6 +8,8 @@ import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } 
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { PageBackButton } from '@/components/page-back-button';
 import { buttonStyles } from '@/components/ui/button';
+import { countActivePortalLinks } from '@/lib/queries/portal';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
@@ -22,6 +24,20 @@ export default async function PortalLayout({ children }: { children: ReactNode }
 
   if (!isClientAccountActive(auth.profile)) {
     redirect('/dashboard' as Route);
+  }
+
+  const activeLinksCount = await countActivePortalLinks();
+  if (activeLinksCount === 0) {
+    const supabase = await createSupabaseServerClient();
+    await supabase
+      .from('profiles')
+      .update({
+        client_account_status: 'pending_reapproval',
+        client_account_status_changed_at: new Date().toISOString(),
+        client_account_status_reason: '활성 포털 링크 없음으로 재승인 대기 전환'
+      })
+      .eq('id', auth.user.id);
+    redirect('/start/pending' as Route);
   }
 
   return (

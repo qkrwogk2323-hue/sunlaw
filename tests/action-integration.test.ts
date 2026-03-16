@@ -801,4 +801,192 @@ describe('server action integration', () => {
 
     expect(organizationInsert).not.toHaveBeenCalled();
   });
+
+  it('compensates case_clients when profile activation fails during case attachment with portal enabled', async () => {
+    const requestLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '66666666-6666-4666-8666-666666666666',
+        requester_profile_id: 'client-profile-1',
+        requester_name: '의뢰인',
+        requester_email: 'client@example.com',
+        target_organization_id: '22222222-2222-4222-8222-222222222222',
+        status: 'approved'
+      },
+      error: null
+    }));
+    const requestLookupEqOrg = vi.fn(() => ({ maybeSingle: requestLookupMaybeSingle }));
+    const requestLookupEqId = vi.fn(() => ({ eq: requestLookupEqOrg }));
+    const requestLookupSelect = vi.fn(() => ({ eq: requestLookupEqId }));
+
+    const caseLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '77777777-7777-4777-8777-777777777777',
+        organization_id: '22222222-2222-4222-8222-222222222222',
+        title: '채권 회수 사건',
+        lifecycle_status: 'active'
+      },
+      error: null
+    }));
+    const caseLookupNeq = vi.fn(() => ({ maybeSingle: caseLookupMaybeSingle }));
+    const caseLookupEqOrg = vi.fn(() => ({ neq: caseLookupNeq }));
+    const caseLookupEqId = vi.fn(() => ({ eq: caseLookupEqOrg }));
+    const caseLookupSelect = vi.fn(() => ({ eq: caseLookupEqId }));
+
+    const existingByProfileMaybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const existingByProfileEqProfile = vi.fn(() => ({ maybeSingle: existingByProfileMaybeSingle }));
+    const existingByProfileEqCase = vi.fn(() => ({ eq: existingByProfileEqProfile }));
+
+    const existingByEmailMaybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const existingByEmailEqEmail = vi.fn(() => ({ maybeSingle: existingByEmailMaybeSingle }));
+    const existingByEmailEqCase = vi.fn(() => ({ eq: existingByEmailEqEmail }));
+
+    const caseClientsSelect = vi.fn()
+      .mockReturnValueOnce({ eq: existingByProfileEqCase })
+      .mockReturnValueOnce({ eq: existingByEmailEqCase });
+
+    const insertedId = 'new-case-client-id';
+    const caseClientsInsertSingle = vi.fn(async () => ({ data: { id: insertedId }, error: null }));
+    const caseClientsInsertSelect = vi.fn(() => ({ single: caseClientsInsertSingle }));
+    const caseClientsInsert = vi.fn(() => ({ select: caseClientsInsertSelect }));
+    const caseClientsDeleteEq = vi.fn(async () => ({ error: null }));
+    const caseClientsDelete = vi.fn(() => ({ eq: caseClientsDeleteEq }));
+
+    const notificationInsert = vi.fn(async () => ({ error: null }));
+    const profileUpdateEq = vi.fn(async () => ({ error: new Error('profile update failed') }));
+    const profileUpdate = vi.fn(() => ({ eq: profileUpdateEq }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'client_access_requests') {
+          return { select: requestLookupSelect };
+        }
+        if (table === 'cases') {
+          return { select: caseLookupSelect };
+        }
+        if (table === 'case_clients') {
+          return {
+            select: caseClientsSelect,
+            insert: caseClientsInsert,
+            delete: caseClientsDelete
+          };
+        }
+        if (table === 'notifications') {
+          return { insert: notificationInsert };
+        }
+        if (table === 'profiles') {
+          return { update: profileUpdate };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('requestId', '66666666-6666-4666-8666-666666666666');
+    formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
+    formData.set('caseId', '77777777-7777-4777-8777-777777777777');
+    formData.set('relationLabel', '의뢰인');
+    formData.set('portalEnabled', 'on');
+
+    const { attachClientAccessRequestToCaseAction } = await import('@/lib/actions/organization-actions');
+
+    await expect(attachClientAccessRequestToCaseAction(formData)).rejects.toThrow('profile update failed');
+
+    expect(caseClientsInsert).toHaveBeenCalledWith(expect.objectContaining({ is_portal_enabled: true }));
+    expect(profileUpdate).toHaveBeenCalled();
+    expect(caseClientsDelete).toHaveBeenCalled();
+    expect(caseClientsDeleteEq).toHaveBeenCalledWith('id', insertedId);
+  });
+
+  it('reverts existing case_client portal flag when profile activation fails during case attachment', async () => {
+    const requestLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '66666666-6666-4666-8666-666666666666',
+        requester_profile_id: 'client-profile-1',
+        requester_name: '의뢰인',
+        requester_email: 'client@example.com',
+        target_organization_id: '22222222-2222-4222-8222-222222222222',
+        status: 'approved'
+      },
+      error: null
+    }));
+    const requestLookupEqOrg = vi.fn(() => ({ maybeSingle: requestLookupMaybeSingle }));
+    const requestLookupEqId = vi.fn(() => ({ eq: requestLookupEqOrg }));
+    const requestLookupSelect = vi.fn(() => ({ eq: requestLookupEqId }));
+
+    const caseLookupMaybeSingle = vi.fn(async () => ({
+      data: {
+        id: '77777777-7777-4777-8777-777777777777',
+        organization_id: '22222222-2222-4222-8222-222222222222',
+        title: '채권 회수 사건',
+        lifecycle_status: 'active'
+      },
+      error: null
+    }));
+    const caseLookupNeq = vi.fn(() => ({ maybeSingle: caseLookupMaybeSingle }));
+    const caseLookupEqOrg = vi.fn(() => ({ neq: caseLookupNeq }));
+    const caseLookupEqId = vi.fn(() => ({ eq: caseLookupEqOrg }));
+    const caseLookupSelect = vi.fn(() => ({ eq: caseLookupEqId }));
+
+    const existingCaseClient = { id: 'existing-case-client-id', client_name: '의뢰인', relation_label: '의뢰인', is_portal_enabled: false };
+    const existingByProfileMaybeSingle = vi.fn(async () => ({ data: existingCaseClient, error: null }));
+    const existingByProfileEqProfile = vi.fn(() => ({ maybeSingle: existingByProfileMaybeSingle }));
+    const existingByProfileEqCase = vi.fn(() => ({ eq: existingByProfileEqProfile }));
+
+    const existingByEmailMaybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const existingByEmailEqEmail = vi.fn(() => ({ maybeSingle: existingByEmailMaybeSingle }));
+    const existingByEmailEqCase = vi.fn(() => ({ eq: existingByEmailEqEmail }));
+
+    const caseClientsSelect = vi.fn()
+      .mockReturnValueOnce({ eq: existingByProfileEqCase })
+      .mockReturnValueOnce({ eq: existingByEmailEqCase });
+
+    const caseClientsUpdateEq = vi.fn(async () => ({ error: null }));
+    const caseClientsUpdate = vi.fn(() => ({ eq: caseClientsUpdateEq }));
+
+    const notificationInsert = vi.fn(async () => ({ error: null }));
+    const profileUpdateEq = vi.fn(async () => ({ error: new Error('profile update failed') }));
+    const profileUpdate = vi.fn(() => ({ eq: profileUpdateEq }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'client_access_requests') {
+          return { select: requestLookupSelect };
+        }
+        if (table === 'cases') {
+          return { select: caseLookupSelect };
+        }
+        if (table === 'case_clients') {
+          return {
+            select: caseClientsSelect,
+            update: caseClientsUpdate
+          };
+        }
+        if (table === 'notifications') {
+          return { insert: notificationInsert };
+        }
+        if (table === 'profiles') {
+          return { update: profileUpdate };
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`);
+      })
+    });
+
+    const formData = new FormData();
+    formData.set('requestId', '66666666-6666-4666-8666-666666666666');
+    formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
+    formData.set('caseId', '77777777-7777-4777-8777-777777777777');
+    formData.set('relationLabel', '의뢰인');
+    formData.set('portalEnabled', 'on');
+
+    const { attachClientAccessRequestToCaseAction } = await import('@/lib/actions/organization-actions');
+
+    await expect(attachClientAccessRequestToCaseAction(formData)).rejects.toThrow('profile update failed');
+
+    expect(profileUpdate).toHaveBeenCalled();
+    expect(caseClientsUpdate).toHaveBeenCalledTimes(2);
+    const revertCall = caseClientsUpdate.mock.calls[1];
+    expect(revertCall[0]).toMatchObject({ is_portal_enabled: false });
+  });
 });
