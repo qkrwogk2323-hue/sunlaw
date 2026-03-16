@@ -1,6 +1,17 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { requireAuthenticatedUser } from '@/lib/auth';
 
+export async function countActivePortalLinks(): Promise<number> {
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+  const { count } = await supabase
+    .from('case_clients')
+    .select('*', { count: 'exact', head: true })
+    .eq('profile_id', auth.user.id)
+    .eq('is_portal_enabled', true);
+  return count ?? 0;
+}
+
 export async function getPortalCases() {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();

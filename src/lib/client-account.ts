@@ -46,7 +46,7 @@ export function hasCompletedLegalName(profile: Pick<Profile, 'full_name' | 'lega
   );
 }
 
-export function getAuthenticatedHomePath(auth: AuthContext): Route {
+export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePortalLinkCount?: number }): Route {
   if (!hasCompletedLegalName(auth.profile)) {
     return '/start/profile-name' as Route;
   }
@@ -56,6 +56,10 @@ export function getAuthenticatedHomePath(auth: AuthContext): Route {
   }
 
   if (isClientAccountActive(auth.profile)) {
+    const linkCount = options?.activePortalLinkCount;
+    if (linkCount !== undefined && linkCount === 0) {
+      return '/start/pending' as Route;
+    }
     return '/portal' as Route;
   }
 

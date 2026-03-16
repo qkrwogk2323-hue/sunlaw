@@ -526,13 +526,7 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
   const targetCaseClientId = invitation.case_client_id;
   const activatedAt = new Date().toISOString();
 
-  if (targetCaseClientId) {
-    const { error: updateClientError } = await adminClient
-      .from('case_clients')
-      .update({ profile_id: userId, is_portal_enabled: true })
-      .eq('id', targetCaseClientId);
-    if (updateClientError) throw updateClientError;
-
+  const activateProfile = async () => {
     const { error: profileError } = await adminClient
       .from('profiles')
       .update({
@@ -543,8 +537,25 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
         client_last_approved_at: activatedAt
       })
       .eq('id', userId);
+    return profileError;
+  };
 
-    if (profileError) throw profileError;
+  if (targetCaseClientId) {
+    const { error: updateClientError } = await adminClient
+      .from('case_clients')
+      .update({ profile_id: userId, is_portal_enabled: true })
+      .eq('id', targetCaseClientId);
+    if (updateClientError) throw updateClientError;
+
+    const profileError = await activateProfile();
+    if (profileError) {
+      await adminClient
+        .from('case_clients')
+        .update({ is_portal_enabled: false })
+        .eq('id', targetCaseClientId)
+        .eq('profile_id', userId);
+      throw profileError;
+    }
     return;
   }
 
@@ -562,18 +573,14 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
       .eq('id', existingClient.id);
     if (updateClientError) throw updateClientError;
 
-    const { error: profileError } = await adminClient
-      .from('profiles')
-      .update({
-        is_client_account: true,
-        client_account_status: 'active',
-        client_account_status_changed_at: activatedAt,
-        client_account_status_reason: '의뢰인 초대 수락으로 활성화',
-        client_last_approved_at: activatedAt
-      })
-      .eq('id', userId);
-
-    if (profileError) throw profileError;
+    const profileError = await activateProfile();
+    if (profileError) {
+      await adminClient
+        .from('case_clients')
+        .update({ is_portal_enabled: false })
+        .eq('id', existingClient.id);
+      throw profileError;
+    }
     return;
   }
 
@@ -587,7 +594,7 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
     throw new Error('사건 정보를 찾을 수 없습니다.');
   }
 
-  const { error: insertClientError } = await adminClient
+  const { data: insertedClient, error: insertClientError } = await adminClient
     .from('case_clients')
     .insert({
       organization_id: caseRow.organization_id,
@@ -599,21 +606,21 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
       is_portal_enabled: true,
       created_by: invitation.created_by,
       updated_by: invitation.created_by
-    });
+    })
+    .select('id')
+    .single();
   if (insertClientError) throw insertClientError;
 
-  const { error: profileError } = await adminClient
-    .from('profiles')
-    .update({
-      is_client_account: true,
-      client_account_status: 'active',
-      client_account_status_changed_at: activatedAt,
-      client_account_status_reason: '의뢰인 초대 수락으로 활성화',
-      client_last_approved_at: activatedAt
-    })
-    .eq('id', userId);
-
-  if (profileError) throw profileError;
+  const profileError = await activateProfile();
+  if (profileError) {
+    if (insertedClient?.id) {
+      await adminClient
+        .from('case_clients')
+        .delete()
+        .eq('id', insertedClient.id);
+    }
+    throw profileError;
+  }
 }
 
 async function finalizeInvitationAcceptance(adminClient: ReturnType<typeof createSupabaseAdminClient>, invitationId: string, acceptedBy: string) {
@@ -1492,6 +1499,9 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
   const relationLabel = parsed.relationLabel || existingClient?.relation_label || '의뢰인';
   const clientName = existingClient?.client_name || requestRow.requester_name || requestRow.requester_email;
   const portalEnabled = parsed.portalEnabled && Boolean(requestRow.requester_profile_id);
+  const previousPortalEnabled = existingClient?.is_portal_enabled ?? false;
+
+  let insertedCaseClientId: string | null = null;
 
   if (existingClient?.id) {
     const { error: updateError } = await adminClient
@@ -1508,7 +1518,7 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
 
     if (updateError) throw updateError;
   } else {
-    const { error: insertError } = await adminClient.from('case_clients').insert({
+    const insertPayload = {
       organization_id: parsed.organizationId,
       case_id: parsed.caseId,
       profile_id: requestRow.requester_profile_id,
@@ -1518,9 +1528,21 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
       is_portal_enabled: portalEnabled,
       created_by: auth.user.id,
       updated_by: auth.user.id
-    });
+    };
 
-    if (insertError) throw insertError;
+    if (portalEnabled) {
+      const { data: insertedClient, error: insertError } = await adminClient
+        .from('case_clients')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+      insertedCaseClientId = insertedClient?.id ?? null;
+    } else {
+      const { error: insertError } = await adminClient.from('case_clients').insert(insertPayload);
+      if (insertError) throw insertError;
+    }
   }
 
   const { error: notificationError } = await adminClient.from('notifications').insert({
@@ -1552,7 +1574,17 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
       })
       .eq('id', requestRow.requester_profile_id);
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      if (insertedCaseClientId) {
+        await adminClient.from('case_clients').delete().eq('id', insertedCaseClientId);
+      } else if (existingClient?.id) {
+        await adminClient
+          .from('case_clients')
+          .update({ is_portal_enabled: previousPortalEnabled, updated_by: auth.user.id })
+          .eq('id', existingClient.id);
+      }
+      throw profileError;
+    }
   }
 
   revalidatePath('/clients');
