@@ -1,13 +1,11 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { redirect } from 'next/navigation';
-import { ArrowRight, BellRing, Building2, ClipboardList, FolderKanban, Landmark, MessageSquareText, Scale, ShieldCheck, Wallet } from 'lucide-react';
+import { ArrowRight, Building2, ClipboardList, Landmark, MessageSquareText, Scale, ShieldCheck, Wallet } from 'lucide-react';
 import { BrandBanner } from '@/components/brand-banner';
 import { HomepageDemoVideo } from '@/components/homepage-demo-video';
 import { buttonStyles } from '@/components/ui/button';
-import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
-import { signOutAction } from '@/lib/actions/auth-actions';
-import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+
+export const revalidate = 3600;
 
 const expertMindMap = [
   {
@@ -42,44 +40,15 @@ const expertMindMap = [
   }
 ];
 
-function greetingLabel(fullName?: string | null) {
-  const name = fullName?.trim() || '고객';
-  return `${name} 님! 반갑습니다.`;
-}
-
-export default async function MarketingPage({
-  searchParams
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  if (typeof resolvedSearchParams?.code === 'string' && resolvedSearchParams.code) {
-    const callbackSearchParams = new URLSearchParams();
-
-    for (const [key, value] of Object.entries(resolvedSearchParams)) {
-      if (typeof value === 'string' && value) {
-        callbackSearchParams.set(key, value);
-      }
-    }
-
-    redirect(`/auth/callback?${callbackSearchParams.toString()}` as Route);
-  }
-
-  const auth = await getCurrentAuth();
-  const startHref = (auth ? '/dashboard' : '/start') as Route;
-  const organizationId = auth ? getEffectiveOrganizationId(auth) : null;
-  const dashboard = auth ? await getDashboardSnapshot(organizationId) : null;
-  const caseAttentionCount = dashboard ? dashboard.pendingDocuments + dashboard.pendingRequests : 0;
-  const heroSectionClassName = auth ? 'relative mx-auto max-w-7xl px-6 pt-20 pb-10 lg:pt-24 lg:pb-12' : 'relative mx-auto max-w-7xl px-6 py-20 lg:py-24';
-
+export default function MarketingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 text-white">
-      <section className={heroSectionClassName}>
+      <section className="relative mx-auto max-w-7xl px-6 py-20 lg:py-24">
         <div className="relative z-10 flex flex-col items-center gap-8 text-center">
           <BrandBanner href={'/' as Route} className="mx-auto w-full max-w-7xl" theme="dark" />
           <div className="grid w-full max-w-7xl gap-4 lg:grid-cols-[1.32fr_1fr] lg:items-center">
             <Link
-              href={startHref}
+              href={'/start' as Route}
               className={buttonStyles({
                 size: 'lg',
                 className:
@@ -89,58 +58,10 @@ export default async function MarketingPage({
               시작하기
               <ArrowRight className="ml-3 size-6" />
             </Link>
-
-            {auth ? (
-              <div className="grid h-20 w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-[1.7rem] border border-white/12 bg-white/10 px-5 text-center backdrop-blur-sm">
-                <div />
-                <div className="justify-self-center">
-                  <p className="text-lg font-semibold text-white">{greetingLabel(auth.profile.full_name)}</p>
-                </div>
-                <form action={signOutAction} className="justify-self-end">
-                  <button className={buttonStyles({ variant: 'secondary', className: 'min-h-12 rounded-[1.1rem] px-5 text-base font-semibold whitespace-nowrap' })}>
-                    로그아웃
-                  </button>
-                </form>
-              </div>
-            ) : null}
-          </div>
-
-          {auth && dashboard ? (
-            <div className="flex w-full max-w-5xl flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-stretch">
-              <Link
-                href={'/notifications' as Route}
-                className="vs-pop-card flex min-h-20 w-full max-w-2xl flex-1 items-center justify-between gap-4 rounded-[1.7rem] border border-sky-300/18 bg-[linear-gradient(135deg,rgba(16,52,88,0.88),rgba(9,24,49,0.94))] px-6 py-5 text-left shadow-[0_20px_52px_rgba(14,116,144,0.24)]"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-sky-300/14 text-sky-100">
-                    <BellRing className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-sky-100/76">알림</p>
-                    <p className="mt-1 text-2xl font-semibold text-white">확인할 알림 {dashboard.unreadNotifications}개</p>
-                    <p className="mt-1 text-sm text-slate-300">새로 들어온 소식과 확인 대기 알림을 바로 볼 수 있습니다.</p>
-                  </div>
-                </div>
-                <ArrowRight className="hidden size-5 text-sky-100/72 lg:block" />
-              </Link>
-
-              <Link
-                href={'/cases' as Route}
-                className="vs-pop-card flex min-h-20 w-full max-w-md items-center justify-between gap-4 rounded-[1.7rem] border border-white/12 bg-white/10 px-5 py-5 text-left backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-white/10 text-amber-100">
-                    <FolderKanban className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-200/78">사건</p>
-                    <p className="mt-1 text-2xl font-semibold text-white">확인할 건 {caseAttentionCount}개</p>
-                    <p className="mt-1 text-sm text-slate-300">요청 {dashboard.pendingRequests}건, 결재 대기 {dashboard.pendingDocuments}건</p>
-                  </div>
-                </div>
-              </Link>
+            <div className="flex h-20 w-full items-center justify-center rounded-[1.7rem] border border-white/12 bg-white/10 px-5 text-center backdrop-blur-sm">
+              <p className="text-lg font-semibold text-white">법률, 추심, 보험, 금융, 부동산 실무를 한 사건 흐름으로 연결합니다.</p>
             </div>
-          ) : null}
+          </div>
 
           <div className="w-full max-w-7xl">
             <div className="overflow-hidden rounded-[2rem] border border-white/12 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(8,32,58,0.96))] p-2 sm:p-3 shadow-[0_28px_64px_rgba(8,47,73,0.3)]">
