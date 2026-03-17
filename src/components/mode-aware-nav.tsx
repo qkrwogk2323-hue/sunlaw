@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { BarChart3, BellRing, Boxes, Building2, CalendarRange, ChevronDown, ChevronRight, ClipboardList, FileText, LayoutDashboard, LifeBuoy, MessageSquareText, ReceiptText, Settings, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { ModeSwitcher, getDefaultMode, getOrganizationAdminMode, type ModeKey } from '@/components/mode-switcher';
 import { Button, segmentStyles } from '@/components/ui/button';
@@ -366,12 +366,33 @@ function MobileSectionBar({
   );
 }
 
-export function ModeAwareNav({ memberships, profile, platformOrganizations = [] }: { memberships: Membership[]; profile: Profile; platformOrganizations?: OrganizationOption[] }) {
+export function ModeAwareNav({
+  memberships,
+  profile,
+  platformOrganizations = [],
+  initialMode = null
+}: {
+  memberships: Membership[];
+  profile: Profile;
+  platformOrganizations?: OrganizationOption[];
+  initialMode?: ModeKey | null;
+}) {
   const pathname = usePathname();
-  const router = useRouter();
+  const isModeKey = (value: string | null | undefined): value is ModeKey => (
+    value === 'platform_admin'
+    || value === 'law_admin'
+    || value === 'collection_admin'
+    || value === 'other_admin'
+    || value === 'organization_staff'
+    || value === 'client_communication'
+  );
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const basePlatformMembership = memberships.find((membership) => membership.organization_id === profile.default_organization_id) ?? memberships[0] ?? null;
   const [mode, setMode] = useState<ModeKey>(() => {
+    if (isModeKey(initialMode)) {
+      return initialMode;
+    }
+
     const baseMode = getDefaultMode(
       profile.platform_role ?? 'standard',
       basePlatformMembership?.organization?.kind,
@@ -522,20 +543,27 @@ export function ModeAwareNav({ memberships, profile, platformOrganizations = [] 
       setPlatformSetupMode(nextMode);
       setMode(nextMode);
     });
-  }, [profile.platform_role]);
+  }, [initialMode, profile.platform_role]);
 
   useEffect(() => {
     const activeMode = mode;
+
+    if (profile.platform_role === 'platform_admin' && activeMode !== 'platform_admin' && isPlatformAdminOnlyPath(pathname)) {
+      window.localStorage.setItem(PLATFORM_WORK_MODE_STORAGE_KEY, activeMode);
+      document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=platform_admin; path=/; max-age=31536000; samesite=lax`;
+      queueMicrotask(() => {
+        setPlatformSetupMode('platform_admin');
+        setMode('platform_admin');
+      });
+      return;
+    }
+
     document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=${activeMode}; path=/; max-age=31536000; samesite=lax`;
 
     if (profile.platform_role === 'platform_admin' && mode !== 'platform_admin') {
       window.localStorage.setItem(PLATFORM_WORK_MODE_STORAGE_KEY, mode);
     }
-
-    if (profile.platform_role === 'platform_admin' && activeMode !== 'platform_admin' && isPlatformAdminOnlyPath(pathname)) {
-      router.replace('/dashboard');
-    }
-  }, [mode, pathname, profile.platform_role, router]);
+  }, [mode, pathname, profile.platform_role]);
 
   return (
     <div className="space-y-3">

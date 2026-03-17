@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, ClipboardList, Landmark, MessageSquareText, Scale, ShieldCheck, Wallet } from 'lucide-react';
 import { BrandBanner } from '@/components/brand-banner';
 import { HomepageDemoVideo } from '@/components/homepage-demo-video';
 import { buttonStyles } from '@/components/ui/button';
+import { getCurrentAuth } from '@/lib/auth';
+import { getAuthenticatedHomePath } from '@/lib/client-account';
 
 export const revalidate = 3600;
 
@@ -40,7 +43,12 @@ const expertMindMap = [
   }
 ];
 
-export default function MarketingPage() {
+export default async function MarketingPage() {
+  const auth = await getCurrentAuth();
+  if (auth) {
+    redirect(getAuthenticatedHomePath(auth));
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 text-white">
       <section className="relative mx-auto max-w-7xl px-6 py-20 lg:py-24">

@@ -3,7 +3,6 @@ import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
   moveNotificationToTrashAction,
-  openNotificationTargetAction,
   restoreNotificationAction
 } from '@/lib/actions/notification-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +16,16 @@ import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
 import { getPlatformScenarioNotificationCenter } from '@/lib/platform-scenario-workspace';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 40, 80, 120] as const;
+
+function notificationOpenHref(notificationId: string, href: string, organizationId?: string | null) {
+  const params = new URLSearchParams();
+  params.set('href', href);
+  if (organizationId) {
+    params.set('organizationId', organizationId);
+  }
+
+  return `/notifications/open/${notificationId}?${params.toString()}`;
+}
 
 function kindLabel(kind: string) {
   if (kind === 'approval_requested') return '결재 요청';
@@ -82,21 +91,23 @@ function NotificationCard({
                 </summary>
                 <div className="mt-3 w-full rounded-2xl border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-900">
                   <p>{notification.organization?.name ?? '다른 조직'}으로 전환한 뒤 이 알림을 엽니다.</p>
-                  <form action={openNotificationTargetAction} className="mt-3 flex flex-wrap gap-2">
-                    <input type="hidden" name="notificationId" value={notification.id} />
-                    <input type="hidden" name="organizationId" value={notification.organization_id ?? ''} />
-                    <input type="hidden" name="href" value={notification.action_href} />
-                    <SubmitButton pendingLabel="이동 중..." className="min-w-20 whitespace-nowrap rounded-full px-4">열기</SubmitButton>
-                  </form>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a
+                      href={notificationOpenHref(notification.id, notification.action_href, notification.organization_id ?? '')}
+                      className="inline-flex min-w-20 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#0f766e_0%,#0284c7_55%,#0f172a_100%)] px-4 py-2 text-sm font-medium text-white shadow-[0_14px_34px_rgba(14,165,164,0.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(14,165,164,0.24)]"
+                    >
+                      열기
+                    </a>
+                  </div>
                 </div>
               </details>
             ) : (
-              <form action={openNotificationTargetAction}>
-                <input type="hidden" name="notificationId" value={notification.id} />
-                <input type="hidden" name="organizationId" value={needsSwitch ? notification.organization_id ?? '' : ''} />
-                <input type="hidden" name="href" value={notification.action_href} />
-                <SubmitButton pendingLabel="이동 중..." className="min-w-20 whitespace-nowrap rounded-full px-4">{notification.action_label ?? '열기'}</SubmitButton>
-              </form>
+              <a
+                href={needsSwitch ? notificationOpenHref(notification.id, notification.action_href, notification.organization_id ?? '') : notification.action_href}
+                className="inline-flex min-w-20 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#0f766e_0%,#0284c7_55%,#0f172a_100%)] px-4 py-2 text-sm font-medium text-white shadow-[0_14px_34px_rgba(14,165,164,0.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(14,165,164,0.24)]"
+              >
+                {notification.action_label ?? '열기'}
+              </a>
             )
           ) : null}
           {supportsTrash ? (

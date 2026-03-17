@@ -2,13 +2,11 @@
 
 import type { FormEvent } from 'react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function CredentialLoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +28,7 @@ export function CredentialLoginForm() {
         throw signInError;
       }
 
-      router.replace('/login');
-      router.refresh();
+      window.location.assign('/');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '일반 로그인을 처리하지 못했습니다.');
     } finally {
@@ -50,7 +47,7 @@ export function CredentialLoginForm() {
         <Input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호를 입력해 주세요" />
       </label>
       {error ? <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-      <SubmitButton pendingLabel="로그인 중..." disabled={loading} className="w-full justify-center rounded-[1.2rem]">일반 로그인</SubmitButton>
+      <SubmitButton pending={loading} pendingLabel="로그인 중..." disabled={loading} className="w-full justify-center rounded-[1.2rem]">일반 로그인</SubmitButton>
     </form>
   );
 }

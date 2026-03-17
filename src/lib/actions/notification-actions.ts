@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/lib/auth';
+import { resolveNotificationOpenTarget } from '@/lib/notification-open';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 function isMissingColumnError(error: unknown) {
@@ -161,48 +162,11 @@ export async function emptyNotificationTrashAction() {
 }
 
 export async function openNotificationTargetAction(formData: FormData) {
-  const id = `${formData.get('notificationId') ?? ''}`;
-  const nextOrganizationId = `${formData.get('organizationId') ?? ''}`;
-  const href = normalizeRelativeHref(`${formData.get('href') ?? ''}`);
+  const targetHref = await resolveNotificationOpenTarget({
+    notificationId: `${formData.get('notificationId') ?? ''}`,
+    nextOrganizationId: `${formData.get('organizationId') ?? ''}`,
+    submittedHref: `${formData.get('href') ?? ''}`.trim()
+  });
 
-  if (!id) {
-    throw new Error('notificationId is required');
-  }
-
-  const { auth, supabase, notification } = await getOwnedNotification(id);
-
-  if (nextOrganizationId && nextOrganizationId !== auth.profile.default_organization_id) {
-    const hasMembership = auth.memberships.some((membership) => membership.organization_id === nextOrganizationId);
-    if (!hasMembership) {
-      throw new Error('해당 조직으로 전환할 수 없습니다.');
-    }
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ default_organization_id: nextOrganizationId })
-      .eq('id', auth.user.id);
-
-    if (profileError) {
-      throw profileError;
-    }
-  }
-
-  const { error: notificationError } = await supabase
-    .from('notifications')
-    .update({ read_at: notification.read_at ?? new Date().toISOString() })
-    .eq('id', id)
-    .eq('recipient_profile_id', auth.user.id);
-
-  if (notificationError) {
-    throw notificationError;
-  }
-
-  revalidateNotificationViews();
-  if (nextOrganizationId && nextOrganizationId !== auth.profile.default_organization_id) {
-    revalidatePath('/cases');
-    revalidatePath('/clients');
-    revalidatePath('/admin/support');
-  }
-
-  redirect((href || normalizeRelativeHref(notification.action_href ?? '')) as Route);
+  redirect(targetHref as Route);
 }

@@ -9,7 +9,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
-    exclude: ['tests/live-db/**/*.test.ts']
+    include: ['tests/live-db/**/*.test.ts']
   }
 });

@@ -898,6 +898,20 @@ export function DashboardHubClient({
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Link
+                href={'/notifications' as Route}
+                className="inline-flex items-center rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-sky-300 hover:bg-sky-50"
+              >
+                확인할 알림 {data.unreadNotifications}개
+              </Link>
+              <Link
+                href={'/cases' as Route}
+                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                확인할 건 {data.activeCases}개
+              </Link>
+            </div>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">지금 처리해야 할 항목</p>

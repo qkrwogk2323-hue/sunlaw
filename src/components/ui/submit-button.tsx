@@ -10,7 +10,8 @@ export function SubmitButton({
   variant = 'primary',
   className,
   size = 'md',
-  disabled = false
+  disabled = false,
+  pending
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -18,11 +19,13 @@ export function SubmitButton({
   size?: ButtonProps['size'];
   className?: string;
   disabled?: boolean;
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const isPending = pending ?? formPending;
   return (
-    <Button type="submit" variant={variant} size={size} isLoading={pending} disabled={disabled} className={className}>
-      {pending ? pendingLabel : children}
+    <Button type="submit" variant={variant} size={size} isLoading={isPending} disabled={disabled} className={className}>
+      {isPending ? pendingLabel : children}
     </Button>
   );
 }

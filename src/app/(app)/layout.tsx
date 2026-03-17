@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { requireAuthenticatedUser, getEffectiveOrganizationId, isManagementRole } from '@/lib/auth';
+import { getActiveViewMode, requireAuthenticatedUser, getEffectiveOrganizationId } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
@@ -16,6 +16,15 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
+  const activeViewMode = await getActiveViewMode();
+  const initialMode = activeViewMode === 'platform_admin'
+    || activeViewMode === 'law_admin'
+    || activeViewMode === 'collection_admin'
+    || activeViewMode === 'other_admin'
+    || activeViewMode === 'organization_staff'
+    || activeViewMode === 'client_communication'
+    ? activeViewMode
+    : null;
 
   if (!hasCompletedLegalName(auth.profile)) {
     redirect('/start/profile-name' as Route);
@@ -49,7 +58,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <div className="vs-shell min-h-screen">
       <div className="mx-auto grid min-h-screen max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
         <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
-          <ModeAwareNav memberships={auth.memberships} profile={auth.profile} platformOrganizations={platformScenarioOrganizations} />
+          <ModeAwareNav
+            memberships={auth.memberships}
+            profile={auth.profile}
+            platformOrganizations={platformScenarioOrganizations}
+            initialMode={initialMode}
+          />
 
           <form action={signOutAction}>
             <button className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>
