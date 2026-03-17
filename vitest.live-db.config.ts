@@ -9,6 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/live-db/**/*.test.ts']
+    include: ['tests/live-db/**/*.test.ts'],
+    testTimeout: 30000
   }
 });
