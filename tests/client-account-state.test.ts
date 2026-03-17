@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getAuthenticatedHomePath, normalizeClientAccountProfile, resolveEffectiveClientAccountStatus } from '@/lib/client-account';
+import {
+  getAuthenticatedHomePath,
+  hasCompletedLegalName,
+  isClientAccountActive,
+  isClientAccountPending
+} from '@/lib/client-account';
 import type { AuthContext } from '@/lib/types';
 
 type AuthContextOverrides = Omit<Partial<AuthContext>, 'profile'> & {
@@ -44,28 +49,50 @@ function buildAuthContext(overrides?: AuthContextOverrides): AuthContext {
 }
 
 describe('client account portal state contract', () => {
-  it('downgrades an active client without accessible portal links to pending reapproval', () => {
-    const auth = buildAuthContext();
-    const normalizedProfile = normalizeClientAccountProfile(auth.profile, 0);
-
-    expect(resolveEffectiveClientAccountStatus(auth.profile, 0)).toBe('pending_reapproval');
-    expect(normalizedProfile.client_account_status).toBe('pending_reapproval');
-    expect(getAuthenticatedHomePath({ ...auth, profile: normalizedProfile })).toBe('/start/pending');
-  });
-
-  it('keeps portal home routing when accessible portal links exist even if the stored status is pending', () => {
+  it('routes to pending for stored pending client accounts', () => {
     const auth = buildAuthContext({
       profile: {
-        is_client_account: true,
-        client_account_status: 'pending_initial_approval',
-        client_last_approved_at: null
+        client_account_status: 'pending_reapproval'
       }
     });
 
-    const normalizedProfile = normalizeClientAccountProfile(auth.profile, 2);
+    expect(isClientAccountPending(auth.profile)).toBe(true);
+    expect(isClientAccountActive(auth.profile)).toBe(false);
+    expect(getAuthenticatedHomePath(auth)).toBe('/start/pending');
+  });
 
-    expect(resolveEffectiveClientAccountStatus(auth.profile, 2)).toBe('active');
-    expect(normalizedProfile.client_account_status).toBe('active');
-    expect(getAuthenticatedHomePath({ ...auth, profile: normalizedProfile })).toBe('/portal');
+  it('routes to portal for stored active client accounts', () => {
+    const auth = buildAuthContext();
+
+    expect(isClientAccountActive(auth.profile)).toBe(true);
+    expect(isClientAccountPending(auth.profile)).toBe(false);
+    expect(getAuthenticatedHomePath(auth)).toBe('/portal');
+  });
+
+  it('routes to profile-name before any client account branch when legal name is incomplete', () => {
+    const auth = buildAuthContext({
+      profile: {
+        full_name: '',
+        legal_name: null,
+        legal_name_confirmed_at: null,
+        client_account_status: 'active'
+      }
+    });
+
+    expect(hasCompletedLegalName(auth.profile)).toBe(false);
+    expect(getAuthenticatedHomePath(auth)).toBe('/start/profile-name');
+  });
+
+  it('routes to signup for standard users without memberships who are not client accounts', () => {
+    const auth = buildAuthContext({
+      profile: {
+        is_client_account: false,
+        client_account_status: 'pending_initial_approval'
+      }
+    });
+
+    expect(isClientAccountPending(auth.profile)).toBe(false);
+    expect(isClientAccountActive(auth.profile)).toBe(false);
+    expect(getAuthenticatedHomePath(auth)).toBe('/start/signup');
   });
 });
