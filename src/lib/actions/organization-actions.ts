@@ -75,13 +75,13 @@ async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('organization_memberships')
-    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, is_platform_root)')
+    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, slug, is_platform_root)')
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
   return (data ?? [])
-    .filter((row: any) => row.organization?.is_platform_root === true && row.profile?.is_active !== false)
+    .filter((row: any) => row.organization?.is_platform_root === true && row.organization?.slug === 'vein-bn-1' && row.profile?.is_active !== false)
     .map((row: any) => row.profile_id)
     .filter(Boolean);
 }

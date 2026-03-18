@@ -7,6 +7,8 @@ import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, normalizeActiveViewMode } from '@/lib/view-mode';
 
+const PLATFORM_OPERATOR_ORGANIZATION_SLUG = 'vein-bn-1';
+
 type CoreProfile = Pick<
   Profile,
   'id' | 'email' | 'full_name' | 'platform_role' | 'default_organization_id' | 'is_active'
@@ -187,6 +189,7 @@ export function isManagementRole(role?: string | null) {
 export function hasPlatformRootManagementMembership(auth: AuthContext) {
   return auth.memberships.some((membership) => (
     membership.organization?.is_platform_root === true
+    && membership.organization?.slug === PLATFORM_OPERATOR_ORGANIZATION_SLUG
     && isManagementRole(membership.role)
   ));
 }

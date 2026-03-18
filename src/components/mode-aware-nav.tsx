@@ -87,6 +87,7 @@ function getRoleLabel(membership: Membership | null, fallback: string) {
 function getOrganizationSections({
   membership,
   mode,
+  canCreateOrganization = false,
   unreadNotificationCount = 0,
   actionRequiredCount = 0,
   unreadConversationCount = 0,
@@ -95,6 +96,7 @@ function getOrganizationSections({
 }: {
   membership: Membership | null;
   mode: ModeKey;
+  canCreateOrganization?: boolean;
   unreadNotificationCount?: number;
   actionRequiredCount?: number;
   unreadConversationCount?: number;
@@ -131,7 +133,7 @@ function getOrganizationSections({
     );
   } else {
     organizationItems.push(
-      { href: '/organizations#create', label: '조직 생성', icon: Boxes },
+      { href: canCreateOrganization ? '/organizations#create' : '/organization-request', label: canCreateOrganization ? '조직 생성' : '조직 생성 신청', icon: Boxes },
       { href: '/cases', label: '사건 목록', icon: FileText },
       { href: '/clients', label: '의뢰인 관리', icon: Users }
     );
@@ -385,6 +387,7 @@ export function ModeAwareNav({
     () => getOrganizationSections({
       membership: sectionMembership,
       mode,
+      canCreateOrganization: isPlatformOperator,
       unreadNotificationCount: navCounts.unreadCount,
       actionRequiredCount: navCounts.actionRequiredCount,
       unreadConversationCount: navCounts.unreadConversationCount,
