@@ -151,7 +151,7 @@ export default async function SignupGuidePage({
                   </div>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Link href={'/organization-request' as Route} className={buttonStyles({ className: 'min-h-14 justify-between rounded-[1.25rem] px-5 text-base' })}>
                   조직 생성 신청으로 이동
                   <ArrowRight className="size-4" />
@@ -215,7 +215,7 @@ export default async function SignupGuidePage({
                         : '이미 활성 상태입니다. 로그인 후 의뢰인 포털에서 사건과 알림을 확인할 수 있습니다.'}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <Link href={(isClientAccountPending(auth.profile) ? '/start/pending' : '/portal') as Route} className={buttonStyles({ className: 'min-h-12 rounded-[1.25rem] px-4 text-base' })}>
                       {isClientAccountPending(auth.profile) ? '대기 상태 보기' : '포털로 이동'}
                     </Link>
