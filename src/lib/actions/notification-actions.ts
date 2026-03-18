@@ -30,7 +30,7 @@ async function getOwnedNotification(notificationId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: notification, error } = await supabase
     .from('notifications')
-    .select('id, recipient_profile_id, organization_id, read_at, requires_action, resolved_at, action_href, destination_url, status, trashed_at, snoozed_until')
+    .select('id, recipient_profile_id, organization_id, read_at, requires_action, resolved_at, action_href, destination_url, status, trashed_at')
     .eq('id', notificationId)
     .eq('recipient_profile_id', auth.user.id)
     .single();
@@ -145,29 +145,13 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
     return;
   }
 
-  if (operation === 'snooze_1d' || operation === 'snooze_3d') {
-    const days = operation === 'snooze_1d' ? 1 : 3;
-    const snoozedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  if (operation === 'delete_now') {
     const { error } = await supabase
       .from('notifications')
-      .update({ snoozed_until: snoozedUntil, read_at: now, status: 'read' })
+      .update({ status: 'deleted', deleted_at: now })
       .eq('recipient_profile_id', auth.user.id)
       .in('id', ids)
-      .in('status', ['active', 'read']);
-
-    if (error) throw error;
-    revalidateNotificationViews();
-    return;
-  }
-
-  if (operation === 'unsnooze') {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ snoozed_until: null })
-      .eq('recipient_profile_id', auth.user.id)
-      .in('id', ids)
-      .in('status', ['active', 'read']);
-
+      .eq('status', 'archived');
     if (error) throw error;
     revalidateNotificationViews();
   }
@@ -253,55 +237,6 @@ export async function restoreNotificationAction(formData: FormData) {
   revalidateNotificationViews();
 }
 
-export async function snoozeNotificationAction(formData: FormData) {
-  const id = `${formData.get('notificationId') ?? ''}`;
-  const daysRaw = Number(`${formData.get('days') ?? '1'}`);
-  const days = Number.isFinite(daysRaw) && [1, 3, 7].includes(daysRaw) ? daysRaw : 1;
-  if (!id) {
-    throw new Error('notificationId is required');
-  }
-
-  const auth = await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
-  const now = new Date().toISOString();
-  const snoozedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-
-  const { error } = await supabase
-    .from('notifications')
-    .update({ snoozed_until: snoozedUntil, read_at: now, status: 'read' })
-    .eq('id', id)
-    .eq('recipient_profile_id', auth.user.id)
-    .in('status', ['active', 'read']);
-
-  if (error) {
-    throw error;
-  }
-
-  revalidateNotificationViews();
-}
-
-export async function unsnoozeNotificationAction(formData: FormData) {
-  const id = `${formData.get('notificationId') ?? ''}`;
-  if (!id) {
-    throw new Error('notificationId is required');
-  }
-
-  const auth = await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
-    .from('notifications')
-    .update({ snoozed_until: null })
-    .eq('id', id)
-    .eq('recipient_profile_id', auth.user.id)
-    .in('status', ['active', 'read']);
-
-  if (error) {
-    throw error;
-  }
-
-  revalidateNotificationViews();
-}
-
 export async function emptyNotificationTrashAction() {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -316,6 +251,51 @@ export async function emptyNotificationTrashAction() {
     throw error;
   }
 
+  revalidateNotificationViews();
+}
+
+export async function permanentlyDeleteNotificationAction(formData: FormData) {
+  const id = `${formData.get('notificationId') ?? ''}`;
+  if (!id) {
+    throw new Error('notificationId is required');
+  }
+
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('notifications')
+    .update({ status: 'deleted', deleted_at: now })
+    .eq('id', id)
+    .eq('recipient_profile_id', auth.user.id)
+    .eq('status', 'archived');
+
+  if (error) {
+    throw error;
+  }
+
+  revalidateNotificationViews();
+}
+
+export async function updateNotificationChannelPreferenceAction(formData: FormData) {
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+
+  const payload = {
+    profile_id: auth.user.id,
+    kakao_enabled: formData.get('kakao_enabled') === 'on',
+    kakao_important_only: formData.get('kakao_important_only') === 'on',
+    allow_case: formData.get('allow_case') === 'on',
+    allow_schedule: formData.get('allow_schedule') === 'on',
+    allow_client: formData.get('allow_client') === 'on',
+    allow_collaboration: formData.get('allow_collaboration') === 'on'
+  };
+
+  const { error } = await supabase
+    .from('notification_channel_preferences')
+    .upsert(payload, { onConflict: 'profile_id' });
+
+  if (error) throw error;
   revalidateNotificationViews();
 }
 

@@ -64,6 +64,15 @@ export type NavUnreadCounts = {
   unreadConversationCount: number;
 };
 
+export type NotificationChannelPreferences = {
+  kakao_enabled: boolean;
+  kakao_important_only: boolean;
+  allow_case: boolean;
+  allow_schedule: boolean;
+  allow_client: boolean;
+  allow_collaboration: boolean;
+};
+
 function isMissingColumnError(error: unknown) {
   return Boolean(
     error &&
@@ -113,6 +122,44 @@ async function purgeExpiredNotificationTrash(userId: string) {
   if (error && !isMissingColumnError(error)) {
     throw error;
   }
+}
+
+async function ensureKakaoSignupNotice(userId: string, organizationId: string | null) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: identityRows } = await supabase
+    .schema('auth')
+    .from('identities')
+    .select('provider')
+    .eq('user_id', userId)
+    .eq('provider', 'kakao')
+    .limit(1);
+
+  if (!identityRows?.length) return;
+
+  const { data: existing } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('recipient_profile_id', userId)
+    .eq('notification_type', 'kakao_channel_notice')
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.id) return;
+
+  await supabase.from('notifications').insert({
+    organization_id: organizationId,
+    recipient_profile_id: userId,
+    kind: 'generic',
+    notification_type: 'kakao_channel_notice',
+    entity_type: 'collaboration',
+    priority: 'normal',
+    status: 'active',
+    title: '카카오톡 중요 알림 안내',
+    body: '카카오톡 가입자는 알림센터에서 알림 유형을 선택해 중요 알림을 카카오톡으로 받을 수 있습니다.',
+    destination_type: 'internal_route',
+    destination_url: '/notifications'
+  });
 }
 
 export async function getUnreadNotificationCount() {
@@ -215,6 +262,7 @@ export async function getNotificationCenter(limit = 20) {
   };
 
   await purgeExpiredNotificationTrash(auth.user.id);
+  await ensureKakaoSignupNotice(auth.user.id, getEffectiveOrganizationId(auth));
 
   const supabase = await createSupabaseServerClient();
   const upgradedActive = await supabase
@@ -376,7 +424,6 @@ const queueSummarySelect = [
   'entity_id',
   'priority',
   'status',
-  'snoozed_until',
   'destination_type',
   'destination_url',
   'destination_params',
@@ -394,7 +441,6 @@ export type NotificationQueueItem = {
   entityId: string | null;
   priority: QueuePriority;
   status: QueueStatus;
-  snoozedUntil: string | null;
   destinationType: string;
   destinationUrl: string;
   createdAt: string;
@@ -467,7 +513,6 @@ function normalizeQueueItem(record: any): NotificationQueueItem {
     entityId,
     priority,
     status,
-    snoozedUntil: record.snoozed_until ?? null,
     destinationType: `${record.destination_type ?? 'internal_route'}`,
     destinationUrl,
     createdAt: record.created_at,
@@ -525,12 +570,7 @@ export async function getDashboardRecentNotifications(organizationId?: string | 
   if (error && !isMissingColumnError(error)) throw error;
 
   const normalized = ((data ?? []) as any[]).map(normalizeQueueItem);
-  const now = Date.now();
   return normalized
-    .filter((item) => {
-      if (!item.snoozedUntil) return true;
-      return new Date(item.snoozedUntil).getTime() <= now;
-    })
     .sort((a, b) => {
       const p = priorityWeight(b.priority) - priorityWeight(a.priority);
       if (p !== 0) return p;
@@ -554,7 +594,7 @@ export async function getNotificationQueueView({
   entityType?: QueueEntityType | 'all' | null;
   section?: 'all' | 'immediate' | 'confirm' | 'reference' | null;
   priority?: QueuePriority | 'all' | null;
-  state?: QueueStatus | 'snoozed' | 'all' | null;
+  state?: QueueStatus | 'all' | null;
 }) {
   const auth = await getCurrentAuth();
   if (!auth) {
@@ -593,15 +633,10 @@ export async function getNotificationQueueView({
   const normalizedSection = section && section !== 'all' ? section : null;
   const normalizedPriority = priority && priority !== 'all' ? priority : null;
   const normalizedState = state && state !== 'all' ? state : null;
-  const now = Date.now();
-
   const rows = ((data ?? []) as any[]).map(normalizeQueueItem).filter((item) => {
     if (normalizedEntityType && item.entityType !== normalizedEntityType) return false;
     if (normalizedPriority && item.priority !== normalizedPriority) return false;
     if (keyword && !`${item.title}`.toLowerCase().includes(keyword)) return false;
-    const isSnoozed = Boolean(item.snoozedUntil && new Date(item.snoozedUntil).getTime() > now);
-    if (normalizedState === 'snoozed') return isSnoozed;
-    if (isSnoozed) return false;
     if (normalizedState && item.status !== normalizedState) return false;
     return true;
   });
@@ -610,8 +645,8 @@ export async function getNotificationQueueView({
   const currentOrganizationId = getEffectiveOrganizationId(auth);
 
   const immediate = pageItems.filter((item) => item.status === 'active' && item.priority === 'urgent');
-  const confirm = pageItems.filter((item) => (item.status === 'active' || item.status === 'read') && item.priority !== 'urgent');
-  const reference = pageItems.filter((item) => item.status === 'resolved' || item.status === 'archived');
+  const confirm = pageItems.filter((item) => item.status === 'active' && item.priority !== 'urgent');
+  const reference = pageItems.filter((item) => item.status === 'read' || item.status === 'resolved' || item.status === 'archived');
 
   const sections = {
     immediate: normalizedSection && normalizedSection !== 'immediate' ? [] : buildQueueGroups(immediate),
@@ -624,5 +659,27 @@ export async function getNotificationQueueView({
     items: pageItems,
     sections,
     nextCursor
+  };
+}
+
+export async function getNotificationChannelPreferences(): Promise<NotificationChannelPreferences | null> {
+  const auth = await getCurrentAuth();
+  if (!auth) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('notification_channel_preferences')
+    .select('kakao_enabled, kakao_important_only, allow_case, allow_schedule, allow_client, allow_collaboration')
+    .eq('profile_id', auth.user.id)
+    .maybeSingle();
+
+  if (data) return data as NotificationChannelPreferences;
+
+  return {
+    kakao_enabled: true,
+    kakao_important_only: true,
+    allow_case: true,
+    allow_schedule: true,
+    allow_client: true,
+    allow_collaboration: true
   };
 }

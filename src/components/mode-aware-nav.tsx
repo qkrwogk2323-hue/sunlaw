@@ -27,7 +27,7 @@ import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, isPlatformAdminOnlyPath } from '@/lib/view-mode';
 
 type NavBadge = { count: number; variant?: 'default' | 'urgent' };
-type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean };
+type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean; emphasize?: boolean };
 type NavSection = { id: string; label: string; items: NavItem[] };
 type NavUnreadCounts = { unreadCount: number; actionRequiredCount: number; unreadConversationCount: number };
 
@@ -113,7 +113,7 @@ function getOrganizationSections({
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
     { href: '/cases', label: '사건 보기', icon: FileText },
     { href: '/inbox', label: '오늘 할 일', icon: ClipboardList, badge: conversationBadge, pulse: pulseConversation },
-    { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
+    { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
     { href: '/calendar', label: '일정 확인', icon: CalendarRange },
     { href: '/documents', label: '검토 필요', icon: ReceiptText }
   ]);
@@ -167,7 +167,8 @@ function ModeNavItem({
   active,
   sectionId,
   badge,
-  pulse = false
+  pulse = false,
+  emphasize = false
 }: {
   href: string;
   label: string;
@@ -176,6 +177,7 @@ function ModeNavItem({
   sectionId: string;
   badge?: NavBadge | null;
   pulse?: boolean;
+  emphasize?: boolean;
 }) {
   const accent = sectionAccent[sectionId as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
   return (
@@ -184,10 +186,12 @@ function ModeNavItem({
       className={`inline-flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition duration-200 ${
         active
           ? accent.active
-          : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'
+          : emphasize
+            ? 'border-amber-300 bg-amber-50/80 text-slate-900 shadow-[0_8px_18px_rgba(245,158,11,0.12)] hover:-translate-y-0.5 hover:border-amber-400'
+            : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'
       }`}
     >
-      <span className={`inline-flex size-8 items-center justify-center rounded-lg ${active ? accent.icon : 'bg-slate-100 text-slate-500'} ${pulse ? 'animate-pulse' : ''}`}>
+      <span className={`inline-flex size-8 items-center justify-center rounded-lg ${active ? accent.icon : emphasize ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'} ${pulse || emphasize ? 'animate-pulse' : ''}`}>
         <Icon className="size-4" />
       </span>
       <span className="flex-1">{label}</span>
@@ -215,13 +219,15 @@ function MobileSectionBar({
   pathname,
   currentOrgMembership,
   baseRoleLabel,
-  currentOrganizationName
+  currentOrganizationName,
+  hasUnreadNotifications
 }: {
   sections: NavSection[];
   pathname: string;
   currentOrgMembership: Membership | null;
   baseRoleLabel: string;
   currentOrganizationName: string;
+  hasUnreadNotifications: boolean;
 }) {
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
@@ -277,7 +283,13 @@ function MobileSectionBar({
                 <Link
                   key={item.href}
                   href={item.href as Route}
-                  className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? accent.active : 'border-slate-200 bg-white text-slate-700'}`}
+                  className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
+                    pathname === item.href || pathname.startsWith(`${item.href}/`)
+                      ? accent.active
+                      : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === '/notifications')
+                        ? 'border-amber-300 bg-amber-50/80 text-slate-900'
+                        : 'border-slate-200 bg-white text-slate-700'
+                  }`}
                 >
                   <item.icon className="size-4" />
                   <span className="flex-1">{item.label}</span>
@@ -385,6 +397,7 @@ export function ModeAwareNav({
   const baseRoleLabel = mode === 'client_communication' ? '의뢰인' : '구성원';
   const roleDetail = getRoleLabel(currentOrgMembership, baseRoleLabel);
   const displayName = profile.full_name;
+  const hasUnreadNotifications = navCounts.unreadCount > 0;
 
   const orgOptions = useMemo(() => {
     if (platformOrganizations.length) {
@@ -499,6 +512,7 @@ export function ModeAwareNav({
         currentOrgMembership={currentOrgMembership}
         baseRoleLabel={baseRoleLabel}
         currentOrganizationName={currentOrganization?.name ?? ''}
+        hasUnreadNotifications={hasUnreadNotifications}
       />
 
       <div className="hidden lg:block">
@@ -569,9 +583,19 @@ export function ModeAwareNav({
         <div className="mt-3 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
           <div className="space-y-2">
             {sections.map((section) => (
-              <div key={section.id} className={`rounded-[1.15rem] border p-2 ${sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'}`}>
+              <div
+                key={section.id}
+                className={`rounded-[1.15rem] border p-2 ${
+                  section.id === 'common-menu' && hasUnreadNotifications
+                    ? 'border-amber-300 bg-amber-50/65'
+                    : sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'
+                }`}
+              >
                 <div className="px-3 py-2">
                   <p className="text-sm font-semibold text-slate-900">{section.label}</p>
+                  {section.id === 'common-menu' && hasUnreadNotifications ? (
+                    <p className="mt-0.5 text-[11px] font-medium text-amber-700">새 알림 확인 전까지 강조됩니다.</p>
+                  ) : null}
                 </div>
                 <div className="mt-1 space-y-1">
                   {section.items.map((item) => (
@@ -583,6 +607,7 @@ export function ModeAwareNav({
                       sectionId={section.id}
                       active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
                       pulse={Boolean(item.pulse)}
+                      emphasize={Boolean(item.emphasize)}
                     />
                   ))}
                 </div>

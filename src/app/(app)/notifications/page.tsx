@@ -6,15 +6,15 @@ import {
   markNotificationResolvedAction,
   moveNotificationToTrashAction,
   restoreNotificationAction,
-  snoozeNotificationAction,
-  unsnoozeNotificationAction
+  updateNotificationChannelPreferenceAction
 } from '@/lib/actions/notification-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ImmediateDeleteForm } from '@/components/notifications/immediate-delete-form';
 import { formatNotificationDate } from '@/lib/format';
 import { requireAuthenticatedUser } from '@/lib/auth';
-import { getNotificationCenter, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
+import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 40, 80] as const;
 
@@ -66,7 +66,6 @@ function actionCopy(item: NotificationQueueItem) {
 
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
   const openHref = notificationOpenHref(item.notificationId, item.destinationUrl, item.organizationId);
-  const isSnoozed = Boolean(item.snoozedUntil && new Date(item.snoozedUntil).getTime() > Date.now());
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -78,7 +77,6 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <div className="flex items-center gap-1">
           <Badge tone="slate">{statusLabel(item.status)}</Badge>
           <Badge tone={item.priority === 'urgent' ? 'red' : item.priority === 'normal' ? 'blue' : 'slate'}>{priorityLabel(item.priority)}</Badge>
-          {isSnoozed ? <Badge tone="amber">스누즈</Badge> : null}
         </div>
       </div>
 
@@ -86,12 +84,6 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <span>{item.organizationName ?? '조직 미지정'}</span>
         <span>·</span>
         <span>{formatNotificationDate(item.createdAt)}</span>
-        {isSnoozed && item.snoozedUntil ? (
-          <>
-            <span>·</span>
-            <span>다시 알림 {formatNotificationDate(item.snoozedUntil)}</span>
-          </>
-        ) : null}
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -120,25 +112,10 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
           </form>
         ) : null}
 
-        {(item.status === 'active' || item.status === 'read') && !isSnoozed ? (
-          <form action={snoozeNotificationAction}>
-            <input type="hidden" name="notificationId" value={item.notificationId} />
-            <input type="hidden" name="days" value="1" />
-            <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">1일 후 다시</SubmitButton>
-          </form>
-        ) : null}
-
-        {(item.status === 'active' || item.status === 'read') && isSnoozed ? (
-          <form action={unsnoozeNotificationAction}>
-            <input type="hidden" name="notificationId" value={item.notificationId} />
-            <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">스누즈 해제</SubmitButton>
-          </form>
-        ) : null}
-
         {item.status === 'resolved' ? (
           <form action={moveNotificationToTrashAction}>
             <input type="hidden" name="notificationId" value={item.notificationId} />
-            <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">보관</SubmitButton>
+            <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">완료함 이동</SubmitButton>
           </form>
         ) : null}
       </div>
@@ -154,18 +131,21 @@ function QueueSection({
   groups: Array<{ groupKey: string; entityType: QueueEntityType; entityId: string | null; title: string; count: number; items: NotificationQueueItem[] }>;
 }) {
   const meta = sectionMeta(section);
-  const groupedByEntity: Record<QueueEntityType, typeof groups> = {
-    case: [],
-    schedule: [],
-    client: [],
-    collaboration: []
-  };
-
-  for (const group of groups) {
-    groupedByEntity[group.entityType].push(group);
-  }
-
   const totalCount = groups.reduce((sum, group) => sum + group.count, 0);
+  let remaining = 5;
+  const limitedGroups = groups
+    .map((group) => {
+      if (remaining <= 0) return null;
+      const items = group.items.slice(0, remaining);
+      remaining -= items.length;
+      if (!items.length) return null;
+      return {
+        ...group,
+        count: items.length,
+        items
+      };
+    })
+    .filter(Boolean) as typeof groups;
 
   return (
     <Card>
@@ -177,7 +157,7 @@ function QueueSection({
       </CardHeader>
       <CardContent className="space-y-3">
         {(['case', 'schedule', 'client', 'collaboration'] as QueueEntityType[]).map((entityType) => {
-          const entityGroups = groupedByEntity[entityType];
+          const entityGroups = limitedGroups.filter((group) => group.entityType === entityType);
           if (!entityGroups.length) return null;
 
           return (
@@ -217,10 +197,13 @@ export default async function NotificationsPage({
   const entity = `${resolved?.entity ?? 'all'}` as 'all' | QueueEntityType;
   const section = `${resolved?.section ?? 'all'}` as 'all' | QueueSectionKey;
   const priority = `${resolved?.priority ?? 'all'}` as 'all' | 'urgent' | 'normal' | 'low';
-  const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived' | 'snoozed';
+  const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived';
   const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize as (typeof PAGE_SIZE_OPTIONS)[number]) ? requestedSize : 20;
 
-  const notificationCenter = await getNotificationCenter(pageSize);
+  const [notificationCenter, channelPreferences] = await Promise.all([
+    getNotificationCenter(pageSize),
+    getNotificationChannelPreferences()
+  ]);
 
   const queueView = await getNotificationQueueView({
     limit: pageSize,
@@ -238,6 +221,7 @@ export default async function NotificationsPage({
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
             <p className="mt-2 text-sm text-slate-500">알림을 보는 곳이 아니라 사건/일정/의뢰인/협업 업무를 처리하는 큐입니다.</p>
+            <p className="mt-1 text-xs text-amber-700">카카오톡 가입자는 중요 알림을 카카오톡으로 받을 수 있습니다. 아래 수신 설정에서 알림 유형을 선택하세요.</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
@@ -293,8 +277,7 @@ export default async function NotificationsPage({
               <option value="active">신규</option>
               <option value="read">확인</option>
               <option value="resolved">해결</option>
-              <option value="archived">보관</option>
-              <option value="snoozed">스누즈됨</option>
+              <option value="archived">완료</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -327,16 +310,7 @@ export default async function NotificationsPage({
             선택 해결
           </button>
           <button type="submit" name="operation" value="archive" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            선택 보관
-          </button>
-          <button type="submit" name="operation" value="snooze_1d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            선택 1일 스누즈
-          </button>
-          <button type="submit" name="operation" value="snooze_3d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            선택 3일 스누즈
-          </button>
-          <button type="submit" name="operation" value="unsnooze" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            선택 스누즈 해제
+            선택 완료함 이동
           </button>
         </form>
         <form action={markAllNotificationsReadAction}>
@@ -351,6 +325,41 @@ export default async function NotificationsPage({
           <QueueSection section="reference" groups={queueView.sections.reference as any} />
         </div>
       ) : null}
+
+      <Card className="border-slate-100">
+        <CardHeader><CardTitle>알림 수신 설정</CardTitle></CardHeader>
+        <CardContent>
+          <form action={updateNotificationChannelPreferenceAction} className="grid gap-3 md:grid-cols-2">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="kakao_enabled" defaultChecked={Boolean(channelPreferences?.kakao_enabled)} className="size-4" />
+              카카오톡 알림 받기
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="kakao_important_only" defaultChecked={Boolean(channelPreferences?.kakao_important_only)} className="size-4" />
+              카카오톡은 중요 알림만 받기
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="allow_case" defaultChecked={Boolean(channelPreferences?.allow_case)} className="size-4" />
+              사건 알림 받기
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="allow_schedule" defaultChecked={Boolean(channelPreferences?.allow_schedule)} className="size-4" />
+              일정 알림 받기
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="allow_client" defaultChecked={Boolean(channelPreferences?.allow_client)} className="size-4" />
+              의뢰인 알림 받기
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="allow_collaboration" defaultChecked={Boolean(channelPreferences?.allow_collaboration)} className="size-4" />
+              협업 알림 받기
+            </label>
+            <div className="md:col-span-2">
+              <SubmitButton pendingLabel="저장 중...">수신 설정 저장</SubmitButton>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {notificationCenter.capabilities?.supportsTrash !== false ? (
         <Card className="border-slate-100">
@@ -391,8 +400,9 @@ export default async function NotificationsPage({
                   </div>
                   <form action={restoreNotificationAction} className="shrink-0">
                     <input type="hidden" name="notificationId" value={notification.id} />
-                    <SubmitButton variant="secondary" pendingLabel="복원 중..." className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs">다시 꺼내기</SubmitButton>
+                    <SubmitButton variant="secondary" pendingLabel="복원 중..." className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs">복원</SubmitButton>
                   </form>
+                  <ImmediateDeleteForm notificationId={notification.id} />
                 </div>
               ))
             ) : (
