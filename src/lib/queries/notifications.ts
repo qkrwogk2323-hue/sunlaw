@@ -495,7 +495,7 @@ function fallbackDestination(record: any, entityType: QueueEntityType, entityId:
   if (entityType === 'case' && entityId) return `/cases/${entityId}`;
   if (entityType === 'schedule') return '/calendar';
   if (entityType === 'client') return entityId ? `/clients?clientId=${entityId}&highlight=1` : '/clients';
-  return '/inbox';
+  return '/dashboard';
 }
 
 function normalizeQueueItem(record: any): NotificationQueueItem {

@@ -17,6 +17,9 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   if (auth.profile.must_change_password) {
     redirect('/start/password-reset' as Route);
   }
+  if (auth.profile.must_complete_profile) {
+    redirect('/start/member-profile' as Route);
+  }
 
   if (!hasCompletedLegalName(auth.profile)) {
     redirect('/start/profile-name' as Route);

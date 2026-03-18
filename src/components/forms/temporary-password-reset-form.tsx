@@ -41,7 +41,7 @@ export function TemporaryPasswordResetForm() {
     startTransition(async () => {
       try {
         await completeTemporaryCredentialPasswordResetAction();
-        router.replace('/settings/team?self=required#self-edit');
+        router.replace('/start/member-profile');
         router.refresh();
       } catch (actionError) {
         setError(actionError instanceof Error ? actionError.message : '후속 처리에 실패했습니다.');

@@ -52,7 +52,7 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
   }
 
   if (auth.profile.must_complete_profile) {
-    return '/settings/team?self=required#self-edit' as Route;
+    return '/start/member-profile' as Route;
   }
 
   if (!hasCompletedLegalName(auth.profile)) {

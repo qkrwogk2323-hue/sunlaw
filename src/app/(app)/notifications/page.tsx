@@ -20,6 +20,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 40, 80] as const;
 
 type QueueSectionKey = 'immediate' | 'confirm' | 'reference';
 type QueueEntityType = 'case' | 'schedule' | 'client' | 'collaboration';
+type WorkflowSectionKey = 'today' | 'review' | 'schedule' | 'communication' | 'reference';
 
 function notificationOpenHref(notificationId: string, href: string, organizationId?: string | null) {
   const params = new URLSearchParams();
@@ -30,17 +31,87 @@ function notificationOpenHref(notificationId: string, href: string, organization
   return `/notifications/open/${notificationId}?${params.toString()}`;
 }
 
-function sectionMeta(section: QueueSectionKey) {
-  if (section === 'immediate') return { label: '즉시 처리 필요', tone: 'red' as const, openByDefault: true };
-  if (section === 'confirm') return { label: '확인 필요', tone: 'blue' as const, openByDefault: true };
-  return { label: '참고 / 완료', tone: 'slate' as const, openByDefault: false };
-}
-
 function entityLabel(entityType: QueueEntityType) {
   if (entityType === 'case') return '사건';
   if (entityType === 'schedule') return '일정';
   if (entityType === 'client') return '의뢰인';
   return '협업';
+}
+
+function workflowMeta(section: WorkflowSectionKey) {
+  if (section === 'today') {
+    return {
+      label: '오늘 할 일',
+      description: '지금 바로 처리하거나 확인해야 하는 업무입니다.',
+      tone: 'red' as const,
+      emptyText: '오늘 바로 처리할 항목이 없습니다.'
+    };
+  }
+
+  if (section === 'review') {
+    return {
+      label: '검토 필요',
+      description: '문서, 승인, 확인 요청처럼 검토가 필요한 항목을 모았습니다.',
+      tone: 'amber' as const,
+      emptyText: '현재 검토가 필요한 항목이 없습니다.'
+    };
+  }
+
+  if (section === 'schedule') {
+    return {
+      label: '일정 / 약속',
+      description: '캘린더와 일정 등록으로 이어지는 항목입니다.',
+      tone: 'blue' as const,
+      emptyText: '확인할 일정 알림이 없습니다.'
+    };
+  }
+
+  if (section === 'communication') {
+    return {
+      label: '소통 / 연결',
+      description: '조직 소통, 의뢰인 연결, 협업 흐름을 모았습니다.',
+      tone: 'green' as const,
+      emptyText: '새로 확인할 소통 항목이 없습니다.'
+    };
+  }
+
+  return {
+    label: '참고 / 완료',
+    description: '읽었거나 정리된 항목을 다시 확인할 때 사용합니다.',
+    tone: 'slate' as const,
+    emptyText: '참고용 알림이 없습니다.'
+  };
+}
+
+function inferWorkflowSection(item: NotificationQueueItem): WorkflowSectionKey {
+  if (item.status === 'read' || item.status === 'resolved' || item.status === 'archived') {
+    return 'reference';
+  }
+
+  const text = `${item.title} ${item.type} ${item.actionLabel}`.toLowerCase();
+  if (item.entityType === 'schedule' || /일정|회의|미팅|기일|마감|리마인더|캘린더/.test(text)) {
+    return 'schedule';
+  }
+
+  if (/검토|승인|결재|확인 요청|문서|review|approval/.test(text)) {
+    return 'review';
+  }
+
+  if (item.entityType === 'client' || item.entityType === 'collaboration' || /소통|대화|메시지|연결|가입신청|협업|의뢰인/.test(text)) {
+    return 'communication';
+  }
+
+  return 'today';
+}
+
+function buildWorkflowSections(items: NotificationQueueItem[]) {
+  return {
+    today: items.filter((item) => inferWorkflowSection(item) === 'today'),
+    review: items.filter((item) => inferWorkflowSection(item) === 'review'),
+    schedule: items.filter((item) => inferWorkflowSection(item) === 'schedule'),
+    communication: items.filter((item) => inferWorkflowSection(item) === 'communication'),
+    reference: items.filter((item) => inferWorkflowSection(item) === 'reference')
+  } satisfies Record<WorkflowSectionKey, NotificationQueueItem[]>;
 }
 
 function statusLabel(status: string) {
@@ -61,7 +132,7 @@ function actionCopy(item: NotificationQueueItem) {
   if (item.entityType === 'case') return '사건 화면에서 다음 조치 진행';
   if (item.entityType === 'schedule') return '일정 화면에서 처리';
   if (item.entityType === 'client') return '의뢰인 화면에서 확인';
-  return '협업 화면에서 확인';
+  return '대시보드 소통창에서 확인';
 }
 
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
@@ -123,63 +194,39 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
   );
 }
 
-function QueueSection({
-  section,
-  groups
-}: {
-  section: QueueSectionKey;
-  groups: Array<{ groupKey: string; entityType: QueueEntityType; entityId: string | null; title: string; count: number; items: NotificationQueueItem[] }>;
-}) {
-  const meta = sectionMeta(section);
-  const totalCount = groups.reduce((sum, group) => sum + group.count, 0);
-  let remaining = 5;
-  const limitedGroups = groups
-    .map((group) => {
-      if (remaining <= 0) return null;
-      const items = group.items.slice(0, remaining);
-      remaining -= items.length;
-      if (!items.length) return null;
-      return {
-        ...group,
-        count: items.length,
-        items
-      };
-    })
-    .filter(Boolean) as typeof groups;
+function WorkflowSection({ section, items }: { section: WorkflowSectionKey; items: NotificationQueueItem[] }) {
+  const meta = workflowMeta(section);
+  const byEntity = (['case', 'schedule', 'client', 'collaboration'] as QueueEntityType[])
+    .map((entityType) => ({ entityType, items: items.filter((item) => item.entityType === entityType) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle>{meta.label}</CardTitle>
-          <Badge tone={meta.tone}>{totalCount}</Badge>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{meta.label}</CardTitle>
+            <p className="mt-1 text-sm text-slate-500">{meta.description}</p>
+          </div>
+          <Badge tone={meta.tone}>{items.length}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {(['case', 'schedule', 'client', 'collaboration'] as QueueEntityType[]).map((entityType) => {
-          const entityGroups = limitedGroups.filter((group) => group.entityType === entityType);
-          if (!entityGroups.length) return null;
-
-          return (
-            <details key={entityType} open={meta.openByDefault} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
-              <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-                {entityLabel(entityType)} · {entityGroups.length}개 그룹
-              </summary>
-              <div className="mt-3 space-y-3">
-                {entityGroups.map((group) => (
-                  <details key={group.groupKey} open={meta.openByDefault} className="rounded-xl border border-slate-200 bg-white p-3">
-                    <summary className="cursor-pointer list-none text-sm font-medium text-slate-900">
-                      {group.title} ({group.count})
-                    </summary>
-                    <div className="mt-3 space-y-2">
-                      {group.items.map((item) => <QueueItemRow key={item.notificationId} item={item} />)}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </details>
-          );
-        })}
+        {items.length ? byEntity.map((group) => (
+          <div key={group.entityType} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-900">{entityLabel(group.entityType)}</p>
+              <Badge tone="slate">{group.items.length}</Badge>
+            </div>
+            <div className="mt-3 space-y-2">
+              {group.items.map((item) => <QueueItemRow key={item.notificationId} item={item} />)}
+            </div>
+          </div>
+        )) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-6 text-sm text-slate-500">
+            {meta.emptyText}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -213,6 +260,7 @@ export default async function NotificationsPage({
     priority,
     state
   });
+  const workflowSections = buildWorkflowSections(queueView.items);
 
   return (
     <div className="space-y-5">
@@ -225,12 +273,16 @@ export default async function NotificationsPage({
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">오늘 할 일</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-950">{workflowSections.today.length}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">보관함</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">검토 필요</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-950">{workflowSections.review.length}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
             </div>
           </div>
         </div>
@@ -320,9 +372,11 @@ export default async function NotificationsPage({
 
       {queueView ? (
         <div className="space-y-4">
-          <QueueSection section="immediate" groups={queueView.sections.immediate as any} />
-          <QueueSection section="confirm" groups={queueView.sections.confirm as any} />
-          <QueueSection section="reference" groups={queueView.sections.reference as any} />
+          <WorkflowSection section="today" items={workflowSections.today} />
+          <WorkflowSection section="review" items={workflowSections.review} />
+          <WorkflowSection section="schedule" items={workflowSections.schedule} />
+          <WorkflowSection section="communication" items={workflowSections.communication} />
+          <WorkflowSection section="reference" items={workflowSections.reference} />
         </div>
       ) : null}
 
