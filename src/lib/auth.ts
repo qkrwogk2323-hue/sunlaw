@@ -16,7 +16,7 @@ type CoreProfile = Pick<
 
 type ClientAccountProfileFields = Pick<
   Profile,
-  'is_client_account' | 'client_account_status' | 'client_account_status_changed_at' | 'client_account_status_reason' | 'client_last_approved_at' | 'legal_name' | 'legal_name_confirmed_at'
+  'is_client_account' | 'client_account_status' | 'client_account_status_changed_at' | 'client_account_status_reason' | 'client_last_approved_at' | 'legal_name' | 'legal_name_confirmed_at' | 'must_change_password' | 'must_complete_profile'
 >;
 
 const defaultClientAccountProfileFields: ClientAccountProfileFields = {
@@ -26,7 +26,9 @@ const defaultClientAccountProfileFields: ClientAccountProfileFields = {
   client_account_status_reason: null,
   client_last_approved_at: null,
   legal_name: null,
-  legal_name_confirmed_at: null
+  legal_name_confirmed_at: null,
+  must_change_password: false,
+  must_complete_profile: false
 };
 
 function isMissingColumnError(error: { code?: string; message?: string } | null) {
@@ -54,7 +56,7 @@ async function getProfileWithScopedFields(userId: string): Promise<Profile | nul
 
   const { data: clientAccountFields, error: clientAccountError } = await supabase
     .from('profiles')
-    .select('is_client_account, client_account_status, client_account_status_changed_at, client_account_status_reason, client_last_approved_at, legal_name, legal_name_confirmed_at')
+    .select('is_client_account, client_account_status, client_account_status_changed_at, client_account_status_reason, client_last_approved_at, legal_name, legal_name_confirmed_at, must_change_password, must_complete_profile')
     .eq('id', userId)
     .maybeSingle();
 

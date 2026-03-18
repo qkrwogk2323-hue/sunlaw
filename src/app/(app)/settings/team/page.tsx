@@ -26,7 +26,7 @@ function toneByStatus(value: string) {
 export default async function TeamSettingsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; member?: string }>;
+  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; issuedTempPassword?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -45,6 +45,8 @@ export default async function TeamSettingsPage({
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
   const canManage = isWorkspaceAdmin(currentMembership) && Boolean(currentMembership?.permissions?.user_manage);
   const inviteToken = resolvedSearchParams?.invite;
+  const issuedLoginId = resolvedSearchParams?.issuedLoginId;
+  const issuedTempPassword = resolvedSearchParams?.issuedTempPassword;
   const selectedMemberId = resolvedSearchParams?.member ?? null;
 
   const staffInvitations = workspace.invitations
@@ -122,6 +124,13 @@ export default async function TeamSettingsPage({
       {inviteToken ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           생성된 초대 링크: <code className="font-mono">/invite/{inviteToken}</code>
+        </div>
+      ) : null}
+
+      {issuedLoginId && issuedTempPassword ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedLoginId}</code> / 비밀번호 <code className="font-mono">{issuedTempPassword}</code>
+          <p className="mt-1 text-xs text-amber-700">직원은 로그인 직후 비밀번호 변경 화면으로 이동합니다.</p>
         </div>
       ) : null}
 

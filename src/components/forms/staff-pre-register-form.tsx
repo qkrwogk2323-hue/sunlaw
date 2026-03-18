@@ -7,7 +7,7 @@ export function StaffPreRegisterForm({ organizationId }: { organizationId: strin
     <form action={createStaffPreRegisteredInvitationAction} className="space-y-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <Input name="name" placeholder="이름" required />
-      <Input name="email" type="email" placeholder="이메일" required />
+      <Input name="email" type="email" placeholder="연락 이메일(선택)" />
       <Input name="phone" placeholder="연락처(선택)" />
       <label className="block text-sm text-slate-600">
         구분
@@ -25,7 +25,7 @@ export function StaffPreRegisterForm({ organizationId }: { organizationId: strin
       />
       <input type="hidden" name="roleTemplateKey" value="org_staff" />
       <input type="hidden" name="caseScopePolicy" value="assigned_cases_only" />
-      <SubmitButton pendingLabel="저장 중...">선등록 후 초대 링크 생성</SubmitButton>
+      <SubmitButton pendingLabel="발급 중...">임시 아이디/비밀번호 발급</SubmitButton>
     </form>
   );
 }

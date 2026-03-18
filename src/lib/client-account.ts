@@ -47,6 +47,14 @@ export function hasCompletedLegalName(profile: Pick<Profile, 'full_name' | 'lega
 }
 
 export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePortalLinkCount?: number }): Route {
+  if (auth.profile.must_change_password) {
+    return '/start/password-reset' as Route;
+  }
+
+  if (auth.profile.must_complete_profile) {
+    return '/settings/team?self=required#self-edit' as Route;
+  }
+
   if (!hasCompletedLegalName(auth.profile)) {
     return '/start/profile-name' as Route;
   }
@@ -64,7 +72,7 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
   }
 
   const isPlatformOperator = auth.memberships.some(
-    (membership) => membership.organization?.is_platform_root && (membership.role === 'org_owner' || membership.role === 'org_manager')
+    (membership) => membership.organization?.is_platform_root && membership.organization?.slug === 'vein-bn-1' && (membership.role === 'org_owner' || membership.role === 'org_manager')
   );
 
   if (!auth.memberships.length && !isPlatformOperator) {

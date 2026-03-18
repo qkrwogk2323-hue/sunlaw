@@ -426,7 +426,7 @@ async function requireOrganizationUserManagementAccess(organizationId: string, e
 const staffPreRegisterInvitationSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email(),
+  email: z.string().trim().email().optional().or(z.literal('')),
   phone: z.string().trim().max(30).optional().or(z.literal('')),
   membershipTitle: z.string().trim().max(80).optional().or(z.literal('')),
   note: z.string().trim().max(500).optional().or(z.literal('')),
@@ -435,6 +435,29 @@ const staffPreRegisterInvitationSchema = z.object({
   caseScopePolicy: z.enum(['all_org_cases', 'assigned_cases_only', 'read_only_assigned']).default('assigned_cases_only'),
   expiresHours: z.coerce.number().int().min(1).max(336).default(72)
 });
+
+function randomAlphaNumeric(length: number) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+async function generateUniqueTempLoginId(admin: ReturnType<typeof createSupabaseAdminClient>, organizationId: string) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate = `staff-${randomAlphaNumeric(6)}`.toLowerCase();
+    const { data } = await admin
+      .from('organization_staff_temp_credentials')
+      .select('profile_id')
+      .eq('organization_id', organizationId)
+      .eq('login_id_normalized', candidate)
+      .maybeSingle();
+    if (!data?.profile_id) return candidate;
+  }
+  throw new Error('임시 아이디를 생성하지 못했습니다. 다시 시도해 주세요.');
+}
+
+function generateTempPassword() {
+  return `${randomAlphaNumeric(4)}!${randomAlphaNumeric(4)}#${randomAlphaNumeric(4)}`;
+}
 
 const clientDirectInvitationSchema = z.object({
   organizationId: z.string().uuid(),
@@ -1450,31 +1473,82 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
   });
 
   const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 구성원을 선등록할 수 있습니다.');
-  const token = createInvitationToken();
   const requestedRole = parsed.actorCategory === 'admin' ? 'org_manager' : 'org_staff';
+  const admin = createSupabaseAdminClient();
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from('invitations').insert({
-    organization_id: parsed.organizationId,
-    kind: 'staff_invite',
-    email: parsed.email,
-    invited_name: parsed.name,
-    requested_role: requestedRole,
-    actor_category: parsed.actorCategory,
-    role_template_key: parsed.roleTemplateKey,
-    case_scope_policy: parsed.caseScopePolicy,
-    permissions_override: {},
-    token_hash: hashInvitationToken(token),
-    share_token: null,
-    token_hint: token.slice(-6),
-    note: encodeInvitationNote(`${parsed.note || ''}${parsed.phone ? `${parsed.note ? '\n' : ''}연락처:${parsed.phone}` : ''}`, parsed.membershipTitle),
-    created_by: auth.user.id,
-    expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+  const { data: organization, error: organizationError } = await supabase
+    .from('organizations')
+    .select('id, slug')
+    .eq('id', parsed.organizationId)
+    .maybeSingle();
+  if (organizationError || !organization) throw organizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
+
+  const loginId = await generateUniqueTempLoginId(admin, parsed.organizationId);
+  const loginEmail = `${organization.slug || parsed.organizationId}__${loginId}@staff.vein.local`;
+  const tempPassword = generateTempPassword();
+
+  const { data: createdUser, error: createUserError } = await admin.auth.admin.createUser({
+    email: loginEmail,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: {
+      full_name: parsed.name,
+      invited_by_organization_id: parsed.organizationId
+    }
   });
-  if (error) throw error;
+  if (createUserError || !createdUser.user) throw createUserError ?? new Error('임시 직원 계정을 생성하지 못했습니다.');
+  const createdUserId = createdUser.user.id;
+
+  try {
+    const permissionSeed = getDefaultTemplatePermissions(parsed.roleTemplateKey);
+    const { error: membershipError } = await admin
+      .from('organization_memberships')
+      .insert({
+        organization_id: parsed.organizationId,
+        profile_id: createdUserId,
+        role: requestedRole,
+        title: parsed.membershipTitle?.trim() || null,
+        actor_category: parsed.actorCategory,
+        permission_template_key: parsed.roleTemplateKey,
+        case_scope_policy: parsed.caseScopePolicy,
+        permissions: permissionSeed,
+        created_by: auth.user.id
+      });
+    if (membershipError) throw membershipError;
+
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({
+        full_name: parsed.name,
+        must_change_password: true,
+        must_complete_profile: true,
+        default_organization_id: parsed.organizationId
+      })
+      .eq('id', createdUserId);
+    if (profileError) throw profileError;
+
+    const { error: credentialError } = await admin
+      .from('organization_staff_temp_credentials')
+      .upsert({
+        profile_id: createdUserId,
+        organization_id: parsed.organizationId,
+        login_id: loginId,
+        login_id_normalized: loginId.toLowerCase(),
+        login_email: loginEmail,
+        contact_email: parsed.email?.trim() || null,
+        contact_phone: parsed.phone?.trim() || null,
+        issued_by: auth.user.id,
+        must_change_password: true
+      }, { onConflict: 'profile_id' });
+    if (credentialError) throw credentialError;
+  } catch (error) {
+    await admin.auth.admin.deleteUser(createdUserId);
+    throw error;
+  }
 
   revalidatePath('/settings/team');
-  redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
+  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}&issuedTempPassword=${encodeURIComponent(tempPassword)}`);
 }
 
 export async function createClientDirectInvitationAction(formData: FormData) {
@@ -1624,7 +1698,8 @@ export async function updateSelfMemberProfileAction(formData: FormData) {
     .from('profiles')
     .update({
       full_name: parsed.fullName,
-      phone_e164: parsed.phone?.trim() || null
+      phone_e164: parsed.phone?.trim() || null,
+      must_complete_profile: false
     })
     .eq('id', auth.user.id);
   if (profileError) throw profileError;

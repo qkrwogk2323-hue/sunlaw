@@ -101,6 +101,8 @@ export interface Profile {
   client_account_status_changed_at: string | null;
   client_account_status_reason?: string | null;
   client_last_approved_at?: string | null;
+  must_change_password?: boolean;
+  must_complete_profile?: boolean;
 }
 
 export interface AuthContext {

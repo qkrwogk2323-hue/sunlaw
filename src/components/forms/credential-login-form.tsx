@@ -10,6 +10,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 export function CredentialLoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [organizationKey, setOrganizationKey] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,8 +22,28 @@ export function CredentialLoginForm() {
 
     try {
       const supabase = createSupabaseBrowserClient();
+      let resolvedEmail = email.trim();
+
+      if (resolvedEmail && !resolvedEmail.includes('@')) {
+        const response = await fetch('/api/auth/temp-login/resolve', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            organizationKey: organizationKey.trim(),
+            loginId: resolvedEmail
+          })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.email) {
+          throw new Error(payload?.message ?? '조직 식별값 또는 임시 아이디를 확인해 주세요.');
+        }
+
+        resolvedEmail = payload.email;
+      }
+
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: resolvedEmail,
         password
       });
 
@@ -42,8 +63,12 @@ export function CredentialLoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="space-y-2 text-sm text-slate-700">
-        <span className="font-medium text-slate-900">이메일</span>
-        <Input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" />
+        <span className="font-medium text-slate-900">이메일 또는 임시 아이디</span>
+        <Input required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="이메일 또는 임시 아이디" />
+      </label>
+      <label className="space-y-2 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">조직 식별값(임시 아이디 로그인 시 필수)</span>
+        <Input value={organizationKey} onChange={(event) => setOrganizationKey(event.target.value)} placeholder="예: vein-bn-1" />
       </label>
       <label className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">비밀번호</span>

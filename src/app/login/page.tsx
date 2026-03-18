@@ -46,7 +46,7 @@ export default async function LoginPage({
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div>
               <p className="text-sm font-semibold text-slate-900">일반 로그인</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">이메일과 비밀번호로 로그인합니다.</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">이메일 로그인과 조직 임시아이디 로그인을 모두 지원합니다.</p>
             </div>
             <CredentialLoginForm />
           </div>
