@@ -2039,6 +2039,349 @@ export async function switchDefaultOrganizationAction(formData: FormData) {
   revalidatePath('/organizations');
 }
 
+export async function createOrganizationCollaborationRequestAction(formData: FormData) {
+  const parsed = collaborationRequestCreateSchema.parse({
+    sourceOrganizationId: formData.get('sourceOrganizationId'),
+    targetOrganizationId: formData.get('targetOrganizationId'),
+    title: formData.get('title'),
+    proposalNote: formData.get('proposalNote'),
+    returnPath: formData.get('returnPath')
+  });
+
+  if (parsed.sourceOrganizationId === parsed.targetOrganizationId) {
+    throw new Error('같은 조직에는 협업 제안을 보낼 수 없습니다.');
+  }
+
+  const { auth } = await requireOrganizationActionAccess(parsed.sourceOrganizationId, {
+    requireManager: true,
+    errorMessage: '협업 제안은 조직 관리자만 보낼 수 있습니다.'
+  });
+
+  const effectiveOrganizationId = getEffectiveOrganizationId(auth);
+  if (effectiveOrganizationId !== parsed.sourceOrganizationId) {
+    throw new Error('현재 선택된 조직 기준으로만 협업 제안을 보낼 수 있습니다.');
+  }
+
+  const adminClient = createSupabaseAdminClient();
+  const [sourceOrgResponse, targetOrgResponse, existingHub, existingRequestResponse] = await Promise.all([
+    adminClient.from('organizations').select('id, name, slug').eq('id', parsed.sourceOrganizationId).maybeSingle(),
+    adminClient.from('organizations').select('id, name, slug, lifecycle_status').eq('id', parsed.targetOrganizationId).maybeSingle(),
+    findActiveCollaborationHub(adminClient, parsed.sourceOrganizationId, parsed.targetOrganizationId),
+    adminClient
+      .from('organization_collaboration_requests')
+      .select('id, status')
+      .eq('status', 'pending')
+      .or(`and(source_organization_id.eq.${parsed.sourceOrganizationId},target_organization_id.eq.${parsed.targetOrganizationId}),and(source_organization_id.eq.${parsed.targetOrganizationId},target_organization_id.eq.${parsed.sourceOrganizationId})`)
+      .maybeSingle()
+  ]);
+
+  if (sourceOrgResponse.error || !sourceOrgResponse.data) {
+    throw sourceOrgResponse.error ?? new Error('현재 조직 정보를 찾을 수 없습니다.');
+  }
+
+  if (targetOrgResponse.error || !targetOrgResponse.data || targetOrgResponse.data.lifecycle_status === 'soft_deleted') {
+    throw targetOrgResponse.error ?? new Error('제안할 대상 조직을 찾을 수 없습니다.');
+  }
+
+  const sourceOrganization = sourceOrgResponse.data;
+
+  if (existingHub?.id) {
+    throw new Error('이미 활성화된 업무 허브가 있습니다.');
+  }
+
+  if (existingRequestResponse.error) {
+    throw existingRequestResponse.error;
+  }
+
+  if (existingRequestResponse.data?.id) {
+    throw new Error('이미 처리 대기 중인 협업 제안이 있습니다.');
+  }
+
+  const { data: requestRow, error: insertError } = await adminClient
+    .from('organization_collaboration_requests')
+    .insert({
+      source_organization_id: parsed.sourceOrganizationId,
+      target_organization_id: parsed.targetOrganizationId,
+      requested_by_profile_id: auth.user.id,
+      title: parsed.title,
+      proposal_note: parsed.proposalNote || null
+    })
+    .select('id')
+    .single();
+
+  if (insertError || !requestRow) {
+    throw insertError ?? new Error('협업 제안을 저장하지 못했습니다.');
+  }
+
+  const targetManagerIds = await listOrganizationManagerProfileIds(adminClient, parsed.targetOrganizationId);
+  if (targetManagerIds.length) {
+    const { error: notificationError } = await adminClient.from('notifications').insert(
+      targetManagerIds.map((profileId) => ({
+        organization_id: parsed.targetOrganizationId,
+        recipient_profile_id: profileId,
+        kind: 'generic',
+        entity_type: 'collaboration',
+        title: `${sourceOrganization.name}에서 협업 제안을 보냈습니다.`,
+        body: `${parsed.title}${parsed.proposalNote ? ` · ${parsed.proposalNote}` : ''}`,
+        payload: { request_id: requestRow.id, source_organization_id: parsed.sourceOrganizationId, target_organization_id: parsed.targetOrganizationId },
+        requires_action: true,
+        action_label: '승인 검토',
+        action_href: `/organizations/${parsed.targetOrganizationId}`,
+        action_entity_type: 'organization_collaboration_request',
+        action_target_id: requestRow.id,
+        destination_type: 'internal_route',
+        destination_url: `/organizations/${parsed.targetOrganizationId}`
+      }))
+    );
+
+    if (notificationError) throw notificationError;
+  }
+
+  revalidatePath('/organizations');
+  revalidatePath(`/organizations/${parsed.targetOrganizationId}`);
+  revalidatePath(`/organizations/${parsed.sourceOrganizationId}`);
+  revalidatePath('/inbox');
+
+  if (parsed.returnPath) {
+    redirect(parsed.returnPath as Route);
+  }
+}
+
+export async function reviewOrganizationCollaborationRequestAction(formData: FormData) {
+  const parsed = collaborationRequestReviewSchema.parse({
+    requestId: formData.get('requestId'),
+    organizationId: formData.get('organizationId'),
+    decision: formData.get('decision'),
+    responseNote: formData.get('responseNote'),
+    returnPath: formData.get('returnPath')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    requireManager: true,
+    errorMessage: '협업 제안 검토는 조직 관리자만 처리할 수 있습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: requestRow, error: requestError } = await adminClient
+    .from('organization_collaboration_requests')
+    .select('id, source_organization_id, target_organization_id, title, proposal_note, status')
+    .eq('id', parsed.requestId)
+    .eq('target_organization_id', parsed.organizationId)
+    .maybeSingle();
+
+  if (requestError || !requestRow) {
+    throw requestError ?? new Error('협업 제안을 찾을 수 없습니다.');
+  }
+
+  if (requestRow.status !== 'pending') {
+    throw new Error('이미 처리된 협업 제안입니다.');
+  }
+
+  const [sourceOrgResponse, targetOrgResponse] = await Promise.all([
+    adminClient.from('organizations').select('id, name, slug').eq('id', requestRow.source_organization_id).maybeSingle(),
+    adminClient.from('organizations').select('id, name, slug').eq('id', requestRow.target_organization_id).maybeSingle()
+  ]);
+
+  if (sourceOrgResponse.error || !sourceOrgResponse.data) {
+    throw sourceOrgResponse.error ?? new Error('제안 조직 정보를 찾을 수 없습니다.');
+  }
+
+  if (targetOrgResponse.error || !targetOrgResponse.data) {
+    throw targetOrgResponse.error ?? new Error('대상 조직 정보를 찾을 수 없습니다.');
+  }
+
+  const sourceOrganization = sourceOrgResponse.data;
+  const targetOrganization = targetOrgResponse.data;
+
+  let approvedHubId: string | null = null;
+  if (parsed.decision === 'approved') {
+    const existingHub = await findActiveCollaborationHub(adminClient, requestRow.source_organization_id, requestRow.target_organization_id);
+    if (existingHub?.id) {
+      approvedHubId = existingHub.id;
+    } else {
+      const { data: createdHub, error: hubError } = await adminClient
+        .from('organization_collaboration_hubs')
+        .insert({
+          primary_organization_id: requestRow.source_organization_id,
+          partner_organization_id: requestRow.target_organization_id,
+          request_id: requestRow.id,
+          created_by_profile_id: auth.user.id,
+          title: `${sourceOrganization.name} × ${targetOrganization.name} 업무 허브`,
+          summary: requestRow.proposal_note || null,
+          status: 'active'
+        })
+        .select('id')
+        .single();
+
+      if (hubError || !createdHub) {
+        throw hubError ?? new Error('업무 허브를 생성하지 못했습니다.');
+      }
+
+      approvedHubId = createdHub.id;
+
+      const { error: seedMessageError } = await adminClient.from('organization_collaboration_messages').insert({
+        hub_id: approvedHubId,
+        organization_id: parsed.organizationId,
+        sender_profile_id: auth.user.id,
+        body: `${targetOrganization.name}에서 협업 제안을 승인했습니다. 이 허브에서 사건 연결, 초대, 대화를 이어갈 수 있습니다.`,
+        metadata: { request_id: requestRow.id, kind: 'approval_seed' }
+      });
+
+      if (seedMessageError) throw seedMessageError;
+    }
+  }
+
+  const resolvedAt = new Date().toISOString();
+  const nextStatus = parsed.decision === 'approved' ? 'approved' : 'rejected';
+  const { error: updateError } = await adminClient
+    .from('organization_collaboration_requests')
+    .update({
+      status: nextStatus,
+      response_note: parsed.responseNote || null,
+      reviewed_by_profile_id: auth.user.id,
+      reviewed_at: resolvedAt,
+      approved_at: parsed.decision === 'approved' ? resolvedAt : null,
+      approved_hub_id: approvedHubId
+    })
+    .eq('id', parsed.requestId)
+    .eq('status', 'pending');
+
+  if (updateError) throw updateError;
+
+  await adminClient
+    .from('notifications')
+    .update({ resolved_at: resolvedAt })
+    .eq('organization_id', parsed.organizationId)
+    .eq('action_entity_type', 'organization_collaboration_request')
+    .eq('action_target_id', parsed.requestId)
+    .is('resolved_at', null);
+
+  const sourceManagerIds = await listOrganizationManagerProfileIds(adminClient, requestRow.source_organization_id);
+  if (sourceManagerIds.length) {
+    const approvedHref = approvedHubId ? `/inbox/${approvedHubId}` : `/organizations/${requestRow.source_organization_id}`;
+    const { error: notificationError } = await adminClient.from('notifications').insert(
+      sourceManagerIds.map((profileId) => ({
+        organization_id: requestRow.source_organization_id,
+        recipient_profile_id: profileId,
+        kind: 'generic',
+        entity_type: 'collaboration',
+        title: parsed.decision === 'approved' ? '협업 제안이 승인되었습니다.' : '협업 제안이 반려되었습니다.',
+        body: parsed.decision === 'approved'
+          ? `${targetOrganization.name}에서 협업 제안을 승인했습니다. 업무 허브로 바로 이동할 수 있습니다.`
+          : `${targetOrganization.name}에서 협업 제안을 반려했습니다.${parsed.responseNote ? ` 메모: ${parsed.responseNote}` : ''}`,
+        payload: { request_id: requestRow.id, hub_id: approvedHubId, decision: parsed.decision },
+        action_label: parsed.decision === 'approved' ? '업무 허브 열기' : '상세 보기',
+        action_href: approvedHref,
+        destination_type: 'internal_route',
+        destination_url: approvedHref
+      }))
+    );
+
+    if (notificationError) throw notificationError;
+  }
+
+  revalidatePath('/organizations');
+  revalidatePath(`/organizations/${parsed.organizationId}`);
+  revalidatePath(`/organizations/${requestRow.source_organization_id}`);
+  revalidatePath('/inbox');
+  if (approvedHubId) {
+    revalidatePath(`/inbox/${approvedHubId}`);
+  }
+
+  if (parsed.returnPath) {
+    redirect(parsed.returnPath as Route);
+  }
+}
+
+export async function postCollaborationHubMessageAction(formData: FormData) {
+  const parsed = collaborationHubMessageSchema.parse({
+    hubId: formData.get('hubId'),
+    organizationId: formData.get('organizationId'),
+    body: formData.get('body'),
+    caseId: formData.get('caseId'),
+    returnPath: formData.get('returnPath')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    errorMessage: '업무 허브에 메시지를 남길 권한이 없습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: hubRow, error: hubError } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id, title, status')
+    .eq('id', parsed.hubId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (hubError || !hubRow) {
+    throw hubError ?? new Error('업무 허브를 찾을 수 없습니다.');
+  }
+
+  const hubOrganizationIds = [hubRow.primary_organization_id, hubRow.partner_organization_id];
+  if (!hubOrganizationIds.includes(parsed.organizationId)) {
+    throw new Error('현재 조직은 이 업무 허브에 참여하고 있지 않습니다.');
+  }
+
+  let linkedCaseTitle: string | null = null;
+  if (parsed.caseId) {
+    const { data: caseRow, error: caseError } = await adminClient
+      .from('cases')
+      .select('id, title')
+      .eq('id', parsed.caseId)
+      .maybeSingle();
+
+    if (caseError || !caseRow) {
+      throw caseError ?? new Error('연결할 사건을 찾을 수 없습니다.');
+    }
+
+    linkedCaseTitle = caseRow.title ?? '사건';
+  }
+
+  const { error: insertError } = await adminClient.from('organization_collaboration_messages').insert({
+    hub_id: parsed.hubId,
+    organization_id: parsed.organizationId,
+    sender_profile_id: auth.user.id,
+    case_id: parsed.caseId || null,
+    body: parsed.body,
+    metadata: parsed.caseId ? { linked_case_id: parsed.caseId } : {}
+  });
+
+  if (insertError) throw insertError;
+
+  const partnerOrganizationId = hubRow.primary_organization_id === parsed.organizationId
+    ? hubRow.partner_organization_id
+    : hubRow.primary_organization_id;
+  const partnerManagerIds = await listOrganizationManagerProfileIds(adminClient, partnerOrganizationId);
+  if (partnerManagerIds.length) {
+    const senderOrganizationName = auth.memberships.find((membership) => membership.organization_id === parsed.organizationId)?.organization?.name ?? '협업 조직';
+    const { error: notificationError } = await adminClient.from('notifications').insert(
+      partnerManagerIds.map((profileId) => ({
+        organization_id: partnerOrganizationId,
+        recipient_profile_id: profileId,
+        kind: 'generic',
+        entity_type: 'collaboration',
+        title: `${senderOrganizationName}에서 업무 허브 메시지가 도착했습니다.`,
+        body: linkedCaseTitle ? `${parsed.body} · 연결 사건: ${linkedCaseTitle}` : parsed.body,
+        payload: { hub_id: parsed.hubId, case_id: parsed.caseId || null },
+        action_label: '업무 허브 열기',
+        action_href: `/inbox/${parsed.hubId}`,
+        destination_type: 'internal_route',
+        destination_url: `/inbox/${parsed.hubId}`
+      }))
+    );
+
+    if (notificationError) throw notificationError;
+  }
+
+  revalidatePath('/inbox');
+  revalidatePath(`/inbox/${parsed.hubId}`);
+
+  if (parsed.returnPath) {
+    redirect(parsed.returnPath as Route);
+  }
+}
+
 export async function submitClientAccessRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const adminClient = createSupabaseAdminClient();

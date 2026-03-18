@@ -602,7 +602,9 @@ function useDashboardCommunicationState({
   const activeTargetLabel = isOrganizationWideRoom ? '구성원 전체 소통방' : (activeOrgRecipient?.label ?? '상대방을 선택하세요.');
 
   const sendMessage = () => {
-    if (!messageCaseId || !messageInput.trim()) return;
+    if (!messageInput.trim()) return;
+    const resolvedCaseId = messageCaseId || data.caseOptions[0]?.id || '';
+    if (!resolvedCaseId) return;
 
     const orgTargetMembershipId = activeOrgRecipient?.membershipId ?? '';
     const recipientMembershipIds = isOrganizationWideRoom
@@ -620,7 +622,7 @@ function useDashboardCommunicationState({
           sender_role: 'staff',
           sender_profile_id: effectiveCurrentUserId,
           recipient_profile_id: activeOrgRecipient?.profileId ?? null,
-          case_id: messageCaseId,
+          case_id: resolvedCaseId,
           cases: { title: selectedMessageCase?.title ?? '사건' },
           sender: { full_name: profileRecord(currentMemberProfile?.profile)?.full_name ?? '나' }
         };
@@ -640,7 +642,7 @@ function useDashboardCommunicationState({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               organizationId,
-              caseId: messageCaseId,
+              caseId: resolvedCaseId,
               content: messageInput,
               targetType: 'org',
               recipientMembershipId: recipientMembershipIds[0],
@@ -652,7 +654,7 @@ function useDashboardCommunicationState({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               organizationId,
-              caseId: messageCaseId,
+              caseId: resolvedCaseId,
               content: messageInput,
               targetType: 'org',
               recipientMembershipId: membershipId,
@@ -970,15 +972,10 @@ export function DashboardHubClient({
     return () => window.clearInterval(interval);
   }, []);
   useEffect(() => {
-    if (!filteredCaseOptions.length) {
-      setMessageCaseId('');
-      return;
+    if (!messageCaseId && data.caseOptions.length) {
+      setMessageCaseId(data.caseOptions[0].id);
     }
-
-    if (!filteredCaseOptions.some((item) => item.id === messageCaseId)) {
-      setMessageCaseId(filteredCaseOptions[0].id);
-    }
-  }, [filteredCaseOptions, messageCaseId, setMessageCaseId]);
+  }, [data.caseOptions, messageCaseId, setMessageCaseId]);
 
   return (
     <div className="space-y-6">
@@ -1253,6 +1250,9 @@ export function DashboardHubClient({
                       onChange={(event) => setMessageCaseId(event.target.value)}
                       className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
                     >
+                      {selectedMessageCase && !filteredCaseOptions.some((item) => item.id === selectedMessageCase.id) ? (
+                        <option value={selectedMessageCase.id}>{selectedMessageCase.title}</option>
+                      ) : null}
                       {filteredCaseOptions.length ? filteredCaseOptions.map((item) => (
                         <option key={item.id} value={item.id}>{item.title}</option>
                       )) : <option value="">사건이 없습니다</option>}
@@ -1397,7 +1397,6 @@ export function DashboardHubClient({
                       onClick={sendMessage}
                       disabled={
                         messagePending
-                        || !messageCaseId
                         || !messageInput.trim()
                       }
                     >

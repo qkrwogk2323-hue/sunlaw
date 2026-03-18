@@ -4,10 +4,11 @@ import { SubmitButton } from '@/components/ui/submit-button';
 
 type CaseOption = { id: string; title: string };
 
-export function ClientDirectInviteForm({ organizationId, cases }: { organizationId: string; cases: CaseOption[] }) {
+export function ClientDirectInviteForm({ organizationId, cases, returnPath }: { organizationId: string; cases: CaseOption[]; returnPath?: string }) {
   return (
     <form action={createClientDirectInvitationAction} className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="organizationId" value={organizationId} />
+      {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
       <div className="md:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">연결 사건</label>
         <select name="caseId" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm" required>

@@ -2,10 +2,11 @@ import { createStaffInvitationAction } from '@/lib/actions/organization-actions'
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
-export function StaffDirectInviteForm({ organizationId }: { organizationId: string }) {
+export function StaffDirectInviteForm({ organizationId, returnPath }: { organizationId: string; returnPath?: string }) {
   return (
     <form action={createStaffInvitationAction} className="space-y-3">
       <input type="hidden" name="organizationId" value={organizationId} />
+      {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
       <Input name="email" type="email" placeholder="직원 이메일" required />
       <label className="block text-sm text-slate-600">
         구분
