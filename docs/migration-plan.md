@@ -40,3 +40,24 @@
 1. 구 스키마의 `resident_number`, `id_card_url` 같은 평문 필드는 그대로 이관하면 안 된다.
 2. `organization_id`를 채울 수 없는 레코드는 이관 전에 소유 조직 기준을 먼저 정의해야 한다.
 3. `service_role`로 일괄 적재하는 경우에도 적재 후 반드시 RLS 기반 사용자 계정으로 샘플 검증을 수행해야 한다.
+
+
+## 7. 플랫폼 관리자 구조 이행 원칙
+
+기존 `profiles.platform_role` 기반의 플랫폼 관리자 판별은 이행기 호환 장치로 보고, 목표 모델은 아래처럼 맞춘다.
+
+1. `organizations`에 고정된 플랫폼 조직 1개를 생성한다.
+2. 기존 플랫폼 관리자 사용자를 플랫폼 조직 `organization_memberships`로 backfill 한다.
+3. 플랫폼 전용 권한은 조직 권한 모델 위에 별도 permission으로 추가한다.
+4. `virtual organization registry`, `scenario controls`는 운영 핵심 모델이 아니라 demo/QA 보조 레이어로 축소한다.
+5. 최종적으로 권한 판별은 `platform organization membership + explicit platform permissions` 조합으로 수렴한다.
+
+권장 이행 순서:
+
+- 고정 플랫폼 조직 seed 추가
+- 기존 플랫폼 관리자 membership backfill
+- auth/RLS 함수 이중 지원
+- UI의 platform admin mode 토글 제거 또는 축소
+- 가상 조직/시나리오 레이어 정리
+
+상세 분석과 파일 후보는 `docs/platform-organization-consolidation-plan.md`를 참고한다.
