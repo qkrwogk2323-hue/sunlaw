@@ -138,7 +138,7 @@ function getOrganizationSections({
 
   if (mode !== 'client_communication') {
     collaborationItems.push(
-      { href: '/organizations', label: '조직 검색하기', icon: Building2 },
+      { href: '/organizations', label: '조직 찾기', icon: Building2 },
       { href: '/inbox', label: '협업 소통함', icon: ClipboardList, badge: conversationBadge }
     );
   }

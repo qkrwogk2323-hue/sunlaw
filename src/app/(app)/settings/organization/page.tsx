@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
@@ -6,11 +7,29 @@ import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { OrganizationSettingForm } from '@/components/forms/organization-setting-form';
-import { createOrganizationExitRequestAction, deactivateOrganizationAction, deleteOrganizationAction } from '@/lib/actions/settings-actions';
+import {
+  createOrganizationExitRequestAction,
+  deactivateOrganizationAction,
+  deleteOrganizationAction,
+  updateOrganizationIntroAction,
+  updateOrganizationProfileAction
+} from '@/lib/actions/settings-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
 
-export default async function OrganizationSettingsPage() {
+const kindLabel: Record<string, string> = {
+  law_firm: '법률사무소/로펌',
+  collection_company: '추심조직',
+  mixed_practice: '복합업무조직',
+  corporate_legal_team: '기업 법무팀',
+  other: '기타'
+};
+
+export default async function OrganizationSettingsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ section?: string }>;
+}) {
   const auth = await requireAuthenticatedUser();
 
   const organizationId = getEffectiveOrganizationId(auth);
@@ -25,46 +44,111 @@ export default async function OrganizationSettingsPage() {
   if (!workspace) notFound();
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
+  const resolved = searchParams ? await searchParams : undefined;
+  const section = `${resolved?.section ?? 'intro'}`.trim();
+  const activeSection = section === 'info' || section === 'env' ? section : 'intro';
+  const introText = `${orgMap.get('organization_intro')?.text ?? ''}`;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직설정</h1>
-        <p className="mt-2 text-sm text-slate-600">회사소개, 회사정보, 환경설정 3개 섹션으로 운영합니다.</p>
+        <p className="mt-2 text-sm text-slate-600">회사소개, 회사정보, 환경설정을 클릭하면 각각 바로 수정할 수 있습니다.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-        <div className="rounded-2xl bg-indigo-600 p-4 text-white">
-          <p className="py-2 text-2xl font-semibold">회사소개</p>
-          <p className="py-2 text-2xl font-semibold">회사정보</p>
-          <p className="py-2 text-2xl font-semibold">환경설정</p>
+        <div className="space-y-2 rounded-2xl bg-indigo-600 p-4 text-white">
+          <Link href="/settings/organization?section=intro" className={`block rounded-xl px-3 py-2 text-xl font-semibold ${activeSection === 'intro' ? 'bg-white text-indigo-700' : 'hover:bg-indigo-500'}`}>
+            회사소개
+          </Link>
+          <Link href="/settings/organization?section=info" className={`block rounded-xl px-3 py-2 text-xl font-semibold ${activeSection === 'info' ? 'bg-white text-indigo-700' : 'hover:bg-indigo-500'}`}>
+            회사정보
+          </Link>
+          <Link href="/settings/organization?section=env" className={`block rounded-xl px-3 py-2 text-xl font-semibold ${activeSection === 'env' ? 'bg-white text-indigo-700' : 'hover:bg-indigo-500'}`}>
+            환경설정
+          </Link>
         </div>
         <div className="space-y-3">
-          <details open className="rounded-2xl border border-slate-200 bg-white">
-            <summary className="cursor-pointer px-4 py-3 text-lg font-semibold text-slate-900">회사소개</summary>
-            <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-              <p>{workspace.organization.name}의 기본 소개 및 운영 메시지 영역입니다.</p>
-            </div>
-          </details>
+          {activeSection === 'intro' ? (
+            <Card>
+              <CardHeader><CardTitle>회사소개 수정</CardTitle></CardHeader>
+              <CardContent>
+                <form action={updateOrganizationIntroAction} className="space-y-3">
+                  <input type="hidden" name="organizationId" value={organizationId} />
+                  <textarea
+                    name="intro"
+                    defaultValue={introText}
+                    placeholder="회사소개/운영 소개 문구를 입력해 주세요."
+                    className="min-h-40 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <SubmitButton pendingLabel="저장 중...">회사소개 저장</SubmitButton>
+                </form>
+              </CardContent>
+            </Card>
+          ) : null}
 
-          <details open className="rounded-2xl border border-slate-200 bg-white">
-            <summary className="cursor-pointer px-4 py-3 text-lg font-semibold text-slate-900">회사정보</summary>
-            <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-              <p>회사명: {workspace.organization.name}</p>
-              <p>조직 유형: {workspace.organization.kind ?? '-'}</p>
-              <p>슬러그: {workspace.organization.slug ?? '-'}</p>
-            </div>
-          </details>
+          {activeSection === 'info' ? (
+            <Card>
+              <CardHeader><CardTitle>회사정보 수정</CardTitle></CardHeader>
+              <CardContent>
+                <form action={updateOrganizationProfileAction} className="grid gap-3 md:grid-cols-2">
+                  <input type="hidden" name="organizationId" value={organizationId} />
+                  <label className="text-sm text-slate-600">회사명
+                    <input name="name" defaultValue={workspace.organization.name ?? ''} required className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                  </label>
+                  <label className="text-sm text-slate-600">조직유형
+                    <select name="kind" defaultValue={workspace.organization.kind ?? 'law_firm'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                      <option value="law_firm">{kindLabel.law_firm}</option>
+                      <option value="collection_company">{kindLabel.collection_company}</option>
+                      <option value="mixed_practice">{kindLabel.mixed_practice}</option>
+                      <option value="corporate_legal_team">{kindLabel.corporate_legal_team}</option>
+                      <option value="other">{kindLabel.other}</option>
+                    </select>
+                  </label>
+                  <label className="text-sm text-slate-600">대표자명
+                    <input name="representativeName" defaultValue={workspace.organization.representative_name ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                  </label>
+                  <label className="text-sm text-slate-600">대표자 직책
+                    <input name="representativeTitle" defaultValue={workspace.organization.representative_title ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                  </label>
+                  <label className="text-sm text-slate-600">연락처
+                    <input name="phone" defaultValue={workspace.organization.phone ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                  </label>
+                  <label className="text-sm text-slate-600">이메일
+                    <input name="email" type="email" defaultValue={workspace.organization.email ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                  </label>
+                  <label className="text-sm text-slate-600 md:col-span-2">웹사이트
+                    <input name="websiteUrl" defaultValue={workspace.organization.website_url ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                  </label>
+                  <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>
+                    <span>현재 유형: {kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-'}</span>
+                  </div>
+                  <div className="md:col-span-2">
+                    <SubmitButton pendingLabel="저장 중...">회사정보 저장</SubmitButton>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          ) : null}
 
-          <details open className="rounded-2xl border border-slate-200 bg-white">
-            <summary className="cursor-pointer px-4 py-3 text-lg font-semibold text-slate-900">환경설정</summary>
-            <div className="border-t border-slate-200 px-4 py-3">
-              <div className="grid gap-4 xl:grid-cols-2">
-                {data.catalog.filter((item: any) => item.scope === 'organization' || item.scope === 'both').map((item: any) => (
-                  <OrganizationSettingForm key={item.key} item={item} organizationId={organizationId} currentValue={orgMap.get(item.key)} />
-                ))}
-              </div>
-            </div>
-          </details>
+          {activeSection === 'env' ? (
+            <Card>
+              <CardHeader><CardTitle>환경설정</CardTitle></CardHeader>
+              <CardContent>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                  <span className="text-slate-700">권한 설정은 구성원 관리 화면에서 수정합니다.</span>
+                  <Link href="/settings/team" className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50">
+                    구성원/권한 설정 이동
+                  </Link>
+                </div>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {data.catalog.filter((item: any) => item.scope === 'organization' || item.scope === 'both').map((item: any) => (
+                    <OrganizationSettingForm key={item.key} item={item} organizationId={organizationId} currentValue={orgMap.get(item.key)} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
       <Card className="border-red-200">
@@ -120,7 +204,7 @@ export default async function OrganizationSettingsPage() {
 
           <form action={deleteOrganizationAction} className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
             <input type="hidden" name="organizationId" value={organizationId} />
-            <p className="text-sm text-slate-700">조직 삭제는 soft delete로 처리되며, 활성 구성원 상태와 기본 조직 연결을 해제합니다.</p>
+            <p className="text-sm text-slate-700">조직 삭제는 안전 삭제로 처리되며, 활성 구성원 상태와 기본 조직 연결을 해제합니다.</p>
             <label className="block text-xs font-medium text-slate-600">
               확인 문구 입력: 삭제
               <input

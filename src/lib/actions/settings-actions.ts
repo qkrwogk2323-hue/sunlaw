@@ -43,6 +43,22 @@ const reviewOrganizationExitRequestSchema = z.object({
   reviewNote: z.string().trim().max(1000).optional().or(z.literal(''))
 });
 
+const organizationIntroUpdateSchema = z.object({
+  organizationId: z.string().uuid(),
+  intro: z.string().trim().max(4000).optional().or(z.literal(''))
+});
+
+const organizationProfileUpdateSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2).max(120),
+  kind: z.enum(['law_firm', 'collection_company', 'mixed_practice', 'corporate_legal_team', 'other']),
+  representativeName: z.string().trim().max(80).optional().or(z.literal('')),
+  representativeTitle: z.string().trim().max(80).optional().or(z.literal('')),
+  email: z.string().trim().email().optional().or(z.literal('')),
+  phone: z.string().trim().max(30).optional().or(z.literal('')),
+  websiteUrl: z.string().trim().url().optional().or(z.literal(''))
+});
+
 const organizationLifecycleMutationSchema = z.object({
   organizationId: z.string().uuid(),
   confirmText: z.string().trim().min(1)
@@ -428,6 +444,63 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
 
   revalidatePath('/settings/organization');
   revalidatePath('/admin/organization-requests');
+}
+
+export async function updateOrganizationIntroAction(formData: FormData) {
+  const parsed = organizationIntroUpdateSchema.parse({
+    organizationId: formData.get('organizationId'),
+    intro: formData.get('intro')
+  });
+  const auth = await assertOrgAdmin(parsed.organizationId);
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+  const introValue = parsed.intro?.trim() || '';
+
+  const { error } = await admin.from('organization_settings').upsert({
+    organization_id: parsed.organizationId,
+    key: 'organization_intro',
+    value_json: { text: introValue },
+    updated_by: auth.user.id,
+    updated_at: now
+  }, { onConflict: 'organization_id,key' });
+  if (error) throw error;
+
+  revalidateTag(`settings:org:${parsed.organizationId}`, 'max');
+  revalidatePath('/settings/organization');
+}
+
+export async function updateOrganizationProfileAction(formData: FormData) {
+  const parsed = organizationProfileUpdateSchema.parse({
+    organizationId: formData.get('organizationId'),
+    name: formData.get('name'),
+    kind: formData.get('kind'),
+    representativeName: formData.get('representativeName'),
+    representativeTitle: formData.get('representativeTitle'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    websiteUrl: formData.get('websiteUrl')
+  });
+  await assertOrgAdmin(parsed.organizationId);
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+
+  const { error } = await admin
+    .from('organizations')
+    .update({
+      name: parsed.name,
+      kind: parsed.kind,
+      representative_name: parsed.representativeName?.trim() || null,
+      representative_title: parsed.representativeTitle?.trim() || null,
+      email: parsed.email?.trim() || null,
+      phone: parsed.phone?.trim() || null,
+      website_url: parsed.websiteUrl?.trim() || null,
+      updated_at: now
+    })
+    .eq('id', parsed.organizationId);
+  if (error) throw error;
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/organizations');
 }
 
 export async function deactivateOrganizationAction(formData: FormData) {
