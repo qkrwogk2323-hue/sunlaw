@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath } from '@/lib/client-account';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LoginPage({
   searchParams
 }: {

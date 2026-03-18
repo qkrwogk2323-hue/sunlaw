@@ -7,6 +7,8 @@ import { buttonStyles } from '@/components/ui/button';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath, hasCompletedLegalName } from '@/lib/client-account';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProfileNamePage() {
   const auth = await getCurrentAuth();
 

@@ -11,6 +11,8 @@ import { buttonStyles } from '@/components/ui/button';
 import { countActivePortalLinks } from '@/lib/queries/portal';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
 

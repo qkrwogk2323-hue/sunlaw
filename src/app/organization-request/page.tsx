@@ -7,6 +7,8 @@ import { getCurrentAuth } from '@/lib/auth';
 import { formatBusinessNumber } from '@/lib/format';
 import { listMySignupRequests } from '@/lib/queries/organizations';
 
+export const dynamic = 'force-dynamic';
+
 const verificationLabels: Record<string, string> = {
   matched: '자동 일치',
   mismatch: '불일치 후보',
