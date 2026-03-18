@@ -48,6 +48,7 @@
 
 - 사용자 프로필, 실명, 플랫폼 관리자 시나리오 접근 흐름을 변경할 때는 `0025_platform_admin_scenario_controls_and_legal_identity.sql` 적용 여부를 반드시 함께 확인합니다.
 - `profiles.legal_name`, `profiles.legal_name_confirmed_at`, `platform_admin_scenario_controls`를 전제로 한 변경은 0025가 빠진 환경에서 런타임 오류를 낼 수 있습니다.
+- 플랫폼 관리자 구조는 현재 전용 security/scenario/virtual organization 레이어를 포함합니다. 후속 정리 방향은 `docs/platform-organization-consolidation-plan.md`의 고정 플랫폼 조직 모델을 기준으로 검토합니다.
 
 ## 실행
 
