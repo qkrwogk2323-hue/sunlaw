@@ -918,7 +918,7 @@ export function DashboardHubClient({
                   data.actionableNotifications.slice(0, 3).map((item) => (
                     <Link
                       key={item.id}
-                      href={(item.action_href ?? '/notifications') as Route}
+                      href={(item.action_href ?? '/dashboard') as Route}
                       className="block rounded-2xl border border-rose-200 bg-white px-3 py-3 text-sm transition hover:border-rose-300 hover:bg-rose-50/40"
                     >
                       <div className="flex items-start justify-between gap-3">
