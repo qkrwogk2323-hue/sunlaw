@@ -17,15 +17,13 @@ import { RecoveryCreateForm } from '@/components/forms/recovery-create-form';
 import { RequestCreateForm } from '@/components/forms/request-create-form';
 import { ScheduleCreateForm } from '@/components/forms/schedule-create-form';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { findMembership, getActiveViewMode, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, requireAuthenticatedUser } from '@/lib/auth';
 import { requestDocumentReviewAction, updateCaseStageAction } from '@/lib/actions/case-actions';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { hasPermission, isWorkspaceAdmin } from '@/lib/permissions';
 import { getCaseDetail } from '@/lib/queries/cases';
 import { ExportLinks } from '@/components/export-links';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioCaseDetail } from '@/lib/platform-scenario-workspace';
 
 const tabs = ['overview', 'communication', 'documents', 'schedule', 'participants', 'billing', 'timeline'] as const;
 
@@ -72,9 +70,7 @@ export default async function CaseDetailPage({
   const { caseId } = await params;
   const { tab = 'overview', clientInvite } = searchParams ? await searchParams : { tab: 'overview', clientInvite: undefined };
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
-  const caseDetail = scenarioMode ? getPlatformScenarioCaseDetail(scenarioMode, caseId) : await getCaseDetail(caseId);
+  const caseDetail = await getCaseDetail(caseId);
 
   if (!caseDetail) notFound();
 
@@ -332,7 +328,7 @@ export default async function CaseDetailPage({
       {currentTab === 'billing' ? (
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <Card>
-            <CardHeader><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><CardTitle>{collectionFocused ? '약정 및 회수금' : 'Billing'}</CardTitle>{!scenarioMode ? <ExportLinks resource="billing" caseId={caseId} /> : null}</div></CardHeader>
+            <CardHeader><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><CardTitle>{collectionFocused ? '약정 및 회수금' : 'Billing'}</CardTitle><ExportLinks resource="billing" caseId={caseId} /></div></CardHeader>
             <CardContent className="space-y-6">
               {collectionFocused ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

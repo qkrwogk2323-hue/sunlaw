@@ -3,12 +3,10 @@ import { ArrowRight, BriefcaseBusiness } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CaseCreateForm } from '@/components/forms/case-create-form';
-import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { listCases } from '@/lib/queries/cases';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { ExportLinks } from '@/components/export-links';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioCases } from '@/lib/platform-scenario-workspace';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 
 export default async function CasesPage({
@@ -17,13 +15,11 @@ export default async function CasesPage({
   searchParams?: Promise<{ stage?: string; stale?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
   const currentOrganizationId = getEffectiveOrganizationId(auth);
   const resolved = searchParams ? await searchParams : undefined;
   const stageFilter = `${resolved?.stage ?? 'all'}`;
   const staleFilter = `${resolved?.stale ?? 'all'}`;
-  const sourceCases = scenarioMode ? getPlatformScenarioCases(scenarioMode) : await listCases(currentOrganizationId);
+  const sourceCases = await listCases(currentOrganizationId);
   const cases = sourceCases.filter((item: any) => {
     if (stageFilter !== 'all' && `${item.stage_key ?? ''}` !== stageFilter) return false;
     if (staleFilter === 'stale' && !isCaseStageStale(item.updated_at, 7)) return false;
@@ -58,7 +54,7 @@ export default async function CasesPage({
           <p className="mt-2 text-sm text-slate-600">접근 권한이 허용한 사건만 노출되며, 최근 변경 흐름을 바로 확인할 수 있습니다.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!scenarioMode ? <ExportLinks resource="case-board" /> : null}
+          <ExportLinks resource="case-board" />
           <form method="get" action="/cases" className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-2">
             <select name="stage" defaultValue={stageFilter} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
               <option value="all">전체 단계</option>
@@ -77,26 +73,14 @@ export default async function CasesPage({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        {scenarioMode ? (
-          <Card className="vs-mesh-card">
-            <CardHeader>
-              <CardTitle>가상 사건 구성</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-600">
-              <p>법률/추심/기타 조직 특성에 맞춰 최근 한 달 동안 실제로 운영된 것처럼 사건 흐름을 구성했습니다.</p>
-              <p>각 사건에는 의뢰인 1명 이상이 연결되어 있고, 문서, 요청, 일정, 비용, 긴 업무소통 기록이 함께 연결됩니다.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="vs-mesh-card">
-            <CardHeader>
-              <CardTitle>새 사건 열기</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
-            </CardContent>
-          </Card>
-        )}
+        <Card className="vs-mesh-card">
+          <CardHeader>
+            <CardTitle>새 사건 열기</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

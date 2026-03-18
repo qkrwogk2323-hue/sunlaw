@@ -192,7 +192,7 @@ export function hasPlatformRootManagementMembership(auth: AuthContext) {
 }
 
 export function isPlatformOperator(auth: AuthContext) {
-  return auth.profile.platform_role === 'platform_admin' || hasPlatformRootManagementMembership(auth);
+  return hasPlatformRootManagementMembership(auth);
 }
 
 export function hasStaffMembership(auth: AuthContext, organizationId: string) {

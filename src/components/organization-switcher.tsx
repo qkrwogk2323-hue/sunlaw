@@ -99,7 +99,7 @@ export function OrganizationSwitcher({
             </form>
           ) : (
             <div className="rounded-[1.4rem] border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
-              가상조직 데이터가 아직 없습니다. 가상조직 레지스트리 시드 적용 후 새온가람법, 누리채움원, 다온하늘랩이 표시됩니다.
+              선택 가능한 조직 데이터가 아직 없습니다.
             </div>
           )
         ) : null}

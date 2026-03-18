@@ -1,18 +1,14 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { listDocuments } from '@/lib/queries/documents';
 import { formatDateTime } from '@/lib/format';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioDocuments } from '@/lib/platform-scenario-workspace';
 
 export default async function DocumentsPage() {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
   const organizationId = getEffectiveOrganizationId(auth);
-  const documents = scenarioMode ? getPlatformScenarioDocuments(scenarioMode) : await listDocuments(organizationId);
+  const documents = await listDocuments(organizationId);
 
   return (
     <div className="space-y-6">

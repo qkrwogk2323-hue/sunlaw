@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { decodeInvitationNote } from '@/lib/invitation-metadata';
 import { actorCategoryLabel, membershipRoleLabel } from '@/lib/membership-labels';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
@@ -13,7 +13,6 @@ import { ResendInvitationForm } from '@/components/forms/resend-invitation-form'
 import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-form';
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
 import { isWorkspaceAdmin } from '@/lib/permissions';
-import { PLATFORM_SCENARIO_ORGANIZATIONS, PLATFORM_SCENARIO_TEAM, isPlatformScenarioMode } from '@/lib/platform-scenarios';
 import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -30,39 +29,6 @@ export default async function TeamSettingsPage({
   searchParams?: Promise<{ invite?: string; member?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const isVirtualScenario = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode);
-
-  if (isVirtualScenario) {
-    const organization = PLATFORM_SCENARIO_ORGANIZATIONS[activeViewMode];
-    const members = PLATFORM_SCENARIO_TEAM[activeViewMode];
-
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">구성원 관리</h1>
-          <p className="mt-2 text-sm text-slate-600">{organization.name} 시나리오의 상태 중심 구성원 목록입니다.</p>
-        </div>
-        <Card>
-          <CardHeader><CardTitle>구성원 목록</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {members.map((member) => (
-              <div key={member.id} className="rounded-xl border border-slate-200 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="green">가입 완료</Badge>
-                  <Badge tone="blue">활성</Badge>
-                  <Badge tone="slate">초대 완료</Badge>
-                </div>
-                <p className="mt-3 font-medium text-slate-900">{member.name}</p>
-                <p className="text-sm text-slate-500">{member.email} · {member.title}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const organizationId = getEffectiveOrganizationId(auth);
   if (!organizationId) notFound();
 

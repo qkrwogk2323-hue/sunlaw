@@ -13,9 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { formatNotificationDate } from '@/lib/format';
-import { getActiveViewMode, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioNotificationCenter } from '@/lib/platform-scenario-workspace';
+import { requireAuthenticatedUser } from '@/lib/auth';
 import { getNotificationCenter, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 40, 80] as const;
@@ -213,9 +211,6 @@ export default async function NotificationsPage({
   searchParams?: Promise<{ size?: string; q?: string; entity?: string; section?: string; priority?: string; state?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
-  const isScenarioMode = Boolean(scenarioMode);
   const resolved = searchParams ? await searchParams : undefined;
   const requestedSize = Number(resolved?.size ?? 20);
   const keyword = `${resolved?.q ?? ''}`.trim();
@@ -225,20 +220,16 @@ export default async function NotificationsPage({
   const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived' | 'snoozed';
   const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize as (typeof PAGE_SIZE_OPTIONS)[number]) ? requestedSize : 20;
 
-  const notificationCenter = scenarioMode
-    ? getPlatformScenarioNotificationCenter(scenarioMode, pageSize)
-    : await getNotificationCenter(pageSize);
+  const notificationCenter = await getNotificationCenter(pageSize);
 
-  const queueView = isScenarioMode
-    ? null
-    : await getNotificationQueueView({
-        limit: pageSize,
-        q: keyword || null,
-        entityType: entity,
-        section,
-        priority,
-        state
-      });
+  const queueView = await getNotificationQueueView({
+    limit: pageSize,
+    q: keyword || null,
+    entityType: entity,
+    section,
+    priority,
+    state
+  });
 
   return (
     <div className="space-y-5">
@@ -328,57 +319,40 @@ export default async function NotificationsPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {!isScenarioMode ? (
-          <>
-            <form id="bulk-queue-form" action={bulkNotificationTransitionAction} className="flex flex-wrap items-center gap-2">
-              <button type="submit" name="operation" value="read" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                선택 읽음
-              </button>
-              <button type="submit" name="operation" value="resolve" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                선택 해결
-              </button>
-              <button type="submit" name="operation" value="archive" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                선택 보관
-              </button>
-              <button type="submit" name="operation" value="snooze_1d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                선택 1일 스누즈
-              </button>
-              <button type="submit" name="operation" value="snooze_3d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                선택 3일 스누즈
-              </button>
-              <button type="submit" name="operation" value="unsnooze" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                선택 스누즈 해제
-              </button>
-            </form>
-            <form action={markAllNotificationsReadAction}>
-              <SubmitButton variant="secondary" pendingLabel="반영 중...">모두 확인 표시</SubmitButton>
-            </form>
-          </>
-        ) : null}
+        <form id="bulk-queue-form" action={bulkNotificationTransitionAction} className="flex flex-wrap items-center gap-2">
+          <button type="submit" name="operation" value="read" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            선택 읽음
+          </button>
+          <button type="submit" name="operation" value="resolve" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            선택 해결
+          </button>
+          <button type="submit" name="operation" value="archive" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            선택 보관
+          </button>
+          <button type="submit" name="operation" value="snooze_1d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            선택 1일 스누즈
+          </button>
+          <button type="submit" name="operation" value="snooze_3d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            선택 3일 스누즈
+          </button>
+          <button type="submit" name="operation" value="unsnooze" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            선택 스누즈 해제
+          </button>
+        </form>
+        <form action={markAllNotificationsReadAction}>
+          <SubmitButton variant="secondary" pendingLabel="반영 중...">모두 확인 표시</SubmitButton>
+        </form>
       </div>
 
-      {!isScenarioMode && queueView ? (
+      {queueView ? (
         <div className="space-y-4">
           <QueueSection section="immediate" groups={queueView.sections.immediate as any} />
           <QueueSection section="confirm" groups={queueView.sections.confirm as any} />
           <QueueSection section="reference" groups={queueView.sections.reference as any} />
         </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>시나리오 알림</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-slate-600">
-            {(notificationCenter.activeNotifications ?? []).map((item: any) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                {item.title}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      ) : null}
 
-      {!isScenarioMode && notificationCenter.capabilities?.supportsTrash !== false ? (
+      {notificationCenter.capabilities?.supportsTrash !== false ? (
         <Card className="border-slate-100">
           <CardHeader>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

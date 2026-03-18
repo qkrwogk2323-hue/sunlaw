@@ -1,15 +1,13 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { findMembership, getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCollectionsWorkspace } from '@/lib/queries/collections';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { ExportLinks } from '@/components/export-links';
 import { CompensationPlanForm } from '@/components/forms/compensation-plan-form';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { hasPermission } from '@/lib/permissions';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioCollections } from '@/lib/platform-scenario-workspace';
 
 function formatDelta(value: number) {
   const rounded = Number.isFinite(value) ? value.toFixed(1) : '0.0';
@@ -28,13 +26,10 @@ const periodOptions = [
 export default async function CollectionsPage({ searchParams }: { searchParams?: Promise<{ period?: string }> }) {
   const { period = 'month' } = searchParams ? await searchParams : { period: 'month' };
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
-  const isScenarioMode = Boolean(scenarioMode);
   const organizationId = getEffectiveOrganizationId(auth);
-  const data = scenarioMode ? getPlatformScenarioCollections(scenarioMode, period) : await getCollectionsWorkspace(organizationId, period);
+  const data = await getCollectionsWorkspace(organizationId, period);
   const membership = organizationId ? findMembership(auth, organizationId) : null;
-  const canManageComp = !isScenarioMode && Boolean(organizationId && membership && hasPermission(auth, organizationId, 'collection_compensation_manage_plan'));
+  const canManageComp = Boolean(organizationId && membership && hasPermission(auth, organizationId, 'collection_compensation_manage_plan'));
   const supabase = await createSupabaseServerClient();
   const { data: orgMembers } = organizationId
     ? await supabase.from('organization_memberships').select('id, title, profile:profiles(full_name)').eq('organization_id', organizationId).eq('status', 'active')
@@ -63,7 +58,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">추심 운영</h2>
           <p className="mt-2 text-sm text-slate-600">회수 활동, 보수 산정, 성과 흐름을 기간별로 정리합니다.</p>
         </div>
-        {!isScenarioMode ? <ExportLinks resource="collections" period={period} /> : null}
+        <ExportLinks resource="collections" period={period} />
       </div>
 
       <div className="flex flex-wrap gap-2">

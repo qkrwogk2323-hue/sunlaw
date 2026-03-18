@@ -12,7 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { PLATFORM_SCENARIO_MEMBER_STORAGE_KEY, type PlatformScenarioMode } from '@/lib/platform-scenarios';
+
+type PlatformScenarioMode = 'law_admin' | 'collection_admin' | 'other_admin';
+const PLATFORM_SCENARIO_MEMBER_STORAGE_KEY = 'vs_platform_scenario_member';
 
 type CaseOption = {
   id: string;
@@ -658,7 +660,7 @@ function useDashboardCommunicationState({
         summary: `${activeTargetLabel}와 오늘 ${visibleMessages.length}건의 내부 대화가 있었고, 마지막으로는 ${previewText(latestMessages[latestMessages.length - 1]).slice(0, 48)} 흐름까지 확인되었습니다.`,
         reason: latestSummary,
         provider: 'rules',
-        setupHint: '가상조직 시나리오에서는 AI 정리 내용을 실제 메모처럼 대화방에 남길 수 있습니다.',
+        setupHint: 'AI 정리 내용을 실제 메모처럼 대화방에 남길 수 있습니다.',
         recommendedRecipientMode: 'one',
         checklist: [
           {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getCurrentAuth: vi.fn(),
+  hasActivePlatformAdminView: vi.fn(),
   createSupabaseServerClient: vi.fn(),
   createSupabaseAdminClient: vi.fn()
 }));
@@ -17,7 +18,8 @@ vi.mock('next/server', () => ({
 }));
 
 vi.mock('@/lib/auth', () => ({
-  getCurrentAuth: mocks.getCurrentAuth
+  getCurrentAuth: mocks.getCurrentAuth,
+  hasActivePlatformAdminView: mocks.hasActivePlatformAdminView
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -75,6 +77,7 @@ describe('dashboard ai routes', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.getCurrentAuth.mockResolvedValue(authContext);
+    mocks.hasActivePlatformAdminView.mockResolvedValue(false);
     mocks.createSupabaseServerClient.mockResolvedValue({
       from: vi.fn()
     });

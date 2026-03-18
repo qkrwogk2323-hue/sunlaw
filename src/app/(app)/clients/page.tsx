@@ -4,11 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientDirectInviteForm } from '@/components/forms/client-direct-invite-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
-import { findMembership, getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { listCases } from '@/lib/queries/cases';
 import { listClientRosterSummary } from '@/lib/queries/clients';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
 
 function statusTone(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -23,14 +22,10 @@ export default async function ClientsPage({
   searchParams?: Promise<{ invite?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
-  const isScenarioMode = Boolean(scenarioMode);
   const organizationId = getEffectiveOrganizationId(auth);
   const membership = organizationId ? findMembership(auth, organizationId) : null;
   const canManage = Boolean(
-    !isScenarioMode
-    && organizationId
+    organizationId
     && membership
     && isManagementRole(membership.role)
     && hasPermission(auth, organizationId, 'user_manage')

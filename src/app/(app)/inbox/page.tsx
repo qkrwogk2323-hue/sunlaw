@@ -3,10 +3,9 @@ import type { Route } from 'next';
 import { BellRing, ClipboardList, MessageSquareText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getInboxSnapshot } from '@/lib/queries/inbox';
 import { formatDateTime } from '@/lib/format';
-import { getPlatformScenarioInboxSnapshot, isPlatformScenarioMode } from '@/lib/platform-scenarios';
 
 function InboxCard({
   href,
@@ -26,12 +25,8 @@ function InboxCard({
 
 export default async function InboxPage() {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
-  const organizationId = scenarioMode ? null : getEffectiveOrganizationId(auth);
-  const data = scenarioMode
-    ? getPlatformScenarioInboxSnapshot(scenarioMode)
-    : await getInboxSnapshot(organizationId);
+  const organizationId = getEffectiveOrganizationId(auth);
+  const data = await getInboxSnapshot(organizationId);
 
   return (
     <div className="space-y-6">
@@ -55,7 +50,7 @@ export default async function InboxPage() {
           <CardHeader><CardTitle>미처리 요청</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {data.requests.length ? data.requests.map((item: any) => (
-              <InboxCard key={item.id} href={scenarioMode ? undefined : `/cases/${item.case_id}`}>
+              <InboxCard key={item.id} href={`/cases/${item.case_id}`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-medium text-slate-900">{item.title}</p>
                   <Badge tone="amber">{item.status}</Badge>
@@ -71,7 +66,7 @@ export default async function InboxPage() {
           <CardHeader><CardTitle>최근 대화</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {data.messages.length ? data.messages.map((item: any) => (
-              <InboxCard key={item.id} href={scenarioMode ? undefined : `/cases/${item.case_id}`}>
+              <InboxCard key={item.id} href={`/cases/${item.case_id}`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-medium text-slate-900">{item.cases?.title ?? '사건'}</p>
                   <Badge tone={item.is_internal ? 'slate' : 'blue'}>{item.is_internal ? '내부' : '외부'}</Badge>
@@ -87,7 +82,7 @@ export default async function InboxPage() {
           <CardHeader><CardTitle>결재 대기</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {data.approvals.length ? data.approvals.map((item: any) => (
-              <InboxCard key={item.id} href={scenarioMode ? undefined : `/cases/${item.case_id}`}>
+              <InboxCard key={item.id} href={`/cases/${item.case_id}`}>
                 <p className="font-medium text-slate-900">{item.title}</p>
                 <p className="mt-1 text-sm text-slate-500">{item.cases?.title ?? '-'}</p>
                 <p className="mt-2 text-xs text-slate-400">{formatDateTime(item.updated_at)}</p>

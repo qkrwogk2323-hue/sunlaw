@@ -1,11 +1,9 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioBilling } from '@/lib/platform-scenario-workspace';
 
 function badgeTone(status: string) {
   if (status === 'overdue') return 'red';
@@ -17,10 +15,8 @@ function badgeTone(status: string) {
 
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
   const organizationId = getEffectiveOrganizationId(auth);
-  const billing = scenarioMode ? getPlatformScenarioBilling(scenarioMode) : await getBillingHubSnapshot(organizationId);
+  const billing = await getBillingHubSnapshot(organizationId);
 
   return (
     <div className="space-y-6">

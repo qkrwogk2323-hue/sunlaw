@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { findMembership, getCurrentAuth, isManagementRole } from '@/lib/auth';
+import { findMembership, getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
 
 export async function POST(request: Request) {
   const auth = await getCurrentAuth();
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
   }
 
   const membership = findMembership(auth, organizationId);
-  if (!membership && auth.profile.platform_role !== 'platform_admin') {
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  if (!membership && !isPlatformAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

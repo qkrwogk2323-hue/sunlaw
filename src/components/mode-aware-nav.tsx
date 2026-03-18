@@ -76,13 +76,13 @@ function enabledModuleLabels(enabledModules?: Record<string, boolean> | null) {
   ].filter(Boolean) as string[];
 }
 
-function roleViewLabel(mode: ModeKey, profile: Profile) {
+function roleViewLabel(mode: ModeKey, isPlatformOperator: boolean) {
   if (mode === 'platform_admin') return '플랫폼 관리자';
-  if (mode === 'organization_staff' && profile.platform_role === 'platform_admin') return '직원';
+  if (mode === 'organization_staff' && isPlatformOperator) return '직원';
   if (mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin') return '가상직원 시야';
   if (mode === 'organization_staff') return '직원';
   if (mode === 'client_communication') return '의뢰인 시야';
-  return profile.platform_role === 'platform_support' ? '플랫폼 지원' : '조직 사용자';
+  return '조직 사용자';
 }
 
 function contextLabel(mode: ModeKey, membership: Membership | null) {
@@ -122,7 +122,7 @@ function resolveSectionIdByPath(sections: NavSection[], pathname: string) {
 
 function getOrganizationSections({
   membership,
-  profile,
+  isPlatformAdminView,
   mode,
   unreadNotificationCount = 0,
   actionRequiredCount = 0,
@@ -131,7 +131,7 @@ function getOrganizationSections({
   pulseConversation = false
 }: {
   membership: Membership | null;
-  profile: Profile;
+  isPlatformAdminView: boolean;
   mode: ModeKey;
   unreadNotificationCount?: number;
   actionRequiredCount?: number;
@@ -140,7 +140,6 @@ function getOrganizationSections({
   pulseConversation?: boolean;
 }) {
   const enabledModules = membership?.organization?.enabled_modules ?? {};
-  const isPlatformAdminView = profile.platform_role === 'platform_admin';
   const isPlatformStaffView = false;
   const isClientView = mode === 'client_communication';
   const effectiveKind = mode === 'collection_admin' ? 'collection_company' : mode === 'law_admin' ? 'law_firm' : membership?.organization?.kind ?? 'other';
@@ -472,14 +471,15 @@ export function ModeAwareNav({
     || value === 'client_communication'
   );
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const isPlatformOperator = useMemo(
+    () => memberships.some((membership) => membership.organization?.is_platform_root === true && isManagementRole(membership.role)),
+    [memberships]
+  );
   const basePlatformMembership = memberships.find((membership) => membership.organization_id === profile.default_organization_id) ?? memberships[0] ?? null;
   const [mode, setMode] = useState<ModeKey>(() => {
-    if (profile.platform_role === 'platform_admin') {
-      return 'organization_staff';
-    }
     if (isModeKey(initialMode)) return initialMode;
     const baseMode = getDefaultMode(
-      profile.platform_role ?? 'standard',
+      'standard',
       basePlatformMembership?.organization?.kind,
       Boolean(basePlatformMembership && isManagementRole(basePlatformMembership.role))
     );
@@ -497,7 +497,7 @@ export function ModeAwareNav({
     [currentOrgMembership, memberships, platformOrganizations, profile.default_organization_id]
   );
   const managerDefaultMode = getDefaultMode(
-    profile.platform_role ?? 'standard',
+    'standard',
     currentOrganization?.kind,
     Boolean(currentOrgMembership && isManagementRole(currentOrgMembership.role))
   );
@@ -509,7 +509,7 @@ export function ModeAwareNav({
     () =>
       getOrganizationSections({
         membership: sectionMembership,
-        profile,
+        isPlatformAdminView: isPlatformOperator,
         mode,
         unreadNotificationCount: navCounts.unreadCount,
         actionRequiredCount: navCounts.actionRequiredCount,
@@ -517,11 +517,11 @@ export function ModeAwareNav({
         pulseNotification,
         pulseConversation
       }),
-    [sectionMembership, profile, mode, navCounts, pulseNotification, pulseConversation]
+    [sectionMembership, isPlatformOperator, mode, navCounts, pulseNotification, pulseConversation]
   );
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createExpandedSections(sections));
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
-  const baseRoleLabel = roleViewLabel(mode, profile);
+  const baseRoleLabel = roleViewLabel(mode, isPlatformOperator);
   const organizationLabel = contextLabel(mode, sectionMembership);
   const moduleLabels = mode === 'platform_admin' || mode === 'client_communication' ? [] : enabledModuleLabels(currentOrganization?.enabled_modules);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
@@ -624,29 +624,29 @@ export function ModeAwareNav({
   }, [sections, activeSectionId]);
 
   useEffect(() => {
-    if (profile.platform_role !== 'platform_admin') {
+    if (!isPlatformOperator) {
       queueMicrotask(() => {
         setMode(managerDefaultMode);
       });
       return;
     }
-  }, [profile.platform_role, managerDefaultMode]);
+  }, [isPlatformOperator, managerDefaultMode]);
 
   useEffect(() => {
     const activeMode = mode;
     document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=${activeMode}; path=/; max-age=31536000; samesite=lax`;
 
-    if (profile.platform_role === 'platform_admin' && activeMode !== 'platform_admin' && isPlatformAdminOnlyPath(pathname)) {
+    if (isPlatformOperator && activeMode !== 'platform_admin' && isPlatformAdminOnlyPath(pathname)) {
       router.replace('/dashboard');
     }
-  }, [mode, pathname, profile.platform_role, router]);
+  }, [mode, pathname, isPlatformOperator, router]);
 
   return (
     <div className="space-y-3">
       <MobileSectionBar sections={sections} pathname={pathname} currentOrgMembership={currentOrgMembership} baseRoleLabel={baseRoleLabel} currentOrganizationName={currentOrganization?.name ?? ''} />
       <div className="hidden lg:block">
       <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
-        {profile.platform_role === 'platform_admin' ? (
+        {isPlatformOperator ? (
           <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
             <p className="text-sm font-semibold text-slate-900">플랫폼 조직 운영</p>
             <p className="mt-1 text-xs text-slate-500">토글 전환 없이 현재 모드 기준으로 플랫폼 조직 운영 화면을 제공합니다.</p>
@@ -674,7 +674,7 @@ export function ModeAwareNav({
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">현재 조직</p>
           <p className="mt-2 text-base font-semibold text-slate-950">{currentOrganization?.name ?? '선택된 조직 없음'}</p>
           <p className="mt-1 text-sm text-slate-600">
-            {profile.platform_role === 'platform_admin' ? '플랫폼 권한으로 참여 중인 조직' : '현재 선택된 조직'}
+            {isPlatformOperator ? '플랫폼 권한으로 참여 중인 조직' : '현재 선택된 조직'}
           </p>
         </div>
       </div>

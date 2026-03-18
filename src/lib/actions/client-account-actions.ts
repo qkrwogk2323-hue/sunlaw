@@ -14,13 +14,16 @@ import { clientServiceRequestSchema, clientSignupSchema } from '@/lib/validators
 async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('platform_role', 'platform_admin')
-    .eq('is_active', true);
+    .from('organization_memberships')
+    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, is_platform_root)')
+    .eq('status', 'active')
+    .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
-  return (data ?? []).map((row: { id: string }) => row.id).filter(Boolean);
+  return (data ?? [])
+    .filter((row: any) => row.organization?.is_platform_root === true && row.profile?.is_active !== false)
+    .map((row: any) => row.profile_id)
+    .filter(Boolean);
 }
 
 export async function submitClientSignupAction(formData: FormData) {

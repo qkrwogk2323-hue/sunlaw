@@ -89,8 +89,8 @@ export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: s
           },
           {
             id: 'organization',
-            label: '가상 조직 시야',
-            description: '법률/법무, 추심, 기타 가상조직 시야',
+            label: '조직 운영 시야',
+            description: '법률/법무, 추심, 기타 조직 시야',
             icon: Building2,
             children: [
               { key: 'law_admin', label: '법률/법무조직' },

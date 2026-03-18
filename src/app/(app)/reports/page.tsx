@@ -1,22 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 import { getCollectionsWorkspace } from '@/lib/queries/collections';
 import { ExportLinks } from '@/components/export-links';
-import { getPlatformScenarioDashboardSnapshot, isPlatformScenarioMode } from '@/lib/platform-scenarios';
-import { getPlatformScenarioCollections } from '@/lib/platform-scenario-workspace';
 
 export default async function ReportsPage() {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
   const organizationId = getEffectiveOrganizationId(auth);
-  const [dashboard, collections] = scenarioMode
-    ? [getPlatformScenarioDashboardSnapshot(scenarioMode), getPlatformScenarioCollections(scenarioMode)]
-    : await Promise.all([
-        getDashboardSnapshot(organizationId),
-        getCollectionsWorkspace(organizationId)
-      ]);
+  const [dashboard, collections] = await Promise.all([
+    getDashboardSnapshot(organizationId),
+    getCollectionsWorkspace(organizationId)
+  ]);
 
   const stats = [
     ['진행 중 사건', dashboard.activeCases],
@@ -36,7 +30,7 @@ export default async function ReportsPage() {
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">핵심 수치 요약</h2>
           <p className="mt-2 text-sm text-slate-600">현재 버전에서는 핵심 운영 수치를 먼저 보여 주고 이후 상세 리포트로 확장합니다.</p>
         </div>
-        {!scenarioMode ? <ExportLinks resource="reports" /> : null}
+        <ExportLinks resource="reports" />
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map(([label, value]) => (
