@@ -4,7 +4,7 @@ import { getPortalAccessibleCaseIds } from '@/lib/queries/portal';
 
 const TRASH_RETENTION_DAYS = 30;
 const legacyNotificationSelect = 'id, title, body, kind, created_at, read_at, organization_id, case_id, payload, organization:organizations(id, name, slug)';
-const upgradedNotificationSelect = 'id, title, body, kind, created_at, read_at, requires_action, resolved_at, action_label, action_href, action_entity_type, action_target_id, organization_id, case_id, trashed_at, payload, organization:organizations(id, name, slug)';
+const upgradedNotificationSelect = 'id, title, body, kind, created_at, read_at, requires_action, resolved_at, action_label, action_href, action_entity_type, action_target_id, organization_id, case_id, trashed_at, payload, status, priority, destination_type, destination_url, destination_params, entity_type, entity_id, notification_type, organization:organizations(id, name, slug)';
 
 type NotificationRecord = {
   id: string;
@@ -22,6 +22,14 @@ type NotificationRecord = {
   organization_id: string | null;
   case_id: string | null;
   trashed_at: string | null;
+  status: string | null;
+  priority: string | null;
+  destination_type: string | null;
+  destination_url: string | null;
+  destination_params: Record<string, unknown> | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  notification_type: string | null;
   payload: Record<string, unknown> | null;
   organization:
     | {
@@ -74,6 +82,13 @@ function withLegacyDefaults(record: Record<string, unknown>) {
     action_entity_type: null,
     action_target_id: null,
     trashed_at: null,
+    status: null,
+    destination_url: null,
+    destination_type: null,
+    priority: null,
+    entity_type: null,
+    entity_id: null,
+    notification_type: null,
     ...record
   } as NotificationRecord;
 }

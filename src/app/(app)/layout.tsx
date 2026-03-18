@@ -2,9 +2,8 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { requireAuthenticatedUser, getEffectiveOrganizationId, isManagementRole } from '@/lib/auth';
+import { getActiveViewMode, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
-import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
 import { BrandBanner } from '@/components/brand-banner';
 import { PageBackButton } from '@/components/page-back-button';
@@ -12,10 +11,21 @@ import { buttonStyles } from '@/components/ui/button';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { resolveInitialViewMode } from '@/lib/view-mode';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
+  const activeViewMode = await getActiveViewMode();
+  const baseMembership = auth.memberships.find((membership) => membership.organization_id === auth.profile.default_organization_id)
+    ?? auth.memberships[0]
+    ?? null;
+  const initialMode = resolveInitialViewMode({
+    activeViewMode,
+    platformRole: auth.profile.platform_role,
+    organizationKind: baseMembership?.organization?.kind,
+    isManager: baseMembership?.role === 'org_owner' || baseMembership?.role === 'org_manager',
+    isClientAccount: auth.profile.is_client_account,
+  });
 
   if (!hasCompletedLegalName(auth.profile)) {
     redirect('/start/profile-name' as Route);
@@ -30,16 +40,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const supportSession = await readSupportSessionCookie();
-  const currentOrganizationId = getEffectiveOrganizationId(auth);
-  const dashboard = await getDashboardSnapshot(currentOrganizationId);
-  const platformOrganizations = auth.profile.platform_role === 'platform_admin'
-    ? ((await createSupabaseAdminClient()
-      .from('organizations')
-      .select('id, name, slug, kind, enabled_modules')
-      .neq('lifecycle_status', 'soft_deleted')
-      .order('name', { ascending: true })).data ?? [])
-    : [];
-  const platformScenarioOrganizations = platformOrganizations.filter((organization) => organization.name?.includes('(가상조직)'));
 
   if (!auth.memberships.length && auth.profile.platform_role !== 'platform_admin') {
     redirect('/start/signup' as Route);
@@ -49,7 +49,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <div className="vs-shell min-h-screen">
       <div className="mx-auto grid min-h-screen max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
         <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
-          <ModeAwareNav memberships={auth.memberships} profile={auth.profile} platformOrganizations={platformScenarioOrganizations} />
+          <ModeAwareNav
+            memberships={auth.memberships}
+            profile={auth.profile}
+            initialMode={initialMode}
+          />
 
           <form action={signOutAction}>
             <button className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>

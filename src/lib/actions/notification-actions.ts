@@ -90,6 +90,33 @@ export async function markAllNotificationsReadAction() {
   revalidateNotificationViews();
 }
 
+export async function markNotificationResolvedAction(formData: FormData) {
+  const id = `${formData.get('notificationId') ?? ''}`;
+  if (!id) {
+    throw new Error('notificationId is required');
+  }
+
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('notifications')
+    .update({
+      status: 'resolved',
+      resolved_at: now,
+      read_at: now
+    })
+    .eq('id', id)
+    .eq('recipient_profile_id', auth.user.id)
+    .in('status', ['active', 'read']);
+
+  if (error) {
+    throw error;
+  }
+
+  revalidateNotificationViews();
+}
+
 export async function moveNotificationToTrashAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {

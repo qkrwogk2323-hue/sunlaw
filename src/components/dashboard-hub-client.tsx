@@ -83,10 +83,16 @@ type BillingItem = {
 type NotificationItem = {
   id: string;
   title: string;
-  body: string;
+  body?: string;
   created_at: string;
   action_label?: string | null;
   action_href?: string | null;
+  destination_url?: string | null;
+  destination_type?: string | null;
+  priority?: 'urgent' | 'normal' | 'low' | string | null;
+  status?: 'active' | 'read' | 'resolved' | 'archived' | 'deleted' | string | null;
+  entity_type?: 'case' | 'schedule' | 'client' | 'collaboration' | string | null;
+  entity_id?: string | null;
   action_entity_type?: string | null;
   requires_action?: boolean | null;
   resolved_at?: string | null;
@@ -260,6 +266,17 @@ function notificationActionLabel(item: NotificationItem) {
   if (item.action_entity_type === 'client_access_request') return '의뢰인 관리 열기';
   if (item.action_entity_type === 'support_access_request') return '지원 요청 보기';
   return '알림 보기';
+}
+
+function toNotificationOpenHref(item: NotificationItem) {
+  const target = (item.destination_url ?? item.action_href ?? '').trim();
+  if (!target.startsWith('/')) return '/dashboard' as Route;
+  const params = new URLSearchParams();
+  params.set('href', target);
+  if (item.organization_id) {
+    params.set('organizationId', item.organization_id);
+  }
+  return `/notifications/open/${item.id}?${params.toString()}` as Route;
 }
 
 function scenarioMessageStorageKey(mode: PlatformScenarioMode) {
@@ -918,7 +935,7 @@ export function DashboardHubClient({
                   data.actionableNotifications.slice(0, 3).map((item) => (
                     <Link
                       key={item.id}
-                      href={(item.action_href ?? '/dashboard') as Route}
+                      href={toNotificationOpenHref(item)}
                       className="block rounded-2xl border border-rose-200 bg-white px-3 py-3 text-sm transition hover:border-rose-300 hover:bg-rose-50/40"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1001,9 +1018,13 @@ export function DashboardHubClient({
               <div className="mt-2.5 space-y-2">
                 {data.unreadNotificationItems.length ? (
                   data.unreadNotificationItems.slice(0, 3).map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-rose-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+                    <Link
+                      key={item.id}
+                      href={toNotificationOpenHref(item)}
+                      className="block rounded-2xl border border-rose-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-rose-300 hover:bg-rose-50/40"
+                    >
                       <p className="font-medium text-slate-900">{item.title}</p>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <div className="rounded-2xl border border-rose-200 bg-white px-3 py-6 text-sm text-slate-500">미확인 알림이 없습니다.</div>

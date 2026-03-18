@@ -13,8 +13,10 @@ import { PLATFORM_SCENARIO_MEMBER_STORAGE_KEY, PLATFORM_SCENARIO_ORGANIZATIONS, 
 
 const PLATFORM_WORK_MODE_STORAGE_KEY = 'vs_platform_admin_work_mode';
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<any> };
+type NavBadge = { count: number; variant?: 'default' | 'urgent' };
+type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean };
 type NavSection = { id: string; label: string; items: NavItem[] };
+type NavUnreadCounts = { unreadCount: number; actionRequiredCount: number; unreadConversationCount: number };
 
 const sectionAccent = {
   'common-menu': {
@@ -114,14 +116,31 @@ function uniqueItems(items: NavItem[]) {
   return items.filter((item, index, list) => list.findIndex((candidate) => candidate.href === item.href) === index);
 }
 
+function resolveSectionIdByPath(sections: NavSection[], pathname: string) {
+  const matchedSection = sections.find((section) =>
+    section.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+  );
+  return matchedSection?.id ?? sections[0]?.id ?? 'common-menu';
+}
+
 function getOrganizationSections({
   membership,
   profile,
-  mode
+  mode,
+  unreadNotificationCount = 0,
+  actionRequiredCount = 0,
+  unreadConversationCount = 0,
+  pulseNotification = false,
+  pulseConversation = false
 }: {
   membership: Membership | null;
   profile: Profile;
   mode: ModeKey;
+  unreadNotificationCount?: number;
+  actionRequiredCount?: number;
+  unreadConversationCount?: number;
+  pulseNotification?: boolean;
+  pulseConversation?: boolean;
 }) {
   const enabledModules = membership?.organization?.enabled_modules ?? {};
   const isPlatformAdminView = mode === 'platform_admin';
@@ -129,9 +148,18 @@ function getOrganizationSections({
   const isClientView = mode === 'client_communication';
   const effectiveKind = mode === 'collection_admin' ? 'collection_company' : mode === 'law_admin' ? 'law_firm' : membership?.organization?.kind ?? 'other';
   const isCollectionOrgView = mode === 'collection_admin' || effectiveKind === 'collection_company';
+  const notificationBadge: NavBadge | null =
+    actionRequiredCount > 0
+      ? { count: actionRequiredCount, variant: 'urgent' }
+      : unreadNotificationCount > 0
+        ? { count: unreadNotificationCount, variant: 'default' }
+        : null;
+  const conversationBadge: NavBadge | null = unreadConversationCount > 0 ? { count: unreadConversationCount, variant: 'default' } : null;
   const commonItems = uniqueItems([
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-    { href: '/notifications', label: '알림 센터', icon: BellRing },
+    ...(!isPlatformAdminView ? [{ href: '/cases', label: '사건 보기', icon: FileText }] : []),
+    ...(!isPlatformAdminView && !isClientView ? [{ href: '/inbox', label: '오늘 할 일', icon: ClipboardList, badge: conversationBadge, pulse: pulseConversation }] : []),
+    { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
     { href: '/calendar', label: '일정 확인', icon: CalendarRange },
     ...(!isPlatformAdminView && !isClientView && !isCollectionOrgView ? [{ href: '/billing', label: '비용 관련', icon: Wallet }] : []),
     { href: '/documents', label: '승인/검토', icon: ReceiptText }
@@ -159,8 +187,10 @@ function getOrganizationSections({
     );
   } else if (isClientView) {
     organizationItems.push(
-      { href: '/portal', label: '의뢰인 홈', icon: MessageSquareText },
-      { href: '/inbox', label: '요청과 회신', icon: ClipboardList }
+      { href: '/portal', label: '의뢰인 홈', icon: LayoutDashboard },
+      { href: '/portal/cases', label: '내 사건', icon: FileText },
+      { href: '/portal/messages', label: '사건 소통', icon: MessageSquareText },
+      { href: '/portal/notifications', label: '알림 확인', icon: BellRing }
     );
   } else if (mode === 'collection_admin' || effectiveKind === 'collection_company') {
     organizationItems.push(
@@ -211,14 +241,15 @@ function getOrganizationSections({
   if (!isPlatformAdminView) {
     if (isCollectionOrgView) {
       collaborationItems.push(
-        { href: '/inbox', label: '전달/회신 확인', icon: ClipboardList },
+        { href: '/inbox', label: '전달/회신 확인', icon: ClipboardList, badge: conversationBadge },
         { href: '/client-access', label: '의뢰인 협업 요청', icon: MessageSquareText },
         { href: '/organizations', label: '외부 협업 찾기', icon: Building2 }
       );
     } else {
       collaborationItems.push(
-        { href: '/inbox', label: '협업 소통함', icon: ClipboardList },
         { href: '/organizations', label: '조직 검색하기', icon: Building2 },
+        { href: '/clients', label: '의뢰인 연결 보기', icon: Users },
+        { href: '/inbox', label: '협업 소통함', icon: ClipboardList, badge: conversationBadge },
         { href: '/documents', label: '약정/협업 문서', icon: ReceiptText }
       );
     }
@@ -262,7 +293,23 @@ function getOrganizationSections({
   return sections;
 }
 
-function ModeNavItem({ href, label, icon: Icon, active, sectionId }: { href: string; label: string; icon: React.ComponentType<any>; active: boolean; sectionId: string }) {
+function ModeNavItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  sectionId,
+  badge,
+  pulse = false
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  active: boolean;
+  sectionId: string;
+  badge?: NavBadge | null;
+  pulse?: boolean;
+}) {
   const accent = sectionAccent[sectionId as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
   return (
     <Link
@@ -273,11 +320,21 @@ function ModeNavItem({ href, label, icon: Icon, active, sectionId }: { href: str
           : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'
       }`}
     >
-      <span className={`inline-flex size-8 items-center justify-center rounded-lg ${active ? accent.icon : 'bg-slate-100 text-slate-500'}`}>
+      <span className={`inline-flex size-8 items-center justify-center rounded-lg ${active ? accent.icon : 'bg-slate-100 text-slate-500'} ${pulse ? 'animate-pulse' : ''}`}>
         <Icon className="size-4" />
       </span>
       <span className="flex-1">{label}</span>
-      <span className={`h-2.5 w-2.5 rounded-full ${active ? accent.dot : 'bg-slate-200'}`} />
+      {badge && badge.count > 0 ? (
+        <span
+          className={`min-w-[1.4rem] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums ${pulse ? 'animate-pulse' : ''} ${
+            badge.variant === 'urgent' ? 'bg-red-500 text-white' : 'bg-sky-600 text-white'
+          }`}
+        >
+          {badge.count > 99 ? '99+' : badge.count}
+        </span>
+      ) : (
+        <span className={`h-2.5 w-2.5 rounded-full ${active ? accent.dot : 'bg-slate-200'}`} />
+      )}
     </Link>
   );
 }
@@ -314,6 +371,15 @@ function MobileSectionBar({
     }
   }, [sections, activeSectionId]);
 
+  useEffect(() => {
+    const nextSectionId = resolveSectionIdByPath(sections, pathname);
+    if (nextSectionId !== activeSectionId) {
+      queueMicrotask(() => {
+        setActiveSectionId(nextSectionId);
+      });
+    }
+  }, [sections, pathname, activeSectionId]);
+
   return (
     <div className="space-y-3 lg:hidden">
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
@@ -321,7 +387,7 @@ function MobileSectionBar({
         <p className="mt-1 text-sm text-slate-600">{baseRoleLabel}</p>
       </div>
       <div className="fixed inset-x-3 bottom-3 z-40 rounded-[1.5rem] border border-slate-200/80 bg-white/94 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)] backdrop-blur-md">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {sections.slice(0, 4).map((section) => (
             (() => {
               const accent = sectionAccent[section.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
@@ -332,7 +398,7 @@ function MobileSectionBar({
               onClick={() => setActiveSectionId(section.id)}
               className={segmentStyles({
                 active: activeSectionId === section.id,
-                className: `rounded-2xl px-2 py-2 text-center text-[11px] font-semibold ${activeSectionId === section.id ? accent.mobile : ''}`
+                className: `min-h-11 rounded-2xl px-3 py-2.5 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
               })}
             >
               {sectionButtonLabel(section.label)}
@@ -346,6 +412,7 @@ function MobileSectionBar({
             {activeSection.items.map((item) => (
               (() => {
                 const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
+                const badge = item.badge;
                 return (
               <Link
                 key={item.href}
@@ -353,7 +420,18 @@ function MobileSectionBar({
                 className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? accent.active : 'border-slate-200 bg-white text-slate-700'}`}
               >
                 <item.icon className="size-4" />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {badge && badge.count > 0 ? (
+                  <span
+                    className={`min-w-[1.25rem] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums ${
+                      badge.variant === 'urgent' ? 'bg-red-500 text-white' : 'bg-sky-600 text-white'
+                    }`}
+                  >
+                    {badge.count > 99 ? '99+' : badge.count}
+                  </span>
+                ) : (
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                )}
               </Link>
                 );
               })()
@@ -361,17 +439,53 @@ function MobileSectionBar({
           </div>
         ) : null}
       </div>
-      <div className="h-40" />
+      <div className="h-52" />
     </div>
   );
 }
 
-export function ModeAwareNav({ memberships, profile, platformOrganizations = [] }: { memberships: Membership[]; profile: Profile; platformOrganizations?: OrganizationOption[] }) {
+export function ModeAwareNav({
+  memberships,
+  profile,
+  platformOrganizations = [],
+  initialMode = null,
+  unreadNotificationCount = 0,
+  actionRequiredCount = 0,
+  unreadConversationCount = 0
+}: {
+  memberships: Membership[];
+  profile: Profile;
+  platformOrganizations?: OrganizationOption[];
+  initialMode?: ModeKey | null;
+  unreadNotificationCount?: number;
+  actionRequiredCount?: number;
+  unreadConversationCount?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
+  const [navCounts, setNavCounts] = useState<NavUnreadCounts>({
+    unreadCount: unreadNotificationCount,
+    actionRequiredCount,
+    unreadConversationCount
+  });
+  const [pulseNotification, setPulseNotification] = useState(false);
+  const [pulseConversation, setPulseConversation] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const isModeKey = (value: string | null | undefined): value is ModeKey => (
+    value === 'platform_admin'
+    || value === 'law_admin'
+    || value === 'collection_admin'
+    || value === 'other_admin'
+    || value === 'organization_staff'
+    || value === 'client_communication'
+  );
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const basePlatformMembership = memberships.find((membership) => membership.organization_id === profile.default_organization_id) ?? memberships[0] ?? null;
   const [mode, setMode] = useState<ModeKey>(() => {
+    if (isModeKey(initialMode)) {
+      return initialMode;
+    }
+
     const baseMode = getDefaultMode(
       profile.platform_role ?? 'standard',
       basePlatformMembership?.organization?.kind,
@@ -413,7 +527,20 @@ export function ModeAwareNav({ memberships, profile, platformOrganizations = [] 
     () => currentOrgMembership ?? toMembershipShape(currentOrganization),
     [currentOrgMembership, currentOrganization]
   );
-  const sections = useMemo(() => getOrganizationSections({ membership: sectionMembership, profile, mode }), [sectionMembership, profile, mode]);
+  const sections = useMemo(
+    () =>
+      getOrganizationSections({
+        membership: sectionMembership,
+        profile,
+        mode,
+        unreadNotificationCount: navCounts.unreadCount,
+        actionRequiredCount: navCounts.actionRequiredCount,
+        unreadConversationCount: navCounts.unreadConversationCount,
+        pulseNotification,
+        pulseConversation
+      }),
+    [sectionMembership, profile, mode, navCounts, pulseNotification, pulseConversation]
+  );
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createExpandedSections(sections));
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
   const scenarioMembers = profile.platform_role === 'platform_admin' && isPlatformScenarioMode(mode) ? PLATFORM_SCENARIO_TEAM[mode] : [];
@@ -436,6 +563,66 @@ export function ModeAwareNav({ memberships, profile, platformOrganizations = [] 
               ? 'border-teal-200 bg-teal-50 text-teal-800'
               : 'border-slate-200 bg-slate-100 text-slate-800';
   const displayName = selectedScenarioMember?.name ?? profile.full_name;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncUnreadCounts = async () => {
+      try {
+        const response = await fetch('/api/nav/unread-counts', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json() as Partial<NavUnreadCounts>;
+        if (cancelled) return;
+
+        setNavCounts((prev) => {
+          const next: NavUnreadCounts = {
+            unreadCount: typeof payload.unreadCount === 'number' ? payload.unreadCount : prev.unreadCount,
+            actionRequiredCount: typeof payload.actionRequiredCount === 'number' ? payload.actionRequiredCount : prev.actionRequiredCount,
+            unreadConversationCount: typeof payload.unreadConversationCount === 'number' ? payload.unreadConversationCount : prev.unreadConversationCount
+          };
+
+          const notificationDelta = next.unreadCount - prev.unreadCount;
+          const conversationDelta = next.unreadConversationCount - prev.unreadConversationCount;
+
+          if (notificationDelta > 0) {
+            setPulseNotification(true);
+            setToastMessage(`새 알림 ${notificationDelta}건이 도착했습니다.`);
+            window.setTimeout(() => setPulseNotification(false), 3200);
+            window.setTimeout(() => setToastMessage(null), 2600);
+          }
+
+          if (conversationDelta > 0) {
+            setPulseConversation(true);
+            setToastMessage(`새 대화 ${conversationDelta}건이 도착했습니다.`);
+            window.setTimeout(() => setPulseConversation(false), 3200);
+            window.setTimeout(() => setToastMessage(null), 2600);
+          }
+
+          if (
+            prev.unreadCount === next.unreadCount
+            && prev.actionRequiredCount === next.actionRequiredCount
+            && prev.unreadConversationCount === next.unreadConversationCount
+          ) {
+            return prev;
+          }
+
+          return next;
+        });
+      } catch {
+        // keep current counts when polling fails
+      }
+    };
+
+    void syncUnreadCounts();
+    const intervalId = window.setInterval(() => {
+      void syncUnreadCounts();
+    }, 15000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -737,7 +924,15 @@ export function ModeAwareNav({ memberships, profile, platformOrganizations = [] 
                 </div>
                 <div className="mt-1 space-y-1">
                   {activeSection.items.map((item) => (
-                    <ModeNavItem key={item.href} href={item.href} label={item.label} icon={item.icon} sectionId={activeSection.id} active={pathname === item.href || pathname.startsWith(`${item.href}/`)} />
+                    <ModeNavItem
+                      key={item.href}
+                      href={item.href}
+                      label={item.label}
+                      icon={item.icon}
+                      sectionId={activeSection.id}
+                      active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                      pulse={Boolean(item.pulse)}
+                    />
                   ))}
                 </div>
               </div>
@@ -746,6 +941,11 @@ export function ModeAwareNav({ memberships, profile, platformOrganizations = [] 
         ) : null}
       </div>
       </div>
+      {toastMessage ? (
+        <div className="fixed bottom-5 right-5 z-50 rounded-xl border border-slate-200 bg-slate-900 px-3 py-2 text-xs font-medium text-white shadow-[0_10px_28px_rgba(15,23,42,0.32)]">
+          {toastMessage}
+        </div>
+      ) : null}
     </div>
   );
 }
