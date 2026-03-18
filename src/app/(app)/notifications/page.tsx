@@ -5,7 +5,9 @@ import {
   markNotificationReadAction,
   markNotificationResolvedAction,
   moveNotificationToTrashAction,
-  restoreNotificationAction
+  restoreNotificationAction,
+  snoozeNotificationAction,
+  unsnoozeNotificationAction
 } from '@/lib/actions/notification-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +68,7 @@ function actionCopy(item: NotificationQueueItem) {
 
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
   const openHref = notificationOpenHref(item.notificationId, item.destinationUrl, item.organizationId);
+  const isSnoozed = Boolean(item.snoozedUntil && new Date(item.snoozedUntil).getTime() > Date.now());
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -77,6 +80,7 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <div className="flex items-center gap-1">
           <Badge tone="slate">{statusLabel(item.status)}</Badge>
           <Badge tone={item.priority === 'urgent' ? 'red' : item.priority === 'normal' ? 'blue' : 'slate'}>{priorityLabel(item.priority)}</Badge>
+          {isSnoozed ? <Badge tone="amber">스누즈</Badge> : null}
         </div>
       </div>
 
@@ -84,6 +88,12 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <span>{item.organizationName ?? '조직 미지정'}</span>
         <span>·</span>
         <span>{formatNotificationDate(item.createdAt)}</span>
+        {isSnoozed && item.snoozedUntil ? (
+          <>
+            <span>·</span>
+            <span>다시 알림 {formatNotificationDate(item.snoozedUntil)}</span>
+          </>
+        ) : null}
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -109,6 +119,21 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
           <form action={markNotificationReadAction}>
             <input type="hidden" name="notificationId" value={item.notificationId} />
             <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">읽음 처리</SubmitButton>
+          </form>
+        ) : null}
+
+        {(item.status === 'active' || item.status === 'read') && !isSnoozed ? (
+          <form action={snoozeNotificationAction}>
+            <input type="hidden" name="notificationId" value={item.notificationId} />
+            <input type="hidden" name="days" value="1" />
+            <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">1일 후 다시</SubmitButton>
+          </form>
+        ) : null}
+
+        {(item.status === 'active' || item.status === 'read') && isSnoozed ? (
+          <form action={unsnoozeNotificationAction}>
+            <input type="hidden" name="notificationId" value={item.notificationId} />
+            <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">스누즈 해제</SubmitButton>
           </form>
         ) : null}
 
@@ -185,7 +210,7 @@ function QueueSection({
 export default async function NotificationsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ size?: string; q?: string; entity?: string; section?: string }>;
+  searchParams?: Promise<{ size?: string; q?: string; entity?: string; section?: string; priority?: string; state?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const activeViewMode = await getActiveViewMode();
@@ -196,6 +221,8 @@ export default async function NotificationsPage({
   const keyword = `${resolved?.q ?? ''}`.trim();
   const entity = `${resolved?.entity ?? 'all'}` as 'all' | QueueEntityType;
   const section = `${resolved?.section ?? 'all'}` as 'all' | QueueSectionKey;
+  const priority = `${resolved?.priority ?? 'all'}` as 'all' | 'urgent' | 'normal' | 'low';
+  const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived' | 'snoozed';
   const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize as (typeof PAGE_SIZE_OPTIONS)[number]) ? requestedSize : 20;
 
   const notificationCenter = scenarioMode
@@ -208,7 +235,9 @@ export default async function NotificationsPage({
         limit: pageSize,
         q: keyword || null,
         entityType: entity,
-        section
+        section,
+        priority,
+        state
       });
 
   return (
@@ -258,6 +287,26 @@ export default async function NotificationsPage({
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-600">
+            <span className="whitespace-nowrap">우선순위</span>
+            <select name="priority" defaultValue={priority} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
+              <option value="all">전체</option>
+              <option value="urgent">긴급</option>
+              <option value="normal">일반</option>
+              <option value="low">낮음</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <span className="whitespace-nowrap">상태</span>
+            <select name="state" defaultValue={state} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
+              <option value="all">전체</option>
+              <option value="active">신규</option>
+              <option value="read">확인</option>
+              <option value="resolved">해결</option>
+              <option value="archived">보관</option>
+              <option value="snoozed">스누즈됨</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
             <span className="whitespace-nowrap">표시 개수</span>
             <select
               name="size"
@@ -290,6 +339,15 @@ export default async function NotificationsPage({
               </button>
               <button type="submit" name="operation" value="archive" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 선택 보관
+              </button>
+              <button type="submit" name="operation" value="snooze_1d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                선택 1일 스누즈
+              </button>
+              <button type="submit" name="operation" value="snooze_3d" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                선택 3일 스누즈
+              </button>
+              <button type="submit" name="operation" value="unsnooze" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                선택 스누즈 해제
               </button>
             </form>
             <form action={markAllNotificationsReadAction}>

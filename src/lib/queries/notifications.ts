@@ -376,6 +376,7 @@ const queueSummarySelect = [
   'entity_id',
   'priority',
   'status',
+  'snoozed_until',
   'destination_type',
   'destination_url',
   'destination_params',
@@ -393,6 +394,7 @@ export type NotificationQueueItem = {
   entityId: string | null;
   priority: QueuePriority;
   status: QueueStatus;
+  snoozedUntil: string | null;
   destinationType: string;
   destinationUrl: string;
   createdAt: string;
@@ -465,6 +467,7 @@ function normalizeQueueItem(record: any): NotificationQueueItem {
     entityId,
     priority,
     status,
+    snoozedUntil: record.snoozed_until ?? null,
     destinationType: `${record.destination_type ?? 'internal_route'}`,
     destinationUrl,
     createdAt: record.created_at,
@@ -522,7 +525,12 @@ export async function getDashboardRecentNotifications(organizationId?: string | 
   if (error && !isMissingColumnError(error)) throw error;
 
   const normalized = ((data ?? []) as any[]).map(normalizeQueueItem);
+  const now = Date.now();
   return normalized
+    .filter((item) => {
+      if (!item.snoozedUntil) return true;
+      return new Date(item.snoozedUntil).getTime() <= now;
+    })
     .sort((a, b) => {
       const p = priorityWeight(b.priority) - priorityWeight(a.priority);
       if (p !== 0) return p;
@@ -536,13 +544,17 @@ export async function getNotificationQueueView({
   cursor,
   q,
   entityType,
-  section
+  section,
+  priority,
+  state
 }: {
   limit?: number;
   cursor?: string | null;
   q?: string | null;
   entityType?: QueueEntityType | 'all' | null;
   section?: 'all' | 'immediate' | 'confirm' | 'reference' | null;
+  priority?: QueuePriority | 'all' | null;
+  state?: QueueStatus | 'snoozed' | 'all' | null;
 }) {
   const auth = await getCurrentAuth();
   if (!auth) {
@@ -579,10 +591,18 @@ export async function getNotificationQueueView({
   const keyword = `${q ?? ''}`.trim().toLowerCase();
   const normalizedEntityType = entityType && entityType !== 'all' ? entityType : null;
   const normalizedSection = section && section !== 'all' ? section : null;
+  const normalizedPriority = priority && priority !== 'all' ? priority : null;
+  const normalizedState = state && state !== 'all' ? state : null;
+  const now = Date.now();
 
   const rows = ((data ?? []) as any[]).map(normalizeQueueItem).filter((item) => {
     if (normalizedEntityType && item.entityType !== normalizedEntityType) return false;
+    if (normalizedPriority && item.priority !== normalizedPriority) return false;
     if (keyword && !`${item.title}`.toLowerCase().includes(keyword)) return false;
+    const isSnoozed = Boolean(item.snoozedUntil && new Date(item.snoozedUntil).getTime() > now);
+    if (normalizedState === 'snoozed') return isSnoozed;
+    if (isSnoozed) return false;
+    if (normalizedState && item.status !== normalizedState) return false;
     return true;
   });
   const pageItems = rows.slice(0, limit);

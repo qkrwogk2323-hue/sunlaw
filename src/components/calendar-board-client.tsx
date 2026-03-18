@@ -109,6 +109,13 @@ function toDateInput(value?: string | null) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
+function toDateTimeInputFromDateKey(dateKey: string) {
+  const date = new Date(`${dateKey}T09:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
 function monthShift(month: string, delta: number) {
   const [year, monthIndex] = month.split('-').map(Number);
   const date = new Date(year, monthIndex - 1 + delta, 1);
@@ -160,6 +167,7 @@ export function CalendarBoardClient({
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [createCaseId, setCreateCaseId] = useState(caseOptions[0]?.id ?? '');
   const [createFormOpen, setCreateFormOpen] = useState(false);
+  const [createScheduledStart, setCreateScheduledStart] = useState(() => toDateInput(snapshot.schedules[0]?.scheduled_start) || toDateTimeInputFromDateKey(toLocalDateKey(new Date())));
   const [currentMoment] = useState(() => new Date());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(toLocalDateKey(new Date()).startsWith(snapshot.focusMonth) ? toLocalDateKey(new Date()) : null);
   const [recentEntryCutoff] = useState(() => Date.now() - 1000 * 60 * 60 * 48);
@@ -366,7 +374,13 @@ export function CalendarBoardClient({
                     <button
                       key={cell.key}
                       type="button"
-                      onClick={() => setSelectedDateKey((current) => current === cell.key ? null : cell.key)}
+                      onClick={() => {
+                        setSelectedDateKey((current) => current === cell.key ? null : cell.key);
+                        if (canManage) {
+                          setCreateFormOpen(true);
+                          setCreateScheduledStart(toDateTimeInputFromDateKey(cell.key));
+                        }
+                      }}
                       className={`min-h-20 rounded-xl border p-1.5 text-left transition sm:min-h-28 sm:p-2 lg:min-h-36 lg:rounded-2xl lg:p-3 ${isSelected ? 'border-slate-950 bg-slate-950 text-white' : isToday ? 'border-sky-300 bg-sky-50 text-slate-900' : cell.inMonth ? 'border-slate-200 bg-white text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -434,7 +448,7 @@ export function CalendarBoardClient({
           <CardContent className="space-y-3 pt-0">
             {!createFormOpen ? (
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                등록이 필요할 때만 열어서 쓰고, 기본 화면은 일정 목록 확인에 집중합니다.
+                날짜를 누르면 해당 날짜로 일정 등록이 바로 열립니다. 기본 화면은 일정 목록 확인에 집중합니다.
               </div>
             ) : (
               <form action={createCaseId ? addScheduleAction.bind(null, createCaseId) : undefined} className="grid gap-3 xl:grid-cols-[1.1fr_1.4fr_0.9fr_1fr_auto]">
@@ -457,7 +471,7 @@ export function CalendarBoardClient({
                   <option value="collection_visit">방문회수</option>
                   <option value="other">기타</option>
                 </select>
-                <Input name="scheduledStart" type="datetime-local" required />
+                <Input name="scheduledStart" type="datetime-local" required value={createScheduledStart} onChange={(event) => setCreateScheduledStart(event.target.value)} />
                 <Button type="submit" disabled={!organizationId || !createCaseId}>등록</Button>
                 <details className="xl:col-span-5">
                   <summary className="cursor-pointer text-sm font-medium text-slate-600">추가 항목</summary>
