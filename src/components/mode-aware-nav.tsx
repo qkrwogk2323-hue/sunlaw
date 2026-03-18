@@ -5,13 +5,11 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import { BarChart3, BellRing, Boxes, Building2, CalendarRange, ChevronDown, ChevronRight, ClipboardList, FileText, LayoutDashboard, LifeBuoy, MessageSquareText, ReceiptText, Settings, Users, Wallet } from 'lucide-react';
-import { ModeSwitcher, getDefaultMode, getOrganizationAdminMode, type ModeKey } from '@/components/mode-switcher';
+import { getDefaultMode, getOrganizationAdminMode, type ModeKey } from '@/components/mode-switcher';
 import { Button, segmentStyles } from '@/components/ui/button';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, isPlatformAdminOnlyPath } from '@/lib/view-mode';
-import { PLATFORM_SCENARIO_MEMBER_STORAGE_KEY, PLATFORM_SCENARIO_ORGANIZATIONS, PLATFORM_SCENARIO_TEAM, isPlatformScenarioMode } from '@/lib/platform-scenarios';
-
-const PLATFORM_WORK_MODE_STORAGE_KEY = 'vs_platform_admin_work_mode';
+import { PLATFORM_SCENARIO_ORGANIZATIONS } from '@/lib/platform-scenarios';
 
 type NavBadge = { count: number; variant?: 'default' | 'urgent' };
 type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean };
@@ -143,8 +141,8 @@ function getOrganizationSections({
   pulseConversation?: boolean;
 }) {
   const enabledModules = membership?.organization?.enabled_modules ?? {};
-  const isPlatformAdminView = mode === 'platform_admin';
-  const isPlatformStaffView = profile.platform_role === 'platform_admin' && mode === 'organization_staff';
+  const isPlatformAdminView = profile.platform_role === 'platform_admin';
+  const isPlatformStaffView = false;
   const isClientView = mode === 'client_communication';
   const effectiveKind = mode === 'collection_admin' ? 'collection_company' : mode === 'law_admin' ? 'law_firm' : membership?.organization?.kind ?? 'other';
   const isCollectionOrgView = mode === 'collection_admin' || effectiveKind === 'collection_company';
@@ -171,13 +169,9 @@ function getOrganizationSections({
 
   if (isPlatformAdminView) {
     organizationItems.push(
-      { href: '/admin/organization-requests', label: '조직 개설 검토', icon: Building2 },
-      { href: '/admin/modules', label: '추가 모듈', icon: Boxes },
-      { href: '/admin/support', label: '지원 요청 관리', icon: LifeBuoy },
-      { href: '/admin/audit', label: '감사 로그', icon: ClipboardList },
-      { href: '/settings/platform', label: '플랫폼 설정', icon: Settings },
-      { href: '/organizations', label: '조직 참여 현황', icon: Building2 },
-      { href: '/clients', label: '의뢰인 연결 현황', icon: Users }
+      { href: '/organizations', label: '조직현황', icon: Building2 },
+      { href: '/organizations#create', label: '조직생성', icon: Boxes },
+      { href: '/admin/audit', label: '감사 로그', icon: ClipboardList }
     );
   } else if (isPlatformStaffView) {
     organizationItems.push(
@@ -268,8 +262,7 @@ function getOrganizationSections({
   if (showOperations) {
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
-      { href: '/settings/team', label: '구성원 관리', icon: Building2 },
-      ...(canManageMembership ? [{ href: '/admin/support', label: '지원 요청 관리', icon: LifeBuoy }] : [])
+      { href: '/settings/team', label: '구성원 관리', icon: Building2 }
     );
   }
 
@@ -483,16 +476,16 @@ export function ModeAwareNav({
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const basePlatformMembership = memberships.find((membership) => membership.organization_id === profile.default_organization_id) ?? memberships[0] ?? null;
   const [mode, setMode] = useState<ModeKey>(() => {
-    if (isModeKey(initialMode)) {
-      return initialMode;
+    if (profile.platform_role === 'platform_admin') {
+      return 'organization_staff';
     }
-
+    if (isModeKey(initialMode)) return initialMode;
     const baseMode = getDefaultMode(
       profile.platform_role ?? 'standard',
       basePlatformMembership?.organization?.kind,
       Boolean(basePlatformMembership && isManagementRole(basePlatformMembership.role))
     );
-    return profile.platform_role === 'platform_admin' ? 'organization_staff' : baseMode;
+    return baseMode;
   });
   const activeScenarioOrganization = useMemo(
     () => profile.platform_role === 'platform_admin' && (mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')
@@ -521,7 +514,6 @@ export function ModeAwareNav({
     currentOrganization?.kind,
     Boolean(currentOrgMembership && isManagementRole(currentOrgMembership.role))
   );
-  const [selectedScenarioMemberId, setSelectedScenarioMemberId] = useState('');
   const sectionMembership = useMemo(
     () => currentOrgMembership ?? toMembershipShape(currentOrganization),
     [currentOrgMembership, currentOrganization]
@@ -542,9 +534,7 @@ export function ModeAwareNav({
   );
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createExpandedSections(sections));
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
-  const scenarioMembers = profile.platform_role === 'platform_admin' && isPlatformScenarioMode(mode) ? PLATFORM_SCENARIO_TEAM[mode] : [];
-  const selectedScenarioMember = scenarioMembers.find((member) => member.id === selectedScenarioMemberId) ?? scenarioMembers[0] ?? null;
-  const baseRoleLabel = selectedScenarioMember?.title ?? roleViewLabel(mode, profile);
+  const baseRoleLabel = roleViewLabel(mode, profile);
   const organizationLabel = contextLabel(mode, sectionMembership);
   const moduleLabels = mode === 'platform_admin' || mode === 'client_communication' ? [] : enabledModuleLabels(currentOrganization?.enabled_modules);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
@@ -560,7 +550,7 @@ export function ModeAwareNav({
             : mode === 'other_admin'
               ? 'border-teal-200 bg-teal-50 text-teal-800'
               : 'border-slate-200 bg-slate-100 text-slate-800';
-  const displayName = selectedScenarioMember?.name ?? profile.full_name;
+  const displayName = profile.full_name;
 
   useEffect(() => {
     let cancelled = false;
@@ -647,32 +637,6 @@ export function ModeAwareNav({
   }, [sections, activeSectionId]);
 
   useEffect(() => {
-    if (profile.platform_role !== 'platform_admin' || !isPlatformScenarioMode(mode)) {
-      queueMicrotask(() => {
-        setSelectedScenarioMemberId('');
-      });
-      return;
-    }
-
-    const raw = window.localStorage.getItem(PLATFORM_SCENARIO_MEMBER_STORAGE_KEY);
-    const savedSelections = raw ? JSON.parse(raw) as Record<string, string> : {};
-    const nextMemberId = savedSelections[mode];
-    const fallbackMemberId = PLATFORM_SCENARIO_TEAM[mode][0]?.id ?? '';
-    queueMicrotask(() => {
-      setSelectedScenarioMemberId(PLATFORM_SCENARIO_TEAM[mode].some((member) => member.id === nextMemberId) ? nextMemberId : fallbackMemberId);
-    });
-  }, [mode, profile.platform_role]);
-
-  useEffect(() => {
-    if (profile.platform_role !== 'platform_admin' || !isPlatformScenarioMode(mode) || !selectedScenarioMemberId) return;
-
-    const raw = window.localStorage.getItem(PLATFORM_SCENARIO_MEMBER_STORAGE_KEY);
-    const savedSelections = raw ? JSON.parse(raw) as Record<string, string> : {};
-    savedSelections[mode] = selectedScenarioMemberId;
-    window.localStorage.setItem(PLATFORM_SCENARIO_MEMBER_STORAGE_KEY, JSON.stringify(savedSelections));
-  }, [mode, profile.platform_role, selectedScenarioMemberId]);
-
-  useEffect(() => {
     if (profile.platform_role !== 'platform_admin') {
       queueMicrotask(() => {
         setMode(managerDefaultMode);
@@ -684,10 +648,6 @@ export function ModeAwareNav({
   useEffect(() => {
     const activeMode = mode;
     document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=${activeMode}; path=/; max-age=31536000; samesite=lax`;
-
-    if (profile.platform_role === 'platform_admin' && mode !== 'platform_admin') {
-      window.localStorage.setItem(PLATFORM_WORK_MODE_STORAGE_KEY, mode);
-    }
 
     if (profile.platform_role === 'platform_admin' && activeMode !== 'platform_admin' && isPlatformAdminOnlyPath(pathname)) {
       router.replace('/dashboard');
@@ -727,56 +687,9 @@ export function ModeAwareNav({
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">현재 조직</p>
           <p className="mt-2 text-base font-semibold text-slate-950">{currentOrganization?.name ?? '선택된 조직 없음'}</p>
           <p className="mt-1 text-sm text-slate-600">
-            {profile.platform_role === 'platform_admin' && isPlatformScenarioMode(mode)
-              ? '플랫폼이 이해를 위해 구성한 가상조직 시나리오'
-              : profile.platform_role === 'platform_admin' && mode === 'organization_staff'
-                ? '플랫폼 운영에 사용하는 기본 조직'
-                : '플랫폼 기준 기본 조직'}
+            {profile.platform_role === 'platform_admin' ? '플랫폼 권한으로 참여 중인 조직' : '현재 선택된 조직'}
           </p>
         </div>
-        {profile.platform_role === 'platform_admin' && isPlatformScenarioMode(mode) ? (
-          <div className="mt-4 rounded-[1.4rem] border border-violet-200 bg-violet-50/60 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-700">가상직원 선택</p>
-                <p className="mt-1 text-sm text-slate-700">관리자/조직원 구분 없이, 지금 보고 싶은 사람 기준으로 시야를 고릅니다.</p>
-              </div>
-              {selectedScenarioMember ? <span className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-700">현재: {selectedScenarioMember.name}</span> : null}
-            </div>
-            <div className="mt-3 grid gap-2">
-              {scenarioMembers.map((member) => {
-                const isActive = selectedScenarioMember?.id === member.id;
-                return (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => setSelectedScenarioMemberId(member.id)}
-                    className={`rounded-2xl border px-3 py-3 text-left transition ${isActive ? 'border-violet-300 bg-white shadow-sm' : 'border-violet-100 bg-white/70 hover:border-violet-200 hover:bg-white'}`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">{member.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">{member.title}</p>
-                      </div>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${isActive ? 'bg-violet-600 text-white' : 'bg-violet-100 text-violet-700'}`}>{isActive ? '선택됨' : '선택'}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-        {profile.platform_role === 'platform_admin' ? (
-          <div className="mt-4">
-            <ModeSwitcher
-              platformRole={profile.platform_role}
-              mode={mode}
-              onChange={(nextMode) => {
-                setMode(nextMode);
-              }}
-            />
-          </div>
-        ) : null}
       </div>
       <div className="mt-3 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
         <button
@@ -786,7 +699,7 @@ export function ModeAwareNav({
         >
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">메뉴</p>
-            <p className="mt-1 text-sm font-semibold text-slate-950">{mode === 'platform_admin' ? '플랫폼 메뉴' : currentOrganization?.name ?? '협업 메뉴'}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950">{currentOrganization?.name ?? '협업 메뉴'}</p>
           </div>
           <span className="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             {isMenuOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}

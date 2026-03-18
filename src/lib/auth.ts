@@ -2,7 +2,6 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { assertPlatformAdminAccess, evaluateOrganizationAccess } from '@/lib/access-control';
-import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
@@ -155,14 +154,7 @@ export async function hasPlatformAdminSecurityClearance(auth: AuthContext) {
 
 export async function hasPlatformAdminScenarioAccess(auth: AuthContext) {
   if (!(await hasPlatformAdminSecurityClearance(auth))) return false;
-
-  const lookup = await getPlatformAdminScenarioLookup(auth.user.id);
-
-  if (lookup.mode === 'legacy') {
-    return true;
-  }
-
-  return Boolean(lookup.row?.scenario_mode_enabled);
+  return false;
 }
 
 export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
@@ -238,15 +230,13 @@ export async function getActiveViewMode() {
 
 export async function hasActivePlatformAdminView(auth: AuthContext) {
   if (!isPlatformOperator(auth)) return false;
-  const activeViewMode = await getActiveViewMode();
-  if (activeViewMode !== 'platform_admin') return false;
   return hasPlatformAdminSecurityClearance(auth);
 }
 
 export async function hasActivePlatformScenarioView(auth: AuthContext, activeViewMode?: string | null) {
-  const resolvedViewMode = activeViewMode ?? await getActiveViewMode();
-  if (!isPlatformScenarioMode(resolvedViewMode)) return false;
-  return hasPlatformAdminScenarioAccess(auth);
+  void auth;
+  void activeViewMode;
+  return false;
 }
 
 export async function requirePlatformAdmin() {
