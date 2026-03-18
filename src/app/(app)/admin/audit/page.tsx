@@ -15,7 +15,7 @@ export default async function AdminAuditPage({
   if (!isPlatformAdmin) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-        플랫폼 조직 운영 권한이 있어야 감사 로그를 볼 수 있습니다.
+        운영 관리자 권한이 있어야 감사 로그를 볼 수 있습니다.
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default async function AdminAuditPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">감사 로그</h1>
-        <p className="mt-2 text-sm text-slate-600">플랫폼 조직 운영 관점에서 최근 데이터 변경을 추적합니다.</p>
+        <p className="mt-2 text-sm text-slate-600">운영 관점에서 최근 데이터 변경을 추적합니다.</p>
       </div>
 
       <Card>

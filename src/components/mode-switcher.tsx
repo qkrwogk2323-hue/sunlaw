@@ -44,7 +44,7 @@ const groupAccent = {
 } as const;
 
 const baseModeOptions = [
-  { key: 'platform_admin', label: '플랫폼 관리자' },
+  { key: 'platform_admin', label: '조직 관리자' },
   { key: 'law_admin', label: '법률/법무조직' },
   { key: 'collection_admin', label: '추심조직' },
   { key: 'other_admin', label: '기타조직' },
@@ -79,12 +79,12 @@ export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: s
       ? [
           {
             id: 'platform_admin',
-            label: '플랫폼 시야',
-            description: '플랫폼 관리자와 직원 업무 시야',
+            label: '운영 보기',
+            description: '조직 관리자와 구성원 보기',
             icon: ShieldCheck,
             children: [
-              { key: 'platform_admin', label: '플랫폼 관리자' },
-              { key: 'organization_staff', label: '직원모드' }
+              { key: 'platform_admin', label: '조직 관리자' },
+              { key: 'organization_staff', label: '구성원' }
             ]
           },
           {
@@ -152,7 +152,7 @@ export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: s
         className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-1 text-left"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">업무모드 / 플랫폼관리자</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">업무모드</p>
           <p className="mt-1 text-sm font-semibold text-slate-950">{currentLabel}</p>
         </div>
         <span className="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600">

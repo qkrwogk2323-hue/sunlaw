@@ -5,7 +5,6 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  BarChart3,
   BellRing,
   Boxes,
   Building2,
@@ -18,8 +17,7 @@ import {
   MessageSquareText,
   ReceiptText,
   Settings,
-  Users,
-  Wallet
+  Users
 } from 'lucide-react';
 import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
 import { segmentStyles } from '@/components/ui/button';
@@ -87,7 +85,6 @@ function getRoleLabel(membership: Membership | null, fallback: string) {
 
 function getOrganizationSections({
   membership,
-  isPlatformAdminView,
   mode,
   unreadNotificationCount = 0,
   actionRequiredCount = 0,
@@ -96,7 +93,6 @@ function getOrganizationSections({
   pulseConversation = false
 }: {
   membership: Membership | null;
-  isPlatformAdminView: boolean;
   mode: ModeKey;
   unreadNotificationCount?: number;
   actionRequiredCount?: number;
@@ -114,11 +110,10 @@ function getOrganizationSections({
 
   const commonItems = uniqueItems([
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-    ...(!isPlatformAdminView ? [{ href: '/cases', label: '사건 보기', icon: FileText }] : []),
-    ...(!isPlatformAdminView ? [{ href: '/inbox', label: '오늘 할 일', icon: ClipboardList, badge: conversationBadge, pulse: pulseConversation }] : []),
+    { href: '/cases', label: '사건 보기', icon: FileText },
+    { href: '/inbox', label: '오늘 할 일', icon: ClipboardList, badge: conversationBadge, pulse: pulseConversation },
     { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
     { href: '/calendar', label: '일정 확인', icon: CalendarRange },
-    ...(!isPlatformAdminView ? [{ href: '/billing', label: '비용 관련', icon: Wallet }] : []),
     { href: '/documents', label: '검토 필요', icon: ReceiptText }
   ]);
 
@@ -126,12 +121,7 @@ function getOrganizationSections({
   const collaborationItems: NavItem[] = [];
   const companyManagementItems: NavItem[] = [];
 
-  if (isPlatformAdminView) {
-    organizationItems.push(
-      { href: '/organizations#create', label: '조직생성', icon: Boxes },
-      { href: '/admin/audit', label: '감사 로그', icon: ClipboardList }
-    );
-  } else if (mode === 'client_communication') {
+  if (mode === 'client_communication') {
     organizationItems.push(
       { href: '/portal', label: '의뢰인 홈', icon: LayoutDashboard },
       { href: '/portal/cases', label: '내 사건', icon: FileText },
@@ -140,13 +130,13 @@ function getOrganizationSections({
     );
   } else {
     organizationItems.push(
+      { href: '/organizations#create', label: '조직 생성', icon: Boxes },
       { href: '/cases', label: '사건 목록', icon: FileText },
-      { href: '/clients', label: '의뢰인 관리', icon: Users },
-      { href: '/reports', label: '성과 리포트', icon: BarChart3 }
+      { href: '/clients', label: '의뢰인 관리', icon: Users }
     );
   }
 
-  if (!isPlatformAdminView && mode !== 'client_communication') {
+  if (mode !== 'client_communication') {
     collaborationItems.push(
       { href: '/organizations', label: '조직 검색하기', icon: Building2 },
       { href: '/inbox', label: '협업 소통함', icon: ClipboardList, badge: conversationBadge }
@@ -380,7 +370,6 @@ export function ModeAwareNav({
   const sections = useMemo(
     () => getOrganizationSections({
       membership: sectionMembership,
-      isPlatformAdminView: isPlatformOperator,
       mode,
       unreadNotificationCount: navCounts.unreadCount,
       actionRequiredCount: navCounts.actionRequiredCount,
@@ -391,7 +380,7 @@ export function ModeAwareNav({
     [sectionMembership, isPlatformOperator, mode, navCounts, pulseNotification, pulseConversation]
   );
 
-  const baseRoleLabel = mode === 'client_communication' ? '의뢰인' : (isPlatformOperator ? '조직관리자' : '직원');
+  const baseRoleLabel = mode === 'client_communication' ? '의뢰인' : '구성원';
   const roleDetail = getRoleLabel(currentOrgMembership, baseRoleLabel);
   const displayName = profile.full_name;
 

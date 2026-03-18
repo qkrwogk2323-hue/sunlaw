@@ -906,7 +906,7 @@ export function DashboardHubClient({
   });
 
   const summaryCards = [
-    { label: '오늘 멈춤 위험 사건', value: todayCaseFocus.length, className: 'border-rose-200 bg-rose-50/80', valueClassName: 'text-rose-950' },
+    { label: '오늘 우선 확인 사건', value: todayCaseFocus.length, className: 'border-rose-200 bg-rose-50/80', valueClassName: 'text-rose-950' },
     { label: '신규 승인 요청', value: pendingClientAccessCount, className: 'border-emerald-200 bg-emerald-50/80', valueClassName: 'text-emerald-950' },
     { label: '연결 후속 처리', value: approvedClientAccessCount, className: 'border-violet-200 bg-violet-50/80', valueClassName: 'text-violet-950' }
   ];
@@ -920,8 +920,8 @@ export function DashboardHubClient({
               <Sparkles className="size-3.5 text-sky-700" />
               업무 허브
             </div>
-            <h1 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">오늘 바로 움직일 것들</h1>
-            <p className="text-sm text-slate-600">사건 기준으로 멈춤 위험을 먼저 확인하고 다음 행동을 바로 실행합니다.</p>
+            <h1 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">오늘 바로 처리할 일</h1>
+            <p className="text-sm text-slate-600">사건 기준으로 우선 확인 항목을 빠르게 처리합니다.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
@@ -1009,7 +1009,7 @@ export function DashboardHubClient({
 
           <div className="rounded-[1.6rem] border border-sky-200 bg-[linear-gradient(180deg,#f8fcff,#edf7ff)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-900">오늘 멈출 수 있는 사건</p>
+              <p className="text-sm font-semibold text-slate-900">오늘 우선 확인 사건</p>
               <Badge tone="red">{todayCaseFocus.length}</Badge>
             </div>
             <div className="mt-2.5 space-y-2">
@@ -1032,7 +1032,7 @@ export function DashboardHubClient({
                 </Link>
               )) : (
                 <div className="rounded-2xl border border-sky-200 bg-white px-3 py-6 text-sm text-slate-500">
-                  멈춤 위험 사건이 없습니다.
+                  우선 확인 사건이 없습니다.
                 </div>
               )}
             </div>
