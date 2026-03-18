@@ -463,6 +463,17 @@ const membershipAdminSummarySchema = z.object({
   title: z.string().trim().max(80).optional().or(z.literal(''))
 });
 
+const organizationExitRequestSchema = z.object({
+  organizationId: z.string().uuid(),
+  reason: z.string().trim().min(5).max(1000)
+});
+
+const organizationExitReviewSchema = z.object({
+  requestId: z.string().uuid(),
+  decision: z.enum(['approved', 'rejected']),
+  reviewNote: z.string().trim().max(1000).optional().or(z.literal(''))
+});
+
 
 async function resolveCaseIdFromCsv({
   supabase,
@@ -1266,6 +1277,97 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
     }
     throw error;
   }
+}
+
+export async function submitOrganizationExitRequestAction(formData: FormData) {
+  const parsed = organizationExitRequestSchema.parse({
+    organizationId: formData.get('organizationId'),
+    reason: formData.get('reason')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    requireManager: true,
+    permission: 'organization_settings_manage',
+    errorMessage: '조직 관리자만 조직 탈퇴를 신청할 수 있습니다.'
+  });
+
+  const admin = createSupabaseAdminClient();
+  const { data: existingPending } = await admin
+    .from('organization_exit_requests')
+    .select('id')
+    .eq('organization_id', parsed.organizationId)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (existingPending?.id) {
+    throw new Error('이미 처리 대기 중인 조직 탈퇴 신청이 있습니다.');
+  }
+
+  const { error } = await admin.from('organization_exit_requests').insert({
+    organization_id: parsed.organizationId,
+    requested_by_profile_id: auth.user.id,
+    reason: parsed.reason,
+    status: 'pending'
+  });
+  if (error) throw error;
+
+  const adminIds = await listActivePlatformAdminIds();
+  if (adminIds.length) {
+    await admin.from('notifications').insert(
+      adminIds.map((recipientProfileId) => ({
+        organization_id: parsed.organizationId,
+        recipient_profile_id: recipientProfileId,
+        kind: 'generic',
+        title: '조직 탈퇴 승인 요청이 접수되었습니다.',
+        body: `${parsed.organizationId} 조직에서 탈퇴 승인 요청이 들어왔습니다.`,
+        requires_action: true,
+        action_label: '탈퇴 요청 검토',
+        action_href: '/admin/organization-requests',
+        action_entity_type: 'organization',
+        action_target_id: parsed.organizationId
+      }))
+    );
+  }
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/admin/organization-requests');
+  revalidatePath('/notifications');
+}
+
+export async function reviewOrganizationExitRequestAction(formData: FormData) {
+  const parsed = organizationExitReviewSchema.parse({
+    requestId: formData.get('requestId'),
+    decision: formData.get('decision'),
+    reviewNote: formData.get('reviewNote')
+  });
+
+  await requirePlatformAdminAction('플랫폼 관리자만 조직 탈퇴 요청을 검토할 수 있습니다.');
+  const admin = createSupabaseAdminClient();
+
+  const { data: requestRow, error: requestError } = await admin
+    .from('organization_exit_requests')
+    .select('id, organization_id, status')
+    .eq('id', parsed.requestId)
+    .maybeSingle();
+  if (requestError || !requestRow) throw requestError ?? new Error('조직 탈퇴 요청을 찾을 수 없습니다.');
+  if (requestRow.status !== 'pending') throw new Error('이미 처리된 요청입니다.');
+
+  const reviewer = await requireAuthenticatedUser();
+  const { error } = await admin
+    .from('organization_exit_requests')
+    .update({
+      status: parsed.decision,
+      reviewed_by_profile_id: reviewer.user.id,
+      review_note: parsed.reviewNote || null,
+      reviewed_at: new Date().toISOString()
+    })
+    .eq('id', parsed.requestId)
+    .eq('status', 'pending');
+  if (error) throw error;
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/admin/organization-requests');
+  revalidatePath('/notifications');
 }
 
 export async function createStaffInvitationAction(formData: FormData) {
