@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { isManagementRole, requireOrganizationActionAccess } from '@/lib/auth';
 import { buildCaseReference, makeSlug } from '@/lib/format';
+import { getCaseStageLabel } from '@/lib/case-stage';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
 import { hasPermission } from '@/lib/permissions';
@@ -13,6 +14,7 @@ import {
   billingEntrySchema,
   caseClientLinkSchema,
   caseCreateSchema,
+  caseStageUpdateSchema,
   caseOrganizationSchema,
   caseDocumentSchema,
   caseMessageSchema,
@@ -993,6 +995,71 @@ export async function addMessageAction(caseId: string, formData: FormData) {
 
   revalidatePath(`/cases/${caseId}`);
   revalidatePath('/inbox');
+}
+
+export async function updateCaseStageAction(formData: FormData) {
+  const parsed = caseStageUpdateSchema.parse({
+    caseId: formData.get('caseId'),
+    organizationId: formData.get('organizationId'),
+    stageKey: formData.get('stageKey'),
+    stageNote: formData.get('stageNote')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    permission: 'case_stage_manage',
+    errorMessage: '사건 단계를 변경할 권한이 없습니다.'
+  });
+  const supabase = await createSupabaseServerClient();
+
+  const { data: caseRecord, error: caseError } = await supabase
+    .from('cases')
+    .select('id, organization_id, title, stage_key')
+    .eq('id', parsed.caseId)
+    .eq('organization_id', parsed.organizationId)
+    .maybeSingle();
+
+  if (caseError || !caseRecord) {
+    throw caseError ?? new Error('사건 정보를 찾을 수 없습니다.');
+  }
+
+  const previousStageKey = `${caseRecord.stage_key ?? ''}`;
+  const changed = previousStageKey !== parsed.stageKey;
+  if (!changed && !parsed.stageNote?.trim()) {
+    revalidatePath(`/cases/${parsed.caseId}`);
+    return;
+  }
+
+  if (changed) {
+    const { error: updateError } = await supabase
+      .from('cases')
+      .update({
+        stage_key: parsed.stageKey,
+        updated_by: auth.user.id
+      })
+      .eq('id', parsed.caseId)
+      .eq('organization_id', parsed.organizationId);
+    if (updateError) throw updateError;
+  }
+
+  const stageChangeLine = changed
+    ? `단계 변경: ${getCaseStageLabel(previousStageKey || null)} -> ${getCaseStageLabel(parsed.stageKey)}`
+    : `단계 확인: ${getCaseStageLabel(parsed.stageKey)}`;
+  const noteLine = parsed.stageNote?.trim() ? `메모: ${parsed.stageNote.trim()}` : '';
+  const messageBody = [stageChangeLine, noteLine].filter(Boolean).join('\n');
+
+  const { error: messageError } = await supabase.from('case_messages').insert({
+    organization_id: parsed.organizationId,
+    case_id: parsed.caseId,
+    sender_profile_id: auth.user.id,
+    sender_role: 'admin',
+    body: messageBody,
+    is_internal: true
+  });
+  if (messageError) throw messageError;
+
+  revalidatePath(`/cases/${parsed.caseId}`);
+  revalidatePath('/cases');
+  revalidatePath('/dashboard');
 }
 
 export async function addRequestAction(caseId: string, formData: FormData) {

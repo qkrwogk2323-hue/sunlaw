@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight, Bell, FileText, FolderOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
+import { getCaseStageLabel } from '@/lib/case-stage';
 import { getPortalCases } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
 
@@ -33,7 +34,7 @@ export default async function PortalHomePage() {
           {cases.length ? cases.map((item: any) => (
             <Link key={item.id} href={`/portal/cases/${item.case_id}`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-slate-900">
               <p className="font-medium text-slate-900">{item.cases?.title ?? item.client_name}</p>
-              <p className="mt-1 text-sm text-slate-500">{item.cases?.reference_no ?? '-'} · {item.cases?.case_status ?? '-'} · {item.cases?.stage_key ?? '-'}</p>
+              <p className="mt-1 text-sm text-slate-500">{item.cases?.reference_no ?? '-'} · {item.cases?.case_status ?? '-'} · {getCaseStageLabel(item.cases?.stage_key)}</p>
               <p className="mt-2 text-xs text-slate-400">최근 변경: {formatDateTime(item.cases?.updated_at)}</p>
               <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-sky-700">사건 자세히 보기 <ArrowRight className="size-4" /></div>
             </Link>

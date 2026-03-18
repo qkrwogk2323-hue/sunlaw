@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getCurrentAuth } from '@/lib/auth';
+import { getCaseStageLabel } from '@/lib/case-stage';
 import { getPortalCaseDetail } from '@/lib/queries/portal';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
@@ -16,7 +17,7 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
     <main className="mx-auto max-w-6xl px-6 py-12 space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{detail.title}</h1>
-        <p className="mt-2 text-sm text-slate-600">{detail.reference_no ?? '-'} · {detail.case_status} · {detail.stage_key ?? '-'}</p>
+        <p className="mt-2 text-sm text-slate-600">{detail.reference_no ?? '-'} · {detail.case_status} · {getCaseStageLabel(detail.stage_key)}</p>
       </div>
 
       <section className="grid gap-6 xl:grid-cols-2">

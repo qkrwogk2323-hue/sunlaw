@@ -142,6 +142,13 @@ export const caseCreateSchema = z.object({
   billingFollowUpDueOn: z.string().optional().or(z.literal(''))
 });
 
+export const caseStageUpdateSchema = z.object({
+  caseId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  stageKey: z.enum(['intake', 'review', 'revision_wait', 'client_reply_wait', 'recheck', 'done']),
+  stageNote: z.string().trim().max(300).optional().or(z.literal(''))
+});
+
 export const caseOrganizationSchema = z.object({
   organizationId: z.string().uuid(),
   role: z.enum(['principal_client_org', 'collection_org', 'legal_counsel_org', 'co_counsel_org', 'partner_org']),

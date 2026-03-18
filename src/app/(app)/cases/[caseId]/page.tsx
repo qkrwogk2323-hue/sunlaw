@@ -18,7 +18,8 @@ import { RequestCreateForm } from '@/components/forms/request-create-form';
 import { ScheduleCreateForm } from '@/components/forms/schedule-create-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { findMembership, getActiveViewMode, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
-import { requestDocumentReviewAction } from '@/lib/actions/case-actions';
+import { requestDocumentReviewAction, updateCaseStageAction } from '@/lib/actions/case-actions';
+import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { hasPermission, isWorkspaceAdmin } from '@/lib/permissions';
 import { getCaseDetail } from '@/lib/queries/cases';
@@ -84,6 +85,8 @@ export default async function CaseDetailPage({
   const canBillingIssue = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'billing_manage'));
   const canPaymentConfirm = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'billing_payment_confirm'));
   const canCollection = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'collection_view'));
+  const canManageStage = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'case_stage_manage'));
+  const stageStale = isCaseStageStale(caseDetail.updated_at, 7);
   const currentTab: TabKey = (tab === 'collection' ? 'collection' : (tabs.includes(tab as any) ? (tab as TabKey) : 'overview'));
   const showCollectionModule = Boolean(caseDetail.module_flags?.collection || caseDetail.case_type === 'debt_collection');
   const collectionFocused = showCollectionModule || caseDetail.case_type === 'debt_collection';
@@ -104,15 +107,46 @@ export default async function CaseDetailPage({
             <span>{caseDetail.reference_no ?? '-'}</span>
             <span>{caseDetail.case_type}</span>
             <span>{caseDetail.case_status}</span>
-            <span>{caseDetail.stage_key ?? '-'}</span>
+            <span>{getCaseStageLabel(caseDetail.stage_key)}</span>
             <span>{formatDate(caseDetail.opened_on)}</span>
           </div>
         </div>
         <div className="flex gap-2">
           <Badge tone="blue">{caseDetail.case_status}</Badge>
-          <Badge tone="slate">{caseDetail.stage_key ?? '-'}</Badge>
+          <Badge tone="slate">{getCaseStageLabel(caseDetail.stage_key)}</Badge>
+          {stageStale ? <Badge tone="amber">단계 7일 이상 미갱신</Badge> : null}
         </div>
       </div>
+
+      {canManageStage ? (
+        <Card>
+          <CardHeader><CardTitle>사건 단계 관리</CardTitle></CardHeader>
+          <CardContent>
+            <form action={updateCaseStageAction} className="grid gap-3 lg:grid-cols-[220px_1fr_auto] lg:items-end">
+              <input type="hidden" name="caseId" value={caseId} />
+              <input type="hidden" name="organizationId" value={caseDetail.organization_id} />
+              <label className="grid gap-1 text-sm text-slate-600">
+                현재 단계
+                <select name="stageKey" defaultValue={caseDetail.stage_key ?? 'intake'} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800">
+                  {CASE_STAGE_OPTIONS.map((stage) => (
+                    <option key={stage.key} value={stage.key}>{stage.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm text-slate-600">
+                단계 메모
+                <input
+                  name="stageNote"
+                  maxLength={300}
+                  placeholder="예: 의뢰인 답변 수신 후 재검토로 전환"
+                  className="h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-800"
+                />
+              </label>
+              <SubmitButton pendingLabel="저장 중...">단계 저장</SubmitButton>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {clientInvite ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">

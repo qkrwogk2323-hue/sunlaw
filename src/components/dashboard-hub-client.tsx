@@ -10,6 +10,7 @@ import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { PLATFORM_SCENARIO_MEMBER_STORAGE_KEY, type PlatformScenarioMode } from '@/lib/platform-scenarios';
 
@@ -268,17 +269,6 @@ function notificationActionLabel(item: NotificationItem) {
   if (item.action_entity_type === 'client_access_request') return '의뢰인 관리 열기';
   if (item.action_entity_type === 'support_access_request') return '지원 요청 보기';
   return '알림 보기';
-}
-
-function stageLabel(stageKey?: string | null) {
-  if (!stageKey) return '단계 미설정';
-  if (stageKey === 'intake') return '접수';
-  if (stageKey === 'review') return '검토 중';
-  if (stageKey === 'revision_wait') return '수정 요청 대기';
-  if (stageKey === 'client_reply_wait') return '의뢰인 답변 대기';
-  if (stageKey === 'recheck') return '재검토 중';
-  if (stageKey === 'done') return '완료';
-  return stageKey;
 }
 
 function toNotificationOpenHref(item: NotificationItem) {
@@ -1046,7 +1036,7 @@ export function DashboardHubClient({
                     <ChevronRight className="size-4 text-slate-400" />
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>현재 단계 {stageLabel(item.stage_key)}</span>
+                    <span>현재 단계 {getCaseStageLabel(item.stage_key)}</span>
                     <span>·</span>
                     <span>마지막 업데이트 {item.updated_at ? formatDateTime(item.updated_at) : '-'}</span>
                   </div>
