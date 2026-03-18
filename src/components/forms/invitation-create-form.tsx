@@ -1,7 +1,6 @@
 import { createStaffInvitationAction } from '@/lib/actions/organization-actions';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { TEMPLATE_LABELS } from '@/lib/permissions';
 
 export function StaffInvitationCreateForm({ organizationId }: { organizationId: string }) {
   return (
@@ -11,20 +10,19 @@ export function StaffInvitationCreateForm({ organizationId }: { organizationId: 
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">구조 역할</label>
         <select name="actorCategory" defaultValue="staff" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-          <option value="admin">조직 상위 담당자</option>
+          <option value="admin">조직관리자</option>
           <option value="staff">조직원</option>
         </select>
       </div>
       <Input name="membershipTitle" placeholder="직책 예: 사무장, 변호사, 팀장" />
       <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-        구조 역할은 조직 관리자/조직 상위 담당자/조직원으로 고정하고, 직책은 각 조직이 자유롭게 적어 관리합니다.
+        구조 역할은 조직관리자/조직원 2단으로 운영합니다. 직책은 표시용으로만 관리합니다.
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">권한 템플릿</label>
-        <select name="roleTemplateKey" defaultValue="office_manager" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-          {Object.entries(TEMPLATE_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
+        <select name="roleTemplateKey" defaultValue="org_staff" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+          <option value="org_staff">조직원</option>
+          <option value="admin_general">조직관리자</option>
         </select>
       </div>
       <div>

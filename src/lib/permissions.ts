@@ -80,6 +80,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
 };
 
 export const TEMPLATE_LABELS: Record<string, string> = {
+  org_admin: '조직관리자',
+  org_staff: '조직원',
   admin_general: '관리자',
   lawyer: '변호사',
   office_manager: '사무장',
@@ -88,6 +90,21 @@ export const TEMPLATE_LABELS: Record<string, string> = {
 };
 
 const templates: Record<string, PermissionSet> = {
+  org_admin: Object.fromEntries(PERMISSION_KEYS.map((key) => [key, true])) as PermissionSet,
+  org_staff: {
+    ...({} as PermissionSet),
+    case_create: true,
+    case_edit: true,
+    document_create: true,
+    request_create: true,
+    request_manage: true,
+    schedule_create: true,
+    schedule_edit: true,
+    schedule_manage: true,
+    billing_view: true,
+    collection_view: true,
+    report_view: true
+  },
   admin_general: Object.fromEntries(PERMISSION_KEYS.map((key) => [key, true])) as PermissionSet,
   lawyer: {
     case_create: true,
@@ -191,20 +208,6 @@ const templates: Record<string, PermissionSet> = {
     case_board_export: true,
     user_manage: true
   },
-  org_staff: {
-    ...({} as PermissionSet),
-    case_create: true,
-    case_edit: true,
-    document_create: true,
-    request_create: true,
-    request_manage: true,
-    schedule_create: true,
-    schedule_edit: true,
-    schedule_manage: true,
-    billing_view: true,
-    collection_view: true,
-    report_view: true
-  }
 };
 
 function applyOverrides(base: PermissionSet, overrides?: MembershipPermissionOverride[] | null, legacy?: PermissionSet | null): PermissionSet {

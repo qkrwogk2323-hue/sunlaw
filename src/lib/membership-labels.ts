@@ -2,13 +2,13 @@ import type { ActorCategory, MembershipRole } from '@/lib/types';
 
 export function membershipRoleLabel(role: MembershipRole | string | null | undefined) {
   if (role === 'org_owner') return '조직 관리자';
-  if (role === 'org_manager') return '조직 상위 담당자';
+  if (role === 'org_manager') return '조직 관리자';
   if (role === 'org_staff') return '조직원';
   return role ?? '-';
 }
 
 export function actorCategoryLabel(category: ActorCategory | string | null | undefined) {
-  if (category === 'admin') return '조직 상위 담당자';
+  if (category === 'admin') return '조직관리자';
   if (category === 'staff') return '조직원';
   return category ?? '-';
 }

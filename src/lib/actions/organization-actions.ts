@@ -411,6 +411,51 @@ async function requireOrganizationUserManagementAccess(organizationId: string, e
   });
 }
 
+const staffPreRegisterInvitationSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
+  phone: z.string().trim().max(30).optional().or(z.literal('')),
+  membershipTitle: z.string().trim().max(80).optional().or(z.literal('')),
+  note: z.string().trim().max(500).optional().or(z.literal('')),
+  actorCategory: z.enum(['admin', 'staff']).default('staff'),
+  roleTemplateKey: z.enum(['admin_general', 'lawyer', 'office_manager', 'org_staff', 'collection_agent', 'intern_readonly']).default('org_staff'),
+  caseScopePolicy: z.enum(['all_org_cases', 'assigned_cases_only', 'read_only_assigned']).default('assigned_cases_only'),
+  expiresHours: z.coerce.number().int().min(1).max(336).default(72)
+});
+
+const clientDirectInvitationSchema = z.object({
+  organizationId: z.string().uuid(),
+  caseId: z.string().uuid(),
+  email: z.string().trim().email(),
+  expiresHours: z.coerce.number().int().min(1).max(336).default(72)
+});
+
+const clientPreRegisterInvitationSchema = z.object({
+  organizationId: z.string().uuid(),
+  caseId: z.string().uuid().optional().or(z.literal('')),
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
+  phone: z.string().trim().max(30).optional().or(z.literal('')),
+  note: z.string().trim().max(500).optional().or(z.literal('')),
+  relationLabel: z.string().trim().max(80).optional().or(z.literal('')),
+  expiresHours: z.coerce.number().int().min(1).max(336).default(72)
+});
+
+const resendInvitationSchema = z.object({
+  invitationId: z.string().uuid(),
+  expiresHours: z.coerce.number().int().min(1).max(336).default(72)
+});
+
+function buildClientInvitationNote(note?: string | null, relationLabel?: string | null, phone?: string | null) {
+  const lines = [
+    relationLabel?.trim() ? `관계:${relationLabel.trim()}` : null,
+    phone?.trim() ? `연락처:${phone.trim()}` : null,
+    note?.trim() ? note.trim() : null
+  ].filter(Boolean) as string[];
+  return lines.length ? lines.join('\n') : null;
+}
+
 function parseStaffInvitationInput(formData: FormData) {
   return invitationCreateSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -421,7 +466,7 @@ function parseStaffInvitationInput(formData: FormData) {
     note: formData.get('note'),
     expiresHours: formData.get('expiresHours') || 72,
     actorCategory: formData.get('actorCategory') || 'staff',
-    roleTemplateKey: formData.get('roleTemplateKey') || 'office_manager',
+    roleTemplateKey: formData.get('roleTemplateKey') || 'org_staff',
     caseScopePolicy: formData.get('caseScopePolicy') || 'assigned_cases_only'
   });
 }
@@ -485,7 +530,7 @@ function validateInvitationAcceptance(invitation: any, signedInEmail: string | n
 
 async function applyStaffInvitation({ adminClient, invitation, userId }: { adminClient: ReturnType<typeof createSupabaseAdminClient>; invitation: any; userId: string; }) {
   const invitationMeta = decodeInvitationNote(invitation.note);
-  const templateKey = invitation.role_template_key ?? (invitation.requested_role === 'org_manager' ? 'admin_general' : 'office_manager');
+  const templateKey = invitation.role_template_key ?? (invitation.requested_role === 'org_manager' ? 'admin_general' : 'org_staff');
   const actorCategory = invitation.actor_category ?? (invitation.requested_role === 'org_manager' ? 'admin' : 'staff');
   const caseScopePolicy = invitation.case_scope_policy ?? (actorCategory === 'admin' ? 'all_org_cases' : 'assigned_cases_only');
   const basePermissions = getDefaultTemplatePermissions(templateKey);
@@ -1186,6 +1231,175 @@ export async function createStaffInvitationAction(formData: FormData) {
 
   revalidatePath('/settings/team');
   redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
+}
+
+export async function createStaffPreRegisteredInvitationAction(formData: FormData) {
+  const parsed = staffPreRegisterInvitationSchema.parse({
+    organizationId: formData.get('organizationId'),
+    name: formData.get('name'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    membershipTitle: formData.get('membershipTitle'),
+    note: formData.get('note'),
+    actorCategory: formData.get('actorCategory'),
+    roleTemplateKey: formData.get('roleTemplateKey'),
+    caseScopePolicy: formData.get('caseScopePolicy'),
+    expiresHours: formData.get('expiresHours') || 72
+  });
+
+  const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 구성원을 선등록할 수 있습니다.');
+  const token = createInvitationToken();
+  const requestedRole = parsed.actorCategory === 'admin' ? 'org_manager' : 'org_staff';
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('invitations').insert({
+    organization_id: parsed.organizationId,
+    kind: 'staff_invite',
+    email: parsed.email,
+    invited_name: parsed.name,
+    requested_role: requestedRole,
+    actor_category: parsed.actorCategory,
+    role_template_key: parsed.roleTemplateKey,
+    case_scope_policy: parsed.caseScopePolicy,
+    permissions_override: {},
+    token_hash: hashInvitationToken(token),
+    share_token: null,
+    token_hint: token.slice(-6),
+    note: encodeInvitationNote(`${parsed.note || ''}${parsed.phone ? `${parsed.note ? '\n' : ''}연락처:${parsed.phone}` : ''}`, parsed.membershipTitle),
+    created_by: auth.user.id,
+    expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+  });
+  if (error) throw error;
+
+  revalidatePath('/settings/team');
+  redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
+}
+
+export async function createClientDirectInvitationAction(formData: FormData) {
+  const parsed = clientDirectInvitationSchema.parse({
+    organizationId: formData.get('organizationId'),
+    caseId: formData.get('caseId'),
+    email: formData.get('email'),
+    expiresHours: formData.get('expiresHours') || 72
+  });
+
+  const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 초대할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+  const token = createInvitationToken();
+
+  const { data: existingClient } = await supabase
+    .from('case_clients')
+    .select('id, client_name')
+    .eq('organization_id', parsed.organizationId)
+    .eq('case_id', parsed.caseId)
+    .eq('client_email_snapshot', parsed.email)
+    .maybeSingle();
+
+  const { error } = await supabase.from('invitations').insert({
+    organization_id: parsed.organizationId,
+    case_id: parsed.caseId,
+    case_client_id: existingClient?.id ?? null,
+    kind: 'client_invite',
+    email: parsed.email,
+    invited_name: existingClient?.client_name ?? parsed.email,
+    token_hash: hashInvitationToken(token),
+    share_token: null,
+    token_hint: token.slice(-6),
+    note: '의뢰인 직접 초대',
+    created_by: auth.user.id,
+    expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+  });
+  if (error) throw error;
+
+  revalidatePath('/clients');
+  redirect(`/clients?invite=${encodeURIComponent(token)}`);
+}
+
+export async function createClientPreRegisteredInvitationAction(formData: FormData) {
+  const parsed = clientPreRegisterInvitationSchema.parse({
+    organizationId: formData.get('organizationId'),
+    caseId: formData.get('caseId'),
+    name: formData.get('name'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    note: formData.get('note'),
+    relationLabel: formData.get('relationLabel'),
+    expiresHours: formData.get('expiresHours') || 72
+  });
+
+  const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 선등록할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+  const token = createInvitationToken();
+  const resolvedCaseId = parsed.caseId || null;
+
+  const { error } = await supabase.from('invitations').insert({
+    organization_id: parsed.organizationId,
+    case_id: resolvedCaseId,
+    case_client_id: null,
+    kind: 'client_invite',
+    email: parsed.email,
+    invited_name: parsed.name,
+    token_hash: hashInvitationToken(token),
+    share_token: null,
+    token_hint: token.slice(-6),
+    note: buildClientInvitationNote(parsed.note, parsed.relationLabel, parsed.phone),
+    created_by: auth.user.id,
+    expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+  });
+  if (error) throw error;
+
+  revalidatePath('/clients');
+  redirect(`/clients?invite=${encodeURIComponent(token)}`);
+}
+
+export async function resendInvitationLinkAction(formData: FormData) {
+  const parsed = resendInvitationSchema.parse({
+    invitationId: formData.get('invitationId'),
+    expiresHours: formData.get('expiresHours') || 72
+  });
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existing, error: invitationError } = await supabase
+    .from('invitations')
+    .select('*')
+    .eq('id', parsed.invitationId)
+    .maybeSingle();
+
+  if (invitationError || !existing) {
+    throw invitationError ?? new Error('초대 이력을 찾을 수 없습니다.');
+  }
+
+  const { auth } = await requireOrganizationUserManagementAccess(existing.organization_id, '조직 관리자만 초대 링크를 재발송할 수 있습니다.');
+  const token = createInvitationToken();
+
+  const { error } = await supabase.from('invitations').insert({
+    organization_id: existing.organization_id,
+    case_id: existing.case_id,
+    case_client_id: existing.case_client_id,
+    kind: existing.kind,
+    email: existing.email,
+    invited_name: existing.invited_name,
+    requested_role: existing.requested_role,
+    actor_category: existing.actor_category,
+    role_template_key: existing.role_template_key,
+    case_scope_policy: existing.case_scope_policy,
+    permissions_override: existing.permissions_override ?? {},
+    token_hash: hashInvitationToken(token),
+    share_token: null,
+    token_hint: token.slice(-6),
+    note: existing.note,
+    created_by: auth.user.id,
+    expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString(),
+    status: 'pending'
+  });
+  if (error) throw error;
+
+  revalidatePath('/clients');
+  revalidatePath('/settings/team');
+  if (existing.kind === 'staff_invite') {
+    redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
+  }
+  redirect(`/clients?invite=${encodeURIComponent(token)}`);
 }
 
 export async function updateMembershipPermissionsAction(formData: FormData) {

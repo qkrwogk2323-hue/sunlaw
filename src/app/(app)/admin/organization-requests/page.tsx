@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { requirePlatformAdmin } from '@/lib/auth';
-import { listOrganizationSignupRequests } from '@/lib/queries/organization-requests';
+import { listOrganizationExitRequests, listOrganizationSignupRequests } from '@/lib/queries/organization-requests';
 import { reviewOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
+import { reviewOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
 import { formatBusinessNumber, formatDateTime } from '@/lib/format';
 
 const verificationLabels: Record<string, string> = {
@@ -44,7 +45,11 @@ function getReviewPriority(request: any) {
 
 export default async function OrganizationRequestsPage() {
   await requirePlatformAdmin();
-  const requests = (await listOrganizationSignupRequests()).sort((left: any, right: any) => {
+  const [requests, exitRequests] = await Promise.all([
+    listOrganizationSignupRequests(),
+    listOrganizationExitRequests()
+  ]);
+  const signupRequests = requests.sort((left: any, right: any) => {
     const priority = { mismatch: 0, unreadable: 1, matched: 2, pending_review: 3 } as Record<string, number>;
     const leftPriority = priority[left.business_registration_verification_status] ?? 9;
     const rightPriority = priority[right.business_registration_verification_status] ?? 9;
@@ -64,7 +69,7 @@ export default async function OrganizationRequestsPage() {
       <Card>
         <CardHeader><CardTitle>신청 목록</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {requests.length ? requests.map((request: any) => (
+          {signupRequests.length ? signupRequests.map((request: any) => (
             <div key={request.id} className="rounded-2xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -128,6 +133,45 @@ export default async function OrganizationRequestsPage() {
               ) : null}
             </div>
           )) : <p className="text-sm text-slate-500">신청 내역이 없습니다.</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>조직 탈퇴 신청</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {exitRequests.length ? exitRequests.map((item: any) => (
+            <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-medium text-slate-900">{item.organization?.name ?? item.organization_id}</p>
+                  <p className="text-sm text-slate-500">요청자: {item.requester?.full_name ?? '-'} · {item.requester?.email ?? '-'}</p>
+                </div>
+                <Badge tone={item.status === 'pending' ? 'amber' : item.status === 'approved' ? 'green' : item.status === 'rejected' ? 'red' : 'slate'}>
+                  {item.status}
+                </Badge>
+              </div>
+              <p className="mt-3 text-sm text-slate-600">사유: {item.reason ?? '-'}</p>
+              <p className="mt-1 text-xs text-slate-400">요청 시각: {formatDateTime(item.created_at)}</p>
+              {item.status === 'pending' ? (
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <form action={reviewOrganizationExitRequestAction} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                    <input type="hidden" name="requestId" value={item.id} />
+                    <input type="hidden" name="decision" value="approved" />
+                    <textarea name="reviewNote" placeholder="승인 메모" className="min-h-20 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                    <SubmitButton pendingLabel="승인 중...">승인</SubmitButton>
+                  </form>
+                  <form action={reviewOrganizationExitRequestAction} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                    <input type="hidden" name="requestId" value={item.id} />
+                    <input type="hidden" name="decision" value="rejected" />
+                    <textarea name="reviewNote" placeholder="반려 사유" className="min-h-20 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                    <SubmitButton variant="destructive" pendingLabel="반려 중...">반려</SubmitButton>
+                  </form>
+                </div>
+              ) : item.reviewed_note ? (
+                <p className="mt-3 text-sm text-slate-600">검토 메모: {item.reviewed_note}</p>
+              ) : null}
+            </div>
+          )) : <p className="text-sm text-slate-500">조직 탈퇴 신청이 없습니다.</p>}
         </CardContent>
       </Card>
     </div>

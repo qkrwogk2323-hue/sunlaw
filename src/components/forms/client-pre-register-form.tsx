@@ -1,0 +1,30 @@
+import { createClientPreRegisteredInvitationAction } from '@/lib/actions/organization-actions';
+import { Input } from '@/components/ui/input';
+import { SubmitButton } from '@/components/ui/submit-button';
+
+type CaseOption = { id: string; title: string };
+
+export function ClientPreRegisterForm({ organizationId, cases }: { organizationId: string; cases: CaseOption[] }) {
+  return (
+    <form action={createClientPreRegisteredInvitationAction} className="grid gap-3 md:grid-cols-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <Input name="name" placeholder="이름" required />
+      <Input name="email" type="email" placeholder="이메일" required />
+      <Input name="phone" placeholder="연락처(선택)" />
+      <Input name="relationLabel" placeholder="관계(선택)" />
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-slate-500">연결 예정 사건(선택)</label>
+        <select name="caseId" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+          <option value="">미연결 상태로 선등록</option>
+          {cases.map((item) => (
+            <option key={item.id} value={item.id}>{item.title}</option>
+          ))}
+        </select>
+      </div>
+      <Input name="note" placeholder="메모(선택)" className="md:col-span-2" />
+      <div className="md:col-span-2">
+        <SubmitButton pendingLabel="선등록 중...">의뢰인 선등록 후 초대 링크 발송</SubmitButton>
+      </div>
+    </form>
+  );
+}

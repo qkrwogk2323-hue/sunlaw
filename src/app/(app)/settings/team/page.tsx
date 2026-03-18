@@ -1,14 +1,21 @@
 import { notFound } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StaffInvitationCreateForm } from '@/components/forms/invitation-create-form';
+import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
+import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
 import { decodeInvitationNote } from '@/lib/invitation-metadata';
-import { actorCategoryLabel, caseScopePolicyLabel, membershipRoleLabel } from '@/lib/membership-labels';
+import { membershipRoleLabel } from '@/lib/membership-labels';
+import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
-import { MembershipPermissionForm } from '@/components/forms/membership-permission-form';
-import { StaffInvitationCreateForm } from '@/components/forms/invitation-create-form';
-import { isWorkspaceAdmin, TEMPLATE_LABELS } from '@/lib/permissions';
 import { PLATFORM_SCENARIO_ORGANIZATIONS, PLATFORM_SCENARIO_TEAM, isPlatformScenarioMode } from '@/lib/platform-scenarios';
+
+function statusTone(value: string) {
+  if (value.includes('완료') || value.includes('활성')) return 'green' as const;
+  if (value.includes('발송') || value.includes('대기')) return 'amber' as const;
+  return 'slate' as const;
+}
 
 export default async function TeamSettingsPage({ searchParams }: { searchParams?: Promise<{ invite?: string }> }) {
   const auth = await requireAuthenticatedUser();
@@ -18,44 +25,28 @@ export default async function TeamSettingsPage({ searchParams }: { searchParams?
   if (isVirtualScenario) {
     const organization = PLATFORM_SCENARIO_ORGANIZATIONS[activeViewMode];
     const members = PLATFORM_SCENARIO_TEAM[activeViewMode];
-
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직관리</h1>
-          <p className="mt-2 text-sm text-slate-600">{organization.name} 시나리오에 배치된 가상직원 목록입니다. 플랫폼 이해를 위한 예시 데이터이며 실제 초대/권한 변경은 동작하지 않습니다.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">구성원 관리</h1>
+          <p className="mt-2 text-sm text-slate-600">{organization.name} 시나리오 구성원 목록입니다.</p>
         </div>
-
         <Card>
-          <CardHeader>
-            <CardTitle>현재 시야</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-slate-700">
-            <p>조직명: {organization.name}</p>
-            <p>시야 기준: 가상직원 선택형</p>
-            <p>조직 특성: {activeViewMode === 'law_admin' ? '법률/법무조직' : activeViewMode === 'collection_admin' ? '추심조직' : '기타조직'}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>구성원 관리</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardHeader><CardTitle>구성원 상태</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
             {members.map((member) => (
-              <div key={member.id} className="space-y-3 rounded-2xl border border-slate-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <div key={member.id} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-900">{member.name} (가상직원)</p>
+                    <p className="font-medium text-slate-900">{member.name}</p>
                     <p className="text-sm text-slate-500">{member.email}</p>
-                    <p className="mt-1 text-sm text-slate-600">직책: {member.title}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
+                    <Badge tone="green">가입 완료</Badge>
+                    <Badge tone="green">활성</Badge>
                     <Badge tone="blue">{member.title}</Badge>
-                    <Badge tone="green">가상직원</Badge>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500">업무 흐름: {member.note}</p>
               </div>
             ))}
           </CardContent>
@@ -72,16 +63,39 @@ export default async function TeamSettingsPage({ searchParams }: { searchParams?
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
   const canManage = isWorkspaceAdmin(currentMembership) && Boolean(currentMembership?.permissions?.user_manage);
   const inviteToken = searchParams ? (await searchParams).invite : undefined;
-  const invitations = workspace.invitations.map((invite: any) => ({
-    ...invite,
-    ...decodeInvitationNote(invite.note)
+
+  const members = workspace.members.map((member: any) => ({
+    id: member.id,
+    name: member.profile?.full_name ?? '-',
+    email: member.profile?.email ?? '-',
+    role: membershipRoleLabel(member.role),
+    title: member.title ?? '직책 미입력',
+    activeStatus: member.status === 'active' ? '활성' : '비활성',
+    signupStatus: '가입 완료',
+    inviteStatus: '완료'
   }));
+
+  const inviteRows = workspace.invitations
+    .filter((invite: any) => invite.kind === 'staff_invite')
+    .map((invite: any) => {
+      const decoded = decodeInvitationNote(invite.note);
+      return {
+        id: invite.id,
+        name: invite.invited_name || invite.email,
+        email: invite.email,
+        role: invite.requested_role === 'org_manager' ? '조직관리자' : '조직원',
+        title: decoded.membershipTitle ?? '직책 미입력',
+        activeStatus: '가입 전',
+        signupStatus: invite.status === 'accepted' ? '가입 완료' : '가입 전',
+        inviteStatus: invite.status === 'pending' ? '초대 발송됨' : invite.status === 'accepted' ? '완료' : '가입 전'
+      };
+    });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Team & Permissions</h1>
-        <p className="mt-2 text-sm text-slate-600">구조 역할은 조직 관리자·조직 상위 담당자·조직원으로 구분하고, 직책은 각 조직이 자유롭게 적어 관리합니다.</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">구성원 관리</h1>
+        <p className="mt-2 text-sm text-slate-600">권한표보다 사람 상태를 먼저 보고 운영합니다.</p>
       </div>
 
       {inviteToken ? (
@@ -91,74 +105,62 @@ export default async function TeamSettingsPage({ searchParams }: { searchParams?
       ) : null}
 
       {canManage ? (
-        <Card>
-          <CardHeader><CardTitle>직원 초대</CardTitle></CardHeader>
-          <CardContent>
-            <StaffInvitationCreateForm organizationId={organizationId} />
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 xl:grid-cols-3">
+          <Card>
+            <CardHeader><CardTitle>직원 초대</CardTitle></CardHeader>
+            <CardContent>
+              <StaffInvitationCreateForm organizationId={organizationId} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>직원 선등록</CardTitle></CardHeader>
+            <CardContent>
+              <StaffPreRegisterForm organizationId={organizationId} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>초대 링크 재발송</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {inviteRows.slice(0, 5).map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                  <div className="text-sm">
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-slate-500">{item.email}</p>
+                  </div>
+                  <ResendInvitationForm invitationId={item.id} compact />
+                </div>
+              ))}
+              {!inviteRows.length ? <p className="text-sm text-slate-500">재발송 가능한 초대가 없습니다.</p> : null}
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       <Card>
-        <CardHeader><CardTitle>구성원 권한</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {workspace.members.map((member: any) => (
-            <div key={member.id} className="space-y-3 rounded-2xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+        <CardHeader><CardTitle>구성원 목록</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {[...inviteRows, ...members].map((item) => (
+            <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-slate-900">{member.profile?.full_name ?? '-'}</p>
-                  <p className="text-sm text-slate-500">{member.profile?.email ?? '-'}</p>
-                  <p className="mt-1 text-sm text-slate-600">직책: {member.title ?? '미입력'}</p>
+                  <p className="font-medium text-slate-900">{item.name}</p>
+                  <p className="mt-1 text-sm text-slate-500">{item.email}</p>
+                  <p className="mt-1 text-xs text-slate-400">{item.title}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge tone={member.role === 'org_owner' ? 'amber' : member.actor_category === 'admin' ? 'blue' : 'slate'}>{membershipRoleLabel(member.role)}</Badge>
-                  <Badge tone={member.actor_category === 'admin' ? 'blue' : 'slate'}>{actorCategoryLabel(member.actor_category)}</Badge>
-                  <Badge tone="green">{TEMPLATE_LABELS[member.permission_template_key] ?? member.permission_template_key ?? '-'}</Badge>
-                  <Badge tone="slate">{caseScopePolicyLabel(member.case_scope_policy)}</Badge>
+                  <Badge tone={statusTone(item.signupStatus)}>{item.signupStatus}</Badge>
+                  <Badge tone={statusTone(item.inviteStatus)}>{item.inviteStatus}</Badge>
+                  <Badge tone={statusTone(item.activeStatus)}>{item.activeStatus}</Badge>
+                  <Badge tone="blue">{item.role}</Badge>
                 </div>
               </div>
-              {canManage && member.role !== 'org_owner' ? (
-                <MembershipPermissionForm
-                  membershipId={member.id}
-                  organizationId={organizationId}
-                  currentPermissions={member.permissions}
-                  actorCategory={member.actor_category}
-                  membershipTitle={member.title}
-                  roleTemplateKey={member.permission_template_key}
-                  caseScopePolicy={member.case_scope_policy}
-                  title={`${member.profile?.full_name ?? '구성원'} 권한`}
-                />
-              ) : (
-                <p className="text-sm text-slate-500">오너 또는 현재 권한으로는 수정할 수 없습니다.</p>
-              )}
+              {canManage && inviteRows.some((invite) => invite.id === item.id) ? (
+                <div className="mt-3">
+                  <ResendInvitationForm invitationId={item.id} />
+                </div>
+              ) : null}
             </div>
           ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>초대 내역</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {invitations.length ? invitations.map((invite: any) => (
-            <div key={invite.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium text-slate-900">{invite.invited_name || invite.email}</p>
-                  <p className="text-slate-500">{invite.email}</p>
-                  <p className="mt-1 text-slate-500">직책: {invite.membershipTitle ?? '미입력'}</p>
-                </div>
-                <Badge tone={invite.status === 'pending' ? 'amber' : invite.status === 'accepted' ? 'green' : 'slate'}>{invite.kind}</Badge>
-              </div>
-              <div className="mt-2 space-y-1 text-slate-500">
-                <p>구조 역할: {membershipRoleLabel(invite.requested_role)}</p>
-                <p>구분: {actorCategoryLabel(invite.actor_category)}</p>
-                <p>템플릿: {TEMPLATE_LABELS[invite.role_template_key] ?? invite.role_template_key ?? '-'}</p>
-                <p>사건 범위: {caseScopePolicyLabel(invite.case_scope_policy)}</p>
-                {invite.note ? <p>메모: {invite.note}</p> : null}
-                <p>힌트: {invite.token_hint ?? '-'} · 저장된 평문 링크는 노출하지 않습니다.</p>
-              </div>
-            </div>
-          )) : <p className="text-sm text-slate-500">초대 내역이 없습니다.</p>}
         </CardContent>
       </Card>
     </div>

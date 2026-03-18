@@ -9,3 +9,26 @@ export async function listOrganizationSignupRequests() {
 
   return data ?? [];
 }
+
+export async function listOrganizationExitRequests() {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('organization_exit_requests')
+    .select('*, organization:organizations(id, name, slug), requester:profiles(id, full_name, email), reviewer:profiles(id, full_name, email)')
+    .order('created_at', { ascending: false });
+
+  return data ?? [];
+}
+
+export async function getLatestOrganizationExitRequest(organizationId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('organization_exit_requests')
+    .select('*, requester:profiles(id, full_name, email), reviewer:profiles(id, full_name, email)')
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data ?? null;
+}

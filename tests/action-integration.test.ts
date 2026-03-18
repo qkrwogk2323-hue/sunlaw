@@ -985,7 +985,7 @@ describe('server action integration', () => {
 
     expect(profileUpdate).toHaveBeenCalled();
     expect(caseClientsUpdate).toHaveBeenCalledTimes(2);
-    const revertCall = caseClientsUpdate.mock.calls[1];
+    const revertCall = (caseClientsUpdate.mock.calls as Array<any[]>)[1];
     expect(revertCall[0]).toMatchObject({ is_portal_enabled: false });
   });
 });

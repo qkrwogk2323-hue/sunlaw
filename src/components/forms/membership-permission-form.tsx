@@ -1,6 +1,6 @@
 import { updateMembershipPermissionsAction } from '@/lib/actions/organization-actions';
 import { Input } from '@/components/ui/input';
-import { PERMISSION_GROUPS, PERMISSION_LABELS, PERMISSION_KEYS, TEMPLATE_LABELS } from '@/lib/permissions';
+import { PERMISSION_GROUPS, PERMISSION_LABELS, PERMISSION_KEYS } from '@/lib/permissions';
 
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -31,7 +31,7 @@ export function MembershipPermissionForm({
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">구조 역할</label>
           <select name="actorCategory" defaultValue={actorCategory ?? 'staff'} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-            <option value="admin">조직 상위 담당자</option>
+            <option value="admin">조직관리자</option>
             <option value="staff">조직원</option>
           </select>
         </div>
@@ -41,10 +41,9 @@ export function MembershipPermissionForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">권한 템플릿</label>
-          <select name="roleTemplateKey" defaultValue={roleTemplateKey ?? 'office_manager'} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-            {Object.entries(TEMPLATE_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
+          <select name="roleTemplateKey" defaultValue={roleTemplateKey ?? 'org_staff'} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+            <option value="admin_general">조직관리자</option>
+            <option value="org_staff">조직원</option>
           </select>
         </div>
         <div>
@@ -58,7 +57,7 @@ export function MembershipPermissionForm({
       </div>
 
       <p className="text-sm font-medium text-slate-900">{title}</p>
-      <p className="text-xs text-slate-500">구조 역할과 권한 템플릿은 별도이며, 직책은 조직이 자유롭게 관리합니다.</p>
+      <p className="text-xs text-slate-500">구조 역할은 조직관리자/조직원 2단으로 운영합니다.</p>
       <div className="space-y-4">
         {Object.entries(PERMISSION_GROUPS).map(([group, keys]) => (
           <div key={group} className="rounded-xl border border-slate-100 bg-slate-50 p-3">

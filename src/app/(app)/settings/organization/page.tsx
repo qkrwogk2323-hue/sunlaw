@@ -4,8 +4,12 @@ import { SettingsNav } from '@/components/settings-nav';
 import { findMembership, getActiveViewMode, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
+import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { OrganizationSettingForm } from '@/components/forms/organization-setting-form';
+import { createOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
+import { SubmitButton } from '@/components/ui/submit-button';
+import { Badge } from '@/components/ui/badge';
 import { PLATFORM_SCENARIO_ORGANIZATIONS, isPlatformScenarioMode } from '@/lib/platform-scenarios';
 
 export default async function OrganizationSettingsPage() {
@@ -58,9 +62,10 @@ export default async function OrganizationSettingsPage() {
   if (!organizationId) notFound();
   const membership = findMembership(auth, organizationId);
   if (!membership || !isWorkspaceAdmin(membership)) notFound();
-  const [workspace, data] = await Promise.all([
+  const [workspace, data, latestExitRequest] = await Promise.all([
     getOrganizationWorkspace(organizationId),
-    getSettingsAdminData(organizationId)
+    getSettingsAdminData(organizationId),
+    getLatestOrganizationExitRequest(organizationId)
   ]);
   if (!workspace) notFound();
 
@@ -82,6 +87,36 @@ export default async function OrganizationSettingsPage() {
           <OrganizationSettingForm key={item.key} item={item} organizationId={organizationId} currentValue={orgMap.get(item.key)} />
         ))}
       </div>
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle>조직 탈퇴 신청</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-slate-600">조직 탈퇴는 플랫폼 관리자 승인 후 처리됩니다. 승인 전에는 상태가 유지됩니다.</p>
+          {latestExitRequest ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-slate-900">최근 신청 상태</span>
+                <Badge tone={latestExitRequest.status === 'pending' ? 'amber' : latestExitRequest.status === 'approved' ? 'green' : latestExitRequest.status === 'rejected' ? 'red' : 'slate'}>
+                  {latestExitRequest.status}
+                </Badge>
+              </div>
+              <p className="mt-2 text-slate-600">사유: {latestExitRequest.reason ?? '-'}</p>
+              {latestExitRequest.reviewed_note ? <p className="mt-1 text-slate-600">검토 메모: {latestExitRequest.reviewed_note}</p> : null}
+            </div>
+          ) : null}
+          <form action={createOrganizationExitRequestAction} className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
+            <input type="hidden" name="organizationId" value={organizationId} />
+            <textarea
+              name="reason"
+              required
+              placeholder="탈퇴 신청 사유를 입력해 주세요."
+              className="min-h-24 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
+            />
+            <SubmitButton variant="destructive" pendingLabel="신청 중...">플랫폼 관리자 승인 요청</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
-import { getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
+import { getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -29,6 +29,17 @@ const featureFlagMutationSchema = z.object({
   rolloutPercentage: z.coerce.number().int().min(0).max(100).default(100),
   organizationId: z.string().uuid().optional().or(z.literal('')),
   reason: z.string().trim().max(500).optional().or(z.literal(''))
+});
+
+const organizationExitRequestSchema = z.object({
+  organizationId: z.string().uuid(),
+  reason: z.string().trim().min(5).max(2000)
+});
+
+const reviewOrganizationExitRequestSchema = z.object({
+  requestId: z.string().uuid(),
+  decision: z.enum(['approved', 'rejected']),
+  reviewNote: z.string().trim().max(1000).optional().or(z.literal(''))
 });
 
 function parseJson(value: string) {
@@ -326,4 +337,89 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
 export async function getCurrentOrganizationIdForSettings() {
   const auth = await requireAuthenticatedUser();
   return getEffectiveOrganizationId(auth);
+}
+
+export async function createOrganizationExitRequestAction(formData: FormData) {
+  const parsed = organizationExitRequestSchema.parse({
+    organizationId: formData.get('organizationId'),
+    reason: formData.get('reason')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    requireManager: true,
+    permission: 'organization_settings_manage',
+    errorMessage: '조직관리자만 탈퇴 신청을 생성할 수 있습니다.'
+  });
+  const admin = createSupabaseAdminClient();
+
+  const { data: pending } = await admin
+    .from('organization_exit_requests')
+    .select('id')
+    .eq('organization_id', parsed.organizationId)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (pending?.id) {
+    throw new Error('이미 검토 중인 조직 탈퇴 신청이 있습니다.');
+  }
+
+  const { error } = await admin.from('organization_exit_requests').insert({
+    organization_id: parsed.organizationId,
+    requested_by_profile_id: auth.user.id,
+    reason: parsed.reason,
+    status: 'pending'
+  });
+  if (error) throw error;
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/admin/organization-requests');
+}
+
+export async function reviewOrganizationExitRequestAction(formData: FormData) {
+  const parsed = reviewOrganizationExitRequestSchema.parse({
+    requestId: formData.get('requestId'),
+    decision: formData.get('decision'),
+    reviewNote: formData.get('reviewNote')
+  });
+  const auth = await requirePlatformAdminAction('플랫폼 관리자만 조직 탈퇴 신청을 검토할 수 있습니다.');
+  const admin = createSupabaseAdminClient();
+
+  const { data: requestRow, error: requestError } = await admin
+    .from('organization_exit_requests')
+    .select('id, organization_id, status')
+    .eq('id', parsed.requestId)
+    .maybeSingle();
+
+  if (requestError || !requestRow) {
+    throw requestError ?? new Error('탈퇴 신청을 찾을 수 없습니다.');
+  }
+  if (requestRow.status !== 'pending') {
+    throw new Error('이미 처리된 탈퇴 신청입니다.');
+  }
+
+  const nextStatus = parsed.decision === 'approved' ? 'approved' : 'rejected';
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from('organization_exit_requests')
+    .update({
+      status: nextStatus,
+      reviewed_by_profile_id: auth.user.id,
+      reviewed_note: parsed.reviewNote || null,
+      reviewed_at: now
+    })
+    .eq('id', parsed.requestId);
+  if (error) throw error;
+
+  if (nextStatus === 'approved') {
+    await admin
+      .from('organizations')
+      .update({
+        lifecycle_status: 'pending_shutdown',
+        updated_at: now
+      })
+      .eq('id', requestRow.organization_id);
+  }
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/admin/organization-requests');
 }
