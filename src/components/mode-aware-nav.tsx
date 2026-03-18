@@ -455,6 +455,24 @@ export function ModeAwareNav({
   }, []);
 
   useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `profile-completeness-reminder:${profile.id}:${currentOrganization?.id ?? 'none'}`;
+    if (typeof window === 'undefined') return;
+
+    try {
+      if (window.localStorage.getItem(key) === today) return;
+      window.localStorage.setItem(key, today);
+    } catch {
+      return;
+    }
+
+    void fetch('/api/profile-completeness/reminder', {
+      method: 'POST',
+      cache: 'no-store'
+    }).catch(() => undefined);
+  }, [profile.id, currentOrganization?.id]);
+
+  useEffect(() => {
     if (!isPlatformOperator) {
       queueMicrotask(() => {
         setMode(managerDefaultMode);

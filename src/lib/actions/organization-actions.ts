@@ -12,10 +12,18 @@ import {
 } from '@/lib/auth';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { decodeInvitationNote, encodeInvitationNote } from '@/lib/invitation-metadata';
-import { isValidKoreanBusinessNumber, makeSlug, normalizeBusinessNumber } from '@/lib/format';
+import {
+  formatResidentRegistrationNumberMasked,
+  isValidKoreanBusinessNumber,
+  isValidResidentRegistrationNumber,
+  makeSlug,
+  normalizeBusinessNumber,
+  normalizeResidentRegistrationNumber
+} from '@/lib/format';
 import { parseCsvFile, pickCsvValue } from '@/lib/csv';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { encryptString } from '@/lib/pii';
 import { getDefaultTemplatePermissions, hasPermission, PERMISSION_KEYS } from '@/lib/permissions';
 import {
   clientAccessCaseLinkSchema,
@@ -455,7 +463,10 @@ const selfMemberProfileUpdateSchema = z.object({
   organizationId: z.string().uuid(),
   fullName: z.string().trim().min(2).max(80),
   phone: z.string().trim().max(30).optional().or(z.literal('')),
-  displayTitle: z.string().trim().max(80).optional().or(z.literal(''))
+  displayTitle: z.string().trim().max(80).optional().or(z.literal('')),
+  residentNumber: z.string().trim().max(20).optional().or(z.literal('')),
+  addressLine1: z.string().trim().max(200).optional().or(z.literal('')),
+  addressLine2: z.string().trim().max(200).optional().or(z.literal(''))
 });
 
 const membershipAdminSummarySchema = z.object({
@@ -1598,7 +1609,10 @@ export async function updateSelfMemberProfileAction(formData: FormData) {
     organizationId: formData.get('organizationId'),
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
-    displayTitle: formData.get('displayTitle')
+    displayTitle: formData.get('displayTitle'),
+    residentNumber: formData.get('residentNumber'),
+    addressLine1: formData.get('addressLine1'),
+    addressLine2: formData.get('addressLine2')
   });
 
   const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
@@ -1623,6 +1637,36 @@ export async function updateSelfMemberProfileAction(formData: FormData) {
     .eq('organization_id', parsed.organizationId)
     .eq('profile_id', auth.user.id);
   if (membershipError) throw membershipError;
+
+  const normalizedResident = normalizeResidentRegistrationNumber(parsed.residentNumber ?? '');
+  if (normalizedResident) {
+    if (normalizedResident.length !== 13 || !isValidResidentRegistrationNumber(normalizedResident)) {
+      throw new Error('유효한 주민등록번호 13자리를 입력해 주세요.');
+    }
+  }
+
+  const nextAddressLine1 = parsed.addressLine1?.trim() || null;
+  const nextAddressLine2 = parsed.addressLine2?.trim() || null;
+  const shouldUpdatePrivateProfile = Boolean(normalizedResident || nextAddressLine1 || nextAddressLine2);
+
+  if (shouldUpdatePrivateProfile) {
+    const upsertPayload: Record<string, any> = { profile_id: auth.user.id };
+
+    if (normalizedResident) {
+      upsertPayload.resident_number_ciphertext = encryptString(normalizedResident);
+      upsertPayload.resident_number_masked = formatResidentRegistrationNumberMasked(normalizedResident);
+    }
+
+    if (nextAddressLine1) {
+      upsertPayload.address_line1_ciphertext = encryptString(nextAddressLine1);
+      upsertPayload.address_line2_ciphertext = nextAddressLine2 ? encryptString(nextAddressLine2) : null;
+    }
+
+    const { error: privateProfileError } = await supabase
+      .from('member_private_profiles')
+      .upsert(upsertPayload, { onConflict: 'profile_id' });
+    if (privateProfileError) throw privateProfileError;
+  }
 
   revalidatePath('/settings/team');
 }

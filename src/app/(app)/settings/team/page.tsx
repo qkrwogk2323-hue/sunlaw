@@ -15,6 +15,7 @@ import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 function toneByStatus(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -34,6 +35,12 @@ export default async function TeamSettingsPage({
 
   const workspace = await getOrganizationWorkspace(organizationId);
   if (!workspace) notFound();
+  const supabase = await createSupabaseServerClient();
+  const { data: privateProfile } = await supabase
+    .from('member_private_profiles')
+    .select('resident_number_masked, address_line1_ciphertext')
+    .eq('profile_id', auth.user.id)
+    .maybeSingle();
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
@@ -202,6 +209,8 @@ export default async function TeamSettingsPage({
               fullName={auth.profile.full_name}
               phone={(auth.profile as any).phone_e164 ?? ''}
               displayTitle={currentMembership.title ?? ''}
+              residentNumberMasked={(privateProfile as any)?.resident_number_masked ?? null}
+              hasSavedAddress={Boolean((privateProfile as any)?.address_line1_ciphertext)}
             />
           </CardContent>
         </Card>
