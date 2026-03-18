@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientDirectInviteForm } from '@/components/forms/client-direct-invite-form';
@@ -19,7 +20,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedClientTempPassword?: string }>;
+  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -36,9 +37,10 @@ export default async function ClientsPage({
     canManage && organizationId ? listCases(organizationId) : Promise.resolve([]),
     searchParams ? searchParams : Promise.resolve(undefined)
   ]);
+  const cookieStore = await cookies();
   const inviteToken = resolvedSearchParams?.invite;
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
-  const issuedClientTempPassword = resolvedSearchParams?.issuedClientTempPassword;
+  const issuedClientTempPassword = cookieStore.get('issued_client_temp_password')?.value ?? null;
 
   return (
     <div className="space-y-6">
@@ -53,10 +55,13 @@ export default async function ClientsPage({
         </div>
       ) : null}
 
-      {issuedClientLoginId && issuedClientTempPassword ? (
+      {issuedClientLoginId ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          의뢰인 임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedClientLoginId}</code> / 비밀번호 <code className="font-mono">{issuedClientTempPassword}</code>
-          <p className="mt-1 text-xs text-amber-700">첫 로그인 시 비밀번호 변경 화면으로 이동합니다.</p>
+          의뢰인 임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedClientLoginId}</code>
+          {issuedClientTempPassword ? (
+            <span> / 비밀번호 <code className="font-mono">{issuedClientTempPassword}</code></span>
+          ) : null}
+          <p className="mt-1 text-xs text-amber-700">임시 비밀번호는 5분만 표시됩니다. 첫 로그인 시 비밀번호 변경 화면으로 이동합니다.</p>
         </div>
       ) : null}
 

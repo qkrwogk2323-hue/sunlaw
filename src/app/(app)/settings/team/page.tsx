@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
@@ -26,7 +27,7 @@ function toneByStatus(value: string) {
 export default async function TeamSettingsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; issuedTempPassword?: string }>;
+  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -42,11 +43,12 @@ export default async function TeamSettingsPage({
     .maybeSingle();
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const cookieStore = await cookies();
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
   const canManage = isWorkspaceAdmin(currentMembership) && Boolean(currentMembership?.permissions?.user_manage);
   const inviteToken = resolvedSearchParams?.invite;
   const issuedLoginId = resolvedSearchParams?.issuedLoginId;
-  const issuedTempPassword = resolvedSearchParams?.issuedTempPassword;
+  const issuedTempPassword = cookieStore.get('issued_staff_temp_password')?.value ?? null;
   const selectedMemberId = resolvedSearchParams?.member ?? null;
 
   const staffInvitations = workspace.invitations
@@ -127,10 +129,13 @@ export default async function TeamSettingsPage({
         </div>
       ) : null}
 
-      {issuedLoginId && issuedTempPassword ? (
+      {issuedLoginId ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedLoginId}</code> / 비밀번호 <code className="font-mono">{issuedTempPassword}</code>
-          <p className="mt-1 text-xs text-amber-700">직원은 로그인 직후 비밀번호 변경 화면으로 이동합니다.</p>
+          임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedLoginId}</code>
+          {issuedTempPassword ? (
+            <span> / 비밀번호 <code className="font-mono">{issuedTempPassword}</code></span>
+          ) : null}
+          <p className="mt-1 text-xs text-amber-700">임시 비밀번호는 5분만 표시됩니다. 직원은 로그인 직후 비밀번호 변경 화면으로 이동합니다.</p>
         </div>
       ) : null}
 

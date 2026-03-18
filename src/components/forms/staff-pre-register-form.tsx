@@ -23,8 +23,6 @@ export function StaffPreRegisterForm({ organizationId }: { organizationId: strin
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800"
         placeholder="메모(선택)"
       />
-      <input type="hidden" name="roleTemplateKey" value="org_staff" />
-      <input type="hidden" name="caseScopePolicy" value="assigned_cases_only" />
       <SubmitButton pendingLabel="발급 중...">임시 아이디/비밀번호 발급</SubmitButton>
     </form>
   );

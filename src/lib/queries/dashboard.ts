@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
+import { getCaseScopeAccess } from '@/lib/case-scope';
 import { getDashboardRecentNotifications } from '@/lib/queries/notifications';
 
 export type DashboardSummary = {
@@ -35,6 +36,69 @@ export type DashboardSecondaryPanels = {
 
 const getDashboardSections = cache(async (organizationId?: string | null) => {
   const auth = await getCurrentAuth();
+  if (!auth) {
+    return {
+      summary: {
+        activeCases: 0,
+        pendingDocuments: 0,
+        pendingRequests: 0,
+        recentMessages: 0,
+        pendingBillingCount: 0,
+        unreadNotifications: 0
+      },
+      queues: {
+        urgentSchedules: [],
+        recentCases: [],
+        caseOptions: [],
+        recentRequests: [],
+        recentMessageItems: [],
+        monthlyHighlights: [],
+        upcomingBilling: [],
+        unreadNotificationItems: [],
+        clientAccessQueue: [],
+        actionableNotifications: []
+      },
+      secondary: {
+        teamMembers: [],
+        clientContacts: [],
+        partnerContacts: [],
+        organizationConversations: []
+      }
+    };
+  }
+  const caseScope = await getCaseScopeAccess(auth, organizationId);
+  const hasRestrictedScope = caseScope.restrictedOrganizationIds.length > 0;
+  const allowedCaseIds = caseScope.assignedCaseIds;
+  if (hasRestrictedScope && !allowedCaseIds.length) {
+    return {
+      summary: {
+        activeCases: 0,
+        pendingDocuments: 0,
+        pendingRequests: 0,
+        recentMessages: 0,
+        pendingBillingCount: 0,
+        unreadNotifications: 0
+      },
+      queues: {
+        urgentSchedules: [],
+        recentCases: [],
+        caseOptions: [],
+        recentRequests: [],
+        recentMessageItems: [],
+        monthlyHighlights: [],
+        upcomingBilling: [],
+        unreadNotificationItems: [],
+        clientAccessQueue: [],
+        actionableNotifications: []
+      },
+      secondary: {
+        teamMembers: [],
+        clientContacts: [],
+        partnerContacts: [],
+        organizationConversations: []
+      }
+    };
+  }
   const canViewPartnerContacts = Boolean(
     auth
     && (await hasActivePlatformAdminView(auth)
@@ -158,6 +222,20 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     upcomingBillingQuery = upcomingBillingQuery.eq('organization_id', organizationId);
     unreadNotificationsQuery = unreadNotificationsQuery.eq('organization_id', organizationId);
     clientAccessQueueQuery = clientAccessQueueQuery.eq('target_organization_id', organizationId);
+  }
+  if (hasRestrictedScope) {
+    casesCountQuery = casesCountQuery.in('id', allowedCaseIds);
+    pendingDocumentsQuery = pendingDocumentsQuery.in('case_id', allowedCaseIds);
+    requestCountQuery = requestCountQuery.in('case_id', allowedCaseIds);
+    messageCountQuery = messageCountQuery.in('case_id', allowedCaseIds);
+    immutableDeadlinesQuery = immutableDeadlinesQuery.in('case_id', allowedCaseIds);
+    recentCasesQuery = recentCasesQuery.in('id', allowedCaseIds);
+    caseOptionsQuery = caseOptionsQuery.in('id', allowedCaseIds);
+    recentRequestsQuery = recentRequestsQuery.in('case_id', allowedCaseIds);
+    recentMessagesQuery = recentMessagesQuery.in('case_id', allowedCaseIds);
+    monthlyHighlightsQuery = monthlyHighlightsQuery.in('case_id', allowedCaseIds);
+    pendingBillingCountQuery = pendingBillingCountQuery.in('case_id', allowedCaseIds);
+    upcomingBillingQuery = upcomingBillingQuery.in('case_id', allowedCaseIds);
   }
 
   const [

@@ -1,4 +1,5 @@
 import { getCurrentAuth } from '@/lib/auth';
+import { getCaseScopeAccess } from '@/lib/case-scope';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export type GlobalSearchResult = {
@@ -23,32 +24,52 @@ export async function searchGlobalWorkspace(query: string, limit = 8): Promise<G
   if (!organizationIds.length) {
     return { cases: [], clients: [], documents: [] };
   }
+  const scope = await getCaseScopeAccess(auth, null);
+  const hasRestrictedScope = scope.restrictedOrganizationIds.length > 0;
+  if (hasRestrictedScope && !scope.assignedCaseIds.length && !scope.unrestrictedOrganizationIds.length) {
+    return { cases: [], clients: [], documents: [] };
+  }
 
   const ilike = `%${keyword.replace(/[%_]/g, '')}%`;
 
-  const [casesRes, clientsRes, docsRes] = await Promise.all([
-    supabase
-      .from('cases')
-      .select('id, title, stage_key, organization_id')
-      .in('organization_id', organizationIds)
-      .ilike('title', ilike)
-      .order('updated_at', { ascending: false })
-      .limit(limit),
-    supabase
-      .from('profiles')
-      .select('id, full_name, email, default_organization_id')
-      .eq('is_client_account', true)
-      .ilike('full_name', ilike)
-      .order('updated_at', { ascending: false })
-      .limit(limit),
-    supabase
-      .from('case_documents')
-      .select('id, title, case_id, updated_at, organization_id')
-      .in('organization_id', organizationIds)
-      .ilike('title', ilike)
-      .order('updated_at', { ascending: false })
-      .limit(limit)
-  ]);
+  let casesQuery = supabase
+    .from('cases')
+    .select('id, title, stage_key, organization_id')
+    .in('organization_id', organizationIds)
+    .ilike('title', ilike)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  let docsQuery = supabase
+    .from('case_documents')
+    .select('id, title, case_id, updated_at, organization_id')
+    .in('organization_id', organizationIds)
+    .ilike('title', ilike)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  let clientsQuery = supabase
+    .from('case_clients')
+    .select('id, profile_id, client_name, client_email_snapshot, organization_id, case_id, created_at')
+    .in('organization_id', organizationIds)
+    .ilike('client_name', ilike)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (hasRestrictedScope) {
+    const assignedFilter = scope.assignedCaseIds.length ? `id.in.(${scope.assignedCaseIds.join(',')})` : '';
+    const assignedCaseFilter = scope.assignedCaseIds.length ? `case_id.in.(${scope.assignedCaseIds.join(',')})` : '';
+    if (scope.unrestrictedOrganizationIds.length) {
+      const orgFilter = `organization_id.in.(${scope.unrestrictedOrganizationIds.join(',')})`;
+      casesQuery = casesQuery.or(assignedFilter ? `${orgFilter},${assignedFilter}` : orgFilter);
+      docsQuery = docsQuery.or(assignedCaseFilter ? `${orgFilter},${assignedCaseFilter}` : orgFilter);
+      clientsQuery = clientsQuery.or(assignedCaseFilter ? `${orgFilter},${assignedCaseFilter}` : orgFilter);
+    } else {
+      casesQuery = casesQuery.in('id', scope.assignedCaseIds);
+      docsQuery = docsQuery.in('case_id', scope.assignedCaseIds);
+      clientsQuery = clientsQuery.in('case_id', scope.assignedCaseIds);
+    }
+  }
+
+  const [casesRes, clientsRes, docsRes] = await Promise.all([casesQuery, clientsQuery, docsQuery]);
 
   if (casesRes.error) throw casesRes.error;
   if (clientsRes.error) throw clientsRes.error;
@@ -62,10 +83,10 @@ export async function searchGlobalWorkspace(query: string, limit = 8): Promise<G
       organization_id: row.organization_id
     })),
     clients: (clientsRes.data ?? []).map((row: any) => ({
-      id: row.id,
-      full_name: row.full_name ?? '이름 없음',
-      email: row.email ?? '',
-      default_organization_id: row.default_organization_id ?? null
+      id: row.profile_id ?? row.id,
+      full_name: row.client_name ?? '이름 없음',
+      email: row.client_email_snapshot ?? '',
+      default_organization_id: row.organization_id ?? null
     })),
     documents: (docsRes.data ?? []).map((row: any) => ({
       id: row.id,

@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { OrganizationCreateForm } from '@/components/forms/organization-create-form';
-import { OrganizationSignupForm } from '@/components/forms/organization-signup-form';
 import { listAccessibleOrganizations, listOrganizationMemberships } from '@/lib/queries/organizations';
 import { hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 
@@ -14,20 +12,25 @@ export default async function OrganizationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Organizations</h1>
-        <p className="mt-2 text-sm text-slate-600">접근 가능한 조직과 온보딩 상태를 확인한다.</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
+        <p className="mt-2 text-sm text-slate-600">협업 공개 조직과 내가 속한 조직을 확인하는 화면입니다. 플랫폼 전용 조직 생성은 관리자 전용 경로에서만 진행합니다.</p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+      {isPlatformAdmin ? (
         <Card>
           <CardHeader>
-            <CardTitle>{isPlatformAdmin ? '플랫폼 관리자 직접 조직 생성' : '조직 개설 신청'}</CardTitle>
+            <CardTitle>플랫폼 관리자 전용</CardTitle>
           </CardHeader>
           <CardContent>
-            {isPlatformAdmin ? <OrganizationCreateForm /> : <OrganizationSignupForm />}
+            <p className="text-sm text-slate-600">조직 직접 생성은 일반 협업 화면에서 숨겨집니다.</p>
+            <Link href="/organization-request" className="mt-3 inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              관리자 전용 조직 생성으로 이동
+            </Link>
           </CardContent>
         </Card>
+      ) : null}
 
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>접근 가능한 조직</CardTitle>
@@ -49,7 +52,7 @@ export default async function OrganizationsPage() {
                 );
               })
             ) : (
-              <p className="text-sm text-slate-500">접근 가능한 조직이 없습니다.</p>
+              <p className="text-sm text-slate-500">표시할 조직이 없습니다.</p>
             )}
           </CardContent>
         </Card>

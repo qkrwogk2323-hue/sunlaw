@@ -1,6 +1,10 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { requireAuthenticatedUser } from '@/lib/auth';
+import { getCaseScopeAccess } from '@/lib/case-scope';
 
 export async function listCases(organizationId?: string | null) {
+  const auth = await requireAuthenticatedUser();
+  const scope = await getCaseScopeAccess(auth, organizationId);
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from('cases')
@@ -11,15 +15,24 @@ export async function listCases(organizationId?: string | null) {
   if (organizationId) {
     query = query.eq('organization_id', organizationId);
   }
+  if (scope.restrictedOrganizationIds.length) {
+    if (!scope.assignedCaseIds.length) return [];
+    query = query.in('id', scope.assignedCaseIds);
+  }
 
   const { data } = await query;
   return data ?? [];
 }
 
 export async function getCaseDetail(caseId: string) {
+  const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
   const { data: caseRecord } = await supabase.from('cases').select('*').eq('id', caseId).maybeSingle();
   if (!caseRecord) return null;
+  const scope = await getCaseScopeAccess(auth, caseRecord.organization_id);
+  if (scope.restrictedOrganizationIds.length && !scope.assignedCaseIds.includes(caseId)) {
+    return null;
+  }
 
   const [
     { data: handlers },

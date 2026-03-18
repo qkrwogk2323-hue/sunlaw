@@ -15,8 +15,6 @@ export function StaffDirectInviteForm({ organizationId }: { organizationId: stri
         </select>
       </label>
       <Input name="membershipTitle" placeholder="직책(선택)" />
-      <input type="hidden" name="roleTemplateKey" value="org_staff" />
-      <input type="hidden" name="caseScopePolicy" value="assigned_cases_only" />
       <SubmitButton pendingLabel="생성 중...">직접 초대 링크 생성</SubmitButton>
     </form>
   );

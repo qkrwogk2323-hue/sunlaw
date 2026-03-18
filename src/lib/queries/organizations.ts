@@ -1,23 +1,69 @@
 import { getCurrentAuth } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-export async function listAccessibleOrganizations() {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('organizations')
-    .select('id, name, slug, kind, business_number, representative_name, email, phone, lifecycle_status, enabled_modules, is_directory_public, updated_at')
-    .order('name', { ascending: true });
+type OrganizationListOptions = {
+  includeAll?: boolean;
+};
 
-  return data ?? [];
+export async function listAccessibleOrganizations(options: OrganizationListOptions = {}) {
+  const auth = await getCurrentAuth();
+  if (!auth) return [];
+
+  const supabase = await createSupabaseServerClient();
+  if (options.includeAll) {
+    const { data } = await supabase
+      .from('organizations')
+      .select('id, name, slug, kind, business_number, representative_name, email, phone, lifecycle_status, enabled_modules, is_directory_public, updated_at')
+      .neq('lifecycle_status', 'soft_deleted')
+      .order('name', { ascending: true });
+
+    return data ?? [];
+  }
+
+  const membershipOrganizationIds = [...new Set(auth.memberships.map((membership) => membership.organization_id).filter(Boolean))];
+
+  const [publicOrganizationsResponse, memberOrganizationsResponse] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('id, name, slug, kind, business_number, representative_name, email, phone, lifecycle_status, enabled_modules, is_directory_public, updated_at')
+      .eq('is_directory_public', true)
+      .neq('slug', 'vein-bn-1')
+      .neq('lifecycle_status', 'soft_deleted')
+      .order('name', { ascending: true }),
+    membershipOrganizationIds.length
+      ? supabase
+          .from('organizations')
+          .select('id, name, slug, kind, business_number, representative_name, email, phone, lifecycle_status, enabled_modules, is_directory_public, updated_at')
+          .in('id', membershipOrganizationIds)
+          .neq('lifecycle_status', 'soft_deleted')
+          .order('name', { ascending: true })
+      : Promise.resolve({ data: [], error: null })
+  ]);
+
+  if (publicOrganizationsResponse.error) throw publicOrganizationsResponse.error;
+  if (memberOrganizationsResponse.error) throw memberOrganizationsResponse.error;
+
+  const merged = [...(memberOrganizationsResponse.data ?? []), ...(publicOrganizationsResponse.data ?? [])];
+  return merged.filter((organization, index, list) => list.findIndex((candidate) => candidate.id === organization.id) === index);
+
 }
 
-export async function listOrganizationMemberships() {
+export async function listOrganizationMemberships(options: OrganizationListOptions = {}) {
+  const auth = await getCurrentAuth();
+  if (!auth) return [];
+
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  let query = supabase
     .from('organization_memberships')
     .select('id, organization_id, role, actor_category, permission_template_key, case_scope_policy, status, title, permissions, is_primary, organization:organizations(id, name, slug)')
     .eq('status', 'active')
     .order('created_at', { ascending: true });
+
+  if (!options.includeAll) {
+    query = query.eq('profile_id', auth.user.id);
+  }
+
+  const { data } = await query;
 
   return data ?? [];
 }

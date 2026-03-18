@@ -2,6 +2,7 @@
 
 import type { Route } from 'next';
 import { z } from 'zod';
+import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
@@ -577,6 +578,9 @@ function buildClientInvitationNote(note?: string | null, relationLabel?: string 
   return lines.length ? lines.join('\n') : null;
 }
 function parseStaffInvitationInput(formData: FormData) {
+  const actorCategory = formData.get('actorCategory') || 'staff';
+  const roleTemplateKey = actorCategory === 'admin' ? 'admin_general' : 'org_staff';
+  const caseScopePolicy = actorCategory === 'admin' ? 'all_org_cases' : 'assigned_cases_only';
   return invitationCreateSchema.parse({
     organizationId: formData.get('organizationId'),
     email: formData.get('email'),
@@ -585,9 +589,9 @@ function parseStaffInvitationInput(formData: FormData) {
     membershipTitle: formData.get('membershipTitle'),
     note: formData.get('note'),
     expiresHours: formData.get('expiresHours') || 72,
-    actorCategory: formData.get('actorCategory') || 'staff',
-    roleTemplateKey: formData.get('roleTemplateKey') || 'org_staff',
-    caseScopePolicy: formData.get('caseScopePolicy') || 'assigned_cases_only'
+    actorCategory,
+    roleTemplateKey,
+    caseScopePolicy
   });
 }
 
@@ -1472,6 +1476,9 @@ export async function createStaffInvitationAction(formData: FormData) {
 }
 
 export async function createStaffPreRegisteredInvitationAction(formData: FormData) {
+  const actorCategory = `${formData.get('actorCategory') || 'staff'}`;
+  const normalizedRoleTemplateKey = actorCategory === 'admin' ? 'admin_general' : 'org_staff';
+  const normalizedCaseScopePolicy = actorCategory === 'admin' ? 'all_org_cases' : 'assigned_cases_only';
   const parsed = staffPreRegisterInvitationSchema.parse({
     organizationId: formData.get('organizationId'),
     name: formData.get('name'),
@@ -1479,9 +1486,9 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
     phone: formData.get('phone'),
     membershipTitle: formData.get('membershipTitle'),
     note: formData.get('note'),
-    actorCategory: formData.get('actorCategory'),
-    roleTemplateKey: formData.get('roleTemplateKey'),
-    caseScopePolicy: formData.get('caseScopePolicy'),
+    actorCategory,
+    roleTemplateKey: normalizedRoleTemplateKey,
+    caseScopePolicy: normalizedCaseScopePolicy,
     expiresHours: formData.get('expiresHours') || 72
   });
 
@@ -1561,7 +1568,15 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
   }
 
   revalidatePath('/settings/team');
-  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}&issuedTempPassword=${encodeURIComponent(tempPassword)}`);
+  const cookieStore = await cookies();
+  cookieStore.set('issued_staff_temp_password', tempPassword, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/settings/team',
+    maxAge: 300
+  });
+  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}`);
 }
 
 export async function createClientDirectInvitationAction(formData: FormData) {
@@ -1686,7 +1701,15 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   }
 
   revalidatePath('/clients');
-  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedClientTempPassword=${encodeURIComponent(tempPassword)}`);
+  const cookieStore = await cookies();
+  cookieStore.set('issued_client_temp_password', tempPassword, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/clients',
+    maxAge: 300
+  });
+  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}`);
 }
 
 export async function resendInvitationLinkAction(formData: FormData) {

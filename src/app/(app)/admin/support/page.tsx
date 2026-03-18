@@ -12,7 +12,6 @@ export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
   const isPlatformAdmin = await hasActivePlatformAdminView(auth);
   const isOrgManager = auth.memberships.some((membership) => isManagementRole(membership.role));
-  const [organizations, requests] = await Promise.all([listAccessibleOrganizations(), listSupportRequests()]);
 
   if (!isPlatformAdmin && !isOrgManager) {
     return (
@@ -21,6 +20,11 @@ export default async function SupportPage() {
       </div>
     );
   }
+
+  const [organizations, requests] = await Promise.all([
+    isPlatformAdmin ? listAccessibleOrganizations({ includeAll: true }) : Promise.resolve([]),
+    listSupportRequests()
+  ]);
 
   return (
     <div className="space-y-6">

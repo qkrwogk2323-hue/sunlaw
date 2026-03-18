@@ -39,17 +39,17 @@ export function BrandBanner({ href, className, theme = 'dark' }: { href?: Route;
     <div
       data-pressed={isPressed ? 'true' : 'false'}
       className={cn(
-        'vs-brand-banner flex h-24 w-full items-center justify-center gap-4 rounded-[1.8rem] border px-6 text-sm backdrop-blur-sm',
+        'vs-brand-banner flex min-h-[6.25rem] w-full items-center justify-center gap-3 rounded-[1.5rem] border px-4 py-3 text-sm backdrop-blur-sm sm:gap-4 sm:px-6',
         themeClasses,
         className
       )}
     >
-      <BrandMark className="w-14" />
+      <BrandMark className="w-12 sm:w-14" />
       <div>
-        <div className={cn('text-2xl font-semibold tracking-[0.26em] sm:text-3xl', theme === 'light' ? 'text-white' : 'text-white')}>
+        <div className={cn('text-xl font-semibold tracking-[0.16em] sm:text-3xl sm:tracking-[0.24em]', theme === 'light' ? 'text-white' : 'text-white')}>
           VEIN SPIRAL
         </div>
-        <div className={cn('mt-2 flex flex-wrap items-center justify-center gap-2 text-sm', theme === 'light' ? 'text-slate-200/92' : 'text-sky-100/88')}>
+        <div className={cn('mt-1.5 flex flex-wrap items-center justify-center gap-2 text-xs sm:mt-2 sm:text-sm', theme === 'light' ? 'text-slate-200/92' : 'text-sky-100/88')}>
           <span>전문가 협업 서비스</span>
           <span className={theme === 'light' ? 'text-slate-400/75' : 'text-sky-200/35'}>|</span>
           <span className={cn('inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em]', theme === 'light' ? 'text-emerald-300/90' : 'text-emerald-200/82')}>

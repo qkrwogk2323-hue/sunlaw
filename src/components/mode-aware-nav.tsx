@@ -14,10 +14,12 @@ import {
   FileText,
   LayoutDashboard,
   MessageSquareText,
+  Menu,
   ReceiptText,
   Search,
   Settings,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
 import { segmentStyles } from '@/components/ui/button';
@@ -228,6 +230,7 @@ function MobileSectionBar({
   hasUnreadNotifications: boolean;
 }) {
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
 
   useEffect(() => {
@@ -249,66 +252,95 @@ function MobileSectionBar({
 
   return (
     <div className="space-y-3 lg:hidden">
-      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
-        <p className="text-lg font-semibold tracking-tight text-slate-950">{currentOrganizationName || currentOrgMembership?.organization?.name || '협업 조직'}</p>
-        <p className="mt-1 text-sm text-slate-600">{baseRoleLabel}</p>
-      </div>
-      <div className="fixed inset-x-3 bottom-3 z-40 rounded-[1.5rem] border border-slate-200/80 bg-white/94 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)] backdrop-blur-md">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {sections.slice(0, 4).map((section) => {
-            const accent = sectionAccent[section.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
-            return (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => setActiveSectionId(section.id)}
-                className={segmentStyles({
-                  active: activeSectionId === section.id,
-                  className: `min-h-12 rounded-2xl px-3 py-2.5 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
-                })}
-              >
-                {sectionButtonLabel(section.label)}
-              </button>
-            );
-          })}
+      <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold tracking-tight text-slate-950">{currentOrganizationName || currentOrgMembership?.organization?.name || '협업 조직'}</p>
+            <p className="mt-0.5 text-xs text-slate-600">{baseRoleLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+            aria-label="메뉴 열기"
+          >
+            <Menu className="size-5" />
+          </button>
         </div>
-        {activeSection ? (
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {activeSection.items.map((item) => {
-              const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
-              const badge = item.badge;
+      </div>
+
+      <div className={`fixed inset-0 z-50 transition ${drawerOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        <button
+          type="button"
+          className={`absolute inset-0 bg-slate-950/35 transition ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
+          aria-label="메뉴 닫기"
+          onClick={() => setDrawerOpen(false)}
+        />
+        <div className={`absolute left-0 top-0 h-full w-[84vw] max-w-[22rem] overflow-y-auto border-r border-slate-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-900">메뉴</p>
+            <button type="button" onClick={() => setDrawerOpen(false)} className="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700">
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {sections.slice(0, 4).map((section) => {
+              const accent = sectionAccent[section.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
               return (
-                <Link
-                  key={item.href}
-                  href={item.href as Route}
-                  className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
-                    pathname === item.href || pathname.startsWith(`${item.href}/`)
-                      ? accent.active
-                      : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === '/notifications')
-                        ? 'border-amber-300 bg-amber-50/80 text-slate-900'
-                        : 'border-slate-200 bg-white text-slate-700'
-                  }`}
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => setActiveSectionId(section.id)}
+                  className={segmentStyles({
+                    active: activeSectionId === section.id,
+                    className: `min-h-11 rounded-xl px-2 py-2 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
+                  })}
                 >
-                  <item.icon className="size-4" />
-                  <span className="flex-1">{item.label}</span>
-                  {badge && badge.count > 0 ? (
-                    <span
-                      className={`min-w-[1.25rem] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums ${
-                        badge.variant === 'urgent' ? 'bg-red-500 text-white' : 'bg-sky-600 text-white'
-                      }`}
-                    >
-                      {badge.count > 99 ? '99+' : badge.count}
-                    </span>
-                  ) : (
-                    <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-                  )}
-                </Link>
+                  {sectionButtonLabel(section.label)}
+                </button>
               );
             })}
           </div>
-        ) : null}
+
+          {activeSection ? (
+            <div className="mt-3 grid gap-2">
+              {activeSection.items.map((item) => {
+                const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
+                const badge = item.badge;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href as Route}
+                    onClick={() => setDrawerOpen(false)}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                      pathname === item.href || pathname.startsWith(`${item.href}/`)
+                        ? accent.active
+                        : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === '/notifications')
+                          ? 'border-amber-300 bg-amber-50/80 text-slate-900'
+                          : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    <item.icon className="size-4" />
+                    <span className="flex-1">{item.label}</span>
+                    {badge && badge.count > 0 ? (
+                      <span
+                        className={`min-w-[1.25rem] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums ${
+                          badge.variant === 'urgent' ? 'bg-red-500 text-white' : 'bg-sky-600 text-white'
+                        }`}
+                      >
+                        {badge.count > 99 ? '99+' : badge.count}
+                      </span>
+                    ) : (
+                      <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       </div>
-      <div className="h-52" />
     </div>
   );
 }
