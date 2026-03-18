@@ -142,14 +142,6 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     .order('created_at', { ascending: false })
     .limit(6);
 
-  let actionableNotificationsQuery = supabase
-    .from('notifications')
-    .select('id, title, body, created_at, action_label, action_href, action_entity_type, requires_action, resolved_at, organization_id')
-    .eq('requires_action', true)
-    .is('resolved_at', null)
-    .order('created_at', { ascending: false })
-    .limit(6);
-
   if (organizationId) {
     casesCountQuery = casesCountQuery.eq('organization_id', organizationId);
     pendingDocumentsQuery = pendingDocumentsQuery.eq('organization_id', organizationId);
@@ -166,7 +158,6 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     upcomingBillingQuery = upcomingBillingQuery.eq('organization_id', organizationId);
     unreadNotificationsQuery = unreadNotificationsQuery.eq('organization_id', organizationId);
     clientAccessQueueQuery = clientAccessQueueQuery.eq('target_organization_id', organizationId);
-    actionableNotificationsQuery = actionableNotificationsQuery.eq('organization_id', organizationId);
   }
 
   const [
@@ -185,8 +176,7 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     { data: upcomingBilling },
     { count: unreadNotifications },
     unreadNotificationItems,
-    { data: clientAccessQueue },
-    { data: actionableNotifications }
+    { data: clientAccessQueue }
   ] = await Promise.all([
     casesCountQuery,
     pendingDocumentsQuery,
@@ -203,8 +193,7 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     upcomingBillingQuery,
     unreadNotificationsQuery,
     unreadNotificationItemsPromise,
-    clientAccessQueueQuery,
-    actionableNotificationsQuery
+    clientAccessQueueQuery
   ]);
 
   const availableCaseIds = (caseOptions ?? []).map((item: any) => item.id).filter(Boolean);
@@ -273,10 +262,28 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
       destination_url: item.destinationUrl,
       priority: item.priority,
       status: item.status,
+      entity_type: item.entityType,
+      entity_id: item.entityId,
+      organization_id: item.organizationId,
+      action_label: '열기',
       created_at: item.createdAt
     })),
     clientAccessQueue: clientAccessQueue ?? [],
-    actionableNotifications: actionableNotifications ?? []
+    actionableNotifications: (unreadNotificationItems ?? [])
+      .filter((item: any) => item.status === 'active' && item.priority === 'urgent')
+      .slice(0, 6)
+      .map((item: any) => ({
+        id: item.notificationId,
+        title: item.title,
+        body: '',
+        action_label: '열기',
+        action_href: item.destinationUrl,
+        destination_url: item.destinationUrl,
+        action_entity_type: item.entityType,
+        requires_action: item.priority === 'urgent',
+        resolved_at: null,
+        organization_id: item.organizationId ?? null
+      }))
   };
 
   const secondary: DashboardSecondaryPanels = {

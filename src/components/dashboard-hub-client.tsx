@@ -18,6 +18,8 @@ type CaseOption = {
   title: string;
   reference_no?: string | null;
   case_status?: string | null;
+  stage_key?: string | null;
+  updated_at?: string | null;
 };
 
 type TeamMember = {
@@ -266,6 +268,17 @@ function notificationActionLabel(item: NotificationItem) {
   if (item.action_entity_type === 'client_access_request') return '의뢰인 관리 열기';
   if (item.action_entity_type === 'support_access_request') return '지원 요청 보기';
   return '알림 보기';
+}
+
+function stageLabel(stageKey?: string | null) {
+  if (!stageKey) return '단계 미설정';
+  if (stageKey === 'intake') return '접수';
+  if (stageKey === 'review') return '검토 중';
+  if (stageKey === 'revision_wait') return '수정 요청 대기';
+  if (stageKey === 'client_reply_wait') return '의뢰인 답변 대기';
+  if (stageKey === 'recheck') return '재검토 중';
+  if (stageKey === 'done') return '완료';
+  return stageKey;
 }
 
 function toNotificationOpenHref(item: NotificationItem) {
@@ -873,20 +886,35 @@ export function DashboardHubClient({
     commitCoordination
   } = communication;
 
-  const quickLinks: Array<{ label: string; href: Route }> = [
-    { label: '사건', href: '/cases' },
-    { label: '캘린더', href: '/calendar' },
-    { label: '비용', href: '/billing' },
-    { label: '의뢰인', href: '/clients' },
-    { label: '문서', href: '/documents' },
-    { label: '알림', href: '/notifications' }
-  ];
-
   const pendingClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'pending').length;
   const approvedClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'approved').length;
+  const requestByCaseId = new Map(
+    data.recentRequests
+      .filter((item) => item.case_id)
+      .map((item) => [item.case_id as string, item])
+  );
+  const alertByCaseId = new Map(
+    data.unreadNotificationItems
+      .filter((item) => (item.entity_type ?? item.action_entity_type) === 'case' && item.entity_id)
+      .map((item) => [item.entity_id as string, item])
+  );
+  const todayCaseFocus = data.recentCases.slice(0, 5).map((item) => {
+    const request = requestByCaseId.get(item.id);
+    const alert = alertByCaseId.get(item.id);
+    const nextAction = request
+      ? `요청 처리 · ${request.title}`
+      : alert
+      ? `알림 확인 · ${alert.title}`
+      : '사건 상세에서 다음 단계 갱신';
+
+    return {
+      ...item,
+      nextAction
+    };
+  });
 
   const summaryCards = [
-    { label: '즉시 조치', value: data.actionableNotifications.length, className: 'border-rose-200 bg-rose-50/80', valueClassName: 'text-rose-950' },
+    { label: '오늘 멈춤 위험 사건', value: todayCaseFocus.length, className: 'border-rose-200 bg-rose-50/80', valueClassName: 'text-rose-950' },
     { label: '신규 승인 요청', value: pendingClientAccessCount, className: 'border-emerald-200 bg-emerald-50/80', valueClassName: 'text-emerald-950' },
     { label: '연결 후속 처리', value: approvedClientAccessCount, className: 'border-violet-200 bg-violet-50/80', valueClassName: 'text-violet-950' }
   ];
@@ -901,7 +929,7 @@ export function DashboardHubClient({
               업무 허브
             </div>
             <h1 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">오늘 바로 움직일 것들</h1>
-            <p className="text-sm text-slate-600">승인 대기, 조치 필요 알림, 비용 후속 처리 순으로 먼저 정리합니다.</p>
+            <p className="text-sm text-slate-600">사건 기준으로 멈춤 위험을 먼저 확인하고 다음 행동을 바로 실행합니다.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
@@ -915,6 +943,20 @@ export function DashboardHubClient({
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Link
+                href={'/notifications' as Route}
+                className="inline-flex items-center rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-sky-300 hover:bg-sky-50"
+              >
+                확인할 알림 {data.unreadNotifications}개
+              </Link>
+              <Link
+                href={'/cases' as Route}
+                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                확인할 건 {data.activeCases}개
+              </Link>
+            </div>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">지금 처리해야 할 항목</p>
@@ -989,20 +1031,32 @@ export function DashboardHubClient({
 
           <div className="rounded-[1.6rem] border border-sky-200 bg-[linear-gradient(180deg,#f8fcff,#edf7ff)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-900">빠른 이동</p>
-              <Badge tone="blue">메뉴</Badge>
+              <p className="text-sm font-semibold text-slate-900">오늘 멈출 수 있는 사건</p>
+              <Badge tone="red">{todayCaseFocus.length}</Badge>
             </div>
-            <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-              {quickLinks.map((item) => (
+            <div className="mt-2.5 space-y-2">
+              {todayCaseFocus.length ? todayCaseFocus.map((item) => (
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center justify-between rounded-2xl border border-sky-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 transition hover:border-sky-300 hover:bg-sky-50/40"
+                  key={item.id}
+                  href={`/cases/${item.id}` as Route}
+                  className="block rounded-2xl border border-sky-200 bg-white px-3.5 py-3 text-sm transition hover:border-sky-300 hover:bg-sky-50/40"
                 >
-                  <span>{item.label}</span>
-                  <ChevronRight className="size-4 text-slate-400" />
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">{item.title}</p>
+                    <ChevronRight className="size-4 text-slate-400" />
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>현재 단계 {stageLabel(item.stage_key)}</span>
+                    <span>·</span>
+                    <span>마지막 업데이트 {item.updated_at ? formatDateTime(item.updated_at) : '-'}</span>
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-sky-700">다음 행동 · {item.nextAction}</p>
                 </Link>
-              ))}
+              )) : (
+                <div className="rounded-2xl border border-sky-200 bg-white px-3 py-6 text-sm text-slate-500">
+                  멈춤 위험 사건이 없습니다.
+                </div>
+              )}
             </div>
           </div>
 

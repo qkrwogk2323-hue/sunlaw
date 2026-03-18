@@ -1,6 +1,6 @@
 import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getPortalCases } from '@/lib/queries/portal';
+import { getPortalAccessibleCaseIds } from '@/lib/queries/portal';
 
 const TRASH_RETENTION_DAYS = 30;
 const legacyNotificationSelect = 'id, title, body, kind, created_at, read_at, organization_id, case_id, payload, organization:organizations(id, name, slug)';
@@ -327,7 +327,7 @@ export async function getPortalNotifications(limit = 20) {
   const auth = await getCurrentAuth();
   if (!auth) return [];
 
-  const caseIds = (await getPortalCases()).map((entry: any) => entry.case_id).filter(Boolean);
+  const caseIds = await getPortalAccessibleCaseIds();
   if (!caseIds.length) return [];
 
   const supabase = await createSupabaseServerClient();
@@ -445,7 +445,7 @@ function fallbackDestination(record: any, entityType: QueueEntityType, entityId:
   if (entityType === 'case' && entityId) return `/cases/${entityId}`;
   if (entityType === 'schedule') return '/calendar';
   if (entityType === 'client') return entityId ? `/clients?clientId=${entityId}&highlight=1` : '/clients';
-  return '/dashboard';
+  return '/inbox';
 }
 
 function normalizeQueueItem(record: any): NotificationQueueItem {
@@ -487,7 +487,7 @@ function buildQueueGroups(items: NotificationQueueItem[]) {
       groupKey: key,
       entityType: item.entityType,
       entityId: item.entityId,
-      title: item.entityId ? `${item.entityType} #${item.entityId}` : `${item.entityType} 그룹`,
+      title: item.title || (item.entityId ? `${item.entityType} #${item.entityId}` : `${item.entityType} 그룹`),
       count: 1,
       items: [item]
     });
@@ -531,10 +531,16 @@ export async function getDashboardRecentNotifications(organizationId?: string | 
 
 export async function getNotificationQueueView({
   limit = 30,
-  cursor
+  cursor,
+  q,
+  entityType,
+  section
 }: {
   limit?: number;
   cursor?: string | null;
+  q?: string | null;
+  entityType?: QueueEntityType | 'all' | null;
+  section?: 'all' | 'immediate' | 'confirm' | 'reference' | null;
 }) {
   const auth = await getCurrentAuth();
   if (!auth) {
@@ -568,7 +574,15 @@ export async function getNotificationQueueView({
     throw error;
   }
 
-  const rows = ((data ?? []) as any[]).map(normalizeQueueItem);
+  const keyword = `${q ?? ''}`.trim().toLowerCase();
+  const normalizedEntityType = entityType && entityType !== 'all' ? entityType : null;
+  const normalizedSection = section && section !== 'all' ? section : null;
+
+  const rows = ((data ?? []) as any[]).map(normalizeQueueItem).filter((item) => {
+    if (normalizedEntityType && item.entityType !== normalizedEntityType) return false;
+    if (keyword && !`${item.title}`.toLowerCase().includes(keyword)) return false;
+    return true;
+  });
   const pageItems = rows.slice(0, limit);
   const nextCursor = rows.length > limit ? pageItems[pageItems.length - 1]?.createdAt ?? null : null;
   const currentOrganizationId = getEffectiveOrganizationId(auth);
@@ -577,14 +591,16 @@ export async function getNotificationQueueView({
   const confirm = pageItems.filter((item) => (item.status === 'active' || item.status === 'read') && item.priority !== 'urgent');
   const reference = pageItems.filter((item) => item.status === 'resolved' || item.status === 'archived');
 
+  const sections = {
+    immediate: normalizedSection && normalizedSection !== 'immediate' ? [] : buildQueueGroups(immediate),
+    confirm: normalizedSection && normalizedSection !== 'confirm' ? [] : buildQueueGroups(confirm),
+    reference: normalizedSection && normalizedSection !== 'reference' ? [] : buildQueueGroups(reference)
+  };
+
   return {
     currentOrganizationId,
     items: pageItems,
-    sections: {
-      immediate: buildQueueGroups(immediate),
-      confirm: buildQueueGroups(confirm),
-      reference: buildQueueGroups(reference)
-    },
+    sections,
     nextCursor
   };
 }
