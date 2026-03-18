@@ -3,6 +3,7 @@ import { ArrowRight, BriefcaseBusiness } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CaseCreateForm } from '@/components/forms/case-create-form';
+import { CaseCsvImportForm } from '@/components/forms/case-csv-import-form';
 import { getActiveViewMode, getEffectiveOrganizationId, hasActivePlatformScenarioView, requireAuthenticatedUser } from '@/lib/auth';
 import { listCases } from '@/lib/queries/cases';
 import { formatCurrency, formatDateTime } from '@/lib/format';
@@ -10,12 +11,19 @@ import { ExportLinks } from '@/components/export-links';
 import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
 import { getPlatformScenarioCases } from '@/lib/platform-scenario-workspace';
 
-export default async function CasesPage() {
+export default async function CasesPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ imported?: string; skipped?: string }>;
+}) {
   const auth = await requireAuthenticatedUser();
   const activeViewMode = await getActiveViewMode();
   const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
   const currentOrganizationId = getEffectiveOrganizationId(auth);
   const cases = scenarioMode ? getPlatformScenarioCases(scenarioMode) : await listCases(currentOrganizationId);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const importedCount = Number(resolvedSearchParams?.imported ?? 0);
+  const skippedCount = Number(resolvedSearchParams?.skipped ?? 0);
   const organizations = auth.memberships.map((membership) => ({
     id: membership.organization_id,
     name: membership.organization?.name ?? membership.organization_id
@@ -38,6 +46,12 @@ export default async function CasesPage() {
         </div>
       </div>
 
+      {importedCount > 0 || skippedCount > 0 ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+          사건 CSV 처리 결과: 저장 {importedCount}건 · 중복/누락으로 건너뜀 {skippedCount}건
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">사건 운영</h2>
@@ -46,7 +60,7 @@ export default async function CasesPage() {
         {!scenarioMode ? <ExportLinks resource="case-board" /> : null}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_0.9fr_1.05fr]">
         {scenarioMode ? (
           <Card className="vs-mesh-card">
             <CardHeader>
@@ -57,18 +71,30 @@ export default async function CasesPage() {
               <p>각 사건에는 의뢰인 1명 이상이 연결되어 있고, 문서, 요청, 일정, 비용, 긴 업무소통 기록이 함께 연결됩니다.</p>
             </CardContent>
           </Card>
-        ) : (
-          <Card className="vs-mesh-card">
-            <CardHeader>
-              <CardTitle>새 사건 열기</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
-            </CardContent>
-          </Card>
+) : (
+          <>
+            <Card className="vs-mesh-card">
+              <CardHeader>
+                <CardTitle>새 사건 열기</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
+              </CardContent>
+            </Card>
+            {currentOrganizationId ? (
+              <Card className="vs-mesh-card">
+                <CardHeader>
+                  <CardTitle>사건 CSV 저장</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CaseCsvImportForm organizationId={currentOrganizationId} />
+                </CardContent>
+              </Card>
+            ) : null}
+          </>
         )}
 
-        <Card>
+        <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle>최근 사건 흐름</CardTitle>
           </CardHeader>

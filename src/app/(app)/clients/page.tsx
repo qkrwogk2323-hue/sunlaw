@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClientBulkInviteForm } from '@/components/forms/client-bulk-invite-form';
+import { bulkInviteClientsAction } from '@/lib/actions/organization-actions';
+import { ClientCsvImportForm } from '@/components/forms/client-csv-import-form';
 import { ClientDirectInviteForm } from '@/components/forms/client-direct-invite-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
@@ -20,7 +23,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string }>;
+  searchParams?: Promise<{ invite?: string; imported?: string; skipped?: string; invited?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const activeViewMode = await getActiveViewMode();
@@ -42,6 +45,10 @@ export default async function ClientsPage({
     searchParams ? searchParams : Promise.resolve(undefined)
   ]);
   const inviteToken = resolvedSearchParams?.invite;
+  const importedCount = Number(resolvedSearchParams?.imported ?? 0);
+  const skippedCount = Number(resolvedSearchParams?.skipped ?? 0);
+  const invitedCount = Number(resolvedSearchParams?.invited ?? 0);
+  const bulkInvitableIds = roster.filter((item: any) => item.source === 'linked' && item.email && item.inviteStatus === '미발송').map((item: any) => item.raw.id);
 
   return (
     <div className="space-y-6">
@@ -56,8 +63,26 @@ export default async function ClientsPage({
         </div>
       ) : null}
 
+      {importedCount > 0 || skippedCount > 0 ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+          의뢰인 CSV 처리 결과: 저장 {importedCount}건 · 중복/누락으로 건너뜀 {skippedCount}건
+        </div>
+      ) : null}
+
+      {invitedCount > 0 ? (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
+          선택한 의뢰인 초대 {invitedCount}건을 생성했습니다.
+        </div>
+      ) : null}
+
       {canManage ? (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-4">
+          <Card>
+            <CardHeader><CardTitle>의뢰인 CSV 저장</CardTitle></CardHeader>
+            <CardContent>
+              <ClientCsvImportForm organizationId={organizationId!} />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader><CardTitle>의뢰인 초대</CardTitle></CardHeader>
             <CardContent>
@@ -92,9 +117,24 @@ export default async function ClientsPage({
 
       <Card>
         <CardHeader><CardTitle>의뢰인 목록</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {roster.length ? roster.map((item: any) => (
+        <CardContent className="space-y-4">
+          {canManage && bulkInvitableIds.length ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-900">일괄 초대</p>
+              <p className="mt-1 text-xs text-slate-500">CSV로 저장된 기존 의뢰인도 체크해서 일부 초대하거나, 한 번에 전부 초대할 수 있습니다.</p>
+            </div>
+          ) : null}
+          {roster.length ? <form action={bulkInviteClientsAction} className="space-y-3">
+            <input type="hidden" name="organizationId" value={organizationId ?? ''} />
+            {canManage && bulkInvitableIds.length ? <ClientBulkInviteForm /> : null}
+            {roster.map((item: any) => (
             <div key={item.id} className="rounded-xl border border-slate-200 p-4">
+              {canManage && item.source === 'linked' && item.email && item.inviteStatus === '미발송' ? (
+                <label className="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                  <input type="checkbox" name="clientIds" value={item.raw.id} className="size-4 rounded border-slate-300" />
+                  일부 초대 목록에 포함
+                </label>
+              ) : null}
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <Link href={item.caseId ? `/cases/${item.caseId}` : '/clients'} className="font-medium text-slate-900 underline-offset-4 hover:underline">
@@ -116,7 +156,9 @@ export default async function ClientsPage({
                 </div>
               ) : null}
             </div>
-          )) : <p className="text-sm text-slate-500">의뢰인 데이터가 없습니다.</p>}
+            ))}
+            {canManage && bulkInvitableIds.length ? <ClientBulkInviteForm /> : null}
+          </form> : <p className="text-sm text-slate-500">의뢰인 데이터가 없습니다.</p>}
         </CardContent>
       </Card>
     </div>

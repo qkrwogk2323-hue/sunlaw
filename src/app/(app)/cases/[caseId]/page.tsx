@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BillingEntryForm } from '@/components/forms/billing-entry-form';
 import { CaseOrganizationForm } from '@/components/forms/case-organization-form';
 import { ClientInvitationForm } from '@/components/forms/client-invitation-form';
+import { ExistingClientLinkForm } from '@/components/forms/existing-client-link-form';
 import { ClientLinkForm } from '@/components/forms/client-link-form';
 import { DocumentCreateForm } from '@/components/forms/document-create-form';
 import { DocumentReviewForm } from '@/components/forms/document-review-form';
@@ -22,6 +23,7 @@ import { requestDocumentReviewAction } from '@/lib/actions/case-actions';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { hasPermission, isWorkspaceAdmin } from '@/lib/permissions';
 import { getCaseDetail } from '@/lib/queries/cases';
+import { listOrganizationClientDirectory } from '@/lib/queries/clients';
 import { ExportLinks } from '@/components/export-links';
 import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
 import { getPlatformScenarioCaseDetail } from '@/lib/platform-scenario-workspace';
@@ -94,6 +96,7 @@ export default async function CaseDetailPage({
     .reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
   const activeAgreement = caseDetail.feeAgreements.find((item: any) => item.is_active) ?? caseDetail.feeAgreements[0] ?? null;
   const legalRequests = caseDetail.requests.filter((item: any) => ['document_request', 'signature_request', 'schedule_request'].includes(item.request_kind));
+  const existingClientOptions = scenarioMode ? [] : await listOrganizationClientDirectory(caseDetail.organization_id, caseDetail.id);
 
   return (
     <div className="space-y-6">
@@ -195,7 +198,7 @@ export default async function CaseDetailPage({
             {canManage ? (
               <>
                 <Card><CardHeader><CardTitle>당사자 등록</CardTitle></CardHeader><CardContent><PartyCreateForm caseId={caseId} /></CardContent></Card>
-                <Card><CardHeader><CardTitle>의뢰인 연결</CardTitle></CardHeader><CardContent className="space-y-4"><ClientLinkForm caseId={caseId} />{isWorkspaceAdmin(membership) ? <ClientInvitationForm caseId={caseId} /> : null}</CardContent></Card>
+                <Card><CardHeader><CardTitle>의뢰인 연결</CardTitle></CardHeader><CardContent className="space-y-4"><ExistingClientLinkForm caseId={caseId} clients={existingClientOptions} /><ClientLinkForm caseId={caseId} />{isWorkspaceAdmin(membership) ? <ClientInvitationForm caseId={caseId} /> : null}</CardContent></Card>
                 {canAssign ? <Card><CardHeader><CardTitle>참여 조직 추가</CardTitle></CardHeader><CardContent><CaseOrganizationForm caseId={caseId} /></CardContent></Card> : null}
               </>
             ) : null}

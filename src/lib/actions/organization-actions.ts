@@ -13,6 +13,7 @@ import {
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { decodeInvitationNote, encodeInvitationNote } from '@/lib/invitation-metadata';
 import { isValidKoreanBusinessNumber, makeSlug, normalizeBusinessNumber } from '@/lib/format';
+import { parseCsvFile, pickCsvValue } from '@/lib/csv';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getDefaultTemplatePermissions, hasPermission, PERMISSION_KEYS } from '@/lib/permissions';
@@ -446,6 +447,45 @@ const resendInvitationSchema = z.object({
   invitationId: z.string().uuid(),
   expiresHours: z.coerce.number().int().min(1).max(336).default(72)
 });
+
+
+async function resolveCaseIdFromCsv({
+  supabase,
+  organizationId,
+  caseId,
+  caseReference,
+  caseTitle
+}: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  organizationId: string;
+  caseId?: string | null;
+  caseReference?: string | null;
+  caseTitle?: string | null;
+}) {
+  if (caseId?.trim()) return caseId.trim();
+
+  if (caseReference?.trim()) {
+    const { data } = await supabase
+      .from('cases')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('reference_no', caseReference.trim())
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+
+  if (caseTitle?.trim()) {
+    const { data } = await supabase
+      .from('cases')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('title', caseTitle.trim())
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+
+  return null;
+}
 
 function buildClientInvitationNote(note?: string | null, relationLabel?: string | null, phone?: string | null) {
   const lines = [
@@ -1827,4 +1867,147 @@ export async function acceptInvitationAction(token: string) {
 
   await finalizeInvitationAcceptance(adminClient, invitation.id, auth.user.id);
   finalizeInvitationAcceptanceNavigation(invitation.kind);
+}
+
+
+export async function importClientsCsvAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+
+  const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인 CSV를 등록할 수 있습니다.');
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) throw new Error('CSV 파일을 선택해 주세요.');
+
+  const supabase = await createSupabaseServerClient();
+  const rows = await parseCsvFile(file);
+  if (!rows.length) throw new Error('CSV에서 읽을 수 있는 행이 없습니다.');
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const email = pickCsvValue(row, ['email', '이메일', 'mail']).toLowerCase();
+    const name = pickCsvValue(row, ['name', 'clientname', '의뢰인명', '이름']);
+    const relationLabel = pickCsvValue(row, ['relationlabel', 'relation', '관계', '관계라벨']);
+    const note = pickCsvValue(row, ['note', 'memo', '메모', '비고']);
+    const phone = pickCsvValue(row, ['phone', 'mobile', '연락처', '전화번호']);
+    const caseId = await resolveCaseIdFromCsv({
+      supabase,
+      organizationId,
+      caseId: pickCsvValue(row, ['caseid', '사건id']),
+      caseReference: pickCsvValue(row, ['casereference', 'reference', '사건번호', '사건참조번호']),
+      caseTitle: pickCsvValue(row, ['casetitle', 'case', '사건명', '사건제목'])
+    });
+
+    if (!email) {
+      skipped += 1;
+      continue;
+    }
+
+    const clientName = name || email;
+    const combinedRelation = [relationLabel, phone ? `연락처:${phone}` : null, note ? `메모:${note}` : null].filter(Boolean).join(' · ') || null;
+
+    const { data: existing } = await supabase
+      .from('case_clients')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('client_email_snapshot', email)
+      .eq('case_id', caseId)
+      .maybeSingle();
+
+    if (existing?.id) {
+      skipped += 1;
+      continue;
+    }
+
+    const adminClient = createSupabaseAdminClient();
+    const { data: profile } = await adminClient.from('profiles').select('id').eq('email', email).maybeSingle();
+    const { error } = await adminClient.from('case_clients').insert({
+      organization_id: organizationId,
+      case_id: caseId,
+      profile_id: profile?.id ?? null,
+      client_name: clientName,
+      client_email_snapshot: email,
+      relation_label: combinedRelation,
+      is_portal_enabled: false,
+      created_by: auth.user.id,
+      updated_by: auth.user.id
+    });
+
+    if (error) throw error;
+    imported += 1;
+  }
+
+  revalidatePath('/clients');
+  redirect(`/clients?imported=${imported}&skipped=${skipped}`);
+}
+
+export async function bulkInviteClientsAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const mode = `${formData.get('mode') ?? 'selected'}`.trim();
+  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+
+  const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인을 초대할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+  const expiresHours = 72;
+
+  let targetIds = formData.getAll('clientIds').map((value) => `${value}`.trim()).filter(Boolean);
+  if (mode === 'all') {
+    const { data } = await supabase
+      .from('case_clients')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_portal_enabled', false)
+      .not('client_email_snapshot', 'is', null)
+      .limit(500);
+    targetIds = (data ?? []).map((item: any) => item.id);
+  }
+
+  if (!targetIds.length) throw new Error('초대할 의뢰인을 선택해 주세요.');
+
+  const { data: clients, error } = await supabase
+    .from('case_clients')
+    .select('id, case_id, client_name, client_email_snapshot')
+    .in('id', targetIds)
+    .eq('organization_id', organizationId);
+
+  if (error) throw error;
+
+  let invited = 0;
+  for (const client of clients ?? []) {
+    const email = `${client.client_email_snapshot ?? ''}`.trim().toLowerCase();
+    if (!email) continue;
+
+    const { data: existingInvite } = await supabase
+      .from('invitations')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('case_client_id', client.id)
+      .eq('status', 'pending')
+      .eq('kind', 'client_invite')
+      .maybeSingle();
+
+    if (existingInvite?.id) continue;
+
+    const token = createInvitationToken();
+    const { error: inviteError } = await supabase.from('invitations').insert({
+      organization_id: organizationId,
+      case_id: client.case_id,
+      case_client_id: client.id,
+      kind: 'client_invite',
+      email,
+      invited_name: client.client_name ?? email,
+      token_hash: hashInvitationToken(token),
+      share_token: null,
+      token_hint: token.slice(-6),
+      note: '의뢰인 일괄 초대',
+      created_by: auth.user.id,
+      expires_at: new Date(Date.now() + expiresHours * 60 * 60 * 1000).toISOString()
+    });
+    if (inviteError) throw inviteError;
+    invited += 1;
+  }
+
+  revalidatePath('/clients');
+  redirect(`/clients?invited=${invited}`);
 }

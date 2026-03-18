@@ -6,6 +6,7 @@ import { isManagementRole, requireOrganizationActionAccess } from '@/lib/auth';
 import { buildCaseReference, makeSlug } from '@/lib/format';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
+import { parseCsvFile, pickCsvValue } from '@/lib/csv';
 import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -353,6 +354,42 @@ function finalizeCreateCase(caseId: string) {
   revalidatePath('/cases');
   revalidatePath('/dashboard');
   redirect(`/cases/${caseId}`);
+}
+
+async function resolveExistingOrgClient({
+  supabase,
+  organizationId,
+  clientId,
+  email
+}: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  organizationId: string;
+  clientId?: string | null;
+  email?: string | null;
+}) {
+  if (clientId?.trim()) {
+    const { data } = await supabase
+      .from('case_clients')
+      .select('id, client_name, client_email_snapshot, relation_label, profile_id, is_portal_enabled')
+      .eq('organization_id', organizationId)
+      .eq('id', clientId.trim())
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  if (email?.trim()) {
+    const { data } = await supabase
+      .from('case_clients')
+      .select('id, client_name, client_email_snapshot, relation_label, profile_id, is_portal_enabled')
+      .eq('organization_id', organizationId)
+      .eq('client_email_snapshot', email.trim().toLowerCase())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  return null;
 }
 
 export async function createCaseAction(formData: FormData) {
@@ -1278,4 +1315,113 @@ export async function recordPaymentAction(caseId: string, formData: FormData) {
   if (error) throw error;
 
   revalidatePath(`/cases/${caseId}`);
+}
+
+
+export async function importCasesCsvAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+
+  const { auth, membership } = await requireOrganizationActionAccess(organizationId, {
+    requireManager: true,
+    errorMessage: '관리자만 사건 CSV를 등록할 수 있습니다.'
+  });
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) throw new Error('CSV 파일을 선택해 주세요.');
+
+  const supabase = await createSupabaseServerClient();
+  const rows = await parseCsvFile(file);
+  if (!rows.length) throw new Error('CSV에서 읽을 수 있는 행이 없습니다.');
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const title = pickCsvValue(row, ['title', '사건명', '사건제목']);
+    const caseType = pickCsvValue(row, ['casetype', '유형', '사건유형']) || 'civil';
+    const referenceNo = pickCsvValue(row, ['reference', 'referenceno', '사건참조번호']);
+    if (!title) {
+      skipped += 1;
+      continue;
+    }
+
+    let duplicateQuery = supabase
+      .from('cases')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('title', title)
+      .limit(1);
+
+    if (referenceNo) duplicateQuery = duplicateQuery.eq('reference_no', referenceNo);
+    const { data: duplicate } = await duplicateQuery.maybeSingle();
+    if (duplicate?.id) {
+      skipped += 1;
+      continue;
+    }
+
+    await createCaseCoreWrite({
+      supabase,
+      organizationId,
+      title,
+      caseType,
+      principalAmount: Number(pickCsvValue(row, ['principalamount', '원금']) || 0),
+      openedOn: pickCsvValue(row, ['openedon', '개시일']) || null,
+      courtName: pickCsvValue(row, ['courtname', '법원']) || null,
+      caseNumber: pickCsvValue(row, ['casenumber', '사건번호']) || null,
+      summary: pickCsvValue(row, ['summary', '개요']) || null,
+      actorId: auth.user.id,
+      actorName: auth.profile.full_name,
+      organizationSlug: membership.organization?.slug ?? null
+    });
+    imported += 1;
+  }
+
+  revalidatePath('/cases');
+  redirect(`/cases?imported=${imported}&skipped=${skipped}`);
+}
+
+export async function quickLinkExistingClientAction(caseId: string, formData: FormData) {
+  const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
+  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'case_edit',
+    errorMessage: '의뢰인 연결 권한이 없습니다.'
+  });
+
+  const sourceClient = await resolveExistingOrgClient({
+    supabase,
+    organizationId: caseRecord.organization_id,
+    clientId: `${formData.get('existingClientId') ?? ''}`,
+    email: `${formData.get('email') ?? ''}`
+  });
+
+  if (!sourceClient) throw new Error('연결할 기존 의뢰인을 찾을 수 없습니다.');
+
+  const { data: duplicate } = await supabase
+    .from('case_clients')
+    .select('id')
+    .eq('case_id', caseRecord.id)
+    .eq('client_email_snapshot', sourceClient.client_email_snapshot)
+    .maybeSingle();
+  if (duplicate?.id) {
+    revalidatePath(`/cases/${caseId}`);
+    return;
+  }
+
+  const adminClient = createSupabaseAdminClient();
+  const { error } = await adminClient.from('case_clients').insert({
+    organization_id: caseRecord.organization_id,
+    case_id: caseRecord.id,
+    profile_id: sourceClient.profile_id ?? null,
+    client_name: sourceClient.client_name,
+    client_email_snapshot: sourceClient.client_email_snapshot,
+    relation_label: sourceClient.relation_label,
+    is_portal_enabled: sourceClient.is_portal_enabled,
+    created_by: auth.user.id,
+    updated_by: auth.user.id
+  });
+  if (error) throw error;
+
+  revalidatePath(`/cases/${caseId}`);
+  revalidatePath('/clients');
 }

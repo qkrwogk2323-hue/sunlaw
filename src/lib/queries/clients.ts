@@ -74,3 +74,25 @@ export async function listClientRosterSummary(organizationId?: string | null) {
 
   return [...pendingRows, ...linkedRows];
 }
+
+
+export async function listOrganizationClientDirectory(organizationId: string, excludeCaseId?: string | null) {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from('case_clients')
+    .select('id, case_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, cases(title)')
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (excludeCaseId) query = query.neq('case_id', excludeCaseId);
+
+  const { data } = await query;
+  const unique = new Map<string, any>();
+  for (const row of data ?? []) {
+    const email = `${row.client_email_snapshot ?? ''}`.trim().toLowerCase();
+    if (!email || unique.has(email)) continue;
+    unique.set(email, row);
+  }
+  return [...unique.values()];
+}
