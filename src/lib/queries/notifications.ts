@@ -1,6 +1,6 @@
 import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getPortalAccessibleCaseIds } from '@/lib/queries/portal';
+import { getPortalCases } from '@/lib/queries/portal';
 
 const TRASH_RETENTION_DAYS = 30;
 const legacyNotificationSelect = 'id, title, body, kind, created_at, read_at, organization_id, case_id, payload, organization:organizations(id, name, slug)';
@@ -327,7 +327,9 @@ export async function getPortalNotifications(limit = 20) {
   const auth = await getCurrentAuth();
   if (!auth) return [];
 
-  const caseIds = await getPortalAccessibleCaseIds();
+  const caseIds = (await getPortalCases())
+    .map((item: any) => item.case_id)
+    .filter(Boolean);
   if (!caseIds.length) return [];
 
   const supabase = await createSupabaseServerClient();
