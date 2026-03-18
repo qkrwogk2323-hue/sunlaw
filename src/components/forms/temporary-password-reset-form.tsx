@@ -18,8 +18,8 @@ export function TemporaryPasswordResetForm() {
     event.preventDefault();
     setError(null);
 
-    if (nextPassword.length < 8) {
-      setError('새 비밀번호는 8자 이상이어야 합니다.');
+    if (nextPassword.length < 4) {
+      setError('새 비밀번호는 4자 이상이어야 합니다.');
       return;
     }
 
@@ -55,7 +55,7 @@ export function TemporaryPasswordResetForm() {
         새 비밀번호
         <Input
           type="password"
-          minLength={8}
+          minLength={4}
           required
           value={nextPassword}
           onChange={(event) => setNextPassword(event.target.value)}
@@ -67,7 +67,7 @@ export function TemporaryPasswordResetForm() {
         새 비밀번호 확인
         <Input
           type="password"
-          minLength={8}
+          minLength={4}
           required
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
@@ -76,6 +76,7 @@ export function TemporaryPasswordResetForm() {
         />
       </label>
       {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
+      <p className="text-xs text-slate-500">보안 권고: 8자 이상, 영문/숫자/특수문자 조합을 권장합니다.</p>
       <SubmitButton pendingLabel="변경 중..." disabled={isPending} className="w-full justify-center">
         비밀번호 변경 후 계속
       </SubmitButton>

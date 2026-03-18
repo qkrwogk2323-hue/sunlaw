@@ -25,13 +25,15 @@ export function CredentialLoginForm() {
       let resolvedEmail = email.trim();
 
       if (resolvedEmail && !resolvedEmail.includes('@')) {
-        const response = await fetch('/api/auth/temp-login/resolve', {
+        const isStaffTempLogin = Boolean(organizationKey.trim());
+        const response = await fetch(isStaffTempLogin ? '/api/auth/temp-login/resolve' : '/api/auth/temp-login/resolve-client', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            organizationKey: organizationKey.trim(),
-            loginId: resolvedEmail
-          })
+          body: JSON.stringify(
+            isStaffTempLogin
+              ? { organizationKey: organizationKey.trim(), loginId: resolvedEmail }
+              : { loginId: resolvedEmail }
+          )
         });
 
         const payload = await response.json().catch(() => ({}));

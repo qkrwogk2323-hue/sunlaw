@@ -14,6 +14,10 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
 
+  if (auth.profile.must_change_password) {
+    redirect('/start/password-reset' as Route);
+  }
+
   if (!hasCompletedLegalName(auth.profile)) {
     redirect('/start/profile-name' as Route);
   }

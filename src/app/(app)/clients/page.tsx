@@ -19,7 +19,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string }>;
+  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedClientTempPassword?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -37,6 +37,8 @@ export default async function ClientsPage({
     searchParams ? searchParams : Promise.resolve(undefined)
   ]);
   const inviteToken = resolvedSearchParams?.invite;
+  const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
+  const issuedClientTempPassword = resolvedSearchParams?.issuedClientTempPassword;
 
   return (
     <div className="space-y-6">
@@ -48,6 +50,13 @@ export default async function ClientsPage({
       {inviteToken ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           생성된 초대 링크: <code className="font-mono">/invite/{inviteToken}</code>
+        </div>
+      ) : null}
+
+      {issuedClientLoginId && issuedClientTempPassword ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          의뢰인 임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedClientLoginId}</code> / 비밀번호 <code className="font-mono">{issuedClientTempPassword}</code>
+          <p className="mt-1 text-xs text-amber-700">첫 로그인 시 비밀번호 변경 화면으로 이동합니다.</p>
         </div>
       ) : null}
 
@@ -97,6 +106,7 @@ export default async function ClientsPage({
                   </Link>
                   <p className="mt-1 text-sm text-slate-500">{item.email ?? '-'}</p>
                   <p className="mt-1 text-xs text-slate-400">{item.caseTitle ?? '미연결 사건'}</p>
+                  {item.tempLoginId ? <p className="mt-1 text-xs text-slate-500">임시 아이디: <code className="font-mono">{item.tempLoginId}</code></p> : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge tone={statusTone(item.signupStatus)}>{item.signupStatus}</Badge>

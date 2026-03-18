@@ -40,7 +40,17 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     invitationsQuery = invitationsQuery.eq('organization_id', organizationId);
   }
 
-  const [{ data: caseClients }, { data: invitations }] = await Promise.all([caseClientsQuery, invitationsQuery]);
+  let tempCredentialsQuery = supabase
+    .from('client_temp_credentials')
+    .select('profile_id, organization_id, case_id, login_id, created_at, contact_email, must_change_password, profile:profiles(full_name)')
+    .order('created_at', { ascending: false })
+    .limit(120);
+
+  if (organizationId) {
+    tempCredentialsQuery = tempCredentialsQuery.eq('organization_id', organizationId);
+  }
+
+  const [{ data: caseClients }, { data: invitations }, { data: tempCredentials }] = await Promise.all([caseClientsQuery, invitationsQuery, tempCredentialsQuery]);
   const linkedRows = (caseClients ?? []).map((row: any) => ({
     id: `linked:${row.id}`,
     source: 'linked',
@@ -72,5 +82,21 @@ export async function listClientRosterSummary(organizationId?: string | null) {
       raw: invite
     }));
 
-  return [...pendingRows, ...linkedRows];
+  const tempRows = (tempCredentials ?? []).map((item: any) => ({
+    id: `temp:${item.profile_id}`,
+    source: 'temp',
+    invitationId: null,
+    name: item.profile?.full_name ?? '이름 미입력',
+    email: item.contact_email ?? null,
+    caseId: item.case_id ?? null,
+    caseTitle: null,
+    signupStatus: item.must_change_password ? '가입 전' : '가입 완료',
+    inviteStatus: '임시계정 발급',
+    caseLinkStatus: item.case_id ? '연결 완료' : '미연결',
+    nextAction: item.must_change_password ? '비밀번호 변경 대기' : '상세 확인',
+    tempLoginId: item.login_id,
+    raw: item
+  }));
+
+  return [...pendingRows, ...tempRows, ...linkedRows];
 }

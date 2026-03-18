@@ -52,6 +52,7 @@ const organizationProfileUpdateSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().trim().min(2).max(120),
   kind: z.enum(['law_firm', 'collection_company', 'mixed_practice', 'corporate_legal_team', 'other']),
+  isDirectoryPublic: z.boolean().default(true),
   representativeName: z.string().trim().max(80).optional().or(z.literal('')),
   representativeTitle: z.string().trim().max(80).optional().or(z.literal('')),
   email: z.string().trim().email().optional().or(z.literal('')),
@@ -474,21 +475,36 @@ export async function updateOrganizationProfileAction(formData: FormData) {
     organizationId: formData.get('organizationId'),
     name: formData.get('name'),
     kind: formData.get('kind'),
+    isDirectoryPublic: formData.get('isDirectoryPublic') === 'on',
     representativeName: formData.get('representativeName'),
     representativeTitle: formData.get('representativeTitle'),
     email: formData.get('email'),
     phone: formData.get('phone'),
     websiteUrl: formData.get('websiteUrl')
   });
-  await assertOrgAdmin(parsed.organizationId);
+  const auth = await assertOrgAdmin(parsed.organizationId);
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
+  const { data: existingOrganization, error: existingOrganizationError } = await admin
+    .from('organizations')
+    .select('id, kind')
+    .eq('id', parsed.organizationId)
+    .maybeSingle();
+  if (existingOrganizationError || !existingOrganization) {
+    throw existingOrganizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
+  }
+
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  if (!isPlatformAdmin && existingOrganization.kind !== parsed.kind) {
+    throw new Error('조직유형 변경은 플랫폼 관리자만 가능합니다.');
+  }
 
   const { error } = await admin
     .from('organizations')
     .update({
       name: parsed.name,
-      kind: parsed.kind,
+      kind: isPlatformAdmin ? parsed.kind : existingOrganization.kind,
+      is_directory_public: parsed.isDirectoryPublic,
       representative_name: parsed.representativeName?.trim() || null,
       representative_title: parsed.representativeTitle?.trim() || null,
       email: parsed.email?.trim() || null,

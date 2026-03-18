@@ -455,6 +455,19 @@ async function generateUniqueTempLoginId(admin: ReturnType<typeof createSupabase
   throw new Error('임시 아이디를 생성하지 못했습니다. 다시 시도해 주세요.');
 }
 
+async function generateUniqueClientTempLoginId(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const candidate = `client-${randomAlphaNumeric(6)}`.toLowerCase();
+    const { data } = await admin
+      .from('client_temp_credentials')
+      .select('profile_id')
+      .eq('login_id_normalized', candidate)
+      .maybeSingle();
+    if (!data?.profile_id) return candidate;
+  }
+  throw new Error('의뢰인 임시 아이디를 생성하지 못했습니다. 다시 시도해 주세요.');
+}
+
 function generateTempPassword() {
   return `${randomAlphaNumeric(4)}!${randomAlphaNumeric(4)}#${randomAlphaNumeric(4)}`;
 }
@@ -470,7 +483,7 @@ const clientPreRegisterInvitationSchema = z.object({
   organizationId: z.string().uuid(),
   caseId: z.string().uuid().optional().or(z.literal('')),
   name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email(),
+  email: z.string().trim().email().optional().or(z.literal('')),
   phone: z.string().trim().max(30).optional().or(z.literal('')),
   note: z.string().trim().max(500).optional().or(z.literal('')),
   relationLabel: z.string().trim().max(80).optional().or(z.literal('')),
@@ -1604,28 +1617,76 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   });
 
   const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 선등록할 수 있습니다.');
-  const supabase = await createSupabaseServerClient();
-  const token = createInvitationToken();
+  const admin = createSupabaseAdminClient();
   const resolvedCaseId = parsed.caseId || null;
+  const loginId = await generateUniqueClientTempLoginId(admin);
+  const loginEmail = `client__${loginId}@client.vein.local`;
+  const tempPassword = generateTempPassword();
 
-  const { error } = await supabase.from('invitations').insert({
-    organization_id: parsed.organizationId,
-    case_id: resolvedCaseId,
-    case_client_id: null,
-    kind: 'client_invite',
-    email: parsed.email,
-    invited_name: parsed.name,
-    token_hash: hashInvitationToken(token),
-    share_token: null,
-    token_hint: token.slice(-6),
-    note: buildClientInvitationNote(parsed.note, parsed.relationLabel, parsed.phone),
-    created_by: auth.user.id,
-    expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+  const { data: createdUser, error: createUserError } = await admin.auth.admin.createUser({
+    email: loginEmail,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { full_name: parsed.name }
   });
-  if (error) throw error;
+  if (createUserError || !createdUser.user) throw createUserError ?? new Error('의뢰인 임시 계정을 생성하지 못했습니다.');
+  const createdUserId = createdUser.user.id;
+
+  try {
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({
+        full_name: parsed.name,
+        default_organization_id: parsed.organizationId,
+        is_client_account: true,
+        client_account_status: 'pending_initial_approval',
+        client_account_status_changed_at: new Date().toISOString(),
+        client_account_status_reason: '의뢰인 임시 계정 발급',
+        must_change_password: true,
+        must_complete_profile: true
+      })
+      .eq('id', createdUserId);
+    if (profileError) throw profileError;
+
+    const { error: credentialError } = await admin
+      .from('client_temp_credentials')
+      .insert({
+        profile_id: createdUserId,
+        organization_id: parsed.organizationId,
+        case_id: resolvedCaseId,
+        login_id: loginId,
+        login_id_normalized: loginId.toLowerCase(),
+        login_email: loginEmail,
+        contact_email: parsed.email?.trim() || null,
+        contact_phone: parsed.phone?.trim() || null,
+        issued_by: auth.user.id,
+        must_change_password: true
+      });
+    if (credentialError) throw credentialError;
+
+    if (resolvedCaseId) {
+      const { error: caseClientError } = await admin
+        .from('case_clients')
+        .insert({
+          organization_id: parsed.organizationId,
+          case_id: resolvedCaseId,
+          profile_id: createdUserId,
+          client_name: parsed.name,
+          client_email_snapshot: parsed.email?.trim() || null,
+          relation_label: parsed.relationLabel?.trim() || '의뢰인',
+          is_portal_enabled: false,
+          created_by: auth.user.id,
+          updated_by: auth.user.id
+        });
+      if (caseClientError) throw caseClientError;
+    }
+  } catch (error) {
+    await admin.auth.admin.deleteUser(createdUserId);
+    throw error;
+  }
 
   revalidatePath('/clients');
-  redirect(`/clients?invite=${encodeURIComponent(token)}`);
+  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedClientTempPassword=${encodeURIComponent(tempPassword)}`);
 }
 
 export async function resendInvitationLinkAction(formData: FormData) {

@@ -9,7 +9,7 @@ export function ClientPreRegisterForm({ organizationId, cases }: { organizationI
     <form action={createClientPreRegisteredInvitationAction} className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <Input name="name" placeholder="이름" required />
-      <Input name="email" type="email" placeholder="이메일" required />
+      <Input name="email" type="email" placeholder="연락 이메일(선택)" />
       <Input name="phone" placeholder="연락처(선택)" />
       <Input name="relationLabel" placeholder="관계(선택)" />
       <div className="md:col-span-2">
@@ -23,7 +23,7 @@ export function ClientPreRegisterForm({ organizationId, cases }: { organizationI
       </div>
       <Input name="note" placeholder="메모(선택)" className="md:col-span-2" />
       <div className="md:col-span-2">
-        <SubmitButton pendingLabel="선등록 중...">의뢰인 선등록 후 초대 링크 발송</SubmitButton>
+        <SubmitButton pendingLabel="발급 중...">의뢰인 임시 아이디/비밀번호 발급</SubmitButton>
       </div>
     </form>
   );

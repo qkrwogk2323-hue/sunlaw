@@ -34,6 +34,15 @@ export async function completeTemporaryCredentialPasswordResetAction() {
     .eq('profile_id', auth.user.id);
   if (credentialError) throw credentialError;
 
+  const { error: clientCredentialError } = await supabase
+    .from('client_temp_credentials')
+    .update({
+      must_change_password: false,
+      last_password_changed_at: new Date().toISOString()
+    })
+    .eq('profile_id', auth.user.id);
+  if (clientCredentialError) throw clientCredentialError;
+
   revalidatePath('/settings/team');
   revalidatePath('/login');
 }

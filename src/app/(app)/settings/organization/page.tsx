@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
@@ -18,6 +18,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
 
 const kindLabel: Record<string, string> = {
+  platform_management: '플랫폼 관리조직',
   law_firm: '법률사무소/로펌',
   collection_company: '추심조직',
   mixed_practice: '복합업무조직',
@@ -44,6 +45,8 @@ export default async function OrganizationSettingsPage({
   if (!workspace) notFound();
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformRootOrganization = workspace.organization?.is_platform_root === true || workspace.organization?.slug === 'vein-bn-1';
   const resolved = searchParams ? await searchParams : undefined;
   const section = `${resolved?.section ?? 'intro'}`.trim();
   const activeSection = section === 'info' || section === 'env' ? section : 'intro';
@@ -56,14 +59,14 @@ export default async function OrganizationSettingsPage({
         <p className="mt-2 text-sm text-slate-600">회사소개, 회사정보, 환경설정을 클릭하면 각각 바로 수정할 수 있습니다.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-        <div className="space-y-2 rounded-2xl bg-indigo-600 p-4 text-white">
-          <Link href="/settings/organization?section=intro" className={`block rounded-xl px-3 py-2 text-xl font-semibold ${activeSection === 'intro' ? 'bg-white text-indigo-700' : 'hover:bg-indigo-500'}`}>
+        <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-900">
+          <Link href="/settings/organization?section=intro" className={`block rounded-xl border px-3 py-2 text-xl font-semibold ${activeSection === 'intro' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-100'}`}>
             회사소개
           </Link>
-          <Link href="/settings/organization?section=info" className={`block rounded-xl px-3 py-2 text-xl font-semibold ${activeSection === 'info' ? 'bg-white text-indigo-700' : 'hover:bg-indigo-500'}`}>
+          <Link href="/settings/organization?section=info" className={`block rounded-xl border px-3 py-2 text-xl font-semibold ${activeSection === 'info' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-100'}`}>
             회사정보
           </Link>
-          <Link href="/settings/organization?section=env" className={`block rounded-xl px-3 py-2 text-xl font-semibold ${activeSection === 'env' ? 'bg-white text-indigo-700' : 'hover:bg-indigo-500'}`}>
+          <Link href="/settings/organization?section=env" className={`block rounded-xl border px-3 py-2 text-xl font-semibold ${activeSection === 'env' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-100'}`}>
             환경설정
           </Link>
         </div>
@@ -96,13 +99,31 @@ export default async function OrganizationSettingsPage({
                     <input name="name" defaultValue={workspace.organization.name ?? ''} required className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label className="text-sm text-slate-600">조직유형
-                    <select name="kind" defaultValue={workspace.organization.kind ?? 'law_firm'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-                      <option value="law_firm">{kindLabel.law_firm}</option>
-                      <option value="collection_company">{kindLabel.collection_company}</option>
-                      <option value="mixed_practice">{kindLabel.mixed_practice}</option>
-                      <option value="corporate_legal_team">{kindLabel.corporate_legal_team}</option>
-                      <option value="other">{kindLabel.other}</option>
-                    </select>
+                    {isPlatformAdmin ? (
+                      <select name="kind" defaultValue={workspace.organization.kind ?? 'law_firm'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                        <option value="law_firm">{kindLabel.law_firm}</option>
+                        <option value="collection_company">{kindLabel.collection_company}</option>
+                        <option value="mixed_practice">{kindLabel.mixed_practice}</option>
+                        <option value="corporate_legal_team">{kindLabel.corporate_legal_team}</option>
+                        <option value="other">{kindLabel.other}</option>
+                      </select>
+                    ) : (
+                      <>
+                        <input type="hidden" name="kind" value={workspace.organization.kind ?? 'law_firm'} />
+                        <div className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
+                          {isPlatformRootOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
+                        </div>
+                      </>
+                    )}
+                  </label>
+                  <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      name="isDirectoryPublic"
+                      defaultChecked={workspace.organization.is_directory_public !== false}
+                      className="size-4"
+                    />
+                    협업 조직 목록에 노출
                   </label>
                   <label className="text-sm text-slate-600">대표자명
                     <input name="representativeName" defaultValue={workspace.organization.representative_name ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
@@ -121,7 +142,7 @@ export default async function OrganizationSettingsPage({
                   </label>
                   <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                     <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>
-                    <span>현재 유형: {kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-'}</span>
+                    <span>현재 유형: {isPlatformRootOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
                   </div>
                   <div className="md:col-span-2">
                     <SubmitButton pendingLabel="저장 중...">회사정보 저장</SubmitButton>

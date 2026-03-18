@@ -16,6 +16,10 @@ import { GlobalCommandPalette } from '@/components/global-command-palette';
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
 
+  if (auth.profile.must_change_password) {
+    redirect('/start/password-reset' as Route);
+  }
+
   if (!hasCompletedLegalName(auth.profile)) {
     redirect('/start/profile-name' as Route);
   }
