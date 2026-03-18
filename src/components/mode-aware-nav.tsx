@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, BellRing, Boxes, Building2, CalendarRange, ChevronDown, ChevronRight, ClipboardList, FileText, LayoutDashboard, LifeBuoy, MessageSquareText, ReceiptText, Settings, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { BarChart3, BellRing, Boxes, Building2, CalendarRange, ChevronDown, ChevronRight, ClipboardList, FileText, LayoutDashboard, LifeBuoy, MessageSquareText, ReceiptText, Settings, Users, Wallet } from 'lucide-react';
 import { ModeSwitcher, getDefaultMode, getOrganizationAdminMode, type ModeKey } from '@/components/mode-switcher';
 import { Button, segmentStyles } from '@/components/ui/button';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
@@ -162,7 +162,7 @@ function getOrganizationSections({
     { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
     { href: '/calendar', label: '일정 확인', icon: CalendarRange },
     ...(!isPlatformAdminView && !isClientView && !isCollectionOrgView ? [{ href: '/billing', label: '비용 관련', icon: Wallet }] : []),
-    { href: '/documents', label: '승인/검토', icon: ReceiptText }
+    { href: '/documents', label: '검토 필요', icon: ReceiptText }
   ]);
   const organizationItems: NavItem[] = [];
   const collaborationItems: NavItem[] = [];
@@ -399,7 +399,7 @@ function MobileSectionBar({
               onClick={() => setActiveSectionId(section.id)}
               className={segmentStyles({
                 active: activeSectionId === section.id,
-                className: `min-h-11 rounded-2xl px-3 py-2.5 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
+                className: `min-h-12 rounded-2xl px-3 py-2.5 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
               })}
             >
               {sectionButtonLabel(section.label)}
@@ -521,8 +521,6 @@ export function ModeAwareNav({
     currentOrganization?.kind,
     Boolean(currentOrgMembership && isManagementRole(currentOrgMembership.role))
   );
-  const [platformSetupOpen, setPlatformSetupOpen] = useState(false);
-  const [platformSetupMode, setPlatformSetupMode] = useState<ModeKey>('platform_admin');
   const [selectedScenarioMemberId, setSelectedScenarioMemberId] = useState('');
   const sectionMembership = useMemo(
     () => currentOrgMembership ?? toMembershipShape(currentOrganization),
@@ -550,7 +548,6 @@ export function ModeAwareNav({
   const organizationLabel = contextLabel(mode, sectionMembership);
   const moduleLabels = mode === 'platform_admin' || mode === 'client_communication' ? [] : enabledModuleLabels(currentOrganization?.enabled_modules);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
-  const isPlatformAdminMode = profile.platform_role === 'platform_admin' && mode === 'platform_admin';
   const currentModeAccent =
     mode === 'platform_admin'
       ? 'border-blue-200 bg-blue-50 text-blue-800'
@@ -678,39 +675,11 @@ export function ModeAwareNav({
   useEffect(() => {
     if (profile.platform_role !== 'platform_admin') {
       queueMicrotask(() => {
-        setPlatformSetupOpen(false);
         setMode(managerDefaultMode);
       });
       return;
     }
-  }, [profile.platform_role, mode, currentOrganization?.kind, managerDefaultMode]);
-
-  useEffect(() => {
-    if (profile.platform_role !== 'platform_admin') return;
-
-    const cookies = document.cookie.split(';').map((item) => item.trim());
-    const activeModeCookie = cookies.find((item) => item.startsWith(`${ACTIVE_VIEW_MODE_COOKIE}=`))?.split('=')[1];
-    const savedPlatformMode = window.localStorage.getItem(PLATFORM_WORK_MODE_STORAGE_KEY);
-    const preferredMode = activeModeCookie === 'platform_admin'
-      || activeModeCookie === 'organization_staff'
-      || activeModeCookie === 'law_admin'
-      || activeModeCookie === 'collection_admin'
-      || activeModeCookie === 'other_admin'
-      ? activeModeCookie
-      : savedPlatformMode;
-    const nextMode = preferredMode === 'platform_admin'
-      || preferredMode === 'organization_staff'
-      || preferredMode === 'law_admin'
-      || preferredMode === 'collection_admin'
-      || preferredMode === 'other_admin'
-      ? preferredMode
-      : 'organization_staff';
-
-    queueMicrotask(() => {
-      setPlatformSetupMode(nextMode);
-      setMode(nextMode);
-    });
-  }, [profile.platform_role]);
+  }, [profile.platform_role, managerDefaultMode]);
 
   useEffect(() => {
     const activeMode = mode;
@@ -732,81 +701,8 @@ export function ModeAwareNav({
       <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
         {profile.platform_role === 'platform_admin' ? (
           <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <ShieldCheck className="size-4 text-emerald-600" /> 플랫폼 조직 운영
-                </span>
-                <p className="mt-1 text-xs text-slate-500">
-                  {isPlatformAdminMode
-                    ? '업무 특성: 플랫폼 조직 운영'
-                    : '업무모드에서 플랫폼 조직/직원/가상조직 시야를 선택한 뒤 활성화합니다.'}
-                </p>
-              </div>
-              <Button
-                variant={isPlatformAdminMode ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => {
-                  if (isPlatformAdminMode) {
-                    setMode(window.localStorage.getItem(PLATFORM_WORK_MODE_STORAGE_KEY) === 'law_admin'
-                      || window.localStorage.getItem(PLATFORM_WORK_MODE_STORAGE_KEY) === 'collection_admin'
-                      || window.localStorage.getItem(PLATFORM_WORK_MODE_STORAGE_KEY) === 'other_admin'
-                      || window.localStorage.getItem(PLATFORM_WORK_MODE_STORAGE_KEY) === 'organization_staff'
-                      ? window.localStorage.getItem(PLATFORM_WORK_MODE_STORAGE_KEY) as ModeKey
-                      : 'organization_staff');
-                    setPlatformSetupOpen(false);
-                    return;
-                  }
-
-                  setPlatformSetupMode(mode);
-                  setPlatformSetupOpen(true);
-                }}
-                className="min-w-18 rounded-full px-3"
-              >
-                {isPlatformAdminMode ? 'ON' : platformSetupOpen ? '설정중' : 'OFF'}
-              </Button>
-            </div>
-            {platformSetupOpen ? (
-              <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-3">
-                <p className="text-sm font-semibold text-slate-900">플랫폼 조직 운영 ON 전에 사용할 시야를 먼저 선택하세요.</p>
-                <p className="mt-1 text-xs text-slate-600">플랫폼 조직/직원모드는 베인을 유지하고, 나머지는 가상조직 시나리오로 전환됩니다.</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {[
-                    { key: 'platform_admin' as const, label: '플랫폼 조직 운영' },
-                    { key: 'organization_staff' as const, label: '직원모드' },
-                    { key: 'law_admin' as const, label: '법률/법무조직' },
-                    { key: 'collection_admin' as const, label: '추심조직' },
-                    { key: 'other_admin' as const, label: '기타조직' }
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setPlatformSetupMode(item.key)}
-                      className={segmentStyles({
-                        active: platformSetupMode === item.key,
-                        className: 'rounded-xl px-3 py-2 text-sm font-semibold'
-                      })}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setMode(platformSetupMode);
-                      setPlatformSetupOpen(false);
-                    }}
-                  >
-                    체크 완료
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setPlatformSetupOpen(false)}>
-                    닫기
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+            <p className="text-sm font-semibold text-slate-900">플랫폼 조직 운영</p>
+            <p className="mt-1 text-xs text-slate-500">토글 전환 없이 현재 모드 기준으로 플랫폼 조직 운영 화면을 제공합니다.</p>
           </div>
         ) : null}
         <div>

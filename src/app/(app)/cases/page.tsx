@@ -9,13 +9,27 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { ExportLinks } from '@/components/export-links';
 import { isPlatformScenarioMode } from '@/lib/platform-scenarios';
 import { getPlatformScenarioCases } from '@/lib/platform-scenario-workspace';
+import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 
-export default async function CasesPage() {
+export default async function CasesPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ stage?: string; stale?: string }>;
+}) {
   const auth = await requireAuthenticatedUser();
   const activeViewMode = await getActiveViewMode();
   const scenarioMode = isPlatformScenarioMode(activeViewMode) && await hasActivePlatformScenarioView(auth, activeViewMode) ? activeViewMode : null;
   const currentOrganizationId = getEffectiveOrganizationId(auth);
-  const cases = scenarioMode ? getPlatformScenarioCases(scenarioMode) : await listCases(currentOrganizationId);
+  const resolved = searchParams ? await searchParams : undefined;
+  const stageFilter = `${resolved?.stage ?? 'all'}`;
+  const staleFilter = `${resolved?.stale ?? 'all'}`;
+  const sourceCases = scenarioMode ? getPlatformScenarioCases(scenarioMode) : await listCases(currentOrganizationId);
+  const cases = sourceCases.filter((item: any) => {
+    if (stageFilter !== 'all' && `${item.stage_key ?? ''}` !== stageFilter) return false;
+    if (staleFilter === 'stale' && !isCaseStageStale(item.updated_at, 7)) return false;
+    if (staleFilter === 'fresh' && isCaseStageStale(item.updated_at, 7)) return false;
+    return true;
+  });
   const organizations = auth.memberships.map((membership) => ({
     id: membership.organization_id,
     name: membership.organization?.name ?? membership.organization_id
@@ -43,7 +57,23 @@ export default async function CasesPage() {
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">사건 운영</h2>
           <p className="mt-2 text-sm text-slate-600">접근 권한이 허용한 사건만 노출되며, 최근 변경 흐름을 바로 확인할 수 있습니다.</p>
         </div>
-        {!scenarioMode ? <ExportLinks resource="case-board" /> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {!scenarioMode ? <ExportLinks resource="case-board" /> : null}
+          <form method="get" action="/cases" className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-2">
+            <select name="stage" defaultValue={stageFilter} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
+              <option value="all">전체 단계</option>
+              {CASE_STAGE_OPTIONS.map((stage) => (
+                <option key={stage.key} value={stage.key}>{stage.label}</option>
+              ))}
+            </select>
+            <select name="stale" defaultValue={staleFilter} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
+              <option value="all">전체 상태</option>
+              <option value="stale">7일 이상 미갱신</option>
+              <option value="fresh">최근 갱신</option>
+            </select>
+            <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">적용</button>
+          </form>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -81,7 +111,13 @@ export default async function CasesPage() {
                       <p className="font-medium text-slate-900">{item.title}</p>
                       <p className="mt-1 text-sm text-slate-500">{item.reference_no ?? '-'} · {item.case_type}</p>
                     </div>
-                    <Badge tone="blue">{item.case_status}</Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge tone={isCaseStageStale(item.updated_at, 7) ? 'amber' : 'slate'}>
+                        {isCaseStageStale(item.updated_at, 7) ? '단계 갱신 필요' : '단계 최신'}
+                      </Badge>
+                      <Badge tone="blue">{getCaseStageLabel(item.stage_key)}</Badge>
+                      <Badge tone="slate">{item.case_status}</Badge>
+                    </div>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-500">
                     <span>{item.court_name ?? '법원 미지정'}</span>
