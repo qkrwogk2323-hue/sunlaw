@@ -212,22 +212,49 @@ export async function getNavUnreadCounts(): Promise<NavUnreadCounts> {
       .select('*', { count: 'exact', head: true })
       .eq('recipient_profile_id', auth.user.id)
       .is('trashed_at', null)
+      .eq('status', 'active')
       .is('read_at', null),
     supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('recipient_profile_id', auth.user.id)
       .is('trashed_at', null)
+      .eq('status', 'active')
       .eq('requires_action', true)
       .is('resolved_at', null)
   ]);
 
-  if (unread.error) {
+  if (unread.error && !isMissingColumnError(unread.error)) {
     throw unread.error;
   }
 
   if (actionRequired.error && !isMissingColumnError(actionRequired.error)) {
     throw actionRequired.error;
+  }
+
+  if (unread.error && isMissingColumnError(unread.error)) {
+    const [legacyUnread, legacyRequired] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_profile_id', auth.user.id)
+        .is('read_at', null),
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_profile_id', auth.user.id)
+        .eq('requires_action', true)
+        .is('resolved_at', null)
+    ]);
+
+    if (legacyUnread.error) throw legacyUnread.error;
+    if (legacyRequired.error && !isMissingColumnError(legacyRequired.error)) throw legacyRequired.error;
+
+    return {
+      unreadCount: legacyUnread.count ?? 0,
+      actionRequiredCount: legacyRequired.error ? 0 : legacyRequired.count ?? 0,
+      unreadConversationCount: 0
+    };
   }
 
   return {
@@ -495,7 +522,7 @@ function fallbackDestination(record: any, entityType: QueueEntityType, entityId:
   if (entityType === 'case' && entityId) return `/cases/${entityId}`;
   if (entityType === 'schedule') return '/calendar';
   if (entityType === 'client') return entityId ? `/clients?clientId=${entityId}&highlight=1` : '/clients';
-  return '/dashboard';
+  return '/inbox';
 }
 
 function normalizeQueueItem(record: any): NotificationQueueItem {

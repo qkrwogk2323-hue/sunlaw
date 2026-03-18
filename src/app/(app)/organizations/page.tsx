@@ -12,7 +12,7 @@ export default async function OrganizationsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
-        <p className="mt-2 text-sm text-slate-600">협업 공개 조직과 내가 속한 조직을 확인하는 화면입니다. 플랫폼관리조직의 고유 운영 권한은 이 화면에 노출되지 않습니다.</p>
+        <p className="mt-2 text-sm text-slate-600">협업 공개 조직과 내가 속한 조직을 확인하는 화면입니다.</p>
       </div>
 
       <div className="grid gap-6">

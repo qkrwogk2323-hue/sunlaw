@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
@@ -47,7 +47,6 @@ export default async function OrganizationSettingsPage({
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
   const isPlatformAdmin = await hasActivePlatformAdminView(auth);
   const isPlatformRootOrganization = workspace.organization?.is_platform_root === true || workspace.organization?.slug === 'vein-bn-1';
-  const canReviewPlatformOrganizationRequests = isPlatformRootOrganization && isManagementRole(membership.role);
   const resolved = searchParams ? await searchParams : undefined;
   const section = `${resolved?.section ?? 'intro'}`.trim();
   const activeSection = section === 'info' || section === 'env' ? section : 'intro';
@@ -72,23 +71,6 @@ export default async function OrganizationSettingsPage({
           </Link>
         </div>
         <div className="space-y-3">
-          {canReviewPlatformOrganizationRequests ? (
-            <Card className="border-sky-200 bg-sky-50/60">
-              <CardHeader>
-                <CardTitle>플랫폼관리조직 전용 운영 권한</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-900">조직 개설 신청 검토</p>
-                  <p className="text-sm text-slate-600">일반 조직은 볼 수 없는 전용 권한입니다. 플랫폼관리조직 관리자만 신청서를 검토하고 승인할 수 있습니다.</p>
-                </div>
-                <Link href="/admin/organization-requests" className="inline-flex min-h-11 items-center justify-center rounded-[1rem] border border-sky-300 bg-white px-4 text-sm font-medium text-sky-900 hover:bg-sky-100">
-                  조직 신청 관리로 이동
-                </Link>
-              </CardContent>
-            </Card>
-          ) : null}
-
           {activeSection === 'intro' ? (
             <Card>
               <CardHeader><CardTitle>회사소개 수정</CardTitle></CardHeader>
@@ -162,6 +144,15 @@ export default async function OrganizationSettingsPage({
                     <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>
                     <span>현재 유형: {isPlatformRootOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
                   </div>
+                  {isPlatformAdmin && isPlatformRootOrganization ? (
+                    <div className="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-950">
+                      <p className="font-semibold">플랫폼 관리조직 전용 기능</p>
+                      <p className="mt-1 text-sky-800">직접 조직 생성은 플랫폼 관리조직의 관리자만 사용할 수 있습니다.</p>
+                      <Link href="/admin/organizations" className="mt-3 inline-flex rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100">
+                        직접 조직 생성 열기
+                      </Link>
+                    </div>
+                  ) : null}
                   <div className="md:col-span-2">
                     <SubmitButton pendingLabel="저장 중...">회사정보 저장</SubmitButton>
                   </div>

@@ -246,6 +246,30 @@ export const invitationCreateSchema = z.object({
   caseScopePolicy: z.enum(['all_org_cases', 'assigned_cases_only', 'read_only_assigned']).optional().default('assigned_cases_only')
 });
 
+export const collaborationRequestCreateSchema = z.object({
+  sourceOrganizationId: z.string().uuid(),
+  targetOrganizationId: z.string().uuid(),
+  title: z.string().trim().min(2).max(120),
+  proposalNote: z.string().trim().max(3000).optional().or(z.literal('')),
+  returnPath: z.string().trim().optional().or(z.literal(''))
+});
+
+export const collaborationRequestReviewSchema = z.object({
+  requestId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  decision: z.enum(['approved', 'rejected']),
+  responseNote: z.string().trim().max(2000).optional().or(z.literal('')),
+  returnPath: z.string().trim().optional().or(z.literal(''))
+});
+
+export const collaborationHubMessageSchema = z.object({
+  hubId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  body: z.string().trim().min(1).max(5000),
+  caseId: z.string().uuid().optional().or(z.literal('')),
+  returnPath: z.string().trim().optional().or(z.literal(''))
+});
+
 export const caseMessageSchema = z.object({
   body: z.string().trim().min(1).max(5000),
   isInternal: z.boolean().default(false)

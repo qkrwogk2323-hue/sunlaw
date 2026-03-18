@@ -318,102 +318,6 @@ function roomTargetLabel(message: MessageItem, currentUserId: string, teamMember
   return teamMemberNameByProfileId[targetId] ?? '조직 내부';
 }
 
-function normalizeSearchValue(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function inferConversationDueAt(content: string) {
-  const now = new Date();
-  const explicitDate = content.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
-  if (explicitDate) {
-    const [, year, month, day, hour = '9', minute = '0'] = explicitDate;
-    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).toISOString();
-  }
-
-  const koreanDate = content.match(/(\d{1,2})월\s*(\d{1,2})일(?:\s*(오전|오후))?(?:\s*(\d{1,2})시)?/);
-  if (koreanDate) {
-    const [, month, day, meridiem, hour = '9'] = koreanDate;
-    let hourValue = Number(hour);
-    if (meridiem === '오후' && hourValue < 12) hourValue += 12;
-    if (meridiem === '오전' && hourValue === 12) hourValue = 0;
-    const candidate = new Date(now.getFullYear(), Number(month) - 1, Number(day), hourValue, 0, 0, 0);
-    if (candidate.getTime() < now.getTime()) {
-      candidate.setFullYear(candidate.getFullYear() + 1);
-    }
-    return candidate.toISOString();
-  }
-
-  if (/내일/.test(content)) {
-    const candidate = new Date(now);
-    candidate.setDate(candidate.getDate() + 1);
-    candidate.setHours(9, 0, 0, 0);
-    return candidate.toISOString();
-  }
-
-  if (/오늘/.test(content)) {
-    const candidate = new Date(now);
-    candidate.setHours(Math.max(now.getHours() + 1, 9), 0, 0, 0);
-    return candidate.toISOString();
-  }
-
-  if (/이번주|금주/.test(content)) {
-    const candidate = new Date(now);
-    candidate.setDate(candidate.getDate() + 3);
-    candidate.setHours(10, 0, 0, 0);
-    return candidate.toISOString();
-  }
-
-  return null;
-}
-
-function buildConversationSchedulePreview({
-  activeTargetLabel,
-  caseTitle,
-  communicationView,
-  content,
-  messageCount
-}: {
-  activeTargetLabel: string;
-  caseTitle: string;
-  communicationView: 'organization' | 'direct';
-  content: string;
-  messageCount: number;
-}): CoordinationPlan {
-  const dueAt = inferConversationDueAt(content);
-  const scheduleRelated = /일정|회의|미팅|통화|기일|재판|변론|마감|제출|회신|방문|면담|내일|오늘|이번주|\d{1,2}월|20\d{2}/.test(content);
-  const counterpart = communicationView === 'organization' ? '구성원 전체 소통방' : activeTargetLabel;
-
-  return {
-    summary: `${counterpart}와 ${messageCount}건의 대화를 하였는데, 일정에 등록할까요?`,
-    reason: content.slice(0, 220),
-    provider: 'rules',
-    setupHint: dueAt
-      ? '대화에서 시간 표현을 찾아 일정 시점을 함께 제안했습니다.'
-      : '대화에서 명확한 시점을 찾지 못해 우선 확인용 리마인더로 제안합니다.',
-    recommendedRecipientMode: communicationView === 'direct' ? 'one' : 'self',
-    checklist: [
-      {
-        id: 'conversation-schedule',
-        label: dueAt ? `${caseTitle} 후속 일정 등록` : `${caseTitle} 후속 리마인더 등록`,
-        detail: scheduleRelated
-          ? `${counterpart}에서 오간 대화를 기준으로 후속 일정이 필요한 흐름을 감지했습니다.`
-          : `${counterpart}에서 오간 대화는 후속 확인이 필요해 보여 기본 리마인더 일정을 제안합니다.`,
-        dueAt,
-        priority: scheduleRelated ? 'high' : 'medium',
-        notifyTarget: communicationView === 'direct' ? 'assignee' : 'team'
-      },
-      {
-        id: 'conversation-follow-up',
-        label: `${caseTitle} 대화 메모 남기기`,
-        detail: `${counterpart}와 나눈 핵심 쟁점과 다음 액션을 사건 기록으로 정리합니다.`,
-        dueAt: null,
-        priority: 'medium',
-        notifyTarget: 'self'
-      }
-    ]
-  };
-}
-
 function useDashboardPlannerState({
   organizationId,
   caseOptions,
@@ -518,9 +422,9 @@ function useDashboardCommunicationState({
   data: DashboardSnapshot;
   router: ReturnType<typeof useRouter>;
 }) {
+  const ALL_RECIPIENT_MEMBERSHIP_ID = '__all__';
   const [messageCaseId, setMessageCaseId] = useState(data.caseOptions[0]?.id ?? '');
-  const [caseSearchQuery, setCaseSearchQuery] = useState('');
-  const [orgRecipientMembershipId, setOrgRecipientMembershipId] = useState('');
+  const [orgRecipientMembershipId, setOrgRecipientMembershipId] = useState(ALL_RECIPIENT_MEMBERSHIP_ID);
   const [targetSearch, setTargetSearch] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [coordinationPreview, setCoordinationPreview] = useState<CoordinationPlan | null>(null);
@@ -534,11 +438,6 @@ function useDashboardCommunicationState({
   const [coordinationPending, startCoordinationTransition] = useTransition();
   const effectiveCurrentUserId = scenarioCurrentUserId ?? currentUserId;
   const selectedMessageCase = data.caseOptions.find((item) => item.id === messageCaseId) ?? null;
-  const normalizedCaseSearch = normalizeSearchValue(caseSearchQuery);
-  const filteredCaseOptions = data.caseOptions.filter((item) => {
-    if (!normalizedCaseSearch) return true;
-    return `${item.title} ${item.reference_no ?? ''}`.toLowerCase().includes(normalizedCaseSearch);
-  });
 
   const memberOptions = data.teamMembers
     .map((member) => ({
@@ -549,12 +448,13 @@ function useDashboardCommunicationState({
     }))
     .filter((item) => item.profileId && item.profileId !== effectiveCurrentUserId);
 
-  const normalizedSearch = normalizeSearchValue(targetSearch);
+  const normalizedSearch = targetSearch.trim().toLowerCase();
   const filteredOrgMembers = memberOptions.filter((item) => {
     if (!normalizedSearch) return true;
     return `${item.label} ${item.roleLabel}`.toLowerCase().includes(normalizedSearch);
   });
   const activeOrgRecipient = filteredOrgMembers.find((item) => item.membershipId === orgRecipientMembershipId) ?? null;
+  const isOrganizationWideRoom = orgRecipientMembershipId === ALL_RECIPIENT_MEMBERSHIP_ID;
   const currentMemberProfile = data.teamMembers.find((member) => (profileRecord(member.profile)?.id ?? member.id) === effectiveCurrentUserId) ?? null;
   const messageItems = scenarioMode ? scenarioMessageItems : data.recentMessageItems;
   const teamMemberNameByProfileId = useMemo(() => Object.fromEntries(data.teamMembers.map((member) => {
@@ -656,16 +556,10 @@ function useDashboardCommunicationState({
   }, [scenarioConversationRooms, scenarioMode, selectedScenarioConversationId]);
 
   useEffect(() => {
-    if (!filteredOrgMembers.length) {
+    if (orgRecipientMembershipId === ALL_RECIPIENT_MEMBERSHIP_ID) return;
+    if (!filteredOrgMembers.length || !filteredOrgMembers.some((member) => member.membershipId === orgRecipientMembershipId)) {
       queueMicrotask(() => {
-        setOrgRecipientMembershipId('');
-      });
-      return;
-    }
-
-    if (!filteredOrgMembers.some((member) => member.membershipId === orgRecipientMembershipId)) {
-      queueMicrotask(() => {
-        setOrgRecipientMembershipId(filteredOrgMembers[0].membershipId);
+        setOrgRecipientMembershipId(ALL_RECIPIENT_MEMBERSHIP_ID);
       });
     }
   }, [filteredOrgMembers, orgRecipientMembershipId]);
@@ -682,34 +576,39 @@ function useDashboardCommunicationState({
       return threadRooms.find((room) => room.membershipId === orgRecipientMembershipId)?.messages ?? [];
     }
 
-    const caseMessages = messageItems
+    let scoped = messageItems
       .filter((item) => item.case_id === messageCaseId)
+      .filter((item) => item.is_internal);
+
+    if (!isOrganizationWideRoom && activeOrgRecipient?.profileId) {
+      scoped = scoped.filter((item) => counterpartProfileId(item, effectiveCurrentUserId) === activeOrgRecipient.profileId);
+    }
+
+    return scoped.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [activeOrgRecipient?.profileId, effectiveCurrentUserId, isOrganizationWideRoom, messageCaseId, messageItems, scenarioMode, threadRooms]);
+
+  const organizationRoomMessages = useMemo(() => {
+    if (!scenarioMode) return [] as MessageItem[];
+
+    return messageItems
       .filter((item) => item.is_internal)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    if (communicationView === 'organization') {
-      return caseMessages;
-    }
-
-    if (!activeOrgRecipient?.profileId) {
-      return [] as MessageItem[];
-    }
-
-    return caseMessages.filter((item) => counterpartProfileId(item, effectiveCurrentUserId) === activeOrgRecipient.profileId);
-  }, [activeOrgRecipient?.profileId, communicationView, effectiveCurrentUserId, messageCaseId, messageItems, orgRecipientMembershipId, scenarioMode, threadRooms]);
+      .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime());
+  }, [messageItems, scenarioMode]);
 
   const communicationTitle = '조직 업무소통';
   const communicationHint = scenarioMode
     ? '버튼으로 조직 전체 흐름과 1:1 대화방을 전환해서 확인합니다.'
     : '대시보드에서는 같은 조직 구성원 간 내부 협업만 지원합니다.';
-    const activeTargetLabel = communicationView === 'organization'
-      ? '구성원 전체 소통방'
-      : activeOrgRecipient?.label ?? '상대방을 명시적으로 선택하세요.';
+  const activeTargetLabel = isOrganizationWideRoom ? '구성원 전체 소통방' : (activeOrgRecipient?.label ?? '상대방을 선택하세요.');
 
   const sendMessage = () => {
     if (!messageCaseId || !messageInput.trim()) return;
 
-    const orgTargetMembershipId = communicationView === 'direct' ? activeOrgRecipient?.membershipId ?? '' : '';
-    if (communicationView === 'direct' && !orgTargetMembershipId) return;
+    const orgTargetMembershipId = activeOrgRecipient?.membershipId ?? '';
+    const recipientMembershipIds = isOrganizationWideRoom
+      ? memberOptions.map((item) => item.membershipId)
+      : (orgTargetMembershipId ? [orgTargetMembershipId] : []);
+    if (!recipientMembershipIds.length) return;
 
     if (scenarioMode && !organizationId) {
       startMessageTransition(async () => {
@@ -720,7 +619,7 @@ function useDashboardCommunicationState({
           created_at: new Date().toISOString(),
           sender_role: 'staff',
           sender_profile_id: effectiveCurrentUserId,
-          recipient_profile_id: communicationView === 'direct' ? activeOrgRecipient?.profileId ?? null : null,
+          recipient_profile_id: activeOrgRecipient?.profileId ?? null,
           case_id: messageCaseId,
           cases: { title: selectedMessageCase?.title ?? '사건' },
           sender: { full_name: profileRecord(currentMemberProfile?.profile)?.full_name ?? '나' }
@@ -735,20 +634,33 @@ function useDashboardCommunicationState({
     if (!organizationId) return;
 
     startMessageTransition(async () => {
-      const response = await fetch('/api/dashboard/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId,
-          caseId: messageCaseId,
-          content: messageInput,
-          targetType: 'org',
-          recipientMembershipId: orgTargetMembershipId,
-          isInternal: true
-        })
-      });
+      const response = recipientMembershipIds.length === 1
+        ? await fetch('/api/dashboard/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              organizationId,
+              caseId: messageCaseId,
+              content: messageInput,
+              targetType: 'org',
+              recipientMembershipId: recipientMembershipIds[0],
+              isInternal: true
+            })
+          })
+        : await Promise.all(recipientMembershipIds.map((membershipId) => fetch('/api/dashboard/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              organizationId,
+              caseId: messageCaseId,
+              content: messageInput,
+              targetType: 'org',
+              recipientMembershipId: membershipId,
+              isInternal: true
+            })
+          })));
 
-      if (response.ok) {
+      if ((Array.isArray(response) && response.every((item) => item.ok)) || (!Array.isArray(response) && response.ok)) {
         setMessageInput('');
         router.refresh();
       }
@@ -757,20 +669,87 @@ function useDashboardCommunicationState({
 
   const summarizeThread = () => {
     if (!visibleMessages.length) return;
+    const latestMessages = visibleMessages.slice(-8);
+    const latestSummary = latestMessages.map((item) => `${senderName(item)}: ${previewText(item)}`).join(' / ');
+    const scheduleTalk = /일정|회의|미팅|기일|마감|내일|이번주|시간|오전|오후|달력|캘린더/.test(latestSummary);
+
+    if (scheduleTalk) {
+      const preview: CoordinationPlan = {
+        summary: `${activeTargetLabel}와 대화를 하였는데, 일정에 등록할까요?`,
+        reason: latestSummary,
+        provider: 'rules',
+        setupHint: '일정 관련 대화로 감지되었습니다. 체크 후 일정 등록을 진행하세요.',
+        recommendedRecipientMode: 'one',
+        checklist: [
+          {
+            id: 'schedule-register',
+            label: '대화 기반 일정 등록',
+            detail: '대화에서 언급한 날짜/시간을 캘린더 일정으로 등록합니다.',
+            dueAt: null,
+            priority: 'high',
+            notifyTarget: 'self'
+          }
+        ]
+      };
+      setCoordinationPreview(preview);
+      setSelectedChecklistIds(preview.checklist.map((item) => item.id));
+      return;
+    }
+
+    if (scenarioMode && !organizationId) {
+      const scenarioMessages = visibleMessages.slice(-4);
+      const scenarioSummary = scenarioMessages.map((item) => `${senderName(item)}: ${previewText(item)}`).join(' / ');
+      const preview: CoordinationPlan = {
+        summary: `${activeTargetLabel}와 오늘 ${visibleMessages.length}건의 대화를 확인했습니다.`,
+        reason: scenarioSummary,
+        provider: 'rules',
+        setupHint: '핵심 내용을 선택해 메모 또는 후속 작업으로 남길 수 있습니다.',
+        recommendedRecipientMode: 'one',
+        checklist: [
+          {
+            id: 'follow-up-1',
+            label: `${activeTargetLabel} 후속 회신 여부 확인`,
+            detail: '오늘 합의된 내용이 실제로 전달되었는지 다시 확인합니다.',
+            dueAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            priority: 'high',
+            notifyTarget: 'self'
+          },
+          {
+            id: 'follow-up-2',
+            label: '대화 메모 남기기',
+            detail: '핵심 쟁점과 다음 액션을 짧게 정리해 대화방 기록으로 남깁니다.',
+            dueAt: null,
+            priority: 'medium',
+            notifyTarget: 'self'
+          }
+        ]
+      };
+
+      setCoordinationPreview(preview);
+      setSelectedChecklistIds(preview.checklist.map((item) => item.id));
+      return;
+    }
+
+    if (!organizationId) return;
 
     const content = visibleMessages
       .slice(-8)
       .map((item) => `${senderName(item)}: ${item.body}`)
       .join('\n');
-    const preview = buildConversationSchedulePreview({
-      activeTargetLabel,
-      caseTitle: selectedMessageCase?.title ?? '선택한 사건',
-      communicationView,
-      content,
-      messageCount: visibleMessages.length
+
+    startCoordinationTransition(async () => {
+      const response = await fetch('/api/dashboard-ai/coordination-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId, content })
+      });
+
+      if (!response.ok) return;
+      const payload = await response.json();
+      const preview = payload.preview as CoordinationPlan | null;
+      setCoordinationPreview(preview);
+      setSelectedChecklistIds(preview?.checklist.map((item) => item.id) ?? []);
     });
-    setCoordinationPreview(preview);
-    setSelectedChecklistIds(preview.checklist.map((item) => item.id));
   };
 
   const commitCoordination = () => {
@@ -781,12 +760,12 @@ function useDashboardCommunicationState({
     if (scenarioMode && !organizationId) {
       const memoMessage: MessageItem = {
         id: `scenario-summary-${Date.now()}`,
-        body: `[AI 일정 제안]\n- ${coordinationPreview.summary}\n${selectedItems.map((item) => `- ${item.label}: ${item.detail}`).join('\n')}`,
+        body: `오늘 대화 정리\n- ${coordinationPreview.summary}\n${selectedItems.map((item) => `- ${item.label}: ${item.detail}`).join('\n')}`,
         is_internal: true,
         created_at: new Date().toISOString(),
         sender_role: 'staff',
         sender_profile_id: effectiveCurrentUserId,
-        recipient_profile_id: communicationView === 'direct' ? activeOrgRecipient?.profileId ?? null : null,
+        recipient_profile_id: activeOrgRecipient?.profileId ?? null,
         case_id: messageCaseId,
         cases: { title: selectedMessageCase?.title ?? '사건' },
         sender: { full_name: profileRecord(currentMemberProfile?.profile)?.full_name ?? '나' }
@@ -808,10 +787,10 @@ function useDashboardCommunicationState({
         body: JSON.stringify({
           organizationId,
           caseId: messageCaseId,
-          title: `대화 기반 일정 제안 · ${selectedMessageCase?.title ?? '사건'}`,
+          title: `오늘 대화 AI 정리 · ${selectedMessageCase?.title ?? '사건 대화'}`,
           summary: coordinationPreview.summary,
-          recipientMode: communicationView === 'direct' && activeOrgRecipient ? 'one' : 'self',
-          recipientMembershipId: communicationView === 'direct' ? activeOrgRecipient?.membershipId ?? null : null,
+          recipientMode: activeOrgRecipient ? 'one' : 'self',
+          recipientMembershipId: activeOrgRecipient?.membershipId ?? null,
           selectedItems
         })
       });
@@ -827,8 +806,6 @@ function useDashboardCommunicationState({
   return {
     messageCaseId,
     setMessageCaseId,
-    caseSearchQuery,
-    setCaseSearchQuery,
     orgRecipientMembershipId,
     setOrgRecipientMembershipId,
     targetSearch,
@@ -849,15 +826,15 @@ function useDashboardCommunicationState({
     coordinationPending,
     effectiveCurrentUserId,
     selectedMessageCase,
-    filteredCaseOptions,
     memberOptions,
     filteredOrgMembers,
     activeOrgRecipient,
+    isOrganizationWideRoom,
     activeTargetLabel,
-    activeConversationLabel: communicationView === 'organization' ? '조직 전체 대화' : '1:1 대화',
     currentMemberProfile,
     filteredThreadRooms,
     visibleMessages,
+    organizationRoomMessages,
     communicationTitle,
     communicationHint,
     teamMemberNameByProfileId,
@@ -879,7 +856,6 @@ export function DashboardHubClient({
   data: DashboardSnapshot;
 }) {
   const router = useRouter();
-  const [liveNow, setLiveNow] = useState(() => new Date());
   const communication = useDashboardCommunicationState({
     organizationId,
     currentUserId,
@@ -912,8 +888,7 @@ export function DashboardHubClient({
   const {
     messageCaseId,
     setMessageCaseId,
-    caseSearchQuery,
-    setCaseSearchQuery,
+    orgRecipientMembershipId,
     setOrgRecipientMembershipId,
     targetSearch,
     setTargetSearch,
@@ -931,14 +906,14 @@ export function DashboardHubClient({
     coordinationPending,
     effectiveCurrentUserId,
     selectedMessageCase,
-    filteredCaseOptions,
     memberOptions,
     filteredOrgMembers,
     activeOrgRecipient,
+    isOrganizationWideRoom,
     activeTargetLabel,
-    activeConversationLabel,
     filteredThreadRooms,
     visibleMessages,
+    organizationRoomMessages,
     scenarioConversationRooms,
     activeScenarioConversation,
     communicationTitle,
@@ -948,27 +923,6 @@ export function DashboardHubClient({
     summarizeThread,
     commitCoordination
   } = communication;
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setLiveNow(new Date());
-    }, 30_000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  const liveDateLabel = new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  }).format(liveNow);
-  const liveTimeLabel = new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(liveNow);
 
   const pendingClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'pending').length;
   const approvedClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'approved').length;
@@ -1002,6 +956,29 @@ export function DashboardHubClient({
     { label: '신규 승인 요청', value: pendingClientAccessCount, className: 'border-emerald-200 bg-emerald-50/80', valueClassName: 'text-emerald-950' },
     { label: '연결 후속 처리', value: approvedClientAccessCount, className: 'border-violet-200 bg-violet-50/80', valueClassName: 'text-violet-950' }
   ];
+  const [caseSearch, setCaseSearch] = useState('');
+  const filteredCaseOptions = useMemo(() => {
+    const keyword = caseSearch.trim().toLowerCase();
+    if (!keyword) return data.caseOptions;
+    return data.caseOptions.filter((item) => `${item.title} ${item.reference_no ?? ''}`.toLowerCase().includes(keyword));
+  }, [caseSearch, data.caseOptions]);
+  const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNowText(formatDateTime(new Date().toISOString()));
+    }, 60000);
+    return () => window.clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    if (!filteredCaseOptions.length) {
+      setMessageCaseId('');
+      return;
+    }
+
+    if (!filteredCaseOptions.some((item) => item.id === messageCaseId)) {
+      setMessageCaseId(filteredCaseOptions[0].id);
+    }
+  }, [filteredCaseOptions, messageCaseId, setMessageCaseId]);
 
   return (
     <div className="space-y-6">
@@ -1259,17 +1236,35 @@ export function DashboardHubClient({
               <div>
                 <CardTitle>{communicationTitle}</CardTitle>
                 <p className="mt-1 text-sm text-slate-500">{communicationHint}</p>
+                <p className="mt-1 text-xs text-slate-500">현재 시각: {nowText}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {scenarioMode ? <Badge tone="blue">가상 조직간 협업방</Badge> : null}
                 {!scenarioMode ? (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">현재 시각</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{liveDateLabel}</p>
-                    <p className="text-xs text-slate-500">{liveTimeLabel}</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={caseSearch}
+                      onChange={(event) => setCaseSearch(event.target.value)}
+                      placeholder="사건 검색"
+                      className="h-10 w-44"
+                    />
+                    <select
+                      value={messageCaseId}
+                      onChange={(event) => setMessageCaseId(event.target.value)}
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                    >
+                      {filteredCaseOptions.length ? filteredCaseOptions.map((item) => (
+                        <option key={item.id} value={item.id}>{item.title}</option>
+                      )) : <option value="">사건이 없습니다</option>}
+                    </select>
                   </div>
                 ) : null}
-                <Badge tone="slate">{scenarioMode ? '조직간 스레드' : activeConversationLabel}</Badge>
+                <Badge tone="slate">{scenarioMode ? '조직전체 대화' : (isOrganizationWideRoom ? '조직전체 대화' : '1:1 대화')}</Badge>
+                {selectedMessageCase ? (
+                  <Link href={`/cases/${selectedMessageCase.id}` as Route} className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                    사건으로 이동
+                  </Link>
+                ) : null}
                 {!scenarioMode ? (
                   <Button variant="secondary" onClick={summarizeThread} disabled={coordinationPending || !visibleMessages.length}>
                     <Bot className="mr-2 size-4" />AI 일정 제안
@@ -1279,36 +1274,23 @@ export function DashboardHubClient({
             </div>
           </div>
         </CardHeader>
-        <CardContent className={scenarioMode ? 'grid gap-4 xl:grid-cols-[0.34fr_0.66fr]' : 'grid gap-4 xl:grid-cols-[0.3fr_0.7fr]'}>
+        <CardContent className="space-y-4">
           {scenarioMode ? (
-            <>
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <div>
-                  <p className="text-base font-semibold text-slate-900">조직간 대화방</p>
-                  <p className="mt-1 text-sm text-slate-500">실제 조직처럼 협업한 흐름을 방 단위로 나눠서 확인합니다.</p>
+            <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-medium text-slate-500">대화방 선택</p>
+                  <select
+                    value={selectedScenarioConversationId}
+                    onChange={(event) => setSelectedScenarioConversationId(event.target.value)}
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                  >
+                    {scenarioConversationRooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.partner_organization_name} · {room.topic}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="max-h-[34rem] space-y-2 overflow-y-auto">
-                  {scenarioConversationRooms.length ? scenarioConversationRooms.map((room) => (
-                    <button
-                      key={room.id}
-                      type="button"
-                      onClick={() => setSelectedScenarioConversationId(room.id)}
-                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${selectedScenarioConversationId === room.id ? 'border-sky-500 bg-sky-50 shadow-[0_12px_24px_rgba(14,165,233,0.12)]' : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium text-slate-900">{room.partner_organization_name}</p>
-                          <p className="mt-1 text-xs text-slate-500">{room.topic} · {room.case_title ?? '공통 협업'}</p>
-                          <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(room.last_message_at)}</p>
-                        </div>
-                        <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${room.unread_count > 0 ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{room.unread_count > 0 ? room.unread_count : '확인'}</span>
-                      </div>
-                    </button>
-                  )) : <p className="px-2 py-6 text-sm text-slate-500">구성된 조직 대화방이 없습니다.</p>}
-                </div>
-              </div>
-
-              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-base font-semibold text-slate-900">{activeScenarioConversation?.partner_organization_name ?? '조직 대화방'}</p>
@@ -1317,7 +1299,7 @@ export function DashboardHubClient({
                   <Badge tone="slate">조직간 스레드</Badge>
                 </div>
 
-                <div className="max-h-[30rem] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
+                <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
                   {activeScenarioConversation?.messages.length ? activeScenarioConversation.messages.map((message) => {
                     const mine = message.sender_organization_name !== activeScenarioConversation.partner_organization_name;
                     return (
@@ -1336,150 +1318,46 @@ export function DashboardHubClient({
                   }) : <p className="px-2 py-12 text-center text-sm text-slate-500">선택한 조직 대화방 기록이 없습니다.</p>}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   시나리오 모드에서는 조직간 협업 흐름을 읽기 전용으로 제공합니다. 이 방들을 기준으로 사건, 의뢰인, 일정, 문서가 서로 연결된 상태를 점검할 수 있습니다.
                 </div>
-              </div>
-            </>
+            </div>
           ) : (
-            <>
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-medium text-slate-500">대화 유형</p>
-                  <div className="mt-2 grid gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCommunicationView('organization')}
-                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${communicationView === 'organization' ? 'border-sky-500 bg-sky-50 shadow-[0_12px_24px_rgba(14,165,233,0.12)]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}
-                    >
-                      <p className="font-medium text-slate-900">구성원 전체 소통방</p>
-                      <p className="mt-1 text-xs text-slate-500">선택한 사건의 내부 대화를 전체 흐름으로 봅니다.</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommunicationView('direct')}
-                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${communicationView === 'direct' ? 'border-sky-500 bg-sky-50 shadow-[0_12px_24px_rgba(14,165,233,0.12)]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}
-                    >
-                      <p className="font-medium text-slate-900">1:1 대화</p>
-                      <p className="mt-1 text-xs text-slate-500">구성원을 선택해 1:1 업무 대화를 이어갑니다.</p>
-                    </button>
-                  </div>
+            <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-500">상대방 선택</p>
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    value={targetSearch}
+                    onChange={(event) => setTargetSearch(event.target.value)}
+                    placeholder="구성원 검색"
+                  />
+                  <Button variant="secondary" onClick={() => setTargetSearch((current) => current.trim())}>
+                    <Search className="size-4" />
+                  </Button>
                 </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-medium text-slate-500">구성원 검색</p>
-                  <div className="mt-2 flex gap-2">
-                    <Input
-                      value={targetSearch}
-                      onChange={(event) => setTargetSearch(event.target.value)}
-                      placeholder="구성원 검색"
-                    />
-                    <Button variant="secondary" onClick={() => setTargetSearch((current) => current.trim())}>
-                      <Search className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="max-h-[34rem] space-y-2 overflow-y-auto">
-                  {communicationView === 'organization' ? (
-                    <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-4 text-sm text-slate-700">
-                      선택한 사건의 전체 내부 대화를 보고 있습니다. 특정 구성원을 고르면 1:1 대화로 바로 전환됩니다.
-                    </div>
-                  ) : null}
-                  {filteredOrgMembers.length ? filteredOrgMembers.map((member) => (
-                    <button
-                      key={member.membershipId}
-                      type="button"
-                      onClick={() => {
-                        setCommunicationView('direct');
-                        setOrgRecipientMembershipId(member.membershipId);
-                      }}
-                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${activeOrgRecipient?.membershipId === member.membershipId ? 'border-sky-500 bg-sky-50 shadow-[0_12px_24px_rgba(14,165,233,0.12)]' : 'border-transparent bg-transparent hover:border-slate-200 hover:bg-white/70'}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium text-slate-900">{member.label}</p>
-                        </div>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">{member.roleLabel}</p>
-                    </button>
-                  )) : <p className="px-2 py-6 text-sm text-slate-500">보낼 수 있는 구성원이 없습니다.</p>}
-                </div>
+                <select
+                  value={orgRecipientMembershipId}
+                  onChange={(event) => setOrgRecipientMembershipId(event.target.value)}
+                  className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                >
+                  <option value="__all__">구성원 전체 소통방</option>
+                  {filteredOrgMembers.map((member) => (
+                    <option key={member.membershipId} value={member.membershipId}>
+                      {member.label} · {member.roleLabel}
+                    </option>
+                  ))}
+                </select>
               </div>
-
-              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-base font-semibold text-slate-900">{selectedMessageCase?.title ?? '사건 선택'}</p>
-                    <p className="mt-1 text-sm text-slate-500">대화 대상 · {activeTargetLabel}</p>
+                    <p className="mt-1 text-sm text-slate-500">상대방 · {activeTargetLabel}</p>
                   </div>
-                  <Badge tone="slate">{activeConversationLabel}</Badge>
+                  <Badge tone="slate">{isOrganizationWideRoom ? '조직전체 대화' : '1:1 대화'}</Badge>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="grid gap-3 xl:grid-cols-[0.42fr_0.58fr]">
-                    <label className="space-y-2 text-sm text-slate-700">
-                      <span className="text-xs font-medium text-slate-500">사건 선택</span>
-                      <select
-                        value={messageCaseId}
-                        onChange={(event) => setMessageCaseId(event.target.value)}
-                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
-                      >
-                        {data.caseOptions.map((item) => (
-                          <option key={item.id} value={item.id}>{item.title}</option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-500">사건 검색</label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={caseSearchQuery}
-                          onChange={(event) => setCaseSearchQuery(event.target.value)}
-                          placeholder="사건명 또는 사건번호 검색"
-                        />
-                        <Button variant="secondary" onClick={() => setCaseSearchQuery((current) => current.trim())}>
-                          <Search className="size-4" />
-                        </Button>
-                        {selectedMessageCase ? (
-                          <Link
-                            href={`/cases/${selectedMessageCase.id}` as Route}
-                            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-                          >
-                            사건으로 이동
-                          </Link>
-                        ) : null}
-                      </div>
-                      {caseSearchQuery.trim() ? (
-                        <div className="rounded-2xl border border-slate-200 bg-white p-2">
-                          {filteredCaseOptions.length ? (
-                            <div className="space-y-2">
-                              {filteredCaseOptions.slice(0, 5).map((item) => (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setMessageCaseId(item.id);
-                                    setCaseSearchQuery(item.title);
-                                  }}
-                                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${messageCaseId === item.id ? 'border-sky-500 bg-sky-50 text-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}`}
-                                >
-                                  <p className="font-medium">{item.title}</p>
-                                  {item.reference_no ? <p className="mt-1 text-xs text-slate-500">{item.reference_no}</p> : null}
-                                </button>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="px-2 py-3 text-sm text-slate-500">사건이 없습니다.</p>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
+                <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
                   {visibleMessages.length ? (
                     visibleMessages.map((item) => {
                       const mine = item.sender_profile_id === effectiveCurrentUserId;
@@ -1501,29 +1379,26 @@ export function DashboardHubClient({
                   )}
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
                   <Textarea
                     value={messageInput}
                     onChange={(event) => setMessageInput(event.target.value)}
-                    placeholder={communicationView === 'organization' ? '선택한 사건의 조직 전체 내부 대화를 남기세요.' : '구성원을 선택한 뒤 1:1 내부 대화를 남기세요.'}
-                    className="min-h-28"
+                    placeholder="상대방을 선택한 뒤 메시지를 입력하세요."
+                    className="min-h-24"
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    {communicationView === 'direct' ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setOrgRecipientMembershipId('')}
-                      >
-                        상대방 선택 해제
-                      </Button>
-                    ) : <span className="text-xs text-slate-500">조직 전체 대화는 선택한 사건의 내부 협업 흐름에 바로 남습니다.</span>}
+                    <Button
+                      variant="ghost"
+                      onClick={() => setOrgRecipientMembershipId('__all__')}
+                    >
+                      전체 소통방으로 전환
+                    </Button>
                     <Button
                       onClick={sendMessage}
                       disabled={
                         messagePending
                         || !messageCaseId
                         || !messageInput.trim()
-                        || (communicationView === 'direct' && !activeOrgRecipient)
                       }
                     >
                       {messagePending ? '전송 중...' : '대화 보내기'}
@@ -1535,7 +1410,7 @@ export function DashboardHubClient({
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-slate-900">AI 일정 제안</p>
+                        <p className="font-semibold text-slate-900">AI 요약 · 오늘 대화 실행 항목</p>
                         <p className="mt-1 text-sm text-slate-600">{coordinationPreview.summary}</p>
                       </div>
                       <Badge tone={providerTone(coordinationPreview.provider)}>{coordinationPreview.provider}</Badge>
@@ -1567,13 +1442,12 @@ export function DashboardHubClient({
                     </div>
                     {coordinationPreview.setupHint ? <p className="mt-3 text-xs text-amber-700">{coordinationPreview.setupHint}</p> : null}
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Button onClick={commitCoordination} disabled={coordinationPending || !selectedChecklistIds.length}>일정에 등록</Button>
+                      <Button onClick={commitCoordination} disabled={coordinationPending || !selectedChecklistIds.length}>정리 내용 반영</Button>
                       <Button variant="secondary" onClick={() => setCoordinationPreview(null)}>닫기</Button>
                     </div>
                   </div>
                 ) : null}
-              </div>
-            </>
+            </div>
           )}
         </CardContent>
       </Card>

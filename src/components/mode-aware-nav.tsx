@@ -10,12 +10,10 @@ import {
   CalendarRange,
   ChevronDown,
   ChevronRight,
-  ClipboardList,
   FileText,
   LayoutDashboard,
   MessageSquareText,
   Menu,
-  ReceiptText,
   Search,
   Settings,
   Users,
@@ -112,7 +110,6 @@ function getOrganizationSections({
 
   const commonItems = uniqueItems([
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-    { href: '/cases', label: '사건 보기', icon: FileText },
     { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
     { href: '/calendar', label: '일정 확인', icon: CalendarRange }
   ]);
@@ -137,8 +134,7 @@ function getOrganizationSections({
 
   if (mode !== 'client_communication') {
     collaborationItems.push(
-      { href: '/organizations', label: '조직 찾기', icon: Building2 },
-      { href: '/inbox', label: '사건·의뢰인 소통', icon: ClipboardList, badge: conversationBadge }
+      { href: '/organizations', label: '조직 찾기', icon: Building2 }
     );
   }
 
@@ -425,8 +421,7 @@ export function ModeAwareNav({
   const baseRoleLabel = mode === 'client_communication' ? '의뢰인' : '구성원';
   const roleDetail = getRoleLabel(currentOrgMembership, baseRoleLabel);
   const displayName = profile.full_name;
-  const hasUnreadNotifications = navCounts.unreadCount > 0;
-  const hasActionRequiredNotifications = navCounts.actionRequiredCount > 0;
+  const hasUnreadNotifications = navCounts.unreadCount > 0 || navCounts.actionRequiredCount > 0;
 
   const orgOptions = useMemo(() => {
     if (platformOrganizations.length) {
@@ -541,7 +536,7 @@ export function ModeAwareNav({
         currentOrgMembership={currentOrgMembership}
         baseRoleLabel={baseRoleLabel}
         currentOrganizationName={currentOrganization?.name ?? ''}
-        hasUnreadNotifications={hasActionRequiredNotifications}
+        hasUnreadNotifications={hasUnreadNotifications}
       />
 
       <div className="hidden lg:block">
@@ -615,15 +610,15 @@ export function ModeAwareNav({
               <div
                 key={section.id}
                 className={`rounded-[1.15rem] border p-2 ${
-                  section.id === 'common-menu' && hasActionRequiredNotifications
+                  section.id === 'common-menu' && hasUnreadNotifications
                     ? 'border-amber-300 bg-amber-50/65'
                     : sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'
                 }`}
               >
                 <div className="px-3 py-2">
                   <p className="text-sm font-semibold text-slate-900">{section.label}</p>
-                  {section.id === 'common-menu' && hasActionRequiredNotifications ? (
-                    <p className="mt-0.5 text-[11px] font-medium text-amber-700">처리할 알림이 있습니다.</p>
+                  {section.id === 'common-menu' && hasUnreadNotifications ? (
+                    <p className="mt-0.5 text-[11px] font-medium text-amber-700">새 알림을 확인하세요!</p>
                   ) : null}
                 </div>
                 <div className="mt-1 space-y-1">

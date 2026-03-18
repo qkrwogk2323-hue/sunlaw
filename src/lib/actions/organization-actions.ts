@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
+  getEffectiveOrganizationId,
   hasActivePlatformAdminView,
   requireAuthenticatedUser,
   requireOrganizationActionAccess,
@@ -27,6 +28,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { encryptString } from '@/lib/pii';
 import { getDefaultTemplatePermissions, hasPermission, PERMISSION_KEYS } from '@/lib/permissions';
 import {
+  collaborationHubMessageSchema,
+  collaborationRequestCreateSchema,
+  collaborationRequestReviewSchema,
   clientAccessCaseLinkSchema,
   clientAccessRequestSchema,
   clientAccessReviewSchema,
@@ -85,6 +89,35 @@ async function listActivePlatformAdminIds() {
     .filter((row: any) => row.organization?.is_platform_root === true && row.organization?.slug === 'vein-bn-1' && row.profile?.is_active !== false)
     .map((row: any) => row.profile_id)
     .filter(Boolean);
+}
+
+async function listOrganizationManagerProfileIds(adminClient: ReturnType<typeof createSupabaseAdminClient>, organizationId: string) {
+  const { data, error } = await adminClient
+    .from('organization_memberships')
+    .select('profile_id')
+    .eq('organization_id', organizationId)
+    .eq('status', 'active')
+    .in('role', ['org_owner', 'org_manager']);
+
+  if (error) throw error;
+
+  return (data ?? []).map((item: any) => item.profile_id).filter(Boolean);
+}
+
+async function findActiveCollaborationHub(
+  adminClient: ReturnType<typeof createSupabaseAdminClient>,
+  leftOrganizationId: string,
+  rightOrganizationId: string
+) {
+  const { data, error } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id, title, summary, status')
+    .eq('status', 'active')
+    .or(`and(primary_organization_id.eq.${leftOrganizationId},partner_organization_id.eq.${rightOrganizationId}),and(primary_organization_id.eq.${rightOrganizationId},partner_organization_id.eq.${leftOrganizationId})`)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ?? null;
 }
 
 function sanitizeStorageFileName(fileName: string) {
@@ -1465,6 +1498,7 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
 
 export async function createStaffInvitationAction(formData: FormData) {
   const parsed = parseStaffInvitationInput(formData);
+  const returnPath = `${formData.get('returnPath') ?? ''}`.trim();
 
   const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 직원을 초대할 수 있습니다.');
   const { token, record } = buildStaffInvitationRecord(parsed, auth.user.id);
@@ -1472,6 +1506,11 @@ export async function createStaffInvitationAction(formData: FormData) {
   await persistStaffInvitation(record);
 
   revalidatePath('/settings/team');
+  if (returnPath) {
+    const separator = returnPath.includes('?') ? '&' : '?';
+    redirect(`${returnPath}${separator}invite=${encodeURIComponent(token)}` as Route);
+  }
+
   redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
 }
 
@@ -1586,6 +1625,7 @@ export async function createClientDirectInvitationAction(formData: FormData) {
     email: formData.get('email'),
     expiresHours: formData.get('expiresHours') || 72
   });
+  const returnPath = `${formData.get('returnPath') ?? ''}`.trim();
 
   const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 초대할 수 있습니다.');
   const supabase = await createSupabaseServerClient();
@@ -1616,6 +1656,11 @@ export async function createClientDirectInvitationAction(formData: FormData) {
   if (error) throw error;
 
   revalidatePath('/clients');
+  if (returnPath) {
+    const separator = returnPath.includes('?') ? '&' : '?';
+    redirect(`${returnPath}${separator}invite=${encodeURIComponent(token)}` as Route);
+  }
+
   redirect(`/clients?invite=${encodeURIComponent(token)}`);
 }
 
