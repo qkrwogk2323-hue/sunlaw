@@ -47,7 +47,21 @@ function redirectOAuthCodeToCallback(request: NextRequest) {
   return NextResponse.redirect(redirectUrl);
 }
 
+function isMaintenanceMode() {
+  return process.env.MAINTENANCE_MODE === 'true';
+}
+
+function shouldBypassMaintenance(pathname: string) {
+  return pathname === '/maintenance' || pathname.startsWith('/_next') || pathname.startsWith('/api');
+}
+
 export async function middleware(request: NextRequest) {
+  if (isMaintenanceMode() && !shouldBypassMaintenance(request.nextUrl.pathname)) {
+    const maintenanceUrl = request.nextUrl.clone();
+    maintenanceUrl.pathname = '/maintenance';
+    return NextResponse.redirect(maintenanceUrl);
+  }
+
   const authRedirect = redirectOAuthCodeToCallback(request);
   if (authRedirect) {
     return authRedirect;
