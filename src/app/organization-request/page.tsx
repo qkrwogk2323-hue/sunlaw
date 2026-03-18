@@ -118,11 +118,11 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                     <p className="mt-3 text-slate-500">사업자번호: {formatBusinessNumber(activePendingRequest.business_number)}</p>
                     <p className="text-slate-500">제출 문서: {activePendingRequest.business_registration_document_name ?? '-'}</p>
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <a href={`/organization-request?edit=${activePendingRequest.id}`} className={buttonStyles({ className: 'min-h-11 rounded-[1rem] px-4' })}>수정하기</a>
                     <form action={cancelOrganizationSignupRequestAction}>
                       <input type="hidden" name="requestId" value={activePendingRequest.id} />
-                      <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-[1rem] px-4' })}>취소하기</button>
+                      <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'min-h-11 w-full rounded-[1rem] px-4' })}>취소하기</button>
                     </form>
                   </div>
                 </div>
