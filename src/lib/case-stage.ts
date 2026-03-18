@@ -10,6 +10,14 @@ export const CASE_STAGE_OPTIONS = [
 export type CaseStageKey = (typeof CASE_STAGE_OPTIONS)[number]['key'];
 
 const CASE_STAGE_LABEL_MAP = new Map<string, string>(CASE_STAGE_OPTIONS.map((item) => [item.key, item.label]));
+const CASE_STAGE_FLOW: Record<string, string | null> = {
+  intake: 'review',
+  review: 'revision_wait',
+  revision_wait: 'client_reply_wait',
+  client_reply_wait: 'recheck',
+  recheck: 'done',
+  done: null
+};
 
 export function getCaseStageLabel(stageKey?: string | null) {
   if (!stageKey) return '단계 미설정';
@@ -21,4 +29,15 @@ export function isCaseStageStale(updatedAt?: string | null, staleDays = 7) {
   const updatedTs = new Date(updatedAt).getTime();
   if (Number.isNaN(updatedTs)) return false;
   return Date.now() - updatedTs >= staleDays * 24 * 60 * 60 * 1000;
+}
+
+export function getNextCaseStageKey(stageKey?: string | null) {
+  if (!stageKey) return null;
+  return CASE_STAGE_FLOW[stageKey] ?? null;
+}
+
+export function getNextCaseStageLabel(stageKey?: string | null) {
+  const nextKey = getNextCaseStageKey(stageKey);
+  if (!nextKey) return '완료 유지';
+  return getCaseStageLabel(nextKey);
 }
