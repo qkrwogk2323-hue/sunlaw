@@ -4,6 +4,8 @@ import { requireAuthenticatedUser } from '@/lib/auth';
 import { TemporaryPasswordResetForm } from '@/components/forms/temporary-password-reset-form';
 import { getAuthenticatedHomePath } from '@/lib/client-account';
 
+export const dynamic = 'force-dynamic';
+
 export default async function TemporaryPasswordResetPage() {
   const auth = await requireAuthenticatedUser();
 

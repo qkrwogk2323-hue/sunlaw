@@ -10,6 +10,8 @@ import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entr
 import { searchPublicOrganizations, listMyClientAccessRequests } from '@/lib/queries/client-access';
 import { Badge } from '@/components/ui/badge';
 
+export const dynamic = 'force-dynamic';
+
 function kindLabel(kind: string | null | undefined) {
   if (kind === 'law_firm') return '법률 조직';
   if (kind === 'collection_company') return '추심 조직';

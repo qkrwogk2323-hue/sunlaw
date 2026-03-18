@@ -3,6 +3,8 @@ import { requireAuthenticatedUser } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProductHomePage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = auth.memberships[0]?.organization_id ?? '';

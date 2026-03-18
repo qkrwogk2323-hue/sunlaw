@@ -9,6 +9,8 @@ import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 
+export const dynamic = 'force-dynamic';
+
 const expertMindMap = [
   {
     title: '법률',
