@@ -65,7 +65,7 @@ const authContext = {
     id: '11111111-1111-4111-8111-111111111111',
     email: 'manager@veinspiral.local',
     full_name: '조직 관리자',
-    platform_role: 'platform_user',
+    platform_role: 'standard',
     default_organization_id: '22222222-2222-4222-8222-222222222222',
     is_active: true,
     is_client_account: false,

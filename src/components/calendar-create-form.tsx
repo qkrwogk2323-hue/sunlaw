@@ -101,13 +101,13 @@ export function CalendarCreateForm({
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500">제목</label>
-            <Input 
+            <input
               name="title" 
               ref={titleRef}
               defaultValue=""
               placeholder="일정 제목" 
               required 
-              className="h-9"
+              className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm"
             />
           </div>
 
@@ -130,12 +130,12 @@ export function CalendarCreateForm({
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500">일시</label>
-            <Input 
+            <input
               name="scheduledStart" 
               type="datetime-local" 
               ref={dateRef}
               required 
-              className="h-9"
+              className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm"
             />
           </div>
           

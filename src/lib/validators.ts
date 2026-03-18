@@ -97,6 +97,12 @@ export const generalSignupSchema = z.object({
   })
 });
 
+export const lightAccountSignupSchema = z.object({
+  email: z.string().trim().email('이메일을 입력해 주세요.'),
+  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.').max(72, '비밀번호는 72자 이하로 입력해 주세요.'),
+  fullName: z.string().trim().min(2, '이름을 입력해 주세요.').max(80)
+});
+
 export const clientServiceRequestSchema = z.object({
   organizationId: z.string().uuid().optional().or(z.literal('')),
   requestKind: z.enum(['status_help', 'reapproval_help', 'access_issue']).default('status_help'),
@@ -227,7 +233,7 @@ export const invitationCreateSchema = z.object({
   note: z.string().trim().max(500).optional().or(z.literal('')),
   expiresHours: z.coerce.number().int().min(1).max(336).default(72),
   actorCategory: z.enum(['admin', 'staff']).optional().default('staff'),
-  roleTemplateKey: z.enum(['admin_general', 'lawyer', 'office_manager', 'collection_agent', 'intern_readonly']).optional().default('office_manager'),
+  roleTemplateKey: z.enum(['admin_general', 'lawyer', 'office_manager', 'org_staff', 'collection_agent', 'intern_readonly']).optional().default('org_staff'),
   caseScopePolicy: z.enum(['all_org_cases', 'assigned_cases_only', 'read_only_assigned']).optional().default('assigned_cases_only')
 });
 
@@ -283,7 +289,7 @@ export const paymentRecordSchema = z.object({
 
 export const membershipSetupSchema = z.object({
   actorCategory: z.enum(['admin', 'staff']),
-  roleTemplateKey: z.enum(['admin_general', 'lawyer', 'office_manager', 'collection_agent', 'intern_readonly']),
+  roleTemplateKey: z.enum(['admin_general', 'lawyer', 'office_manager', 'org_staff', 'collection_agent', 'intern_readonly']),
   caseScopePolicy: z.enum(['all_org_cases', 'assigned_cases_only', 'read_only_assigned']),
   membershipTitle: z.string().trim().max(80).optional().or(z.literal(''))
 });
