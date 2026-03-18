@@ -933,7 +933,7 @@ export function DashboardHubClient({
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="mt-3">
           <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1006,93 +1006,9 @@ export function DashboardHubClient({
               </div>
             </div>
           </div>
-
-          <div className="rounded-[1.6rem] border border-sky-200 bg-[linear-gradient(180deg,#f8fcff,#edf7ff)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-900">오늘 우선 확인 사건</p>
-              <Badge tone="red">{todayCaseFocus.length}</Badge>
-            </div>
-            <div className="mt-2.5 space-y-2">
-              {todayCaseFocus.length ? todayCaseFocus.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/cases/${item.id}` as Route}
-                  className="block rounded-2xl border border-sky-200 bg-white px-3.5 py-3 text-sm transition hover:border-sky-300 hover:bg-sky-50/40"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-900">{item.title}</p>
-                    <ChevronRight className="size-4 text-slate-400" />
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>현재 단계 {getCaseStageLabel(item.stage_key)}</span>
-                    <span>·</span>
-                    <span>마지막 업데이트 {item.updated_at ? formatDateTime(item.updated_at) : '-'}</span>
-                  </div>
-                  <p className="mt-2 text-xs font-medium text-sky-700">다음 행동 · {item.nextAction}</p>
-                </Link>
-              )) : (
-                <div className="rounded-2xl border border-sky-200 bg-white px-3 py-6 text-sm text-slate-500">
-                  우선 확인 사건이 없습니다.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-1">
-            <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <BellRing className="size-4" />
-                  최근 미확인 알림
-                </div>
-                <Badge tone="blue">{data.unreadNotifications}</Badge>
-              </div>
-              <div className="mt-2.5 space-y-2">
-                {data.unreadNotificationItems.length ? (
-                  data.unreadNotificationItems.slice(0, 3).map((item) => (
-                    <Link
-                      key={item.id}
-                      href={toNotificationOpenHref(item)}
-                      className="block rounded-2xl border border-rose-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-rose-300 hover:bg-rose-50/40"
-                    >
-                      <p className="font-medium text-slate-900">{item.title}</p>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-rose-200 bg-white px-3 py-6 text-sm text-slate-500">미확인 알림이 없습니다.</div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-[1.6rem] border border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff6df)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <Wallet className="size-4" />
-                  비용 관련
-                </div>
-                <Badge tone="amber">{data.pendingBillingCount}</Badge>
-              </div>
-              <div className="mt-2.5 space-y-2">
-                {data.upcomingBilling.length ? (
-                  data.upcomingBilling.slice(0, 2).map((item) => (
-                    <Link
-                      key={item.id}
-                      href={(item.case_id ? `/cases/${item.case_id}` : '/billing') as Route}
-                      className="block rounded-2xl border border-amber-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-amber-300 hover:bg-amber-50/40"
-                    >
-                      <p className="font-medium text-slate-900">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{formatCurrency(item.amount)} · {item.due_on ? formatDate(item.due_on) : '기한 미정'}</p>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-amber-200 bg-white px-3 py-6 text-sm text-slate-500">대기 중인 비용 항목이 없습니다.</div>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
-
+      {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <Card className="border-amber-200 bg-[linear-gradient(180deg,#fffdf2,#fff8da)]">
           <CardHeader className="border-amber-200/70">
@@ -1192,16 +1108,16 @@ export function DashboardHubClient({
                   <div className="rounded-2xl border border-sky-300 bg-white/88 p-4 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-900">이렇게 바꿀까요?</p>
-                      <Badge tone={providerTone(plannerPreview.provider)}>{plannerPreview.provider}</Badge>
+                      <Badge tone={providerTone(plannerPreview!.provider)}>{plannerPreview!.provider}</Badge>
                     </div>
                     <div className="mt-3 space-y-2 text-sm text-slate-700">
                       <p><span className="font-medium text-slate-900">대상 사건</span> · {selectedPlannerCase?.title ?? '미지정'}</p>
-                      <p><span className="font-medium text-slate-900">제목</span> · {plannerPreview.title}</p>
-                      <p><span className="font-medium text-slate-900">설명</span> · {plannerPreview.summary}</p>
-                      <p><span className="font-medium text-slate-900">예정 시각</span> · {plannerPreview.dueAt ? formatDateTime(plannerPreview.dueAt) : '직접 확인 필요'}</p>
-                      <p><span className="font-medium text-slate-900">판단 근거</span> · {plannerPreview.reason}</p>
+                      <p><span className="font-medium text-slate-900">제목</span> · {plannerPreview!.title}</p>
+                      <p><span className="font-medium text-slate-900">설명</span> · {plannerPreview!.summary}</p>
+                      <p><span className="font-medium text-slate-900">예정 시각</span> · {plannerPreview!.dueAt ? formatDateTime(plannerPreview!.dueAt) : '직접 확인 필요'}</p>
+                      <p><span className="font-medium text-slate-900">판단 근거</span> · {plannerPreview!.reason}</p>
                     </div>
-                    {plannerPreview.setupHint ? <p className="mt-3 text-xs text-amber-700">{plannerPreview.setupHint}</p> : null}
+                    {plannerPreview!.setupHint ? <p className="mt-3 text-xs text-amber-700">{plannerPreview!.setupHint}</p> : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button onClick={commitPlanner} disabled={plannerPending || !plannerCaseId || !organizationId}>초안 등록</Button>
                       <Button variant="secondary" onClick={() => setPlannerPreview(null)}>다시 작성</Button>
@@ -1215,7 +1131,8 @@ export function DashboardHubClient({
           </CardContent>
         </Card>
       </div>
-
+      ) : null}
+      {false ? (
       <Card className="border-slate-200 bg-white">
         <CardHeader className="border-slate-100">
           <CardTitle>보조 이동</CardTitle>
@@ -1241,6 +1158,7 @@ export function DashboardHubClient({
           </Link>
         </CardContent>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
