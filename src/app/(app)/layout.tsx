@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
 import { BrandBanner } from '@/components/brand-banner';
@@ -11,6 +11,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
+import { GlobalCommandPalette } from '@/components/global-command-palette';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
@@ -29,7 +30,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const supportSession = await readSupportSessionCookie();
 
-  if (!auth.memberships.length && auth.profile.platform_role !== 'platform_admin') {
+  if (!auth.memberships.length && !isPlatformOperator(auth)) {
     redirect('/start/signup' as Route);
   }
 
@@ -71,6 +72,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           ) : null}
           {children}
+          <GlobalCommandPalette />
         </main>
       </div>
     </div>

@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
-import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 
 export default async function SettingsIndexPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  if (!organizationId && auth.profile.platform_role !== 'platform_admin') notFound();
+  if (!organizationId && !isPlatformOperator(auth)) notFound();
   const data = await getSettingsAdminData(organizationId);
 
   return (

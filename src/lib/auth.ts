@@ -136,7 +136,7 @@ const getPlatformAdminScenarioLookup = cache(async (userId: string): Promise<Pla
 });
 
 export async function hasPlatformAdminSecurityClearance(auth: AuthContext) {
-  if (auth.profile.platform_role !== 'platform_admin') return false;
+  if (!isPlatformOperator(auth)) return false;
 
   const lookup = await getPlatformAdminSecurityLookup(auth.user.id);
 
@@ -194,7 +194,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
       actor_category,
       permission_template_key,
       case_scope_policy,
-      organization:organizations(id, name, slug, kind, enabled_modules),
+      organization:organizations(id, name, slug, kind, enabled_modules, is_platform_root),
       permission_overrides:organization_membership_permission_overrides(permission_key, effect)
     `)
     .eq('profile_id', user.id)
@@ -237,7 +237,7 @@ export async function getActiveViewMode() {
 }
 
 export async function hasActivePlatformAdminView(auth: AuthContext) {
-  if (auth.profile.platform_role !== 'platform_admin') return false;
+  if (!isPlatformOperator(auth)) return false;
   const activeViewMode = await getActiveViewMode();
   if (activeViewMode !== 'platform_admin') return false;
   return hasPlatformAdminSecurityClearance(auth);
@@ -273,6 +273,17 @@ export function findMembership(auth: AuthContext, organizationId: string) {
 
 export function isManagementRole(role?: string | null) {
   return role === 'org_owner' || role === 'org_manager';
+}
+
+export function hasPlatformRootManagementMembership(auth: AuthContext) {
+  return auth.memberships.some((membership) => (
+    membership.organization?.is_platform_root === true
+    && isManagementRole(membership.role)
+  ));
+}
+
+export function isPlatformOperator(auth: AuthContext) {
+  return auth.profile.platform_role === 'platform_admin' || hasPlatformRootManagementMembership(auth);
 }
 
 export function hasStaffMembership(auth: AuthContext, organizationId: string) {

@@ -63,7 +63,10 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
     return '/portal' as Route;
   }
 
-  if (!auth.memberships.length && auth.profile.platform_role !== 'platform_admin') {
+  const isPlatformOperator = auth.profile.platform_role === 'platform_admin'
+    || auth.memberships.some((membership) => membership.organization?.is_platform_root && (membership.role === 'org_owner' || membership.role === 'org_manager'));
+
+  if (!auth.memberships.length && !isPlatformOperator) {
     return '/start/signup' as Route;
   }
 

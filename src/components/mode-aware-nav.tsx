@@ -174,6 +174,7 @@ function getOrganizationSections({
       { href: '/admin/organization-requests', label: '조직 개설 검토', icon: Building2 },
       { href: '/admin/modules', label: '추가 모듈', icon: Boxes },
       { href: '/admin/support', label: '지원 요청 관리', icon: LifeBuoy },
+      { href: '/admin/audit', label: '감사 로그', icon: ClipboardList },
       { href: '/settings/platform', label: '플랫폼 설정', icon: Settings },
       { href: '/organizations', label: '조직 참여 현황', icon: Building2 },
       { href: '/clients', label: '의뢰인 연결 현황', icon: Users }
@@ -734,12 +735,12 @@ export function ModeAwareNav({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <ShieldCheck className="size-4 text-emerald-600" /> 플랫폼 관리자 모드
+                  <ShieldCheck className="size-4 text-emerald-600" /> 플랫폼 조직 운영
                 </span>
                 <p className="mt-1 text-xs text-slate-500">
                   {isPlatformAdminMode
-                    ? '업무 특성: 플랫폼 관리자'
-                    : '업무모드에서 플랫폼/직원/가상조직 시야를 선택한 뒤 활성화합니다.'}
+                    ? '업무 특성: 플랫폼 조직 운영'
+                    : '업무모드에서 플랫폼 조직/직원/가상조직 시야를 선택한 뒤 활성화합니다.'}
                 </p>
               </div>
               <Button
@@ -767,11 +768,11 @@ export function ModeAwareNav({
             </div>
             {platformSetupOpen ? (
               <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-3">
-                <p className="text-sm font-semibold text-slate-900">플랫폼 관리자 ON 전에 사용할 시야를 먼저 선택하세요.</p>
-                <p className="mt-1 text-xs text-slate-600">플랫폼 관리자와 직원모드는 베인을 유지하고, 나머지는 가상조직 시나리오로 전환됩니다.</p>
+                <p className="text-sm font-semibold text-slate-900">플랫폼 조직 운영 ON 전에 사용할 시야를 먼저 선택하세요.</p>
+                <p className="mt-1 text-xs text-slate-600">플랫폼 조직/직원모드는 베인을 유지하고, 나머지는 가상조직 시나리오로 전환됩니다.</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {[
-                    { key: 'platform_admin' as const, label: '플랫폼 관리자' },
+                    { key: 'platform_admin' as const, label: '플랫폼 조직 운영' },
                     { key: 'organization_staff' as const, label: '직원모드' },
                     { key: 'law_admin' as const, label: '법률/법무조직' },
                     { key: 'collection_admin' as const, label: '추심조직' },
