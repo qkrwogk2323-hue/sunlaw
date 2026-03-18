@@ -1939,6 +1939,8 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
   const relationLabel = parsed.relationLabel || existingClient?.relation_label || '의뢰인';
   const clientName = existingClient?.client_name || requestRow.requester_name || requestRow.requester_email;
   const portalEnabled = parsed.portalEnabled && Boolean(requestRow.requester_profile_id);
+  const previousPortalEnabled = existingClient?.is_portal_enabled ?? false;
+  let insertedCaseClientId: string | null = null;
 
   if (existingClient?.id) {
     const { error: updateError } = await adminClient
@@ -1955,7 +1957,7 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
 
     if (updateError) throw updateError;
   } else {
-    const { error: insertError } = await adminClient.from('case_clients').insert({
+    const insertPayload = {
       organization_id: parsed.organizationId,
       case_id: parsed.caseId,
       profile_id: requestRow.requester_profile_id,
@@ -1965,9 +1967,20 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
       is_portal_enabled: portalEnabled,
       created_by: auth.user.id,
       updated_by: auth.user.id
-    });
+    };
 
-    if (insertError) throw insertError;
+    if (portalEnabled) {
+      const { data: insertedClient, error: insertError } = await adminClient
+        .from('case_clients')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+      if (insertError) throw insertError;
+      insertedCaseClientId = insertedClient?.id ?? null;
+    } else {
+      const { error: insertError } = await adminClient.from('case_clients').insert(insertPayload);
+      if (insertError) throw insertError;
+    }
   }
 
   const { error: notificationError } = await adminClient.from('notifications').insert({
@@ -1999,7 +2012,17 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
       })
       .eq('id', requestRow.requester_profile_id);
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      if (insertedCaseClientId) {
+        await adminClient.from('case_clients').delete().eq('id', insertedCaseClientId);
+      } else if (existingClient?.id) {
+        await adminClient
+          .from('case_clients')
+          .update({ is_portal_enabled: previousPortalEnabled, updated_by: auth.user.id })
+          .eq('id', existingClient.id);
+      }
+      throw profileError;
+    }
   }
 
   revalidatePath('/clients');
