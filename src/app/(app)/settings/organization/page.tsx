@@ -6,7 +6,7 @@ import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { OrganizationSettingForm } from '@/components/forms/organization-setting-form';
-import { createOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
+import { createOrganizationExitRequestAction, deactivateOrganizationAction, deleteOrganizationAction } from '@/lib/actions/settings-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
 
@@ -94,6 +94,43 @@ export default async function OrganizationSettingsPage() {
               className="min-h-24 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
             />
             <SubmitButton variant="destructive" pendingLabel="신청 중...">플랫폼 관리자 승인 요청</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-red-300">
+        <CardHeader>
+          <CardTitle>조직 비활성화 / 삭제</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <form action={deactivateOrganizationAction} className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <input type="hidden" name="organizationId" value={organizationId} />
+            <p className="text-sm text-slate-700">조직을 비활성화하면 새 작업이 중지되고 목록에서 운영 대상에서 제외됩니다.</p>
+            <label className="block text-xs font-medium text-slate-600">
+              확인 문구 입력: 비활성화
+              <input
+                name="confirmText"
+                required
+                className="mt-1 h-10 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm"
+                placeholder="비활성화"
+              />
+            </label>
+            <SubmitButton pendingLabel="비활성화 중..." variant="secondary">조직 비활성화</SubmitButton>
+          </form>
+
+          <form action={deleteOrganizationAction} className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
+            <input type="hidden" name="organizationId" value={organizationId} />
+            <p className="text-sm text-slate-700">조직 삭제는 soft delete로 처리되며, 활성 구성원 상태와 기본 조직 연결을 해제합니다.</p>
+            <label className="block text-xs font-medium text-slate-600">
+              확인 문구 입력: 삭제
+              <input
+                name="confirmText"
+                required
+                className="mt-1 h-10 w-full rounded-lg border border-red-200 bg-white px-3 text-sm"
+                placeholder="삭제"
+              />
+            </label>
+            <SubmitButton pendingLabel="삭제 처리 중..." variant="destructive">조직 삭제</SubmitButton>
           </form>
         </CardContent>
       </Card>

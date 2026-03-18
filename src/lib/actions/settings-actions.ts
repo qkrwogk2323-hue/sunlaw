@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
+import { redirect } from 'next/navigation';
 import { getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -40,6 +41,11 @@ const reviewOrganizationExitRequestSchema = z.object({
   requestId: z.string().uuid(),
   decision: z.enum(['approved', 'rejected']),
   reviewNote: z.string().trim().max(1000).optional().or(z.literal(''))
+});
+
+const organizationLifecycleMutationSchema = z.object({
+  organizationId: z.string().uuid(),
+  confirmText: z.string().trim().min(1)
 });
 
 function parseJson(value: string) {
@@ -422,4 +428,100 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
 
   revalidatePath('/settings/organization');
   revalidatePath('/admin/organization-requests');
+}
+
+export async function deactivateOrganizationAction(formData: FormData) {
+  const parsed = organizationLifecycleMutationSchema.parse({
+    organizationId: formData.get('organizationId'),
+    confirmText: formData.get('confirmText')
+  });
+  if (parsed.confirmText !== '비활성화') {
+    throw new Error('확인 문구로 "비활성화"를 정확히 입력해 주세요.');
+  }
+
+  await requireOrganizationActionAccess(parsed.organizationId, {
+    requireManager: true,
+    permission: 'organization_settings_manage',
+    errorMessage: '조직 관리자만 조직 비활성화를 실행할 수 있습니다.'
+  });
+
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from('organizations')
+    .update({
+      lifecycle_status: 'archived',
+      updated_at: now
+    })
+    .eq('id', parsed.organizationId)
+    .neq('lifecycle_status', 'soft_deleted');
+  if (error) throw error;
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/dashboard');
+  revalidatePath('/organizations');
+}
+
+export async function deleteOrganizationAction(formData: FormData) {
+  const parsed = organizationLifecycleMutationSchema.parse({
+    organizationId: formData.get('organizationId'),
+    confirmText: formData.get('confirmText')
+  });
+  if (parsed.confirmText !== '삭제') {
+    throw new Error('확인 문구로 "삭제"를 정확히 입력해 주세요.');
+  }
+
+  await requireOrganizationActionAccess(parsed.organizationId, {
+    requireManager: true,
+    permission: 'organization_settings_manage',
+    errorMessage: '조직 관리자만 조직 삭제를 실행할 수 있습니다.'
+  });
+
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: memberships, error: membershipError } = await admin
+    .from('organization_memberships')
+    .select('profile_id')
+    .eq('organization_id', parsed.organizationId)
+    .eq('status', 'active');
+  if (membershipError) throw membershipError;
+
+  const profileIds = Array.from(new Set((memberships ?? []).map((row: any) => row.profile_id).filter(Boolean)));
+
+  const { error: orgError } = await admin
+    .from('organizations')
+    .update({
+      lifecycle_status: 'soft_deleted',
+      updated_at: now
+    })
+    .eq('id', parsed.organizationId);
+  if (orgError) throw orgError;
+
+  const { error: inactiveMembershipError } = await admin
+    .from('organization_memberships')
+    .update({
+      status: 'inactive',
+      updated_at: now
+    })
+    .eq('organization_id', parsed.organizationId)
+    .eq('status', 'active');
+  if (inactiveMembershipError) throw inactiveMembershipError;
+
+  if (profileIds.length > 0) {
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({
+        default_organization_id: null,
+        updated_at: now
+      })
+      .in('id', profileIds)
+      .eq('default_organization_id', parsed.organizationId);
+    if (profileError) throw profileError;
+  }
+
+  revalidatePath('/settings/organization');
+  revalidatePath('/dashboard');
+  revalidatePath('/organizations');
+  redirect('/organizations');
 }
