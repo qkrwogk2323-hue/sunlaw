@@ -1,6 +1,28 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
+const AUTH_REQUIRED_PREFIXES = [
+  '/dashboard',
+  '/cases',
+  '/clients',
+  '/calendar',
+  '/documents',
+  '/notifications',
+  '/inbox',
+  '/organizations',
+  '/settings',
+  '/portal',
+  '/billing',
+  '/collections',
+  '/reports',
+  '/client-access',
+  '/start'
+];
+
+function shouldRunSessionUpdate(pathname: string) {
+  return AUTH_REQUIRED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 function redirectOAuthCodeToCallback(request: NextRequest) {
   if (request.nextUrl.pathname === '/auth/callback') {
     return null;
@@ -32,7 +54,21 @@ export async function middleware(request: NextRequest) {
     return authRedirect;
   }
 
-  return updateSession(request);
+  if (!shouldRunSessionUpdate(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
+  try {
+    const result = await Promise.race([
+      updateSession(request),
+      new Promise<NextResponse>((resolve) => {
+        setTimeout(() => resolve(NextResponse.next({ request })), 1800);
+      })
+    ]);
+    return result;
+  } catch {
+    return NextResponse.next({ request });
+  }
 }
 
 export const config = {
