@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
 
 const AUTH_REQUIRED_PREFIXES = [
   '/dashboard',
@@ -58,17 +57,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  try {
-    const result = await Promise.race([
-      updateSession(request),
-      new Promise<NextResponse>((resolve) => {
-        setTimeout(() => resolve(NextResponse.next({ request })), 1800);
-      })
-    ]);
-    return result;
-  } catch {
-    return NextResponse.next({ request });
-  }
+  // NOTE: 미들웨어 타임아웃 방지를 위해 세션 갱신은 앱 라우트 내부에서 처리합니다.
+  return NextResponse.next({ request });
 }
 
 export const config = {
