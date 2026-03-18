@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { getActiveViewMode, requireAuthenticatedUser } from '@/lib/auth';
+import { requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
 import { BrandBanner } from '@/components/brand-banner';
@@ -11,21 +11,9 @@ import { buttonStyles } from '@/components/ui/button';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
-import { resolveInitialViewMode } from '@/lib/view-mode';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-  const baseMembership = auth.memberships.find((membership) => membership.organization_id === auth.profile.default_organization_id)
-    ?? auth.memberships[0]
-    ?? null;
-  const initialMode = resolveInitialViewMode({
-    activeViewMode,
-    platformRole: auth.profile.platform_role,
-    organizationKind: baseMembership?.organization?.kind,
-    isManager: baseMembership?.role === 'org_owner' || baseMembership?.role === 'org_manager',
-    isClientAccount: auth.profile.is_client_account,
-  });
 
   if (!hasCompletedLegalName(auth.profile)) {
     redirect('/start/profile-name' as Route);
@@ -52,7 +40,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <ModeAwareNav
             memberships={auth.memberships}
             profile={auth.profile}
-            initialMode={initialMode}
           />
 
           <form action={signOutAction}>
