@@ -41,9 +41,9 @@ export async function POST() {
     .from('notifications')
     .select('id')
     .eq('organization_id', organizationId)
-    .eq('notification_type', 'member_profile_missing_daily')
-    .eq('entity_type', 'collaboration')
-    .eq('entity_id', auth.user.id)
+    .eq('kind', 'generic')
+    .eq('action_label', '구성원 정보 확인')
+    .eq('action_target_id', auth.user.id)
     .gte('created_at', since)
     .limit(1)
     .maybeSingle();
@@ -77,20 +77,13 @@ export async function POST() {
     organization_id: organizationId,
     recipient_profile_id: recipientProfileId,
     kind: 'generic',
-    notification_type: 'member_profile_missing_daily',
     title: `${auth.profile.full_name} 구성원 정보 보완 필요`,
     body: `미기재 항목: ${missingItems}. 본인 수정 영역에서 입력이 필요합니다.`,
     requires_action: true,
     action_label: '구성원 정보 확인',
     action_href: destinationUrl,
     action_entity_type: 'client',
-    action_target_id: auth.user.id,
-    entity_type: 'collaboration',
-    entity_id: auth.user.id,
-    priority: 'normal',
-    status: 'active',
-    destination_type: 'internal_route',
-    destination_url: destinationUrl
+    action_target_id: auth.user.id
   }));
 
   const { error } = await admin.from('notifications').insert(rows);

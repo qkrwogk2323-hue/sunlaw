@@ -27,7 +27,3 @@ drop trigger if exists trg_member_private_profiles_updated_at on public.member_p
 create trigger trg_member_private_profiles_updated_at
 before update on public.member_private_profiles
 for each row execute function app.set_updated_at();
-
-create index if not exists notifications_profile_missing_daily_idx
-  on public.notifications (organization_id, notification_type, entity_id, created_at desc)
-  where notification_type = 'member_profile_missing_daily';
