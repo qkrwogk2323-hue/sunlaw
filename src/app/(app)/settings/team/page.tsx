@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +45,7 @@ export default async function TeamSettingsPage({
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
   const canManage = isWorkspaceAdmin(currentMembership) && Boolean(currentMembership?.permissions?.user_manage);
   const inviteToken = resolvedSearchParams?.invite;
-  const selectedMemberId = resolvedSearchParams?.member ?? currentMembership?.id ?? workspace.members[0]?.id ?? null;
+  const selectedMemberId = resolvedSearchParams?.member ?? null;
 
   const staffInvitations = workspace.invitations
     .filter((invite: any) => invite.kind === 'staff_invite')
@@ -94,8 +93,6 @@ export default async function TeamSettingsPage({
   });
 
   const roster = [...memberRows, ...inviteOnlyRows];
-  const selectedMember: any = workspace.members.find((member: any) => member.id === selectedMemberId) ?? null;
-
   return (
     <div className="space-y-6">
       <div>
@@ -165,13 +162,19 @@ export default async function TeamSettingsPage({
                 {row.isInviteOnly ? (
                   <p className="font-medium text-slate-900">{row.name}</p>
                 ) : (
-                  <Link href={`/settings/team?member=${row.raw.id}`} className="font-medium text-slate-900 underline underline-offset-4">
-                    {row.name}
-                  </Link>
+                  <p className="font-medium text-slate-900">{row.name}</p>
                 )}
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-slate-500">{row.email}</p>
                   {row.invitationId ? <ResendInvitationForm invitationId={row.invitationId} compact /> : null}
+                  {canManage && !row.isInviteOnly && row.raw.role !== 'org_owner' ? (
+                    <a
+                      href={`/settings/team?member=${row.raw.id}#member-edit-${row.raw.id}`}
+                      className="inline-flex h-8 items-center rounded-md border border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      수정하기
+                    </a>
+                  ) : null}
                   {canManage && !row.isInviteOnly && row.raw.role !== 'org_owner' ? (
                     <>
                       <form action={updateMembershipAdminSummaryAction}>
@@ -195,6 +198,44 @@ export default async function TeamSettingsPage({
                   ) : null}
                 </div>
               </div>
+
+              {canManage && !row.isInviteOnly && selectedMemberId === row.raw.id ? (
+                <div id={`member-edit-${row.raw.id}`} className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-sm text-slate-700">
+                    <p className="font-medium text-slate-900">관리자 수정 영역</p>
+                    <p>대상: {row.raw.profile?.full_name ?? '-'} · {row.raw.profile?.email ?? '-'}</p>
+                    <p className="mt-1 text-slate-500">현재 역할: {membershipRoleLabel(row.raw.role)} · {actorCategoryLabel(row.raw.actor_category)}</p>
+                  </div>
+
+                  {row.raw.role !== 'org_owner' ? (
+                    <MemberAdminSummaryForm
+                      organizationId={organizationId}
+                      membershipId={row.raw.id}
+                      actorCategory={row.raw.actor_category}
+                      status={row.raw.status}
+                      title={row.raw.title}
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-500">조직관리자는 이 화면에서 수정할 수 없습니다.</p>
+                  )}
+
+                  <details className="rounded-xl border border-slate-200 bg-white p-4">
+                    <summary className="cursor-pointer text-sm font-medium text-slate-900">고급 권한 수정(필요할 때만)</summary>
+                    <div className="mt-3">
+                      <MembershipPermissionForm
+                        membershipId={row.raw.id}
+                        organizationId={organizationId}
+                        currentPermissions={row.raw.permissions}
+                        actorCategory={row.raw.actor_category}
+                        membershipTitle={row.raw.title}
+                        roleTemplateKey={row.raw.permission_template_key}
+                        caseScopePolicy={row.raw.case_scope_policy}
+                        title={`${row.raw.profile?.full_name ?? '구성원'} 고급 권한`}
+                      />
+                    </div>
+                  </details>
+                </div>
+              ) : null}
             </div>
           )) : <p className="text-sm text-slate-500">구성원 데이터가 없습니다.</p>}
         </CardContent>
@@ -216,46 +257,6 @@ export default async function TeamSettingsPage({
         </Card>
       ) : null}
 
-      {canManage && selectedMember ? (
-        <Card>
-          <CardHeader><CardTitle>관리자 수정 영역</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
-              <p className="font-medium text-slate-900">대상: {selectedMember.profile?.full_name ?? '-'}</p>
-              <p className="text-slate-500">{selectedMember.profile?.email ?? '-'}</p>
-              <p className="mt-1 text-slate-500">현재 역할: {membershipRoleLabel(selectedMember.role)} · {actorCategoryLabel(selectedMember.actor_category)}</p>
-            </div>
-
-            {selectedMember.role !== 'org_owner' ? (
-              <MemberAdminSummaryForm
-                organizationId={organizationId}
-                membershipId={selectedMember.id}
-                actorCategory={selectedMember.actor_category}
-                status={selectedMember.status}
-                title={selectedMember.title}
-              />
-            ) : (
-              <p className="text-sm text-slate-500">조직관리자는 이 화면에서 수정할 수 없습니다.</p>
-            )}
-
-            <details className="rounded-xl border border-slate-200 p-4">
-              <summary className="cursor-pointer text-sm font-medium text-slate-900">고급 권한 수정(필요할 때만)</summary>
-              <div className="mt-3">
-                <MembershipPermissionForm
-                  membershipId={selectedMember.id}
-                  organizationId={organizationId}
-                  currentPermissions={selectedMember.permissions}
-                  actorCategory={selectedMember.actor_category}
-                  membershipTitle={selectedMember.title}
-                  roleTemplateKey={selectedMember.permission_template_key}
-                  caseScopePolicy={selectedMember.case_scope_policy}
-                  title={`${selectedMember.profile?.full_name ?? '구성원'} 고급 권한`}
-                />
-              </div>
-            </details>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }

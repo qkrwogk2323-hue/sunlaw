@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   MessageSquareText,
   ReceiptText,
+  Search,
   Settings,
   Users
 } from 'lucide-react';
@@ -139,7 +140,7 @@ function getOrganizationSections({
   if (mode !== 'client_communication') {
     collaborationItems.push(
       { href: '/organizations', label: '조직 찾기', icon: Building2 },
-      { href: '/inbox', label: '협업 소통함', icon: ClipboardList, badge: conversationBadge }
+      { href: '/inbox', label: '사건·의뢰인 소통', icon: ClipboardList, badge: conversationBadge }
     );
   }
 
@@ -330,6 +331,7 @@ export function ModeAwareNav({
   const [pulseConversation, setPulseConversation] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [orgPickerOpen, setOrgPickerOpen] = useState(false);
+  const [quickSearchQuery, setQuickSearchQuery] = useState('');
 
   const isModeKey = (value: string | null | undefined): value is ModeKey => (
     value === 'platform_admin'
@@ -502,6 +504,28 @@ export function ModeAwareNav({
       <div className="hidden lg:block">
         <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <form
+              className="rounded-xl border border-slate-200 bg-slate-50 p-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const query = quickSearchQuery.trim();
+                window.dispatchEvent(new CustomEvent('open-global-search', { detail: { query } }));
+              }}
+            >
+              <p className="px-1 pb-1 text-xs font-semibold text-slate-500">공통 메뉴 빠른 검색</p>
+              <div className="flex items-center gap-2">
+                <input
+                  value={quickSearchQuery}
+                  onChange={(event) => setQuickSearchQuery(event.target.value)}
+                  placeholder="사건, 의뢰인, 문서 검색"
+                  className="h-9 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                />
+                <button type="submit" className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100">
+                  <Search className="size-4" />
+                </button>
+              </div>
+            </form>
+
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">조직</p>
               <button

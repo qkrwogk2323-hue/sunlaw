@@ -30,6 +30,18 @@ export function GlobalCommandPalette() {
   }, []);
 
   useEffect(() => {
+    const onOpenSearch = (event: Event) => {
+      const custom = event as CustomEvent<{ query?: string }>;
+      const nextQuery = `${custom.detail?.query ?? ''}`.trim();
+      setOpen(true);
+      setQuery(nextQuery);
+    };
+
+    window.addEventListener('open-global-search', onOpenSearch as EventListener);
+    return () => window.removeEventListener('open-global-search', onOpenSearch as EventListener);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     if (query.trim().length < 2) {
       setResults({ cases: [], clients: [], documents: [] });
