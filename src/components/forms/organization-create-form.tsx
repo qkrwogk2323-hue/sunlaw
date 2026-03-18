@@ -23,6 +23,13 @@ export function OrganizationCreateForm() {
       <Input name="addressLine2" placeholder="상세주소" className="md:col-span-2" />
       <Input name="postalCode" placeholder="우편번호" />
       <div className="space-y-2 rounded-xl border border-slate-200 p-4 md:col-span-2">
+        <p className="text-sm font-medium text-slate-900">초기 조직관리자 초대 (선택)</p>
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input name="managerInviteName" placeholder="초대받는 관리자 이름" />
+          <Input name="managerInviteEmail" placeholder="초대받는 관리자 이메일" type="email" />
+        </div>
+      </div>
+      <div className="space-y-2 rounded-xl border border-slate-200 p-4 md:col-span-2">
         <p className="text-sm font-medium text-slate-900">기본 활성 모듈</p>
         <div className="grid gap-2 md:grid-cols-3">
           <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="requestedModules" value="client_portal" defaultChecked className="size-4 rounded border-slate-300" /> 의뢰인 포털</label>

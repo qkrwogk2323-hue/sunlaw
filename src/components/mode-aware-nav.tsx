@@ -9,7 +9,6 @@ import { getDefaultMode, getOrganizationAdminMode, type ModeKey } from '@/compon
 import { Button, segmentStyles } from '@/components/ui/button';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, isPlatformAdminOnlyPath } from '@/lib/view-mode';
-import { PLATFORM_SCENARIO_ORGANIZATIONS } from '@/lib/platform-scenarios';
 
 type NavBadge = { count: number; variant?: 'default' | 'urgent' };
 type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean };
@@ -169,7 +168,6 @@ function getOrganizationSections({
 
   if (isPlatformAdminView) {
     organizationItems.push(
-      { href: '/organizations', label: '조직현황', icon: Building2 },
       { href: '/organizations#create', label: '조직생성', icon: Boxes },
       { href: '/admin/audit', label: '감사 로그', icon: ClipboardList }
     );
@@ -487,27 +485,16 @@ export function ModeAwareNav({
     );
     return baseMode;
   });
-  const activeScenarioOrganization = useMemo(
-    () => profile.platform_role === 'platform_admin' && (mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')
-      ? PLATFORM_SCENARIO_ORGANIZATIONS[mode]
-      : null,
-    [mode, profile.platform_role]
-  );
   const currentOrgMembership = useMemo(
-    () => profile.platform_role === 'platform_admin' && (mode === 'platform_admin' || mode === 'organization_staff')
-      ? basePlatformMembership
-      : profile.platform_role === 'platform_admin'
-        ? toMembershipShape(activeScenarioOrganization)
-        : basePlatformMembership,
-    [activeScenarioOrganization, basePlatformMembership, mode, profile.platform_role]
+    () => basePlatformMembership,
+    [basePlatformMembership]
   );
   const currentOrganization = useMemo(
     () => currentOrgMembership?.organization
-      ?? activeScenarioOrganization
       ?? platformOrganizations.find((organization) => organization.id === profile.default_organization_id)
       ?? memberships[0]?.organization
       ?? null,
-    [activeScenarioOrganization, currentOrgMembership, memberships, platformOrganizations, profile.default_organization_id]
+    [currentOrgMembership, memberships, platformOrganizations, profile.default_organization_id]
   );
   const managerDefaultMode = getDefaultMode(
     profile.platform_role ?? 'standard',

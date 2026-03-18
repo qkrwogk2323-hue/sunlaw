@@ -66,13 +66,16 @@ function getActionErrorMessage(error: unknown, fallback: string) {
 async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('platform_role', 'platform_admin')
-    .eq('is_active', true);
+    .from('organization_memberships')
+    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, is_platform_root)')
+    .eq('status', 'active')
+    .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
-  return (data ?? []).map((row: { id: string }) => row.id).filter(Boolean);
+  return (data ?? [])
+    .filter((row: any) => row.organization?.is_platform_root === true && row.profile?.is_active !== false)
+    .map((row: any) => row.profile_id)
+    .filter(Boolean);
 }
 
 function sanitizeStorageFileName(fileName: string) {
@@ -766,6 +769,8 @@ export async function createOrganizationAction(formData: FormData) {
     addressLine2: formData.get('addressLine2'),
     postalCode: formData.get('postalCode'),
     websiteUrl: formData.get('websiteUrl'),
+    managerInviteName: formData.get('managerInviteName'),
+    managerInviteEmail: formData.get('managerInviteEmail'),
     requestedModules: formData.getAll('requestedModules').map(String)
   });
 
@@ -786,8 +791,40 @@ export async function createOrganizationAction(formData: FormData) {
     setDefaultOrganization: false
   });
 
+  const managerInviteEmail = parsed.managerInviteEmail?.trim().toLowerCase();
+  const creatorEmail = `${auth.user.email ?? auth.profile.email ?? ''}`.trim().toLowerCase();
+  let managerInviteToken: string | null = null;
+
+  if (managerInviteEmail && managerInviteEmail !== creatorEmail) {
+    const token = createInvitationToken();
+    const { error: invitationError } = await (await createSupabaseServerClient()).from('invitations').insert({
+      organization_id: organization.id,
+      kind: 'staff_invite',
+      email: managerInviteEmail,
+      invited_name: parsed.managerInviteName?.trim() || managerInviteEmail,
+      requested_role: 'org_manager',
+      actor_category: 'admin',
+      role_template_key: 'admin_general',
+      case_scope_policy: 'all_org_cases',
+      permissions_override: {},
+      token_hash: hashInvitationToken(token),
+      share_token: null,
+      token_hint: token.slice(-6),
+      note: encodeInvitationNote('조직 생성 시 초기 관리자 초대', '조직관리자'),
+      created_by: auth.user.id,
+      expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+    });
+
+    if (invitationError) throw invitationError;
+    managerInviteToken = token;
+  }
+
   revalidatePath('/organizations');
   revalidatePath('/admin/organization-requests');
+  if (managerInviteToken) {
+    redirect(`/organizations/${organization.id}?invite=${encodeURIComponent(managerInviteToken)}` as Route);
+  }
+
   redirect(`/organizations/${organization.id}`);
 }
 

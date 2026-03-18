@@ -17,23 +17,6 @@ type ClientAccountProfileFields = Pick<
   'is_client_account' | 'client_account_status' | 'client_account_status_changed_at' | 'client_account_status_reason' | 'client_last_approved_at' | 'legal_name' | 'legal_name_confirmed_at'
 >;
 
-type PlatformAdminSecurityRow = {
-  access_state: 'active' | 'suspended' | 'pending_review';
-  platform_mode_enabled: boolean;
-};
-
-type PlatformAdminSecurityLookup =
-  | { mode: 'legacy'; row: null }
-  | { mode: 'managed'; row: PlatformAdminSecurityRow | null };
-
-type PlatformAdminScenarioRow = {
-  scenario_mode_enabled: boolean;
-};
-
-type PlatformAdminScenarioLookup =
-  | { mode: 'legacy'; row: null }
-  | { mode: 'managed'; row: PlatformAdminScenarioRow | null };
-
 const defaultClientAccountProfileFields: ClientAccountProfileFields = {
   is_client_account: false,
   client_account_status: 'pending_initial_approval',
@@ -48,12 +31,6 @@ function isMissingColumnError(error: { code?: string; message?: string } | null)
   return error?.code === '42703'
     || error?.code === 'PGRST204'
     || Boolean(error?.message?.includes('column'));
-}
-
-function isMissingRelationError(error: { code?: string; message?: string } | null) {
-  return error?.code === '42P01'
-    || error?.code === 'PGRST205'
-    || Boolean(error?.message?.includes('Could not find the table'));
 }
 
 async function getProfileWithScopedFields(userId: string): Promise<Profile | null> {
@@ -90,66 +67,8 @@ async function getProfileWithScopedFields(userId: string): Promise<Profile | nul
   };
 }
 
-const getPlatformAdminSecurityLookup = cache(async (userId: string): Promise<PlatformAdminSecurityLookup> => {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('platform_admin_security_controls')
-    .select('access_state, platform_mode_enabled')
-    .eq('profile_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingRelationError(error)) {
-      return { mode: 'legacy', row: null };
-    }
-
-    throw error;
-  }
-
-  return {
-    mode: 'managed',
-    row: (data as PlatformAdminSecurityRow | null) ?? null
-  };
-});
-
-const getPlatformAdminScenarioLookup = cache(async (userId: string): Promise<PlatformAdminScenarioLookup> => {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('platform_admin_scenario_controls')
-    .select('scenario_mode_enabled')
-    .eq('profile_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingRelationError(error)) {
-      return { mode: 'legacy', row: null };
-    }
-
-    throw error;
-  }
-
-  return {
-    mode: 'managed',
-    row: (data as PlatformAdminScenarioRow | null) ?? null
-  };
-});
-
 export async function hasPlatformAdminSecurityClearance(auth: AuthContext) {
-  if (!isPlatformOperator(auth)) return false;
-
-  const lookup = await getPlatformAdminSecurityLookup(auth.user.id);
-
-  if (lookup.mode === 'legacy') {
-    return true;
-  }
-
-  const securityRow = lookup.row;
-
-  if (!securityRow) {
-    return false;
-  }
-
-  return securityRow.access_state === 'active' && securityRow.platform_mode_enabled;
+  return isPlatformOperator(auth);
 }
 
 export async function hasPlatformAdminScenarioAccess(auth: AuthContext) {

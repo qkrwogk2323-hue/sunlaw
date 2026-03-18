@@ -19,7 +19,7 @@ export default async function SettingsIndexPage() {
       <SettingsNav currentPath="/settings" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">카탈로그 키 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.catalog.length}</p></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">플랫폼 설정 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.platformSettings.length}</p></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">기본 설정 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.platformSettings.length}</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">조직 오버라이드 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.organizationSettings.length}</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">최근 변경 로그</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.changeLogs.length}</p></CardContent></Card>
       </div>

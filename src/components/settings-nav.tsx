@@ -6,8 +6,7 @@ const items: { href: Route; label: string }[] = [
   { href: '/settings/team', label: '구성원 관리' },
   { href: '/settings/organization', label: '조직 설정' },
   { href: '/settings/content', label: '문구/리소스' },
-  { href: '/settings/features', label: '기능 플래그' },
-  { href: '/settings/platform', label: '플랫폼 설정' }
+  { href: '/settings/features', label: '기능 플래그' }
 ];
 
 export function SettingsNav({ currentPath }: { currentPath: string }) {

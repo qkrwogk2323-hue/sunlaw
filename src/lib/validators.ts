@@ -41,6 +41,8 @@ export const organizationCreateSchema = z.object({
   addressLine2: z.string().trim().max(120).optional().or(z.literal('')),
   postalCode: z.string().trim().max(20).optional().or(z.literal('')),
   websiteUrl: z.string().trim().url().optional().or(z.literal('')),
+  managerInviteName: z.string().trim().max(80).optional().or(z.literal('')),
+  managerInviteEmail: z.string().trim().email().optional().or(z.literal('')),
   requestedModules: z.array(z.string()).optional().default([])
 });
 

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { findMembership, getActiveViewMode, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
@@ -9,52 +9,9 @@ import { OrganizationSettingForm } from '@/components/forms/organization-setting
 import { createOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
-import { PLATFORM_SCENARIO_ORGANIZATIONS, isPlatformScenarioMode } from '@/lib/platform-scenarios';
 
 export default async function OrganizationSettingsPage() {
   const auth = await requireAuthenticatedUser();
-  const activeViewMode = await getActiveViewMode();
-
-  if (auth.profile.platform_role === 'platform_admin' && isPlatformScenarioMode(activeViewMode)) {
-    const organization = PLATFORM_SCENARIO_ORGANIZATIONS[activeViewMode];
-
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직설정</h1>
-          <p className="mt-2 text-sm text-slate-600">가상조직 시야에서는 조직 설정을 읽기 전용으로 보여 줍니다. 실제 저장은 연결된 실조직이나 플랫폼 설정에서만 처리합니다.</p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-          <div className="rounded-2xl bg-indigo-600 p-4 text-white">
-            <p className="py-2 text-2xl font-semibold">회사소개</p>
-            <p className="py-2 text-2xl font-semibold">회사정보</p>
-            <p className="py-2 text-2xl font-semibold">환경설정</p>
-          </div>
-          <div className="space-y-3">
-            <details open className="rounded-2xl border border-slate-200 bg-white">
-              <summary className="cursor-pointer px-4 py-3 text-lg font-semibold text-slate-900">회사소개</summary>
-              <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-                <p>{organization.name} 조직의 운영 소개 섹션입니다.</p>
-              </div>
-            </details>
-            <details open className="rounded-2xl border border-slate-200 bg-white">
-              <summary className="cursor-pointer px-4 py-3 text-lg font-semibold text-slate-900">회사정보</summary>
-              <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-                <p>조직 유형: {organization.kind ?? '-'}</p>
-                <p>상태: 가상조직 시나리오</p>
-              </div>
-            </details>
-            <details open className="rounded-2xl border border-slate-200 bg-white">
-              <summary className="cursor-pointer px-4 py-3 text-lg font-semibold text-slate-900">환경설정</summary>
-              <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-                <p>이 화면에서는 실제 저장 없이 예시만 제공합니다.</p>
-              </div>
-            </details>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const organizationId = getEffectiveOrganizationId(auth);
   if (!organizationId) notFound();
