@@ -3,6 +3,7 @@ import {
   clientSignupSchema,
   generalSignupSchema,
   invitationCreateSchema,
+  lightAccountSignupSchema,
   organizationSignupSchema,
   supportRequestSchema
 } from '@/lib/validators';
@@ -121,6 +122,16 @@ describe('resident registration validation', () => {
 
     expect(result.success).toBe(true);
   });
+
+  it('accepts a valid lightweight account payload', () => {
+    const result = lightAccountSignupSchema.safeParse({
+      email: 'member@example.com',
+      password: 'safePass123',
+      fullName: '홍길동'
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('invitationCreateSchema', () => {
@@ -136,7 +147,7 @@ describe('invitationCreateSchema', () => {
 
     expect(parsed.expiresHours).toBe(72);
     expect(parsed.actorCategory).toBe('staff');
-    expect(parsed.roleTemplateKey).toBe('office_manager');
+    expect(parsed.roleTemplateKey).toBe('org_staff');
     expect(parsed.caseScopePolicy).toBe('assigned_cases_only');
   });
 });

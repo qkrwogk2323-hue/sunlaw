@@ -11,7 +11,7 @@ function revalidateNotificationViews() {
 }
 
 function normalizeRelativeHref(value: string) {
-  return value.startsWith('/') ? value : '/notifications';
+  return value.startsWith('/') ? value : '/dashboard';
 }
 
 async function getOwnedNotification(notificationId: string) {
@@ -19,7 +19,7 @@ async function getOwnedNotification(notificationId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: notification, error } = await supabase
     .from('notifications')
-    .select('id, recipient_profile_id, organization_id, read_at, requires_action, resolved_at, action_href')
+    .select('id, recipient_profile_id, organization_id, read_at, status, destination_url, action_href')
     .eq('id', notificationId)
     .eq('recipient_profile_id', auth.user.id)
     .single();
@@ -68,7 +68,10 @@ export async function resolveNotificationOpenTarget({
 
   const { error: notificationError } = await supabase
     .from('notifications')
-    .update({ read_at: notification.read_at ?? new Date().toISOString() })
+    .update({
+      read_at: notification.read_at ?? new Date().toISOString(),
+      status: notification.status === 'active' ? 'read' : notification.status
+    })
     .eq('id', id)
     .eq('recipient_profile_id', auth.user.id);
 
@@ -83,5 +86,5 @@ export async function resolveNotificationOpenTarget({
     revalidatePath('/admin/support');
   }
 
-  return normalizeRelativeHref(notification.action_href ?? resolvedHref) as Route;
+  return normalizeRelativeHref(notification.destination_url ?? notification.action_href ?? resolvedHref) as Route;
 }

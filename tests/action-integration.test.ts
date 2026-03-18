@@ -317,7 +317,7 @@ describe('server action integration', () => {
     formData.set('membershipId', '55555555-5555-4555-8555-555555555555');
     formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
     formData.set('actorCategory', 'staff');
-    formData.set('roleTemplateKey', 'office_manager');
+    formData.set('roleTemplateKey', 'org_staff');
     formData.set('caseScopePolicy', 'assigned_cases_only');
     formData.set('membershipTitle', '실무 담당');
     formData.set('case_edit', 'on');
@@ -336,7 +336,7 @@ describe('server action integration', () => {
       role: 'org_staff',
       title: '실무 담당',
       actor_category: 'staff',
-      permission_template_key: 'office_manager',
+      permission_template_key: 'org_staff',
       case_scope_policy: 'assigned_cases_only'
     }));
     expect(writeClient.eqMembershipId).toHaveBeenCalledWith('id', '55555555-5555-4555-8555-555555555555');

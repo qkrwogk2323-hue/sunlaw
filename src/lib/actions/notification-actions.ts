@@ -22,7 +22,7 @@ function revalidateNotificationViews() {
 }
 
 function normalizeRelativeHref(value: string) {
-  return value.startsWith('/') ? value : '/notifications';
+  return value.startsWith('/') ? value : '/dashboard';
 }
 
 async function getOwnedNotification(notificationId: string) {
@@ -30,7 +30,7 @@ async function getOwnedNotification(notificationId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: notification, error } = await supabase
     .from('notifications')
-    .select('id, recipient_profile_id, organization_id, read_at, requires_action, resolved_at, action_href')
+    .select('id, recipient_profile_id, organization_id, read_at, requires_action, resolved_at, action_href, destination_url, status, trashed_at')
     .eq('id', notificationId)
     .eq('recipient_profile_id', auth.user.id)
     .single();
@@ -51,9 +51,9 @@ export async function markNotificationReadAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from('notifications')
-    .update({ read_at: new Date().toISOString() })
+    .update({ read_at: new Date().toISOString(), status: 'read' })
     .eq('id', id)
-    .is('read_at', null);
+    .eq('status', 'active');
 
   if (error) {
     throw error;
@@ -68,10 +68,9 @@ export async function markAllNotificationsReadAction() {
 
   const upgraded = await supabase
     .from('notifications')
-    .update({ read_at: new Date().toISOString() })
+    .update({ read_at: new Date().toISOString(), status: 'read' })
     .eq('recipient_profile_id', auth.user.id)
-    .is('trashed_at', null)
-    .is('read_at', null);
+    .eq('status', 'active');
 
   if (upgraded.error && !isMissingColumnError(upgraded.error)) {
     throw upgraded.error;
@@ -100,21 +99,21 @@ export async function moveNotificationToTrashAction(formData: FormData) {
 
   const { auth, supabase, notification } = await getOwnedNotification(id);
 
-  if (notification.requires_action && !notification.resolved_at) {
-    throw new Error('처리가 끝나지 않은 알림은 보관함으로 옮길 수 없습니다.');
+  if (notification.status !== 'resolved') {
+    throw new Error('보관은 resolved 상태에서만 가능합니다.');
   }
 
   const now = new Date().toISOString();
   const { error } = await supabase
     .from('notifications')
     .update({
+      status: 'archived',
       trashed_at: now,
       trashed_by: auth.user.id,
       read_at: notification.read_at ?? now
     })
     .eq('id', id)
-    .eq('recipient_profile_id', auth.user.id)
-    .is('trashed_at', null);
+    .eq('recipient_profile_id', auth.user.id);
 
   if (error) {
     throw error;
@@ -133,10 +132,10 @@ export async function restoreNotificationAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from('notifications')
-    .update({ trashed_at: null, trashed_by: null })
+    .update({ status: 'resolved', trashed_at: null, trashed_by: null })
     .eq('id', id)
     .eq('recipient_profile_id', auth.user.id)
-    .not('trashed_at', 'is', null);
+    .eq('status', 'archived');
 
   if (error) {
     throw error;
@@ -148,11 +147,12 @@ export async function restoreNotificationAction(formData: FormData) {
 export async function emptyNotificationTrashAction() {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from('notifications')
-    .delete()
+    .update({ status: 'deleted', deleted_at: now })
     .eq('recipient_profile_id', auth.user.id)
-    .not('trashed_at', 'is', null);
+    .eq('status', 'archived');
 
   if (error) {
     throw error;
