@@ -97,6 +97,19 @@ pnpm dev
 - `E2E_AUTH_SMOKE_PASSWORD`: 선택. service role이 없을 때만 password sign-in fallback으로 사용
 - 경로와 heading 기준은 코드에 고정돼 있으므로 별도 CI variable로 바꾸지 않습니다.
 
+## Ops Fixed Commands
+
+- `.env.local` 로드 고정 실행: `./scripts/run-with-env.sh <command>`
+- 환경 사전 점검: `pnpm ops:preflight`
+- Supabase 프로젝트 확인: `pnpm supabase:projects`
+- Supabase 마이그레이션 목록: `pnpm supabase:migration:list`
+- Supabase DB 반영: `pnpm supabase:db:push`
+- 메인 동기화(직반영 시작 전): `pnpm git:main:sync`
+
+주의:
+- Supabase CLI는 `SUPABASE_SERVICE_ROLE_KEY`가 아니라 `SUPABASE_ACCESS_TOKEN`을 사용합니다.
+- 마이그레이션 적용에는 `SUPABASE_DB_PASSWORD`도 필요합니다.
+
 ## 추가 의존성
 
 - `xlsx`
