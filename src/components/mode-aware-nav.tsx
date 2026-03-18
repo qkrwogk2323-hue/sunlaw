@@ -4,9 +4,26 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, BellRing, Boxes, Building2, CalendarRange, ChevronDown, ChevronRight, ClipboardList, FileText, LayoutDashboard, LifeBuoy, MessageSquareText, ReceiptText, Settings, Users, Wallet } from 'lucide-react';
-import { getDefaultMode, getOrganizationAdminMode, type ModeKey } from '@/components/mode-switcher';
-import { Button, segmentStyles } from '@/components/ui/button';
+import {
+  BarChart3,
+  BellRing,
+  Boxes,
+  Building2,
+  CalendarRange,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  MessageSquareText,
+  ReceiptText,
+  Settings,
+  Users,
+  Wallet
+} from 'lucide-react';
+import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
+import { segmentStyles } from '@/components/ui/button';
+import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, isPlatformAdminOnlyPath } from '@/lib/view-mode';
 
@@ -43,70 +60,11 @@ const sectionAccent = {
     icon: 'bg-amber-100 text-amber-700',
     dot: 'bg-amber-500',
     mobile: 'bg-amber-500 text-slate-950'
-  },
-  'extra-modules': {
-    soft: 'border-rose-200 bg-rose-50/75',
-    active: 'border-rose-300 bg-rose-50 text-slate-950 shadow-[0_12px_24px_rgba(244,63,94,0.10)]',
-    icon: 'bg-rose-100 text-rose-700',
-    dot: 'bg-rose-500',
-    mobile: 'bg-rose-600'
   }
 } as const;
 
 function isManagementRole(role?: string | null) {
   return role === 'org_owner' || role === 'org_manager';
-}
-
-function kindLabel(kind?: string | null) {
-  if (kind === 'law_firm') return '법률/법무 조직';
-  if (kind === 'collection_company') return '채권추심 조직';
-  if (kind === 'mixed_practice') return '법률·추심 복합 조직';
-  if (kind === 'corporate_legal_team') return '기업 법무 조직';
-  return '협업 조직';
-}
-
-function enabledModuleLabels(enabledModules?: Record<string, boolean> | null) {
-  if (!enabledModules) return [];
-
-  return [
-    enabledModules.client_portal ? '의뢰인 포털' : null,
-    enabledModules.collections ? '추심 운영' : null,
-    enabledModules.reports ? '성과 리포트' : null,
-    enabledModules.billing ? '비용/정산' : null
-  ].filter(Boolean) as string[];
-}
-
-function roleViewLabel(mode: ModeKey, isPlatformOperator: boolean) {
-  if (mode === 'platform_admin') return '플랫폼 관리자';
-  if (mode === 'organization_staff' && isPlatformOperator) return '직원';
-  if (mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin') return '가상직원 시야';
-  if (mode === 'organization_staff') return '직원';
-  if (mode === 'client_communication') return '의뢰인 시야';
-  return '조직 사용자';
-}
-
-function contextLabel(mode: ModeKey, membership: Membership | null) {
-  if (mode === 'platform_admin') return '플랫폼 운영';
-  if (mode === 'organization_staff' && membership?.organization?.name) return '직원 업무 시야';
-  if (mode === 'organization_staff') return kindLabel(membership?.organization?.kind);
-  if (mode === 'client_communication') return '의뢰인 협업';
-  if (mode === 'collection_admin') return '채권추심 조직';
-  if (mode === 'law_admin') return '법률/법무 조직';
-  if (mode === 'other_admin') return '기타 조직';
-  return kindLabel(membership?.organization?.kind);
-}
-
-function toMembershipShape(organization: OrganizationOption | null | undefined): Membership | null {
-  if (!organization) return null;
-
-  return {
-    id: organization.id,
-    organization_id: organization.id,
-    role: 'org_manager',
-    status: 'active',
-    title: null,
-    organization
-  };
 }
 
 function uniqueItems(items: NavItem[]) {
@@ -118,6 +76,13 @@ function resolveSectionIdByPath(sections: NavSection[], pathname: string) {
     section.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
   );
   return matchedSection?.id ?? sections[0]?.id ?? 'common-menu';
+}
+
+function getRoleLabel(membership: Membership | null, fallback: string) {
+  if (membership?.title?.trim()) return membership.title.trim();
+  if (membership?.role === 'org_owner' || membership?.role === 'org_manager') return '조직관리자';
+  if (membership?.role === 'org_staff') return '조직원';
+  return fallback;
 }
 
 function getOrganizationSections({
@@ -139,11 +104,6 @@ function getOrganizationSections({
   pulseNotification?: boolean;
   pulseConversation?: boolean;
 }) {
-  const enabledModules = membership?.organization?.enabled_modules ?? {};
-  const isPlatformStaffView = false;
-  const isClientView = mode === 'client_communication';
-  const effectiveKind = mode === 'collection_admin' ? 'collection_company' : mode === 'law_admin' ? 'law_firm' : membership?.organization?.kind ?? 'other';
-  const isCollectionOrgView = mode === 'collection_admin' || effectiveKind === 'collection_company';
   const notificationBadge: NavBadge | null =
     actionRequiredCount > 0
       ? { count: actionRequiredCount, variant: 'urgent' }
@@ -151,112 +111,50 @@ function getOrganizationSections({
         ? { count: unreadNotificationCount, variant: 'default' }
         : null;
   const conversationBadge: NavBadge | null = unreadConversationCount > 0 ? { count: unreadConversationCount, variant: 'default' } : null;
+
   const commonItems = uniqueItems([
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
     ...(!isPlatformAdminView ? [{ href: '/cases', label: '사건 보기', icon: FileText }] : []),
-    ...(!isPlatformAdminView && !isClientView ? [{ href: '/inbox', label: '오늘 할 일', icon: ClipboardList, badge: conversationBadge, pulse: pulseConversation }] : []),
+    ...(!isPlatformAdminView ? [{ href: '/inbox', label: '오늘 할 일', icon: ClipboardList, badge: conversationBadge, pulse: pulseConversation }] : []),
     { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
     { href: '/calendar', label: '일정 확인', icon: CalendarRange },
-    ...(!isPlatformAdminView && !isClientView && !isCollectionOrgView ? [{ href: '/billing', label: '비용 관련', icon: Wallet }] : []),
+    ...(!isPlatformAdminView ? [{ href: '/billing', label: '비용 관련', icon: Wallet }] : []),
     { href: '/documents', label: '검토 필요', icon: ReceiptText }
   ]);
+
   const organizationItems: NavItem[] = [];
   const collaborationItems: NavItem[] = [];
   const companyManagementItems: NavItem[] = [];
-  const extraItems: NavItem[] = [];
 
   if (isPlatformAdminView) {
     organizationItems.push(
       { href: '/organizations#create', label: '조직생성', icon: Boxes },
       { href: '/admin/audit', label: '감사 로그', icon: ClipboardList }
     );
-  } else if (isPlatformStaffView) {
-    organizationItems.push(
-      { href: '/cases', label: '사건/업무 보기', icon: FileText },
-      { href: '/clients', label: '고객/의뢰인 보기', icon: Users },
-      { href: '/reports', label: '리포트 보기', icon: BarChart3 },
-      { href: '/settings/organization', label: '조직 설정 보기', icon: Settings }
-    );
-  } else if (isClientView) {
+  } else if (mode === 'client_communication') {
     organizationItems.push(
       { href: '/portal', label: '의뢰인 홈', icon: LayoutDashboard },
       { href: '/portal/cases', label: '내 사건', icon: FileText },
       { href: '/portal/messages', label: '사건 소통', icon: MessageSquareText },
       { href: '/portal/notifications', label: '알림 확인', icon: BellRing }
     );
-  } else if (mode === 'collection_admin' || effectiveKind === 'collection_company') {
-    organizationItems.push(
-      { href: '/collections', label: '추심 대시보드', icon: LayoutDashboard },
-      { href: '/cases', label: '추심 사건 보기', icon: FileText },
-      { href: '/billing', label: '약정 및 회수금 관리', icon: Wallet },
-      { href: '/documents', label: '법률 실행/자료 관리', icon: ReceiptText },
-      { href: '/clients', label: '의뢰인/외부 협업', icon: Users },
-      { href: '/reports', label: '회수 실적 보기', icon: BarChart3 }
-    );
-  } else if (mode === 'law_admin') {
-    organizationItems.push(
-      { href: '/cases', label: '사건 목록', icon: FileText },
-      { href: '/clients', label: '의뢰인 관리', icon: Users },
-      { href: '/reports', label: '미정 1', icon: BarChart3 },
-      { href: '/settings/organization', label: '미정 2', icon: Settings }
-    );
-  } else if (effectiveKind === 'mixed_practice') {
-    organizationItems.push(
-      { href: '/cases', label: '사건/업무 보드', icon: FileText },
-      { href: '/clients', label: '고객/의뢰인 관리', icon: Users },
-      { href: '/reports', label: '성과 리포트', icon: BarChart3 },
-      { href: '/collections', label: '추심 운영', icon: Wallet }
-    );
-  } else if (mode === 'other_admin') {
-    organizationItems.push(
-      { href: '/cases', label: '업무 현황판', icon: FileText },
-      { href: '/clients', label: '고객 관리', icon: Users },
-      { href: '/reports', label: '성과 리포트', icon: BarChart3 },
-      { href: '/settings/organization', label: '운영 기준 설정', icon: Settings }
-    );
-  } else if (effectiveKind === 'law_firm' || effectiveKind === 'corporate_legal_team') {
-    organizationItems.push(
-      { href: '/cases', label: '사건 목록', icon: FileText },
-      { href: '/clients', label: '의뢰인 관리', icon: Users },
-      { href: '/reports', label: '미정 1', icon: BarChart3 },
-      { href: '/settings/organization', label: '미정 2', icon: Settings }
-    );
   } else {
     organizationItems.push(
-      { href: '/cases', label: '업무 현황판', icon: FileText },
-      { href: '/clients', label: '고객 관리', icon: Users },
-      { href: '/reports', label: '성과 리포트', icon: BarChart3 },
-      { href: '/settings/organization', label: '운영 기준 설정', icon: Settings }
+      { href: '/cases', label: '사건 목록', icon: FileText },
+      { href: '/clients', label: '의뢰인 관리', icon: Users },
+      { href: '/reports', label: '성과 리포트', icon: BarChart3 }
     );
   }
 
-  if (!isPlatformAdminView) {
-    if (isCollectionOrgView) {
-      collaborationItems.push(
-        { href: '/inbox', label: '전달/회신 확인', icon: ClipboardList, badge: conversationBadge },
-        { href: '/client-access', label: '의뢰인 협업 요청', icon: MessageSquareText },
-        { href: '/organizations', label: '외부 협업 찾기', icon: Building2 }
-      );
-    } else {
-      collaborationItems.push(
-        { href: '/organizations', label: '조직 검색하기', icon: Building2 },
-        { href: '/clients', label: '의뢰인 연결 보기', icon: Users },
-        { href: '/inbox', label: '협업 소통함', icon: ClipboardList, badge: conversationBadge },
-        { href: '/documents', label: '약정/협업 문서', icon: ReceiptText }
-      );
-    }
+  if (!isPlatformAdminView && mode !== 'client_communication') {
+    collaborationItems.push(
+      { href: '/organizations', label: '조직 검색하기', icon: Building2 },
+      { href: '/inbox', label: '협업 소통함', icon: ClipboardList, badge: conversationBadge }
+    );
   }
 
-  if (enabledModules.collections && !organizationItems.some((item) => item.href === '/collections')) {
-    extraItems.push({ href: '/collections', label: '추가 모듈 · 추심 운영', icon: Wallet });
-  }
-  if (enabledModules.reports && !organizationItems.some((item) => item.href === '/reports')) {
-    extraItems.push({ href: '/reports', label: '추가 모듈 · 성과 리포트', icon: BarChart3 });
-  }
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
-  const showOperations = mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin' || (mode === 'organization_staff' ? false : canManageMembership);
-
-  if (showOperations) {
+  if (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin') {
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
       { href: '/settings/team', label: '구성원 관리', icon: Building2 }
@@ -264,22 +162,9 @@ function getOrganizationSections({
   }
 
   const sections: NavSection[] = [{ id: 'common-menu', label: '공통 메뉴', items: commonItems }];
-
-  if (organizationItems.length) {
-    sections.push({ id: 'organization-menu', label: '조직 메뉴', items: uniqueItems(organizationItems) });
-  }
-
-  if (collaborationItems.length) {
-    sections.push({ id: 'collaboration-menu', label: '협업 메뉴', items: uniqueItems(collaborationItems) });
-  }
-
-  if (companyManagementItems.length) {
-    sections.push({ id: 'company-management-menu', label: '회사 관리', items: uniqueItems(companyManagementItems) });
-  }
-
-  if (extraItems.length) {
-    sections.push({ id: 'extra-modules', label: '추가 메뉴', items: uniqueItems(extraItems) });
-  }
+  if (organizationItems.length) sections.push({ id: 'organization-menu', label: '조직 메뉴', items: uniqueItems(organizationItems) });
+  if (collaborationItems.length) sections.push({ id: 'collaboration-menu', label: '협업 메뉴', items: uniqueItems(collaborationItems) });
+  if (companyManagementItems.length) sections.push({ id: 'company-management-menu', label: '회사 관리', items: uniqueItems(companyManagementItems) });
 
   return sections;
 }
@@ -330,10 +215,6 @@ function ModeNavItem({
   );
 }
 
-function createExpandedSections(sections: NavSection[]) {
-  return Object.fromEntries(sections.map((section) => [section.id, true]));
-}
-
 function sectionButtonLabel(label: string) {
   return label.replace(' 메뉴', '').replace(' 관리', '관리');
 }
@@ -379,54 +260,50 @@ function MobileSectionBar({
       </div>
       <div className="fixed inset-x-3 bottom-3 z-40 rounded-[1.5rem] border border-slate-200/80 bg-white/94 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)] backdrop-blur-md">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {sections.slice(0, 4).map((section) => (
-            (() => {
-              const accent = sectionAccent[section.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
-              return (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => setActiveSectionId(section.id)}
-              className={segmentStyles({
-                active: activeSectionId === section.id,
-                className: `min-h-12 rounded-2xl px-3 py-2.5 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
-              })}
-            >
-              {sectionButtonLabel(section.label)}
-            </button>
-              );
-            })()
-          ))}
+          {sections.slice(0, 4).map((section) => {
+            const accent = sectionAccent[section.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setActiveSectionId(section.id)}
+                className={segmentStyles({
+                  active: activeSectionId === section.id,
+                  className: `min-h-12 rounded-2xl px-3 py-2.5 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
+                })}
+              >
+                {sectionButtonLabel(section.label)}
+              </button>
+            );
+          })}
         </div>
         {activeSection ? (
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {activeSection.items.map((item) => (
-              (() => {
-                const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
-                const badge = item.badge;
-                return (
-              <Link
-                key={item.href}
-                href={item.href as Route}
-                className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? accent.active : 'border-slate-200 bg-white text-slate-700'}`}
-              >
-                <item.icon className="size-4" />
-                <span className="flex-1">{item.label}</span>
-                {badge && badge.count > 0 ? (
-                  <span
-                    className={`min-w-[1.25rem] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums ${
-                      badge.variant === 'urgent' ? 'bg-red-500 text-white' : 'bg-sky-600 text-white'
-                    }`}
-                  >
-                    {badge.count > 99 ? '99+' : badge.count}
-                  </span>
-                ) : (
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-                )}
-              </Link>
-                );
-              })()
-            ))}
+            {activeSection.items.map((item) => {
+              const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
+              const badge = item.badge;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href as Route}
+                  className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? accent.active : 'border-slate-200 bg-white text-slate-700'}`}
+                >
+                  <item.icon className="size-4" />
+                  <span className="flex-1">{item.label}</span>
+                  {badge && badge.count > 0 ? (
+                    <span
+                      className={`min-w-[1.25rem] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums ${
+                        badge.variant === 'urgent' ? 'bg-red-500 text-white' : 'bg-sky-600 text-white'
+                      }`}
+                    >
+                      {badge.count > 99 ? '99+' : badge.count}
+                    </span>
+                  ) : (
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
         ) : null}
       </div>
@@ -462,6 +339,8 @@ export function ModeAwareNav({
   const [pulseNotification, setPulseNotification] = useState(false);
   const [pulseConversation, setPulseConversation] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [orgPickerOpen, setOrgPickerOpen] = useState(false);
+
   const isModeKey = (value: string | null | undefined): value is ModeKey => (
     value === 'platform_admin'
     || value === 'law_admin'
@@ -470,25 +349,19 @@ export function ModeAwareNav({
     || value === 'organization_staff'
     || value === 'client_communication'
   );
-  const [isMenuOpen, setIsMenuOpen] = useState(true);
+
   const isPlatformOperator = useMemo(
     () => memberships.some((membership) => membership.organization?.is_platform_root === true && isManagementRole(membership.role)),
     [memberships]
   );
+
   const basePlatformMembership = memberships.find((membership) => membership.organization_id === profile.default_organization_id) ?? memberships[0] ?? null;
   const [mode, setMode] = useState<ModeKey>(() => {
     if (isModeKey(initialMode)) return initialMode;
-    const baseMode = getDefaultMode(
-      'standard',
-      basePlatformMembership?.organization?.kind,
-      Boolean(basePlatformMembership && isManagementRole(basePlatformMembership.role))
-    );
-    return baseMode;
+    return getDefaultMode('standard', basePlatformMembership?.organization?.kind, Boolean(basePlatformMembership && isManagementRole(basePlatformMembership.role)));
   });
-  const currentOrgMembership = useMemo(
-    () => basePlatformMembership,
-    [basePlatformMembership]
-  );
+
+  const currentOrgMembership = useMemo(() => basePlatformMembership, [basePlatformMembership]);
   const currentOrganization = useMemo(
     () => currentOrgMembership?.organization
       ?? platformOrganizations.find((organization) => organization.id === profile.default_organization_id)
@@ -496,48 +369,41 @@ export function ModeAwareNav({
       ?? null,
     [currentOrgMembership, memberships, platformOrganizations, profile.default_organization_id]
   );
+
   const managerDefaultMode = getDefaultMode(
     'standard',
     currentOrganization?.kind,
     Boolean(currentOrgMembership && isManagementRole(currentOrgMembership.role))
   );
-  const sectionMembership = useMemo(
-    () => currentOrgMembership ?? toMembershipShape(currentOrganization),
-    [currentOrgMembership, currentOrganization]
-  );
+
+  const sectionMembership = currentOrgMembership;
   const sections = useMemo(
-    () =>
-      getOrganizationSections({
-        membership: sectionMembership,
-        isPlatformAdminView: isPlatformOperator,
-        mode,
-        unreadNotificationCount: navCounts.unreadCount,
-        actionRequiredCount: navCounts.actionRequiredCount,
-        unreadConversationCount: navCounts.unreadConversationCount,
-        pulseNotification,
-        pulseConversation
-      }),
+    () => getOrganizationSections({
+      membership: sectionMembership,
+      isPlatformAdminView: isPlatformOperator,
+      mode,
+      unreadNotificationCount: navCounts.unreadCount,
+      actionRequiredCount: navCounts.actionRequiredCount,
+      unreadConversationCount: navCounts.unreadConversationCount,
+      pulseNotification,
+      pulseConversation
+    }),
     [sectionMembership, isPlatformOperator, mode, navCounts, pulseNotification, pulseConversation]
   );
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createExpandedSections(sections));
-  const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
-  const baseRoleLabel = roleViewLabel(mode, isPlatformOperator);
-  const organizationLabel = contextLabel(mode, sectionMembership);
-  const moduleLabels = mode === 'platform_admin' || mode === 'client_communication' ? [] : enabledModuleLabels(currentOrganization?.enabled_modules);
-  const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
-  const currentModeAccent =
-    mode === 'platform_admin'
-      ? 'border-blue-200 bg-blue-50 text-blue-800'
-      : mode === 'law_admin'
-        ? 'border-violet-200 bg-violet-50 text-violet-800'
-        : mode === 'collection_admin'
-          ? 'border-amber-200 bg-amber-50 text-amber-800'
-          : mode === 'client_communication'
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-            : mode === 'other_admin'
-              ? 'border-teal-200 bg-teal-50 text-teal-800'
-              : 'border-slate-200 bg-slate-100 text-slate-800';
+
+  const baseRoleLabel = mode === 'client_communication' ? '의뢰인' : (isPlatformOperator ? '조직관리자' : '직원');
+  const roleDetail = getRoleLabel(currentOrgMembership, baseRoleLabel);
   const displayName = profile.full_name;
+
+  const orgOptions = useMemo(() => {
+    if (platformOrganizations.length) {
+      return platformOrganizations.map((organization) => ({ id: organization.id, name: organization.name }));
+    }
+    return memberships.map((membership) => ({
+      id: membership.organization_id,
+      name: membership.organization?.name ?? membership.organization_id
+    }));
+  }, [memberships, platformOrganizations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -600,35 +466,10 @@ export function ModeAwareNav({
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setExpandedSections((prev) => {
-        const next = createExpandedSections(sections);
-        const prevKeys = Object.keys(prev);
-        const nextKeys = Object.keys(next);
-
-        if (prevKeys.length === nextKeys.length && nextKeys.every((key) => prev[key] === next[key])) {
-          return prev;
-        }
-
-        return next;
-      });
-    });
-  }, [sections]);
-
-  useEffect(() => {
-    if (!sections.some((section) => section.id === activeSectionId)) {
-      queueMicrotask(() => {
-        setActiveSectionId(sections[0]?.id ?? 'common-menu');
-      });
-    }
-  }, [sections, activeSectionId]);
-
-  useEffect(() => {
     if (!isPlatformOperator) {
       queueMicrotask(() => {
         setMode(managerDefaultMode);
       });
-      return;
     }
   }, [isPlatformOperator, managerDefaultMode]);
 
@@ -643,101 +484,83 @@ export function ModeAwareNav({
 
   return (
     <div className="space-y-3">
-      <MobileSectionBar sections={sections} pathname={pathname} currentOrgMembership={currentOrgMembership} baseRoleLabel={baseRoleLabel} currentOrganizationName={currentOrganization?.name ?? ''} />
-      <div className="hidden lg:block">
-      <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
-        {isPlatformOperator ? (
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">플랫폼 조직 운영</p>
-            <p className="mt-1 text-xs text-slate-500">토글 전환 없이 현재 모드 기준으로 플랫폼 조직 운영 화면을 제공합니다.</p>
-          </div>
-        ) : null}
-        <div>
-          <p className="text-xl font-semibold tracking-tight text-slate-950">{displayName}</p>
-          <p className="mt-1 text-sm text-slate-600">{baseRoleLabel}</p>
-          <div className="mt-3 space-y-3">
-            <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] ${currentModeAccent}`}>
-              {organizationLabel}
-            </span>
-            {moduleLabels.length ? (
-              <div className="flex flex-wrap gap-2">
-                {moduleLabels.map((label) => (
-                  <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
-                    {label}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
-        <div className="mt-5 rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">현재 조직</p>
-          <p className="mt-2 text-base font-semibold text-slate-950">{currentOrganization?.name ?? '선택된 조직 없음'}</p>
-          <p className="mt-1 text-sm text-slate-600">
-            {isPlatformOperator ? '플랫폼 권한으로 참여 중인 조직' : '현재 선택된 조직'}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
-        <button
-          type="button"
-          onClick={() => setIsMenuOpen((prev) => !prev)}
-          className="flex w-full items-center justify-between gap-3 rounded-[1.1rem] border border-slate-200 bg-slate-50 px-3 py-3 text-left transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.99]"
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">메뉴</p>
-            <p className="mt-1 text-sm font-semibold text-slate-950">{currentOrganization?.name ?? '협업 메뉴'}</p>
-          </div>
-          <span className="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            {isMenuOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-          </span>
-        </button>
+      <MobileSectionBar
+        sections={sections}
+        pathname={pathname}
+        currentOrgMembership={currentOrgMembership}
+        baseRoleLabel={baseRoleLabel}
+        currentOrganizationName={currentOrganization?.name ?? ''}
+      />
 
-        {isMenuOpen ? (
-          <div className="mt-2 space-y-2">
-            <div className="grid grid-cols-2 gap-2 rounded-[1.15rem] border border-slate-200 bg-slate-50 p-2">
-              {sections.map((section) => {
-                const accent = sectionAccent[section.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => setActiveSectionId(section.id)}
-                    className={segmentStyles({
-                      active: activeSectionId === section.id,
-                      className: `rounded-xl px-3 py-2.5 text-sm font-semibold ${activeSectionId === section.id ? accent.mobile : ''}`
-                    })}
+      <div className="hidden lg:block">
+        <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">조직</p>
+              <button
+                type="button"
+                onClick={() => setOrgPickerOpen((prev) => !prev)}
+                className="mt-1 inline-flex items-center gap-2 text-left text-2xl font-semibold tracking-tight text-slate-950 hover:text-slate-700"
+              >
+                {currentOrganization?.name ?? '선택된 조직 없음'}
+                {orgPickerOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+              </button>
+              {orgPickerOpen ? (
+                <form action={switchDefaultOrganizationAction} className="mt-3 flex items-center gap-2">
+                  <select
+                    name="organizationId"
+                    defaultValue={currentOrganization?.id ?? orgOptions[0]?.id}
+                    className="h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
                   >
-                    {sectionButtonLabel(section.label)}
+                    {orgOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.name}</option>
+                    ))}
+                  </select>
+                  <button type="submit" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    변경
                   </button>
-                );
-              })}
+                </form>
+              ) : null}
             </div>
-            {activeSection ? (
-              <div className={`rounded-[1.15rem] border p-2 ${sectionAccent[activeSection.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'}`}>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">사용자</p>
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{displayName}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">직책</p>
+              <p className="mt-1 text-lg font-medium text-slate-800">{roleDetail}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
+          <div className="space-y-2">
+            {sections.map((section) => (
+              <div key={section.id} className={`rounded-[1.15rem] border p-2 ${sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'}`}>
                 <div className="px-3 py-2">
-                  <p className="text-sm font-semibold text-slate-900">{activeSection.label}</p>
-                  <p className="mt-1 text-xs text-slate-500">선택한 메뉴군의 항목만 표시합니다.</p>
+                  <p className="text-sm font-semibold text-slate-900">{section.label}</p>
                 </div>
                 <div className="mt-1 space-y-1">
-                  {activeSection.items.map((item) => (
+                  {section.items.map((item) => (
                     <ModeNavItem
                       key={item.href}
                       href={item.href}
                       label={item.label}
                       icon={item.icon}
-                      sectionId={activeSection.id}
+                      sectionId={section.id}
                       active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
                       pulse={Boolean(item.pulse)}
                     />
                   ))}
                 </div>
               </div>
-            ) : null}
+            ))}
           </div>
-        ) : null}
+        </div>
       </div>
-      </div>
+
       {toastMessage ? (
         <div className="fixed bottom-5 right-5 z-50 rounded-xl border border-slate-200 bg-slate-900 px-3 py-2 text-xs font-medium text-white shadow-[0_10px_28px_rgba(15,23,42,0.32)]">
           {toastMessage}
