@@ -14,6 +14,8 @@ import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-fo
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { PLATFORM_SCENARIO_ORGANIZATIONS, PLATFORM_SCENARIO_TEAM, isPlatformScenarioMode } from '@/lib/platform-scenarios';
+import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
+import { SubmitButton } from '@/components/ui/submit-button';
 
 function toneByStatus(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -128,46 +130,54 @@ export default async function TeamSettingsPage({
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 보고 가입/초대/활성 상태를 운영합니다.</p>
       </div>
 
+      {currentMembership ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>내 프로필</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+              <div>
+                <p className="font-medium text-slate-900">{auth.profile.full_name}</p>
+                <p className="text-sm text-slate-500">{auth.profile.email}</p>
+              </div>
+              <a href="#self-edit" className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                수정하기
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {inviteToken ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           생성된 초대 링크: <code className="font-mono">/invite/{inviteToken}</code>
         </div>
       ) : null}
 
-      {canManage ? (
-        <div className="grid gap-4 xl:grid-cols-3">
-          <Card>
-            <CardHeader><CardTitle>직접 초대</CardTitle></CardHeader>
-            <CardContent>
-              <StaffDirectInviteForm organizationId={organizationId} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>선등록</CardTitle></CardHeader>
-            <CardContent>
-              <StaffPreRegisterForm organizationId={organizationId} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>초대 링크 재발송</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {staffInvitations.filter((invite: any) => invite.status === 'pending').slice(0, 6).map((invite: any) => (
-                <div key={invite.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
-                  <div className="text-sm">
-                    <p className="font-medium text-slate-900">{invite.invited_name ?? invite.email}</p>
-                    <p className="text-slate-500">{invite.email ?? '-'}</p>
-                  </div>
-                  <ResendInvitationForm invitationId={invite.id} compact />
-                </div>
-              ))}
-              {!staffInvitations.some((invite: any) => invite.status === 'pending') ? <p className="text-sm text-slate-500">재발송 대상이 없습니다.</p> : null}
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
-
       <Card>
-        <CardHeader><CardTitle>구성원 목록</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>구성원 목록</CardTitle>
+            {canManage ? (
+              <details className="rounded-xl border border-slate-200 bg-white p-2">
+                <summary className="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                  구성원 등록하기
+                </summary>
+                <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 p-3">
+                    <p className="mb-2 text-sm font-semibold text-slate-900">초대링크 발송하기</p>
+                    <StaffDirectInviteForm organizationId={organizationId} />
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-3">
+                    <p className="mb-2 text-sm font-semibold text-slate-900">직원 계정 등록하기</p>
+                    <StaffPreRegisterForm organizationId={organizationId} />
+                  </div>
+                </div>
+              </details>
+            ) : null}
+          </div>
+        </CardHeader>
         <CardContent className="space-y-3">
           {roster.length ? roster.map((row: any) => (
             <div key={row.id} className="rounded-xl border border-slate-200 p-4">
@@ -186,7 +196,31 @@ export default async function TeamSettingsPage({
                     {row.name}
                   </Link>
                 )}
-                <p className="text-sm text-slate-500">{row.email}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-slate-500">{row.email}</p>
+                  {row.invitationId ? <ResendInvitationForm invitationId={row.invitationId} compact /> : null}
+                  {canManage && !row.isInviteOnly && row.raw.role !== 'org_owner' ? (
+                    <>
+                      <form action={updateMembershipAdminSummaryAction}>
+                        <input type="hidden" name="organizationId" value={organizationId} />
+                        <input type="hidden" name="membershipId" value={row.raw.id} />
+                        <input type="hidden" name="actorCategory" value={row.raw.actor_category ?? 'staff'} />
+                        <input type="hidden" name="title" value={row.raw.title ?? ''} />
+                        <input type="hidden" name="status" value={row.raw.status === 'suspended' ? 'active' : 'suspended'} />
+                        <SubmitButton variant="ghost" pendingLabel="처리 중..." className="h-8 px-3 text-xs">
+                          {row.raw.status === 'suspended' ? '활성화' : '비활성화'}
+                        </SubmitButton>
+                      </form>
+                      <form action={deleteMembershipAction}>
+                        <input type="hidden" name="organizationId" value={organizationId} />
+                        <input type="hidden" name="membershipId" value={row.raw.id} />
+                        <SubmitButton variant="ghost" pendingLabel="삭제 중..." className="h-8 px-3 text-xs text-rose-700">
+                          삭제
+                        </SubmitButton>
+                      </form>
+                    </>
+                  ) : null}
+                </div>
               </div>
             </div>
           )) : <p className="text-sm text-slate-500">구성원 데이터가 없습니다.</p>}
@@ -194,7 +228,7 @@ export default async function TeamSettingsPage({
       </Card>
 
       {currentMembership ? (
-        <Card>
+        <Card id="self-edit">
           <CardHeader><CardTitle>본인 수정 영역</CardTitle></CardHeader>
           <CardContent>
             <MemberSelfProfileForm

@@ -463,6 +463,11 @@ const membershipAdminSummarySchema = z.object({
   title: z.string().trim().max(80).optional().or(z.literal(''))
 });
 
+const membershipDeleteSchema = z.object({
+  organizationId: z.string().uuid(),
+  membershipId: z.string().uuid()
+});
+
 const organizationExitRequestSchema = z.object({
   organizationId: z.string().uuid(),
   reason: z.string().trim().min(5).max(1000)
@@ -1621,6 +1626,44 @@ export async function updateMembershipAdminSummaryAction(formData: FormData) {
       status: parsed.status,
       title: parsed.title?.trim() || null
     })
+    .eq('id', parsed.membershipId)
+    .eq('organization_id', parsed.organizationId);
+
+  if (error) throw error;
+  revalidatePath('/settings/team');
+}
+
+export async function deleteMembershipAction(formData: FormData) {
+  const parsed = membershipDeleteSchema.parse({
+    organizationId: formData.get('organizationId'),
+    membershipId: formData.get('membershipId')
+  });
+
+  const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 구성원을 삭제할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+
+  const { data: targetMember, error: memberReadError } = await supabase
+    .from('organization_memberships')
+    .select('id, role, profile_id')
+    .eq('id', parsed.membershipId)
+    .eq('organization_id', parsed.organizationId)
+    .maybeSingle();
+
+  if (memberReadError || !targetMember) {
+    throw memberReadError ?? new Error('삭제 대상 구성원을 찾을 수 없습니다.');
+  }
+
+  if (targetMember.role === 'org_owner') {
+    throw new Error('조직관리자는 삭제할 수 없습니다.');
+  }
+
+  if (targetMember.profile_id === auth.user.id) {
+    throw new Error('본인 계정은 이 화면에서 삭제할 수 없습니다.');
+  }
+
+  const { error } = await supabase
+    .from('organization_memberships')
+    .delete()
     .eq('id', parsed.membershipId)
     .eq('organization_id', parsed.organizationId);
 
