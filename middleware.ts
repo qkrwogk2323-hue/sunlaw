@@ -48,7 +48,8 @@ function redirectOAuthCodeToCallback(request: NextRequest) {
 }
 
 function isMaintenanceMode() {
-  return process.env.MAINTENANCE_MODE === 'true';
+  // Use an explicit sentinel so accidental truthy env values do not lock all routes.
+  return process.env.MAINTENANCE_MODE === 'enabled';
 }
 
 function shouldBypassMaintenance(pathname: string) {
