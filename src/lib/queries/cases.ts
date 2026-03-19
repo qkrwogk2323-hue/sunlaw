@@ -2,15 +2,60 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { getCaseScopeAccess } from '@/lib/case-scope';
 
-export async function listCases(organizationId?: string | null) {
+type CaseBucket = 'active' | 'completed' | 'deleted' | 'all';
+
+const COMPLETED_CASE_STATUSES = ['closed', 'completed', 'done'];
+
+export async function purgeDeletedCasesPastRetention(organizationId?: string | null, retentionDays = 30) {
   const auth = await requireAuthenticatedUser();
   const scope = await getCaseScopeAccess(auth, organizationId);
   const supabase = await createSupabaseServerClient();
+  const cutoffIso = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+
+  let query = supabase
+    .from('cases')
+    .delete()
+    .eq('lifecycle_status', 'soft_deleted')
+    .lt('updated_at', cutoffIso);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  if (scope.restrictedOrganizationIds.length) {
+    if (!scope.assignedCaseIds.length) return;
+    query = query.in('id', scope.assignedCaseIds);
+  }
+
+  await query;
+}
+
+export async function listCases(
+  organizationId?: string | null,
+  options?: { bucket?: CaseBucket }
+) {
+  const auth = await requireAuthenticatedUser();
+  const scope = await getCaseScopeAccess(auth, organizationId);
+  const supabase = await createSupabaseServerClient();
+  const bucket = options?.bucket ?? 'all';
   let query = supabase
     .from('cases')
     .select('id, organization_id, reference_no, title, case_type, case_status, stage_key, stage_template_key, principal_amount, opened_on, updated_at, court_name, case_number, lifecycle_status, module_flags')
-    .neq('lifecycle_status', 'soft_deleted')
     .order('updated_at', { ascending: false });
+
+  if (bucket === 'deleted') {
+    query = query.eq('lifecycle_status', 'soft_deleted');
+  } else {
+    query = query.neq('lifecycle_status', 'soft_deleted');
+  }
+
+  if (bucket === 'completed') {
+    query = query.in('case_status', COMPLETED_CASE_STATUSES);
+  }
+
+  if (bucket === 'active') {
+    query = query.not('case_status', 'in', `(${COMPLETED_CASE_STATUSES.join(',')})`);
+  }
 
   if (organizationId) {
     query = query.eq('organization_id', organizationId);
@@ -22,6 +67,17 @@ export async function listCases(organizationId?: string | null) {
 
   const { data } = await query;
   return data ?? [];
+}
+
+export async function getCaseClientLinkedMap(caseIds: string[]) {
+  if (!caseIds.length) return {} as Record<string, boolean>;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from('case_clients').select('case_id').in('case_id', caseIds);
+  const linkedIds = new Set((data ?? []).map((row: any) => `${row.case_id ?? ''}`));
+  return caseIds.reduce<Record<string, boolean>>((acc, caseId) => {
+    acc[caseId] = linkedIds.has(caseId);
+    return acc;
+  }, {});
 }
 
 export async function getCaseDetail(caseId: string) {

@@ -1,7 +1,7 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClientDirectInviteForm } from '@/components/forms/client-direct-invite-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
@@ -19,7 +19,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string }>;
+  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedClientTempPassword?: string; issuedOrgName?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -38,6 +38,8 @@ export default async function ClientsPage({
   ]);
   const inviteToken = resolvedSearchParams?.invite;
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
+  const issuedClientTempPassword = resolvedSearchParams?.issuedClientTempPassword;
+  const issuedOrgName = resolvedSearchParams?.issuedOrgName ?? (organizationId ? (auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? '현재 조직') : '현재 조직');
 
   return (
     <div className="space-y-6">
@@ -52,27 +54,32 @@ export default async function ClientsPage({
         </div>
       ) : null}
 
-      {issuedClientLoginId ? (
+      {issuedClientLoginId && issuedClientTempPassword ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          의뢰인 임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedClientLoginId}</code>
-          <p className="mt-1 text-xs text-amber-700">보안을 위해 임시 비밀번호는 화면에 표시되지 않습니다. 첫 로그인 시 비밀번호 변경 화면으로 이동합니다.</p>
+          <p>
+            {issuedOrgName}에서 초대했어요! 임시아이디 : <code className="font-mono">{issuedClientLoginId}</code> 비밀번호 : <code className="font-mono">{issuedClientTempPassword}</code>, 조직명 : <code className="font-mono">{issuedOrgName}</code>
+          </p>
+          <p className="mt-1 text-xs text-amber-700">로그인하시고 아이디와 비밀번호를 수정해주세요.</p>
         </div>
       ) : null}
 
       {canManage ? (
-        <div className="grid gap-4 xl:grid-cols-3">
-          <Card>
-            <CardHeader><CardTitle>의뢰인 초대</CardTitle></CardHeader>
-            <CardContent>
-              {cases.length ? <ClientDirectInviteForm organizationId={organizationId!} cases={cases} /> : <p className="text-sm text-slate-500">사건이 있어야 직접 초대를 보낼 수 있습니다.</p>}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>의뢰인 선등록</CardTitle></CardHeader>
-            <CardContent>
-              <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
-            </CardContent>
-          </Card>
+        <div className="space-y-4">
+          <details id="client-pre-register" className="group rounded-xl border border-slate-200 bg-white px-2 py-2">
+            <summary className="list-none">
+              <span className="ml-auto inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-sky-200 bg-sky-50 px-4 text-sm font-semibold text-sky-800 group-open:bg-sky-100 md:w-[22rem]">
+                의뢰인 등록하기
+              </span>
+            </summary>
+            <div className="mt-3">
+              <Card className="vs-mesh-card">
+                <CardHeader><CardTitle>의뢰인 선등록</CardTitle></CardHeader>
+                <CardContent>
+                  <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
+                </CardContent>
+              </Card>
+            </div>
+          </details>
           <Card>
             <CardHeader><CardTitle>초대 링크 재발송</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -97,25 +104,26 @@ export default async function ClientsPage({
         <CardHeader><CardTitle>의뢰인 목록</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {roster.length ? roster.map((item: any) => (
-            <div key={item.id} className="rounded-xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <div key={item.id} className="relative rounded-xl border border-slate-200 p-4">
+              <Link
+                href={`/clients/${item.clientKey ?? item.id}` as Route}
+                className="absolute inset-0 rounded-xl"
+                aria-label={`${item.name} 상세보기`}
+              />
+              <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <Link href={item.caseId ? `/cases/${item.caseId}` : '/clients'} className="font-medium text-slate-900 underline-offset-4 hover:underline">
-                    {item.name}
-                  </Link>
-                  <p className="mt-1 text-sm text-slate-500">{item.email ?? '-'}</p>
-                  <p className="mt-1 text-xs text-slate-400">{item.caseTitle ?? '미연결 사건'}</p>
-                  {item.tempLoginId ? <p className="mt-1 text-xs text-slate-500">임시 아이디: <code className="font-mono">{item.tempLoginId}</code></p> : null}
+                  <p className="font-medium text-slate-900">{item.name}</p>
+                  <p className="mt-1 text-sm text-slate-600">주민번호: <span className="font-medium text-slate-900">{item.residentNumberMasked ?? '-'}</span></p>
+                  <p className="mt-1 text-sm text-slate-600">주소: <span className="font-medium text-slate-900">{item.addressSummary ?? '-'}</span></p>
+                  <p className="mt-1 text-sm text-slate-600">연락처: <span className="font-medium text-slate-900">{item.contactPhone ?? '-'}</span></p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge tone={statusTone(item.signupStatus)}>{item.signupStatus}</Badge>
-                  <Badge tone={statusTone(item.inviteStatus)}>{item.inviteStatus}</Badge>
-                  <Badge tone={statusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
-                  <Badge tone="blue">{item.nextAction}</Badge>
+                  <Badge tone={item.caseId ? 'blue' : 'slate'}>{item.caseId ? '사건 연결' : '사건 미연결'}</Badge>
+                  <Badge tone="slate">의뢰인 상세 관리</Badge>
                 </div>
               </div>
               {canManage && item.source === 'invite' && item.invitationId ? (
-                <div className="mt-3">
+                <div className="relative z-20 mt-3">
                   <ResendInvitationForm invitationId={item.invitationId} />
                 </div>
               ) : null}

@@ -132,10 +132,11 @@ function getOrganizationSections({
     );
   }
 
+  collaborationItems.push(
+    { href: '/inbox', label: '사건허브', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
+  );
   if (mode !== 'client_communication') {
-    collaborationItems.push(
-      { href: '/organizations', label: '조직 찾기', icon: Building2 }
-    );
+    collaborationItems.push({ href: '/organizations', label: '조직 찾기', icon: Building2 });
   }
 
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
@@ -427,8 +428,10 @@ export function ModeAwareNav({
 
   useEffect(() => {
     let cancelled = false;
+    let intervalId: number | null = null;
 
     const syncUnreadCounts = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       try {
         const response = await fetch('/api/nav/unread-counts', { cache: 'no-store' });
         if (!response.ok) return;
@@ -475,13 +478,13 @@ export function ModeAwareNav({
     };
 
     void syncUnreadCounts();
-    const intervalId = window.setInterval(() => {
+    intervalId = window.setInterval(() => {
       void syncUnreadCounts();
-    }, 15000);
+    }, 45000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (intervalId) window.clearInterval(intervalId);
     };
   }, []);
 

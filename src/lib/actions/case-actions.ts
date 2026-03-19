@@ -186,6 +186,22 @@ async function loadCaseOrThrow(caseId: string) {
 }
 
 function parseCreateCaseInput(formData: FormData) {
+  const clientName = `${formData.get('clientName') ?? ''}`.trim();
+  const clientRole = `${formData.get('clientRole') ?? ''}`.trim();
+  const opponentName = `${formData.get('opponentName') ?? ''}`.trim();
+  const opponentRole = `${formData.get('opponentRole') ?? ''}`.trim();
+  const summaryInput = `${formData.get('summary') ?? ''}`.trim();
+  const specialNote = `${formData.get('specialNote') ?? ''}`.trim();
+  const mergedSummary = [
+    summaryInput,
+    clientName ? `의뢰인: ${clientName}` : '',
+    clientRole ? `의뢰인 지위: ${clientRole}` : '',
+    opponentName ? `상대방: ${opponentName}` : '',
+    opponentRole ? `상대방 지위: ${opponentRole}` : ''
+  ]
+    .filter(Boolean)
+    .join('\n');
+
   return caseCreateSchema.parse({
     organizationId: formData.get('organizationId'),
     title: formData.get('title'),
@@ -194,9 +210,9 @@ function parseCreateCaseInput(formData: FormData) {
     openedOn: formData.get('openedOn'),
     courtName: formData.get('courtName'),
     caseNumber: formData.get('caseNumber'),
-    summary: formData.get('summary'),
-    billingPlanSummary: formData.get('billingPlanSummary'),
-    billingFollowUpDueOn: formData.get('billingFollowUpDueOn')
+    summary: mergedSummary,
+    billingPlanSummary: specialNote,
+    billingFollowUpDueOn: ''
   });
 }
 
@@ -1345,4 +1361,60 @@ export async function recordPaymentAction(caseId: string, formData: FormData) {
   if (error) throw error;
 
   revalidatePath(`/cases/${caseId}`);
+}
+
+export async function moveCaseToDeletedAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!caseId || !organizationId) {
+    throw new Error('사건 삭제 요청 정보가 올바르지 않습니다.');
+  }
+
+  const { auth } = await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_assign',
+    errorMessage: '사건 삭제함 이동 권한이 없습니다.'
+  });
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('cases')
+    .update({
+      lifecycle_status: 'soft_deleted',
+      case_status: 'archived',
+      updated_by: auth.user.id
+    })
+    .eq('id', caseId)
+    .eq('organization_id', organizationId);
+
+  if (error) throw error;
+
+  revalidatePath('/cases');
+  revalidatePath(`/cases/${caseId}`);
+  revalidatePath('/dashboard');
+}
+
+export async function forceDeleteCaseAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!caseId || !organizationId) {
+    throw new Error('강제 삭제 요청 정보가 올바르지 않습니다.');
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_assign',
+    errorMessage: '강제 삭제 권한이 없습니다.'
+  });
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('cases')
+    .delete()
+    .eq('id', caseId)
+    .eq('organization_id', organizationId)
+    .eq('lifecycle_status', 'soft_deleted');
+
+  if (error) throw error;
+
+  revalidatePath('/cases');
+  revalidatePath('/dashboard');
 }

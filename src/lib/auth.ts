@@ -29,7 +29,7 @@ const defaultClientAccountProfileFields: ClientAccountProfileFields = {
   must_complete_profile: false
 };
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = 4000): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 9000): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -44,6 +44,26 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs = 4000): Promise<T>
       clearTimeout(timeoutId);
     }
   }
+}
+
+async function withTimeoutRetry<T>(
+  factory: () => Promise<T>,
+  timeoutMs = 9000,
+  retries = 1
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await withTimeout(factory(), timeoutMs);
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof Error) || error.message !== 'auth_timeout' || attempt === retries) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('auth_timeout');
 }
 
 function isMissingColumnError(error: { code?: string; message?: string } | null) {
@@ -101,13 +121,13 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
     const {
       data: { user },
       error: userError
-    } = await withTimeout(supabase.auth.getUser());
+    } = await withTimeoutRetry(() => supabase.auth.getUser(), 9000, 1);
 
     if (userError || !user) {
       return null;
     }
 
-    const profile = await withTimeout(getProfileWithScopedFields(user.id));
+    const profile = await withTimeoutRetry(() => getProfileWithScopedFields(user.id), 9000, 1);
 
     if (!profile || !profile.is_active) {
       return null;
@@ -132,7 +152,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
       .eq('status', 'active')
       .order('created_at', { ascending: true });
 
-    const { data: memberships } = await withTimeout<any>(Promise.resolve(membershipQuery));
+    const { data: memberships } = await withTimeoutRetry<any>(() => Promise.resolve(membershipQuery), 9000, 1);
 
     return {
       user: {
