@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   BellRing,
   Building2,
@@ -23,7 +23,7 @@ import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
 import { segmentStyles } from '@/components/ui/button';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
-import { ACTIVE_VIEW_MODE_COOKIE, isPlatformAdminOnlyPath } from '@/lib/view-mode';
+import { ACTIVE_VIEW_MODE_COOKIE } from '@/lib/view-mode';
 
 type NavBadge = { count: number; variant?: 'default' | 'urgent' };
 type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean; emphasize?: boolean };
@@ -357,7 +357,6 @@ export function ModeAwareNav({
   unreadConversationCount?: number;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [navCounts, setNavCounts] = useState<NavUnreadCounts>({
     unreadCount: unreadNotificationCount,
     actionRequiredCount,
@@ -370,23 +369,17 @@ export function ModeAwareNav({
   const [quickSearchQuery, setQuickSearchQuery] = useState('');
 
   const isModeKey = (value: string | null | undefined): value is ModeKey => (
-    value === 'platform_admin'
-    || value === 'law_admin'
+    value === 'law_admin'
     || value === 'collection_admin'
     || value === 'other_admin'
     || value === 'organization_staff'
     || value === 'client_communication'
   );
 
-  const isPlatformOperator = useMemo(
-    () => memberships.some((membership) => membership.organization?.is_platform_root === true && isManagementRole(membership.role)),
-    [memberships]
-  );
-
   const basePlatformMembership = memberships.find((membership) => membership.organization_id === profile.default_organization_id) ?? memberships[0] ?? null;
   const [mode, setMode] = useState<ModeKey>(() => {
     if (isModeKey(initialMode)) return initialMode;
-    return getDefaultMode('standard', basePlatformMembership?.organization?.kind, Boolean(basePlatformMembership && isManagementRole(basePlatformMembership.role)));
+    return getDefaultMode(basePlatformMembership?.organization?.kind, Boolean(basePlatformMembership && isManagementRole(basePlatformMembership.role)));
   });
 
   const currentOrgMembership = useMemo(() => basePlatformMembership, [basePlatformMembership]);
@@ -399,7 +392,6 @@ export function ModeAwareNav({
   );
 
   const managerDefaultMode = getDefaultMode(
-    'standard',
     currentOrganization?.kind,
     Boolean(currentOrgMembership && isManagementRole(currentOrgMembership.role))
   );
@@ -415,7 +407,7 @@ export function ModeAwareNav({
       pulseNotification,
       pulseConversation
     }),
-    [sectionMembership, isPlatformOperator, mode, navCounts, pulseNotification, pulseConversation]
+    [sectionMembership, mode, navCounts, pulseNotification, pulseConversation]
   );
 
   const baseRoleLabel = mode === 'client_communication' ? '의뢰인' : '구성원';
@@ -512,21 +504,15 @@ export function ModeAwareNav({
   }, [profile.id, currentOrganization?.id]);
 
   useEffect(() => {
-    if (!isPlatformOperator) {
-      queueMicrotask(() => {
-        setMode(managerDefaultMode);
-      });
-    }
-  }, [isPlatformOperator, managerDefaultMode]);
+    queueMicrotask(() => {
+      setMode(managerDefaultMode);
+    });
+  }, [managerDefaultMode]);
 
   useEffect(() => {
     const activeMode = mode;
     document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=${activeMode}; path=/; max-age=31536000; samesite=lax`;
-
-    if (isPlatformOperator && activeMode !== 'platform_admin' && isPlatformAdminOnlyPath(pathname)) {
-      router.replace('/dashboard');
-    }
-  }, [mode, pathname, isPlatformOperator, router]);
+  }, [mode, pathname]);
 
   return (
     <div className="space-y-3">

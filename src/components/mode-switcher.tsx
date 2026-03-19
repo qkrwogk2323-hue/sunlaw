@@ -1,15 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Building2, ChevronDown, ChevronRight, MessageSquareText, ShieldCheck, UserCog } from 'lucide-react';
+import { Building2, ChevronDown, ChevronRight, MessageSquareText, UserCog } from 'lucide-react';
 import { segmentStyles } from '@/components/ui/button';
 
 const modeAccent = {
-  platform_admin: {
-    icon: 'bg-blue-100 text-blue-700',
-    badge: 'bg-blue-100 text-blue-700',
-    active: 'bg-blue-50 border-blue-200'
-  },
   law_admin: {
     icon: 'bg-violet-100 text-violet-700',
     badge: 'bg-violet-100 text-violet-700',
@@ -38,13 +33,11 @@ const modeAccent = {
 } as const;
 
 const groupAccent = {
-  platform_admin: 'border-blue-200 bg-blue-50/60',
   organization: 'border-violet-200 bg-violet-50/50',
   client_communication: 'border-emerald-200 bg-emerald-50/60'
 } as const;
 
 const baseModeOptions = [
-  { key: 'platform_admin', label: '조직 관리자' },
   { key: 'law_admin', label: '법률/법무조직' },
   { key: 'collection_admin', label: '추심조직' },
   { key: 'other_admin', label: '기타조직' },
@@ -54,7 +47,7 @@ const baseModeOptions = [
 
 export type ModeKey = (typeof baseModeOptions)[number]['key'];
 
-export type OrganizationKind = 'law_firm' | 'collection_company' | 'mixed_practice' | 'corporate_legal_team' | 'other' | null | undefined;
+export type OrganizationKind = 'platform_management' | 'law_firm' | 'collection_company' | 'mixed_practice' | 'corporate_legal_team' | 'other' | null | undefined;
 
 export function getOrganizationAdminMode(kind: OrganizationKind) {
   if (kind === 'law_firm' || kind === 'corporate_legal_team') return 'law_admin';
@@ -62,72 +55,46 @@ export function getOrganizationAdminMode(kind: OrganizationKind) {
   return 'other_admin';
 }
 
-export function getDefaultMode(platformRole: string, organizationKind?: OrganizationKind, isManager = false) {
-  if (platformRole === 'platform_admin') return 'platform_admin';
+export function getDefaultMode(organizationKind?: OrganizationKind, isManager = false) {
   if (isManager) return getOrganizationAdminMode(organizationKind);
   return 'organization_staff';
 }
 
-export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: string; mode: ModeKey; onChange: (value: ModeKey) => void }) {
-  const isPlatformRole = platformRole === 'platform_admin';
+export function ModeSwitcher({ mode, onChange }: { mode: ModeKey; onChange: (value: ModeKey) => void }) {
   const modeOptions = useMemo(
-    () => (isPlatformRole ? baseModeOptions : baseModeOptions.map((item) => item.key === 'organization_staff' ? { ...item, label: '조직 담당자' } : item)),
-    [isPlatformRole]
+    () => baseModeOptions.map((item) => item.key === 'organization_staff' ? { ...item, label: '조직 담당자' } : item),
+    []
   );
   const modeGroups = useMemo(
-    () => (isPlatformRole
-      ? [
-          {
-            id: 'platform_admin',
-            label: '운영 보기',
-            description: '조직 관리자와 구성원 보기',
-            icon: ShieldCheck,
-            children: [
-              { key: 'platform_admin', label: '조직 관리자' },
-              { key: 'organization_staff', label: '구성원' }
-            ]
-          },
-          {
-            id: 'organization',
-            label: '조직 운영 시야',
-            description: '법률/법무, 추심, 기타 조직 시야',
-            icon: Building2,
-            children: [
-              { key: 'law_admin', label: '법률/법무조직' },
-              { key: 'collection_admin', label: '추심조직' },
-              { key: 'other_admin', label: '기타조직' }
-            ]
-          }
+    () => ([
+      {
+        id: 'organization',
+        label: '조직 운영',
+        description: '조직 관리자 시야와 담당자 시야 전환',
+        icon: Building2,
+        children: [
+          { key: 'law_admin', label: '법률/법무 조직 관리자' },
+          { key: 'collection_admin', label: '추심 조직 관리자' },
+          { key: 'other_admin', label: '기타 조직 관리자' },
+          { key: 'organization_staff', label: '조직 담당자' }
         ]
-      : [
-          {
-            id: 'organization',
-            label: '조직 운영',
-            description: '조직 관리자 시야와 담당자 시야 전환',
-            icon: Building2,
-            children: [
-              { key: 'law_admin', label: '법률/법무 조직 관리자' },
-              { key: 'collection_admin', label: '추심 조직 관리자' },
-              { key: 'other_admin', label: '기타 조직 관리자' },
-              { key: 'organization_staff', label: '조직 담당자' }
-            ]
-          },
-          {
-            id: 'client_communication',
-            label: '의뢰인 모드',
-            description: '의뢰인 관점 진행 확인과 소통',
-            icon: MessageSquareText,
-            children: [{ key: 'client_communication', label: '의뢰인 모드' }]
-          }
-        ]),
-    [isPlatformRole]
+      },
+      {
+        id: 'client_communication',
+        label: '의뢰인 모드',
+        description: '의뢰인 관점 진행 확인과 소통',
+        icon: MessageSquareText,
+        children: [{ key: 'client_communication', label: '의뢰인 모드' }]
+      }
+    ]),
+    []
   );
   const [isOpen, setIsOpen] = useState(false);
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(
     mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin'
       ? 'organization'
-      : mode === 'organization_staff' || mode === 'platform_admin'
-        ? 'platform_admin'
+      : mode === 'organization_staff'
+        ? 'organization'
         : mode
   );
   const currentLabel = modeOptions.find((option) => option.key === mode)?.label ?? '업무 모드';
@@ -138,8 +105,8 @@ export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: s
     setExpandedGroupId(
       nextMode === 'law_admin' || nextMode === 'collection_admin' || nextMode === 'other_admin'
         ? 'organization'
-        : nextMode === 'organization_staff' || nextMode === 'platform_admin'
-          ? 'platform_admin'
+        : nextMode === 'organization_staff'
+          ? 'organization'
           : nextMode
     );
   }
@@ -213,9 +180,7 @@ export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: s
                                   ? 'bg-amber-500 text-slate-950'
                                   : child.key === 'client_communication'
                                     ? 'bg-emerald-600'
-                                    : child.key === 'platform_admin'
-                                      ? 'bg-blue-600'
-                                      : child.key === 'other_admin'
+                                    : child.key === 'other_admin'
                                         ? 'bg-teal-600'
                                         : 'bg-slate-900'
                               : ''
@@ -239,6 +204,6 @@ export function ModeSwitcher({ platformRole, mode, onChange }: { platformRole: s
   );
 }
 
-export function getCurrentMode(platformRole?: string) {
-  return getDefaultMode(platformRole ?? 'platform_admin');
+export function getCurrentMode(organizationKind?: OrganizationKind, isManager = false) {
+  return getDefaultMode(organizationKind, isManager);
 }

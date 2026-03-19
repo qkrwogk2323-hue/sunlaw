@@ -27,7 +27,6 @@ export async function listAccessibleOrganizations(options: OrganizationListOptio
       .from('organizations')
       .select('id, name, slug, kind, business_number, representative_name, email, phone, lifecycle_status, enabled_modules, is_directory_public, updated_at')
       .eq('is_directory_public', true)
-      .neq('slug', 'vein-bn-1')
       .neq('lifecycle_status', 'soft_deleted')
       .order('name', { ascending: true }),
     membershipOrganizationIds.length

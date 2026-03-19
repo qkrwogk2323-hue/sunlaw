@@ -7,8 +7,6 @@ import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, normalizeActiveViewMode } from '@/lib/view-mode';
 
-const PLATFORM_OPERATOR_ORGANIZATION_SLUG = 'vein-bn-1';
-
 type CoreProfile = Pick<
   Profile,
   'id' | 'email' | 'full_name' | 'platform_role' | 'default_organization_id' | 'is_active'
@@ -109,7 +107,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
       actor_category,
       permission_template_key,
       case_scope_policy,
-      organization:organizations(id, name, slug, kind, enabled_modules, is_platform_root),
+      organization:organizations(id, name, slug, kind, enabled_modules),
       permission_overrides:organization_membership_permission_overrides(permission_key, effect)
     `)
     .eq('profile_id', user.id)
@@ -188,16 +186,15 @@ export function isManagementRole(role?: string | null) {
   return role === 'org_owner' || role === 'org_manager';
 }
 
-export function hasPlatformRootManagementMembership(auth: AuthContext) {
+export function hasPlatformManagementMembership(auth: AuthContext) {
   return auth.memberships.some((membership) => (
-    membership.organization?.is_platform_root === true
-    && membership.organization?.slug === PLATFORM_OPERATOR_ORGANIZATION_SLUG
+    membership.organization?.kind === 'platform_management'
     && isManagementRole(membership.role)
   ));
 }
 
 export function isPlatformOperator(auth: AuthContext) {
-  return hasPlatformRootManagementMembership(auth);
+  return hasPlatformManagementMembership(auth);
 }
 
 export function hasStaffMembership(auth: AuthContext, organizationId: string) {

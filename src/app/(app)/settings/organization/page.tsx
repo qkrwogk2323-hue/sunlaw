@@ -46,7 +46,7 @@ export default async function OrganizationSettingsPage({
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
   const isPlatformAdmin = await hasActivePlatformAdminView(auth);
-  const isPlatformRootOrganization = workspace.organization?.is_platform_root === true || workspace.organization?.slug === 'vein-bn-1';
+  const isPlatformManagementOrganization = workspace.organization?.kind === 'platform_management';
   const resolved = searchParams ? await searchParams : undefined;
   const section = `${resolved?.section ?? 'intro'}`.trim();
   const activeSection = section === 'info' || section === 'env' ? section : 'intro';
@@ -111,7 +111,7 @@ export default async function OrganizationSettingsPage({
                       <>
                         <input type="hidden" name="kind" value={workspace.organization.kind ?? 'law_firm'} />
                         <div className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
-                          {isPlatformRootOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
+                          {isPlatformManagementOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
                         </div>
                       </>
                     )}
@@ -142,9 +142,9 @@ export default async function OrganizationSettingsPage({
                   </label>
                   <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                     <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>
-                    <span>현재 유형: {isPlatformRootOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
+                    <span>현재 유형: {isPlatformManagementOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
                   </div>
-                  {isPlatformAdmin && isPlatformRootOrganization ? (
+                  {isPlatformAdmin && isPlatformManagementOrganization ? (
                     <div className="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-950">
                       <p className="font-semibold">플랫폼 관리조직 전용 기능</p>
                       <p className="mt-1 text-sky-800">직접 조직 생성은 플랫폼 관리조직의 관리자만 사용할 수 있습니다.</p>

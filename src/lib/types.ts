@@ -63,7 +63,7 @@ export interface OrganizationOption {
   id: string;
   name: string;
   slug: string;
-  kind?: 'law_firm' | 'collection_company' | 'mixed_practice' | 'corporate_legal_team' | 'other' | null;
+  kind?: 'platform_management' | 'law_firm' | 'collection_company' | 'mixed_practice' | 'corporate_legal_team' | 'other' | null;
   enabled_modules?: Record<string, boolean> | null;
   is_platform_root?: boolean;
 }

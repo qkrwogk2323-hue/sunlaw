@@ -72,7 +72,7 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
   }
 
   const isPlatformOperator = auth.memberships.some(
-    (membership) => membership.organization?.is_platform_root && membership.organization?.slug === 'vein-bn-1' && (membership.role === 'org_owner' || membership.role === 'org_manager')
+    (membership) => membership.organization?.kind === 'platform_management' && (membership.role === 'org_owner' || membership.role === 'org_manager')
   );
 
   if (!auth.memberships.length && !isPlatformOperator) {
