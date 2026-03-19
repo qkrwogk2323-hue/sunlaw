@@ -70,7 +70,10 @@ export default async function InboxPage() {
               <InboxCard key={hub.id} href={`/inbox/${hub.id}`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-medium text-slate-900">{hub.partnerOrganization?.name ?? '협업 조직'} 허브</p>
-                  <Badge tone="green">활성</Badge>
+                  <div className="flex items-center gap-2">
+                    {hub.unreadCount > 0 ? <Badge tone="blue">새 메시지 {hub.unreadCount}</Badge> : null}
+                    <Badge tone="green">활성</Badge>
+                  </div>
                 </div>
                 <p className="mt-1 text-sm text-slate-500">{hub.title}</p>
                 <p className="mt-2 text-sm text-slate-600 line-clamp-2">{hub.lastMessageBody ?? hub.summary ?? '첫 메시지를 시작해 허브를 열어 보세요.'}</p>

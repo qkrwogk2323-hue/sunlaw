@@ -270,6 +270,20 @@ export const collaborationHubMessageSchema = z.object({
   returnPath: z.string().trim().optional().or(z.literal(''))
 });
 
+export const collaborationHubReadSchema = z.object({
+  hubId: z.string().uuid(),
+  organizationId: z.string().uuid()
+});
+
+export const collaborationHubCaseShareSchema = z.object({
+  hubId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  caseId: z.string().uuid(),
+  permissionScope: z.enum(['view', 'reference', 'collaborate']).default('view'),
+  note: z.string().trim().max(1000).optional().or(z.literal('')),
+  returnPath: z.string().trim().optional().or(z.literal(''))
+});
+
 export const caseMessageSchema = z.object({
   body: z.string().trim().min(1).max(5000),
   isInternal: z.boolean().default(false)

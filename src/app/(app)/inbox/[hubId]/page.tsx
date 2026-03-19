@@ -3,6 +3,8 @@ import type { Route } from 'next';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CollaborationHubLiveShell } from '@/components/collaboration-hub-live-shell';
+import { CollaborationCaseShareForm } from '@/components/forms/collaboration-case-share-form';
 import { CollaborationHubMessageForm } from '@/components/forms/collaboration-hub-message-form';
 import { ClientDirectInviteForm } from '@/components/forms/client-direct-invite-form';
 import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-form';
@@ -40,7 +42,8 @@ export default async function CollaborationHubPage({
   }));
 
   return (
-    <div className="space-y-6">
+    <CollaborationHubLiveShell hubId={hub.id} organizationId={organizationId}>
+      <div className="space-y-6">
       <div className="vs-brand-panel overflow-hidden rounded-[1.8rem] p-6 text-white shadow-[0_24px_54px_rgba(8,47,73,0.26)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -128,9 +131,13 @@ export default async function CollaborationHubPage({
                 <Link key={caseItem.id} href={`/cases/${caseItem.id}` as Route} className="block rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-900 hover:bg-slate-50/70">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{caseItem.title}</p>
-                    <Badge tone="blue">{caseItem.caseStatus ?? '진행 중'}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone="blue">{caseItem.caseStatus ?? '진행 중'}</Badge>
+                      <Badge tone="slate">{caseItem.permissionScope}</Badge>
+                    </div>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{caseItem.referenceNo ?? '사건번호 없음'} · {caseItem.updatedAt ? formatDateTime(caseItem.updatedAt) : '업데이트 정보 없음'}</p>
+                  <p className="mt-1 text-xs text-slate-400">공유 조직: {caseItem.sharedByOrganizationName ?? '현재 조직'}{caseItem.note ? ` · ${caseItem.note}` : ''}</p>
                 </Link>
               )) : <p className="text-sm text-slate-500">검색 조건에 맞는 사건이 없습니다.</p>}
             </CardContent>
@@ -138,6 +145,19 @@ export default async function CollaborationHubPage({
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>사건 공유</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {caseOptions.length ? (
+                <CollaborationCaseShareForm hubId={hub.id} organizationId={organizationId} cases={caseOptions} returnPath={`/inbox/${hub.id}`} />
+              ) : (
+                <p className="text-sm text-slate-500">공유할 수 있는 현재 조직 사건이 없습니다.</p>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>담당자 초대</CardTitle>
@@ -175,6 +195,7 @@ export default async function CollaborationHubPage({
           </Card>
         </div>
       </section>
-    </div>
+      </div>
+    </CollaborationHubLiveShell>
   );
 }

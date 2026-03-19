@@ -28,7 +28,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { encryptString } from '@/lib/pii';
 import { getDefaultTemplatePermissions, hasPermission, PERMISSION_KEYS } from '@/lib/permissions';
 import {
+  collaborationHubCaseShareSchema,
   collaborationHubMessageSchema,
+  collaborationHubReadSchema,
   collaborationRequestCreateSchema,
   collaborationRequestReviewSchema,
   clientAccessCaseLinkSchema,
@@ -80,13 +82,13 @@ async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('organization_memberships')
-    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, slug, is_platform_root)')
+    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, kind)')
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
   return (data ?? [])
-    .filter((row: any) => row.organization?.is_platform_root === true && row.organization?.slug === 'vein-bn-1' && row.profile?.is_active !== false)
+    .filter((row: any) => row.organization?.kind === 'platform_management' && row.profile?.is_active !== false)
     .map((row: any) => row.profile_id)
     .filter(Boolean);
 }
@@ -2377,6 +2379,141 @@ export async function postCollaborationHubMessageAction(formData: FormData) {
   revalidatePath('/inbox');
   revalidatePath(`/inbox/${parsed.hubId}`);
 
+  if (parsed.returnPath) {
+    redirect(parsed.returnPath as Route);
+  }
+}
+
+export async function markCollaborationHubReadAction(formData: FormData) {
+  const parsed = collaborationHubReadSchema.parse({
+    hubId: formData.get('hubId'),
+    organizationId: formData.get('organizationId')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    errorMessage: '업무 허브 읽음 상태를 갱신할 권한이 없습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: hubRow, error: hubError } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id')
+    .eq('id', parsed.hubId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (hubError || !hubRow) {
+    throw hubError ?? new Error('업무 허브를 찾을 수 없습니다.');
+  }
+
+  if (![hubRow.primary_organization_id, hubRow.partner_organization_id].includes(parsed.organizationId)) {
+    throw new Error('현재 조직은 이 업무 허브에 참여하고 있지 않습니다.');
+  }
+
+  const { error } = await adminClient.from('organization_collaboration_reads').upsert({
+    hub_id: parsed.hubId,
+    organization_id: parsed.organizationId,
+    profile_id: auth.user.id,
+    last_read_at: new Date().toISOString()
+  }, { onConflict: 'hub_id,profile_id' });
+
+  if (error) throw error;
+
+  revalidatePath('/inbox');
+  revalidatePath(`/inbox/${parsed.hubId}`);
+}
+
+export async function shareCaseToCollaborationHubAction(formData: FormData) {
+  const parsed = collaborationHubCaseShareSchema.parse({
+    hubId: formData.get('hubId'),
+    organizationId: formData.get('organizationId'),
+    caseId: formData.get('caseId'),
+    permissionScope: formData.get('permissionScope') || 'view',
+    note: formData.get('note'),
+    returnPath: formData.get('returnPath')
+  });
+
+  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    permission: 'case_edit',
+    errorMessage: '허브에 사건을 공유할 권한이 없습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: hubRow, error: hubError } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id')
+    .eq('id', parsed.hubId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (hubError || !hubRow) {
+    throw hubError ?? new Error('업무 허브를 찾을 수 없습니다.');
+  }
+
+  if (![hubRow.primary_organization_id, hubRow.partner_organization_id].includes(parsed.organizationId)) {
+    throw new Error('현재 조직은 이 업무 허브에 참여하고 있지 않습니다.');
+  }
+
+  const { data: caseOrganization, error: caseOrganizationError } = await adminClient
+    .from('case_organizations')
+    .select('id')
+    .eq('case_id', parsed.caseId)
+    .eq('organization_id', parsed.organizationId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (caseOrganizationError || !caseOrganization) {
+    throw caseOrganizationError ?? new Error('현재 조직이 접근 가능한 사건만 허브에 공유할 수 있습니다.');
+  }
+
+  const { data: caseRow, error: caseError } = await adminClient
+    .from('cases')
+    .select('id, title')
+    .eq('id', parsed.caseId)
+    .maybeSingle();
+
+  if (caseError || !caseRow) {
+    throw caseError ?? new Error('공유할 사건을 찾을 수 없습니다.');
+  }
+
+  const { error: upsertError } = await adminClient.from('organization_collaboration_case_shares').upsert({
+    hub_id: parsed.hubId,
+    case_id: parsed.caseId,
+    shared_by_organization_id: parsed.organizationId,
+    shared_by_profile_id: auth.user.id,
+    permission_scope: parsed.permissionScope,
+    note: parsed.note || null
+  }, { onConflict: 'hub_id,case_id' });
+
+  if (upsertError) throw upsertError;
+
+  const partnerOrganizationId = hubRow.primary_organization_id === parsed.organizationId
+    ? hubRow.partner_organization_id
+    : hubRow.primary_organization_id;
+  const partnerManagerIds = await listOrganizationManagerProfileIds(adminClient, partnerOrganizationId);
+  if (partnerManagerIds.length) {
+    const senderOrganizationName = auth.memberships.find((membership) => membership.organization_id === parsed.organizationId)?.organization?.name ?? '협업 조직';
+    const { error: notificationError } = await adminClient.from('notifications').insert(
+      partnerManagerIds.map((profileId) => ({
+        organization_id: partnerOrganizationId,
+        recipient_profile_id: profileId,
+        kind: 'generic',
+        entity_type: 'collaboration',
+        title: `${senderOrganizationName}에서 사건을 업무 허브에 공유했습니다.`,
+        body: `${caseRow.title} · 권한 범위: ${parsed.permissionScope}`,
+        payload: { hub_id: parsed.hubId, case_id: parsed.caseId, permission_scope: parsed.permissionScope },
+        action_label: '허브 열기',
+        action_href: `/inbox/${parsed.hubId}`,
+        destination_type: 'internal_route',
+        destination_url: `/inbox/${parsed.hubId}`
+      }))
+    );
+
+    if (notificationError) throw notificationError;
+  }
+
+  revalidatePath('/inbox');
+  revalidatePath(`/inbox/${parsed.hubId}`);
   if (parsed.returnPath) {
     redirect(parsed.returnPath as Route);
   }

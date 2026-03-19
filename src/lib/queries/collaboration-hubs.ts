@@ -38,6 +38,7 @@ export type CollaborationHubSummary = {
   lastMessageCaseId: string | null;
   lastMessageCaseTitle: string | null;
   recentMessageCount: number;
+  unreadCount: number;
 };
 
 export type CollaborationOverview = {
@@ -65,6 +66,9 @@ export type CollaborationHubCase = {
   referenceNo: string | null;
   caseStatus: string | null;
   updatedAt: string | null;
+  permissionScope: 'view' | 'reference' | 'collaborate';
+  sharedByOrganizationName: string | null;
+  note: string | null;
 };
 
 export type CollaborationHubDetail = {
@@ -107,6 +111,7 @@ export async function getCollaborationOverview(organizationId?: string | null): 
   }
 
   const admin = createSupabaseAdminClient();
+  const currentUserId = auth.user.id;
   const [{ data: requestRows, error: requestError }, { data: hubRows, error: hubError }] = await Promise.all([
     admin
       .from('organization_collaboration_requests')
@@ -132,7 +137,7 @@ export async function getCollaborationOverview(organizationId?: string | null): 
   ].filter(Boolean))];
   const hubIds = (hubRows ?? []).map((row: any) => row.id).filter(Boolean);
 
-  const [{ data: orgRows, error: orgError }, { data: messageRows, error: messageError }] = await Promise.all([
+  const [{ data: orgRows, error: orgError }, { data: messageRows, error: messageError }, { data: readRows, error: readError }] = await Promise.all([
     orgIds.length
       ? admin.from('organizations').select('id, name, slug').in('id', orgIds)
       : Promise.resolve({ data: [], error: null }),
@@ -143,11 +148,19 @@ export async function getCollaborationOverview(organizationId?: string | null): 
           .in('hub_id', hubIds)
           .order('created_at', { ascending: false })
           .limit(120)
-      : Promise.resolve({ data: [], error: null })
+          : Promise.resolve({ data: [], error: null }),
+        hubIds.length
+          ? admin
+            .from('organization_collaboration_reads')
+            .select('hub_id, profile_id, last_read_at')
+            .in('hub_id', hubIds)
+            .eq('profile_id', currentUserId)
+          : Promise.resolve({ data: [], error: null })
   ]);
 
   if (orgError) throw orgError;
   if (messageError) throw messageError;
+        if (readError) throw readError;
 
   const caseIds = [...new Set((messageRows ?? []).map((row: any) => row.case_id).filter(Boolean))];
   const { data: caseRows, error: caseError } = caseIds.length
@@ -158,6 +171,7 @@ export async function getCollaborationOverview(organizationId?: string | null): 
 
   const organizations = buildOrganizationMap(orgRows ?? []);
   const caseTitleById = Object.fromEntries((caseRows ?? []).map((row: any) => [row.id, row.title ?? '사건'])) as Record<string, string>;
+  const readMap = Object.fromEntries((readRows ?? []).map((row: any) => [row.hub_id, row.last_read_at])) as Record<string, string>;
   const messagesByHub = (messageRows ?? []).reduce<Record<string, any[]>>((accumulator, row: any) => {
     const next = accumulator[row.hub_id] ?? [];
     next.push(row);
@@ -200,7 +214,13 @@ export async function getCollaborationOverview(organizationId?: string | null): 
       lastMessageBody: latestMessage?.body ?? null,
       lastMessageCaseId: latestMessage?.case_id ?? null,
       lastMessageCaseTitle: latestMessage?.case_id ? caseTitleById[latestMessage.case_id] ?? null : null,
-      recentMessageCount: recentMessages.length
+      recentMessageCount: recentMessages.length,
+      unreadCount: recentMessages.filter((message) => {
+        if (message.organization_id === currentOrganizationId) return false;
+        const readAt = readMap[row.id];
+        if (!readAt) return true;
+        return new Date(message.created_at).getTime() > new Date(readAt).getTime();
+      }).length
     } satisfies CollaborationHubSummary;
   });
 
@@ -224,6 +244,7 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
   }
 
   const admin = createSupabaseAdminClient();
+  const currentUserId = auth.user.id;
   const { data: hubRow, error: hubError } = await admin
     .from('organization_collaboration_hubs')
     .select('id, primary_organization_id, partner_organization_id, title, summary, status')
@@ -243,7 +264,7 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
     : hubRow.primary_organization_id;
   const normalizedQuery = `${searchQuery ?? ''}`.trim().toLowerCase();
 
-  const [{ data: orgRows, error: orgError }, { data: messageRows, error: messageError }, { data: caseOrgRows, error: caseOrgError }, { data: fallbackCaseRows, error: fallbackCaseError }] = await Promise.all([
+  const [{ data: orgRows, error: orgError }, { data: messageRows, error: messageError }, { data: caseShareRows, error: caseShareError }] = await Promise.all([
     admin.from('organizations').select('id, name, slug').in('id', [currentOrganizationId, partnerOrganizationId]),
     admin
       .from('organization_collaboration_messages')
@@ -252,24 +273,15 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
       .order('created_at', { ascending: false })
       .limit(80),
     admin
-      .from('case_organizations')
-      .select('case_id, organization_id, case:cases(id, title, reference_no, case_status, updated_at)')
-      .in('organization_id', [currentOrganizationId, partnerOrganizationId])
-      .eq('status', 'active')
-      .limit(200),
-    admin
-      .from('cases')
-      .select('id, title, reference_no, case_status, updated_at')
-      .eq('organization_id', currentOrganizationId)
-      .neq('lifecycle_status', 'soft_deleted')
-      .order('updated_at', { ascending: false })
-      .limit(20)
+      .from('organization_collaboration_case_shares')
+      .select('id, case_id, shared_by_organization_id, permission_scope, note, case:cases(id, title, reference_no, case_status, updated_at)')
+      .eq('hub_id', hubId)
+      .order('created_at', { ascending: false })
   ]);
 
   if (orgError) throw orgError;
   if (messageError) throw messageError;
-  if (caseOrgError) throw caseOrgError;
-  if (fallbackCaseError) throw fallbackCaseError;
+  if (caseShareError) throw caseShareError;
 
   const senderIds = [...new Set((messageRows ?? []).map((row: any) => row.sender_profile_id).filter(Boolean))];
   const messageCaseIds = [...new Set((messageRows ?? []).map((row: any) => row.case_id).filter(Boolean))];
@@ -290,36 +302,16 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
   const senderNameById = Object.fromEntries((senderRows ?? []).map((row: any) => [row.id, row.full_name ?? '구성원'])) as Record<string, string>;
   const messageCaseTitleById = Object.fromEntries((messageCaseRows ?? []).map((row: any) => [row.id, row.title ?? '사건'])) as Record<string, string>;
 
-  const casesById = new Map<string, { organizationIds: Set<string>; record: any }>();
-  for (const row of caseOrgRows ?? []) {
-    if (!row.case_id) continue;
-    const current = casesById.get(row.case_id) ?? { organizationIds: new Set<string>(), record: Array.isArray(row.case) ? row.case[0] : row.case };
-    current.organizationIds.add(row.organization_id);
-    if (!current.record) {
-      current.record = Array.isArray(row.case) ? row.case[0] : row.case;
-    }
-    casesById.set(row.case_id, current);
-  }
-
-  const sharedCases = [...casesById.entries()]
-    .filter(([, value]) => value.organizationIds.has(currentOrganizationId) && value.organizationIds.has(partnerOrganizationId))
-    .map(([caseId, value]) => ({
-      id: caseId,
-      title: value.record?.title ?? '사건',
-      referenceNo: value.record?.reference_no ?? null,
-      caseStatus: value.record?.case_status ?? null,
-      updatedAt: value.record?.updated_at ?? null
-    })) as CollaborationHubCase[];
-
-  const baseCases = sharedCases.length
-    ? sharedCases
-    : (fallbackCaseRows ?? []).map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        referenceNo: row.reference_no ?? null,
-        caseStatus: row.case_status ?? null,
-        updatedAt: row.updated_at ?? null
-      })) as CollaborationHubCase[];
+  const baseCases = (caseShareRows ?? []).map((row: any) => ({
+    id: row.case_id,
+    title: Array.isArray(row.case) ? row.case[0]?.title ?? '사건' : row.case?.title ?? '사건',
+    referenceNo: Array.isArray(row.case) ? row.case[0]?.reference_no ?? null : row.case?.reference_no ?? null,
+    caseStatus: Array.isArray(row.case) ? row.case[0]?.case_status ?? null : row.case?.case_status ?? null,
+    updatedAt: Array.isArray(row.case) ? row.case[0]?.updated_at ?? null : row.case?.updated_at ?? null,
+    permissionScope: row.permission_scope,
+    sharedByOrganizationName: organizations[row.shared_by_organization_id]?.name ?? null,
+    note: row.note ?? null
+  })) as CollaborationHubCase[];
 
   return {
     id: hubRow.id,
