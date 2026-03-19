@@ -1,20 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-
-function restartVideo(video: HTMLVideoElement | null) {
-  if (!video) return;
-
-  video.currentTime = 0;
-  void video.play().catch(() => undefined);
-}
+import { useEffect, useState } from 'react';
 
 export function HomepageDemoVideo() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [replayToken, setReplayToken] = useState(0);
 
   useEffect(() => {
     function handleReplayRequest() {
-      restartVideo(videoRef.current);
+      setReplayToken((current) => current + 1);
     }
 
     window.addEventListener('vs:homepage-demo-replay', handleReplayRequest);
@@ -22,14 +15,12 @@ export function HomepageDemoVideo() {
   }, []);
 
   return (
-    <video
-      ref={videoRef}
+    <img
       className="h-full w-full object-cover object-[52.5%_44%]"
-      src="/vein-spiral-demo.mp4"
-      autoPlay
-      muted
-      playsInline
-      preload="metadata"
+      src={`/vein-spiral-demo.gif?replay=${replayToken}`}
+      alt="베인스파이럴 서비스 데모 화면"
+      loading="eager"
+      decoding="async"
     />
   );
 }
