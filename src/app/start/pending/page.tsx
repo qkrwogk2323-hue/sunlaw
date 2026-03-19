@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
 
+export const dynamic = 'force-dynamic';
+
 function requestStatusLabel(status: string) {
   if (status === 'approved') return '승인 완료';
   if (status === 'rejected') return '반려됨';

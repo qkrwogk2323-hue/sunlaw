@@ -10,6 +10,8 @@ import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entr
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
 
+export const dynamic = 'force-dynamic';
+
 function StepChip({ step, title, active }: { step: string; title: string; active?: boolean }) {
   return (
     <div className={`rounded-full px-4 py-2 text-sm font-medium ${active ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600'}`}>

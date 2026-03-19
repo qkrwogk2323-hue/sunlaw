@@ -6,6 +6,8 @@ import { CASE_STAGE_OPTIONS, getCaseStageLabel } from '@/lib/case-stage';
 import { getPortalActionQueue, getPortalCaseDetail } from '@/lib/queries/portal';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PortalCaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const auth = await getCurrentAuth();
   if (!auth) redirect('/login');

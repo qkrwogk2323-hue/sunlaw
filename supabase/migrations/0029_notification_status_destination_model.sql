@@ -1,4 +1,4 @@
--- 0033: notification status/destination canonical model
+-- 0029: notification status/destination canonical model
 
 alter table public.notifications
   add column if not exists notification_type text not null default 'generic',

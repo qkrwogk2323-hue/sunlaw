@@ -6,6 +6,8 @@ import { getCurrentAuth } from '@/lib/auth';
 import { getPortalCases, getPortalActionQueue } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
 
+export const dynamic = 'force-dynamic';
+
 function progressSentence(text?: string | null) {
   const raw = `${text ?? ''}`.trim();
   if (!raw) return '최근 진행 내역이 업데이트되고 있습니다.';

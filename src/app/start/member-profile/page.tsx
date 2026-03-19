@@ -6,6 +6,8 @@ import { completeMemberOnboardingProfileAction } from '@/lib/actions/profile-act
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export default async function MemberProfileOnboardingPage() {
   const auth = await requireAuthenticatedUser();
   if (!auth.profile.must_complete_profile) {

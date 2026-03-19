@@ -3,6 +3,8 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { acceptInvitationAction } from '@/lib/actions/organization-actions';
 import { requireAuthenticatedUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export default async function InvitationAcceptPage({ params }: { params: Promise<{ token: string }> }) {
   await requireAuthenticatedUser();
   const { token } = await params;
