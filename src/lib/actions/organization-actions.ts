@@ -2,7 +2,6 @@
 
 import type { Route } from 'next';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
@@ -1609,14 +1608,6 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
   }
 
   revalidatePath('/settings/team');
-  const cookieStore = await cookies();
-  cookieStore.set('issued_staff_temp_password', tempPassword, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/settings/team',
-    maxAge: 300
-  });
   redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}`);
 }
 
@@ -1748,14 +1739,6 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   }
 
   revalidatePath('/clients');
-  const cookieStore = await cookies();
-  cookieStore.set('issued_client_temp_password', tempPassword, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/clients',
-    maxAge: 300
-  });
   redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}`);
 }
 

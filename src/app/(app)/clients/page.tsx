@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientDirectInviteForm } from '@/components/forms/client-direct-invite-form';
@@ -37,10 +36,8 @@ export default async function ClientsPage({
     canManage && organizationId ? listCases(organizationId) : Promise.resolve([]),
     searchParams ? searchParams : Promise.resolve(undefined)
   ]);
-  const cookieStore = await cookies();
   const inviteToken = resolvedSearchParams?.invite;
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
-  const issuedClientTempPassword = cookieStore.get('issued_client_temp_password')?.value ?? null;
 
   return (
     <div className="space-y-6">
@@ -58,10 +55,7 @@ export default async function ClientsPage({
       {issuedClientLoginId ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           의뢰인 임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedClientLoginId}</code>
-          {issuedClientTempPassword ? (
-            <span> / 비밀번호 <code className="font-mono">{issuedClientTempPassword}</code></span>
-          ) : null}
-          <p className="mt-1 text-xs text-amber-700">임시 비밀번호는 5분만 표시됩니다. 첫 로그인 시 비밀번호 변경 화면으로 이동합니다.</p>
+          <p className="mt-1 text-xs text-amber-700">보안을 위해 임시 비밀번호는 화면에 표시되지 않습니다. 첫 로그인 시 비밀번호 변경 화면으로 이동합니다.</p>
         </div>
       ) : null}
 

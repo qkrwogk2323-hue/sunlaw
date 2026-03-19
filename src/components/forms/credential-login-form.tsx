@@ -7,6 +7,23 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
+function toLoginErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return '로그인을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+
+  const message = error.message.toLowerCase();
+  if (message.includes('invalid login credentials') || message.includes('email not confirmed')) {
+    return '아이디 또는 비밀번호가 올바르지 않습니다.';
+  }
+
+  if (message.includes('too many requests')) {
+    return '로그인 시도가 많아 잠시 제한되었습니다. 잠시 후 다시 시도해 주세요.';
+  }
+
+  return error.message || '로그인을 처리하지 못했습니다.';
+}
+
 export function CredentialLoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -56,7 +73,7 @@ export function CredentialLoginForm() {
       router.replace('/login');
       router.refresh();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : '일반 로그인을 처리하지 못했습니다.');
+      setError(toLoginErrorMessage(submitError));
     } finally {
       setLoading(false);
     }
