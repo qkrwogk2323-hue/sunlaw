@@ -29,6 +29,7 @@ export default async function SignupGuidePage({
   const resolved = searchParams ? await searchParams : undefined;
   const flow = resolved?.flow ?? '';
   const signupNext = '/start/signup';
+  const showGeneralOnly = !auth && flow === 'general';
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-16">
@@ -46,7 +47,24 @@ export default async function SignupGuidePage({
           </div>
         </div>
 
-        {!auth ? (
+        {showGeneralOnly ? (
+          <div className="mx-auto max-w-3xl">
+            <Card className="rounded-[1.8rem]">
+              <CardHeader className="border-none pb-2">
+                <CardTitle className="text-2xl">일반회원가입</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm leading-7 text-slate-600">카카오 연결 없이 이메일 기반 일반회원가입만 바로 진행합니다.</p>
+                <GeneralSignupForm />
+                <div className="pt-1">
+                  <Link href={'/start/signup' as Route} className={buttonStyles({ variant: 'ghost', className: 'min-h-12 rounded-[1.25rem] px-4 text-base' })}>
+                    <ArrowLeft className="size-4" /> 가입 경로 선택으로 돌아가기
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : !auth ? (
           <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <Card className="rounded-[1.8rem] border-sky-200 bg-[linear-gradient(180deg,#f8fbff,#eef6ff)]">
               <CardHeader className="border-none pb-2">

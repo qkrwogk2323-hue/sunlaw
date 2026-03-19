@@ -53,7 +53,7 @@ export default async function LoginPage({
             <CredentialLoginForm />
           </div>
           <div className="rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-500 lg:col-span-2">
-            처음 이용하신다면 <Link href={'/start/signup' as Route} className="font-medium text-sky-700">회원가입하기</Link>에서 카카오 또는 일반회원가입 중 원하는 방식으로 계정을 만든 뒤 의뢰인 가입 또는 조직 개설 신청으로 이어갈 수 있습니다.
+            처음 이용하신다면 <Link href={'/start/signup?flow=general' as Route} className="font-medium text-sky-700">회원가입하기</Link>에서 일반회원가입을 먼저 완료한 뒤 의뢰인 가입 또는 조직 개설 신청으로 이어갈 수 있습니다.
           </div>
         </CardContent>
       </Card>
