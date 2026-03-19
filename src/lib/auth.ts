@@ -29,6 +29,23 @@ const defaultClientAccountProfileFields: ClientAccountProfileFields = {
   must_complete_profile: false
 };
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 4000): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('auth_timeout'));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 function isMissingColumnError(error: { code?: string; message?: string } | null) {
   return error?.code === '42703'
     || error?.code === 'PGRST204'
@@ -79,61 +96,68 @@ export async function hasPlatformAdminScenarioAccess(auth: AuthContext) {
 }
 
 export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+      error: userError
+    } = await withTimeout(supabase.auth.getUser());
 
-  if (userError || !user) {
+    if (userError || !user) {
+      return null;
+    }
+
+    const profile = await withTimeout(getProfileWithScopedFields(user.id));
+
+    if (!profile || !profile.is_active) {
+      return null;
+    }
+
+    const membershipQuery = supabase
+      .from('organization_memberships')
+      .select(`
+        id,
+        organization_id,
+        role,
+        status,
+        title,
+        permissions,
+        actor_category,
+        permission_template_key,
+        case_scope_policy,
+        organization:organizations(id, name, slug, kind, enabled_modules),
+        permission_overrides:organization_membership_permission_overrides(permission_key, effect)
+      `)
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: true });
+
+    const { data: memberships } = await withTimeout<any>(Promise.resolve(membershipQuery));
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email ?? undefined
+      },
+      profile,
+      memberships: ((memberships ?? []) as unknown[]).map((membership) => {
+        const normalized = membership as Membership & {
+          organization?: Membership['organization'] | Membership['organization'][];
+        };
+
+        return {
+          ...normalized,
+          organization: Array.isArray(normalized.organization)
+            ? normalized.organization[0] ?? null
+            : normalized.organization ?? null,
+          permissions: resolveMembershipPermissions(normalized as Membership)
+        };
+      })
+    };
+  } catch (error) {
+    console.error('getCurrentAuth failed', error);
     return null;
   }
-
-  const profile = await getProfileWithScopedFields(user.id);
-
-  if (!profile || !profile.is_active) {
-    return null;
-  }
-
-  const { data: memberships } = await supabase
-    .from('organization_memberships')
-    .select(`
-      id,
-      organization_id,
-      role,
-      status,
-      title,
-      permissions,
-      actor_category,
-      permission_template_key,
-      case_scope_policy,
-      organization:organizations(id, name, slug, kind, enabled_modules),
-      permission_overrides:organization_membership_permission_overrides(permission_key, effect)
-    `)
-    .eq('profile_id', user.id)
-    .eq('status', 'active')
-    .order('created_at', { ascending: true });
-
-  return {
-    user: {
-      id: user.id,
-      email: user.email ?? undefined
-    },
-    profile,
-    memberships: ((memberships ?? []) as unknown[]).map((membership) => {
-      const normalized = membership as Membership & {
-        organization?: Membership['organization'] | Membership['organization'][];
-      };
-
-      return {
-        ...normalized,
-        organization: Array.isArray(normalized.organization)
-          ? normalized.organization[0] ?? null
-          : normalized.organization ?? null,
-        permissions: resolveMembershipPermissions(normalized as Membership)
-      };
-    })
-  };
 });
 
 export async function requireAuthenticatedUser() {

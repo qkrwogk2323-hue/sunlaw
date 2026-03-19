@@ -38,7 +38,7 @@ export default function StartPage() {
               <span className="inline-flex items-center gap-2"><LogIn className="size-5" /> 로그인하기</span>
               <ArrowRight className="size-4" />
             </Link>
-            <Link href={'/start/signup?flow=general' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
+            <Link href={'/signup' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
               <span className="inline-flex items-center gap-2"><UserPlus className="size-5" /> 회원가입하기</span>
               <ArrowRight className="size-4" />
             </Link>
