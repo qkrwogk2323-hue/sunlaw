@@ -1,4 +1,5 @@
 alter table public.organization_exit_requests enable row level security;
+alter table public.organization_exit_requests force row level security;
 
 drop policy if exists organization_exit_requests_select on public.organization_exit_requests;
 create policy organization_exit_requests_select on public.organization_exit_requests
@@ -33,6 +34,7 @@ with check (
 );
 
 alter table public.kakao_notification_outbox enable row level security;
+alter table public.kakao_notification_outbox force row level security;
 
 drop policy if exists kakao_notification_outbox_select on public.kakao_notification_outbox;
 create policy kakao_notification_outbox_select on public.kakao_notification_outbox

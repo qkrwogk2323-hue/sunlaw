@@ -1,9 +1,9 @@
-# Supabase Migration Catalog (0001~0046)
+# Supabase Migration Catalog (0001~0051)
 
-이 문서는 `supabase/migrations`의 번호를 0001부터 0046까지 누락 없이 정렬한 기준 카탈로그입니다.
+이 문서는 `supabase/migrations`의 번호를 0001부터 0051까지 누락 없이 정렬한 기준 카탈로그입니다.
 
 ## 상태 요약
-- 번호 연속성: `0001` ~ `0046` 연속
+- 번호 연속성: `0001` ~ `0051` 연속
 - 누락 보정: `0044`, `0045`는 원격 DB 히스토리와 맞추기 위해 회수/반영된 파일
 
 ## 마이그레이션 설명
@@ -55,7 +55,13 @@
 | 0044 | `0044_organization_collaboration_hubs.sql` | 원격 히스토리 정합용 협업허브 스키마(0040 계열) |
 | 0045 | `0045_collaboration_hub_reads_and_case_shares.sql` | 원격 히스토리 정합용 읽음/공유 스키마(0041 계열) |
 | 0046 | `0046_lock_single_platform_root_to_vein_bn_1.sql` | 플랫폼 조직 단일 고정(`vein-bn-1`) 및 관리자 판정 재고정 |
+| 0047 | `0047_add_organization_industry_fields.sql` | 조직/조직가입신청 업종 필드 추가 |
+| 0048 | `0048_case_cover_fields.sql` | 사건 표지 출력용 추가 필드 |
+| 0049 | `0049_case_hubs.sql` | 사건허브(사건 중심 협업 로비) 스키마 |
+| 0050 | `0050_finalize_single_platform_root_to_vein_bn_1.sql` | 플랫폼 조직 단일 고정 최종화 |
+| 0051 | `0051_enable_rls_for_exit_requests_and_kakao_outbox.sql` | `organization_exit_requests` 및 `kakao_notification_outbox` RLS 활성화 및 정책 설정 |
 
 ## 운영 메모
 - `0044`, `0045`는 원격 DB에 이미 존재하던 버전과 로컬 번호를 일치시키기 위한 정합 파일입니다.
 - 현재 플랫폼 조직 기준은 `0046` 기준을 따릅니다.
+- `0051`은 기존에 RLS 없이 생성된 `organization_exit_requests`(0030)와 `kakao_notification_outbox`(0036) 테이블에 RLS 및 정책을 추가합니다.
