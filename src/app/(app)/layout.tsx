@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
+import { getNavUnreadCounts } from '@/lib/queries/notifications';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
 import { BrandBanner } from '@/components/brand-banner';
 import { PageBackButton } from '@/components/page-back-button';
@@ -39,7 +40,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect('/portal' as Route);
   }
 
-  const supportSession = await readSupportSessionCookie();
+  const [supportSession, navCounts] = await Promise.all([
+    readSupportSessionCookie(),
+    getNavUnreadCounts().catch(() => ({ unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 })),
+  ]);
 
   if (!auth.memberships.length && !isPlatformOperator(auth)) {
     redirect('/start/signup' as Route);
@@ -53,6 +57,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <ModeAwareNav
             memberships={auth.memberships}
             profile={auth.profile}
+            unreadNotificationCount={navCounts.unreadCount}
+            actionRequiredCount={navCounts.actionRequiredCount}
+            unreadConversationCount={navCounts.unreadConversationCount}
           />
 
           <form action={signOutAction}>
