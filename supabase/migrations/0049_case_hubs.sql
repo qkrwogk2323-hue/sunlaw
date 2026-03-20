@@ -87,50 +87,59 @@ alter table public.case_hub_members  enable row level security;
 alter table public.case_hub_activity enable row level security;
 
 -- case_hubs: 조직 구성원 읽기, service_role 전체
+drop policy if exists "case_hubs_org_member_select" on public.case_hubs;
 create policy "case_hubs_org_member_select"
   on public.case_hubs for select
   using (
     exists (
-      select 1 from public.organization_members om
+      select 1 from public.organization_memberships om
       where om.organization_id = case_hubs.organization_id
         and om.profile_id = auth.uid()
+        and om.status = 'active'
     )
   );
 
+drop policy if exists "case_hubs_service_role_all" on public.case_hubs;
 create policy "case_hubs_service_role_all"
   on public.case_hubs for all
   using (auth.role() = 'service_role')
   with check (auth.role() = 'service_role');
 
 -- case_hub_members: 조직 구성원 읽기, service_role 전체
+drop policy if exists "case_hub_members_org_select" on public.case_hub_members;
 create policy "case_hub_members_org_select"
   on public.case_hub_members for select
   using (
     exists (
       select 1 from public.case_hubs ch
-      join public.organization_members om on om.organization_id = ch.organization_id
+      join public.organization_memberships om on om.organization_id = ch.organization_id
       where ch.id = case_hub_members.hub_id
         and om.profile_id = auth.uid()
+        and om.status = 'active'
     )
   );
 
+drop policy if exists "case_hub_members_service_role_all" on public.case_hub_members;
 create policy "case_hub_members_service_role_all"
   on public.case_hub_members for all
   using (auth.role() = 'service_role')
   with check (auth.role() = 'service_role');
 
 -- case_hub_activity: 조직 구성원 읽기, service_role 전체
+drop policy if exists "case_hub_activity_org_select" on public.case_hub_activity;
 create policy "case_hub_activity_org_select"
   on public.case_hub_activity for select
   using (
     exists (
       select 1 from public.case_hubs ch
-      join public.organization_members om on om.organization_id = ch.organization_id
+      join public.organization_memberships om on om.organization_id = ch.organization_id
       where ch.id = case_hub_activity.hub_id
         and om.profile_id = auth.uid()
+        and om.status = 'active'
     )
   );
 
+drop policy if exists "case_hub_activity_service_role_all" on public.case_hub_activity;
 create policy "case_hub_activity_service_role_all"
   on public.case_hub_activity for all
   using (auth.role() = 'service_role')
