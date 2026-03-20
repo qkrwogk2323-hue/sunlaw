@@ -32,6 +32,7 @@ const businessRegistrationDocumentSchema = z.custom<File>((value) => value insta
 export const organizationCreateSchema = z.object({
   name: z.string().trim().min(2, '조직명은 2자 이상이어야 합니다.'),
   kind: z.enum(['law_firm', 'collection_company', 'mixed_practice', 'corporate_legal_team', 'other']).optional().default('law_firm'),
+  organizationIndustry: z.string().trim().max(120).optional().or(z.literal('')),
   businessNumber: z.string().trim().max(20).optional().or(z.literal('')),
   representativeName: z.string().trim().max(50).optional().or(z.literal('')),
   representativeTitle: z.string().trim().max(50).optional().or(z.literal('')),
@@ -52,6 +53,17 @@ export const organizationSignupSchema = organizationCreateSchema.extend({
     .refine((value) => isValidKoreanBusinessNumber(value), '유효한 사업자등록번호를 입력해 주세요.'),
   businessRegistrationDocument: businessRegistrationDocumentSchema,
   note: z.string().trim().max(1000).optional().or(z.literal(''))
+}).superRefine((value, ctx) => {
+  if (
+    (value.kind === 'law_firm' || value.kind === 'collection_company' || value.kind === 'other')
+    && !(value.organizationIndustry ?? '').trim()
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: '업종 상세를 입력해 주세요.',
+      path: ['organizationIndustry']
+    });
+  }
 });
 
 export const clientAccessRequestSchema = z.object({

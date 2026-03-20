@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { requirePlatformAdmin } from '@/lib/auth';
 import { listOrganizationExitRequests, listOrganizationSignupRequests } from '@/lib/queries/organization-requests';
 import { reviewOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
@@ -33,6 +34,14 @@ const statusTones: Record<string, 'green' | 'amber' | 'red' | 'slate'> = {
   approved: 'green',
   rejected: 'red',
   cancelled: 'slate'
+};
+
+const kindLabels: Record<string, string> = {
+  law_firm: '법률/법무',
+  collection_company: '신용정보회사',
+  mixed_practice: '복합업무조직',
+  corporate_legal_team: '기업 법무팀',
+  other: '기타'
 };
 
 function getReviewPriority(request: any) {
@@ -88,12 +97,12 @@ export default async function OrganizationRequestsPage() {
                 {request.business_registration_verified_number ? <Badge tone="blue">추출 번호 {formatBusinessNumber(request.business_registration_verified_number)}</Badge> : null}
               </div>
               <div className="mt-3 grid gap-1 text-sm text-slate-600 md:grid-cols-2">
-                <p>조직 유형: {request.organization_kind ?? '-'}</p>
+                <p>조직 유형: {kindLabels[request.organization_kind] ?? request.organization_kind ?? '-'}</p>
+                <p>업종 상세: {request.organization_industry ?? '-'}</p>
                 <p>사업자등록번호: {formatBusinessNumber(request.business_number)}</p>
                 <p>대표자: {request.representative_name ?? '-'} / {request.representative_title ?? '-'}</p>
                 <p>전화: {request.contact_phone ?? '-'}</p>
                 <p>웹사이트: {request.website_url ?? '-'}</p>
-                <p>요청 모듈: {Array.isArray(request.requested_modules) ? request.requested_modules.join(', ') || '-' : '-'}</p>
                 <p>
                   제출 문서: {request.business_registration_document_name ? (
                     <a href={`/api/organization-signup-requests/${request.id}/document`} className="font-medium text-slate-900 underline underline-offset-4">
@@ -112,18 +121,33 @@ export default async function OrganizationRequestsPage() {
               </div>
               {request.status === 'pending' ? (
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <form action={reviewOrganizationSignupRequestAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+                  <ClientActionForm
+                    action={reviewOrganizationSignupRequestAction}
+                    successTitle="조직 가입 신청이 승인되었습니다."
+                    successMessage="새 조직이 생성되고 신청자에게 알림이 발송됩니다."
+                    errorTitle="승인 처리에 실패했습니다."
+                    errorCause="이미 처리된 신청이거나 조직 생성 중 오류가 발생했습니다."
+                    errorResolution="신청 상태를 새로고침하고 다시 시도해 주세요."
+                    className="space-y-3 rounded-xl border border-slate-200 p-4"
+                  >
                     <input type="hidden" name="requestId" value={request.id} />
                     <input type="hidden" name="decision" value="approved" />
                     <textarea name="reviewNote" placeholder="승인 메모" className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                     <SubmitButton pendingLabel="승인 중...">승인하고 조직 생성</SubmitButton>
-                  </form>
-                  <form action={reviewOrganizationSignupRequestAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+                  </ClientActionForm>
+                  <ClientActionForm
+                    action={reviewOrganizationSignupRequestAction}
+                    successTitle="조직 가입 신청이 반려되었습니다."
+                    errorTitle="반려 처리에 실패했습니다."
+                    errorCause="이미 처리된 신청이거나 서버 오류가 발생했습니다."
+                    errorResolution="신청 상태를 새로고침하고 다시 시도해 주세요."
+                    className="space-y-3 rounded-xl border border-slate-200 p-4"
+                  >
                     <input type="hidden" name="requestId" value={request.id} />
                     <input type="hidden" name="decision" value="rejected" />
                     <textarea name="reviewNote" placeholder="반려 사유" className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                     <SubmitButton variant="destructive" pendingLabel="반려 중...">반려하기</SubmitButton>
-                  </form>
+                  </ClientActionForm>
                 </div>
               ) : request.reviewed_note ? (
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
@@ -154,18 +178,33 @@ export default async function OrganizationRequestsPage() {
               <p className="mt-1 text-xs text-slate-400">요청 시각: {formatDateTime(item.created_at)}</p>
               {item.status === 'pending' ? (
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <form action={reviewOrganizationExitRequestAction} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                  <ClientActionForm
+                    action={reviewOrganizationExitRequestAction}
+                    successTitle="조직 탈퇴 신청이 승인되었습니다."
+                    successMessage="해당 조직의 탈퇴 절차가 진행됩니다."
+                    errorTitle="탈퇴 신청 승인에 실패했습니다."
+                    errorCause="이미 처리된 신청이거나 서버 오류가 발생했습니다."
+                    errorResolution="잠시 후 다시 시도해 주세요."
+                    className="space-y-2 rounded-xl border border-slate-200 p-3"
+                  >
                     <input type="hidden" name="requestId" value={item.id} />
                     <input type="hidden" name="decision" value="approved" />
                     <textarea name="reviewNote" placeholder="승인 메모" className="min-h-20 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                     <SubmitButton pendingLabel="승인 중...">승인</SubmitButton>
-                  </form>
-                  <form action={reviewOrganizationExitRequestAction} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                  </ClientActionForm>
+                  <ClientActionForm
+                    action={reviewOrganizationExitRequestAction}
+                    successTitle="조직 탈퇴 신청이 반려되었습니다."
+                    errorTitle="탈퇴 신청 반려에 실패했습니다."
+                    errorCause="이미 처리된 신청이거나 서버 오류가 발생했습니다."
+                    errorResolution="잠시 후 다시 시도해 주세요."
+                    className="space-y-2 rounded-xl border border-slate-200 p-3"
+                  >
                     <input type="hidden" name="requestId" value={item.id} />
                     <input type="hidden" name="decision" value="rejected" />
                     <textarea name="reviewNote" placeholder="반려 사유" className="min-h-20 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                     <SubmitButton variant="destructive" pendingLabel="반려 중...">반려</SubmitButton>
-                  </form>
+                  </ClientActionForm>
                 </div>
               ) : item.reviewed_note ? (
                 <p className="mt-3 text-sm text-slate-600">검토 메모: {item.reviewed_note}</p>

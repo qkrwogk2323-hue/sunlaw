@@ -2,12 +2,13 @@ import { addPartyAction } from '@/lib/actions/case-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function PartyCreateForm({ caseId }: { caseId: string }) {
   const action = addPartyAction.bind(null, caseId);
 
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="당사자가 등록되었습니다." className="grid gap-3 md:grid-cols-2">
       <select name="partyRole" defaultValue="debtor" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="creditor">채권자</option>
         <option value="debtor">채무자</option>
@@ -37,6 +38,6 @@ export function PartyCreateForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="등록 중...">당사자 등록</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

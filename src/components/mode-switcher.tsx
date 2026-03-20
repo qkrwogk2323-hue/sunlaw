@@ -39,7 +39,7 @@ const groupAccent = {
 
 const baseModeOptions = [
   { key: 'law_admin', label: '법률/법무조직' },
-  { key: 'collection_admin', label: '추심조직' },
+  { key: 'collection_admin', label: '신용정보회사' },
   { key: 'other_admin', label: '기타조직' },
   { key: 'organization_staff', label: '직원모드' },
   { key: 'client_communication', label: '의뢰인 모드' }
@@ -74,7 +74,7 @@ export function ModeSwitcher({ mode, onChange }: { mode: ModeKey; onChange: (val
         icon: Building2,
         children: [
           { key: 'law_admin', label: '법률/법무 조직 관리자' },
-          { key: 'collection_admin', label: '추심 조직 관리자' },
+          { key: 'collection_admin', label: '신용정보사 관리자' },
           { key: 'other_admin', label: '기타 조직 관리자' },
           { key: 'organization_staff', label: '조직 담당자' }
         ]

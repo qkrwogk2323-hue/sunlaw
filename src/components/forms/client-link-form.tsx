@@ -2,12 +2,13 @@ import { linkClientAction } from '@/lib/actions/case-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function ClientLinkForm({ caseId }: { caseId: string }) {
   const action = linkClientAction.bind(null, caseId);
 
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="의뢰인이 연결되었습니다." className="grid gap-3 md:grid-cols-2">
       <Input name="email" type="email" placeholder="클라이언트 이메일" required />
       <Input name="clientName" placeholder="표시명(선택)" />
       <Input name="relationLabel" placeholder="관계 라벨 예: 의뢰인, 담당자" className="md:col-span-2" />
@@ -31,6 +32,6 @@ export function ClientLinkForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="연결 중...">클라이언트 연결</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

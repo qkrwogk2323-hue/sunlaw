@@ -126,7 +126,7 @@ export default async function SignupGuidePage({
                 <CardTitle className="mt-4 text-2xl">조직 생성 신청</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm leading-7 text-slate-600">법률사무소, 추심사, 금융사 등 조직 단위 운영을 시작하는 경로입니다.</p>
+                <p className="text-sm leading-7 text-slate-600">법률사무소, 신용정보회사, 금융사 등 조직 단위 운영을 시작하는 경로입니다.</p>
                 <Link href={'/start/signup?flow=organization' as Route} className={buttonStyles({ className: 'min-h-14 w-full justify-between rounded-[1.25rem] px-5 text-base' })}>
                   조직 생성 신청 단계 보기
                   <ArrowRight className="size-4" />

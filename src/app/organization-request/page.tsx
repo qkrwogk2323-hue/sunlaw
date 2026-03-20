@@ -51,6 +51,7 @@ export default async function OrganizationRequestPage({ searchParams }: { search
     id: string;
     organization_name: string;
     organization_kind: string;
+    organization_industry: string | null;
     requester_email: string | null;
     business_number: string | null;
     representative_name: string | null;
@@ -118,6 +119,7 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                     <p className="font-medium text-slate-900">현재 신청명</p>
                     <p className="mt-1">{activePendingRequest.organization_name}</p>
                     <p className="mt-3 text-slate-500">사업자번호: {formatBusinessNumber(activePendingRequest.business_number)}</p>
+                    <p className="text-slate-500">업종 상세: {activePendingRequest.organization_industry ?? '-'}</p>
                     <p className="text-slate-500">제출 문서: {activePendingRequest.business_registration_document_name ?? '-'}</p>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -135,13 +137,13 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                   defaultValues={editingRequest ? {
                     name: editingRequest.organization_name,
                     kind: editingRequest.organization_kind,
+                    organizationIndustry: editingRequest.organization_industry,
                     businessNumber: editingRequest.business_number,
                     representativeName: editingRequest.representative_name,
                     representativeTitle: editingRequest.representative_title,
                     email: editingRequest.requester_email,
                     phone: editingRequest.contact_phone,
                     websiteUrl: editingRequest.website_url,
-                    requestedModules: editingRequest.requested_modules,
                     note: editingRequest.note
                   } : undefined}
                   existingDocumentName={editingRequest?.business_registration_document_name}
@@ -176,6 +178,7 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                     <Badge tone="blue">사업자번호 {formatBusinessNumber(request.business_number)}</Badge>
                   </div>
                   <p className="mt-3 text-slate-500">자동 대조 메모: {request.business_registration_verification_note ?? '-'}</p>
+                  <p className="text-slate-500">업종 상세: {request.organization_industry ?? '-'}</p>
                   <p className="text-slate-500">
                     제출 문서: {request.business_registration_document_name ? (
                       <a href={`/api/organization-signup-requests/${request.id}/document`} className="font-medium text-slate-900 underline underline-offset-4">

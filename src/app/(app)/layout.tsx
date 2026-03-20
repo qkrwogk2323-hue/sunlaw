@@ -13,6 +13,7 @@ import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
 import { GlobalCommandPalette } from '@/components/global-command-palette';
 import { FloatingExportWidget } from '@/components/floating-export-widget';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
+    <ToastProvider>
     <div className="vs-shell min-h-screen">
       <div className="mx-auto grid min-h-screen max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
         <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
@@ -87,5 +89,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

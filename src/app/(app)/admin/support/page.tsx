@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { SupportRequestForm } from '@/components/forms/support-request-form';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser, isManagementRole } from '@/lib/auth';
 import { listAccessibleOrganizations } from '@/lib/queries/organizations';
@@ -73,26 +75,56 @@ export default async function SupportPage() {
 
                 {canApprove ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <form action={decideSupportRequestAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+                    <ClientActionForm
+                      action={decideSupportRequestAction}
+                      successTitle="지원 요청이 승인되었습니다."
+                      successMessage="플랫폼 관리자가 지원 접속을 진행할 수 있습니다."
+                      errorTitle="승인 처리에 실패했습니다."
+                      errorCause="이미 처리된 요청이거나 서버 오류가 발생했습니다."
+                      errorResolution="요청 상태를 새로고침하고 다시 시도해 주세요."
+                      className="space-y-3 rounded-xl border border-slate-200 p-4"
+                    >
                       <input type="hidden" name="requestId" value={request.id} />
                       <input type="hidden" name="decision" value="approved" />
                       <textarea name="approvalNote" placeholder="승인 메모" className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                       <SubmitButton pendingLabel="승인 중...">승인</SubmitButton>
-                    </form>
-                    <form action={decideSupportRequestAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+                    </ClientActionForm>
+                    <ClientActionForm
+                      action={decideSupportRequestAction}
+                      successTitle="지원 요청이 반려되었습니다."
+                      errorTitle="반려 처리에 실패했습니다."
+                      errorCause="이미 처리된 요청이거나 서버 오류가 발생했습니다."
+                      errorResolution="요청 상태를 새로고침하고 다시 시도해 주세요."
+                      className="space-y-3 rounded-xl border border-slate-200 p-4"
+                    >
                       <input type="hidden" name="requestId" value={request.id} />
                       <input type="hidden" name="decision" value="rejected" />
                       <textarea name="approvalNote" placeholder="반려 사유" className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                       <SubmitButton variant="destructive" pendingLabel="반려 중...">반려</SubmitButton>
-                    </form>
+                    </ClientActionForm>
                   </div>
                 ) : null}
 
                 {canConsume ? (
-                  <form action={beginSupportSessionAction} className="mt-4">
-                    <input type="hidden" name="requestId" value={request.id} />
-                    <SubmitButton pendingLabel="접속 시작 중...">지원 접속 시작</SubmitButton>
-                  </form>
+                  <div className="mt-4">
+                    <DangerActionButton
+                      action={beginSupportSessionAction}
+                      fields={{ requestId: request.id }}
+                      confirmTitle="지원 접속을 시작할까요?"
+                      confirmDescription={`'${request.target_name_snapshot}' 사용자 계정에 한시적으로 접속합니다. 모든 지원 접속은 감사 로그에 기록됩니다.`}
+                      highlightedInfo={`${request.target_name_snapshot} · ${request.target_email_snapshot}`}
+                      confirmLabel="지원 접속 시작"
+                      variant="warning"
+                      successTitle="지원 접속이 시작되었습니다."
+                      successMessage="대시보드에서 지원 접속 상태가 표시됩니다."
+                      errorTitle="지원 접속 시작에 실패했습니다."
+                      errorCause="요청이 만료되었거나 이미 사용된 요청입니다."
+                      errorResolution="요청 만료 시각을 확인하고, 필요하면 새 요청을 생성해 주세요."
+                      buttonVariant="primary"
+                    >
+                      지원 접속 시작
+                    </DangerActionButton>
+                  </div>
                 ) : null}
               </div>
             );

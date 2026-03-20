@@ -93,7 +93,7 @@ export const moduleCatalog: ModuleCatalogGroup[] = [
         key: 'collections_core',
         name: '채권추심 운영',
         summary: '회수 사건, 접촉 내역, 회수 성과를 하나의 운영 보드에서 관리합니다.',
-        audience: '채권추심사, 추심 조직 관리자',
+        audience: '신용정보사, 신용정보회사 관리자',
         defaultStatus: '업종 선택 시 기본 노출',
         route: '/collections',
         submodules: ['회수 사건 보드', '접촉 기록', '분할상환 추적', '회수 성과'],

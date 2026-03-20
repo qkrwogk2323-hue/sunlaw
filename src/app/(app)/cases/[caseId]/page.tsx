@@ -17,6 +17,7 @@ import { RecoveryCreateForm } from '@/components/forms/recovery-create-form';
 import { RequestCreateForm } from '@/components/forms/request-create-form';
 import { ScheduleCreateForm } from '@/components/forms/schedule-create-form';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { CaseDetailHubConnectButton } from '@/components/case-detail-hub-connect-button';
 import { findMembership, requireAuthenticatedUser } from '@/lib/auth';
 import { requestDocumentReviewAction, updateCaseStageAction } from '@/lib/actions/case-actions';
@@ -344,7 +345,15 @@ export default async function CaseDetailPage({
         <Card>
           <CardHeader><CardTitle>사건 단계 관리</CardTitle></CardHeader>
           <CardContent>
-            <form action={updateCaseStageAction} className="grid gap-3 lg:grid-cols-[220px_1fr_auto] lg:items-end">
+            <ClientActionForm
+              action={updateCaseStageAction}
+              successTitle="사건 단계가 저장되었습니다."
+              successMessage="변경된 단계가 타임라인에 기록됩니다."
+              errorTitle="단계 저장에 실패했습니다."
+              errorCause="권한 부족 또는 서버 오류가 발생했습니다."
+              errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
+              className="grid gap-3 lg:grid-cols-[220px_1fr_auto] lg:items-end"
+            >
               <input type="hidden" name="caseId" value={caseId} />
               <input type="hidden" name="organizationId" value={caseDetail.organization_id} />
               <label className="grid gap-1 text-sm text-slate-600">
@@ -365,7 +374,7 @@ export default async function CaseDetailPage({
                 />
               </label>
               <SubmitButton pendingLabel="저장 중...">단계 저장</SubmitButton>
-            </form>
+            </ClientActionForm>
           </CardContent>
         </Card>
       ) : null}
@@ -501,9 +510,17 @@ export default async function CaseDetailPage({
                     {document.reviewed_at ? <p>최종 검토: {document.reviewed_by_name ?? '-'} · {formatDateTime(document.reviewed_at)}</p> : null}
                   </div>
                   {canManage && ['draft', 'rejected', 'stale'].includes(document.approval_status) ? (
-                    <form action={requestDocumentReviewAction.bind(null, document.id)} className="mt-4">
+                    <ClientActionForm
+                      action={requestDocumentReviewAction.bind(null, document.id)}
+                      successTitle="결재 요청이 등록되었습니다."
+                      successMessage="검토자에게 알림이 발송됩니다."
+                      errorTitle="결재 요청에 실패했습니다."
+                      errorCause="이미 검토 중인 문서이거나 권한이 없습니다."
+                      errorResolution="문서 상태를 확인하고 다시 시도해 주세요."
+                      className="mt-4"
+                    >
                       <SubmitButton variant="secondary" pendingLabel="요청 중...">결재 요청</SubmitButton>
-                    </form>
+                    </ClientActionForm>
                   ) : null}
                 </div>
               )) : <p className="text-sm text-slate-500">등록된 문서가 없습니다.</p>}

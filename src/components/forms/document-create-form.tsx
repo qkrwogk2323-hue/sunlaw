@@ -2,12 +2,13 @@ import { addDocumentAction } from '@/lib/actions/case-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function DocumentCreateForm({ caseId }: { caseId: string }) {
   const action = addDocumentAction.bind(null, caseId);
 
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="문서가 등록되었습니다." className="grid gap-3 md:grid-cols-2">
       <Input name="title" placeholder="문서 제목" required className="md:col-span-2" />
       <select name="documentKind" defaultValue="brief" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="complaint">소장</option>
@@ -31,6 +32,6 @@ export function DocumentCreateForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="문서 저장 중...">문서 등록</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

@@ -1,8 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useContext } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button, type ButtonProps, type ButtonVariant } from '@/components/ui/button';
+import { ActionFormPendingContext } from '@/components/ui/client-action-form';
 
 export function SubmitButton({
   children,
@@ -19,7 +21,9 @@ export function SubmitButton({
   className?: string;
   disabled?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const contextPending = useContext(ActionFormPendingContext);
+  const pending = formPending || contextPending;
   return (
     <Button type="submit" variant={variant} size={size} isLoading={pending} disabled={disabled} className={className}>
       {pending ? pendingLabel : children}

@@ -9,6 +9,7 @@ import { getCaseClientLinkedMap, listCases, purgeDeletedCasesPastRetention } fro
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
@@ -176,28 +177,43 @@ export default async function CasesPage({
                 </Link>
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                   {bucket !== 'deleted' ? (
-                    <form action={moveCaseToDeletedAction}>
-                      <input type="hidden" name="caseId" value={item.id} />
-                      <input type="hidden" name="organizationId" value={item.organization_id} />
-                      <button
-                        type="submit"
-                        className="inline-flex h-9 items-center rounded-lg border border-rose-200 bg-rose-50 px-3 text-sm font-medium text-rose-700 hover:bg-rose-100"
-                      >
-                        삭제함 이동
-                      </button>
-                    </form>
+                    <DangerActionButton
+                      action={moveCaseToDeletedAction}
+                      fields={{ caseId: item.id, organizationId: item.organization_id }}
+                      confirmTitle="사건을 삭제함으로 이동할까요?"
+                      confirmDescription="삭제함으로 이동된 사건은 30일 후 자동으로 영구 삭제됩니다. 그 전에 삭제함에서 복원할 수 있습니다."
+                      highlightedInfo={item.title}
+                      confirmLabel="삭제함 이동"
+                      variant="warning"
+                      undoNote="삭제함으로 이동한 뒤에도 '삭제함' 탭에서 복원할 수 있습니다."
+                      successTitle="삭제함으로 이동했습니다."
+                      successMessage={`'${item.title}' 사건이 삭제함에 보관됩니다.`}
+                      errorTitle="삭제함 이동에 실패했습니다."
+                      errorCause="서버 처리 중 문제가 발생했습니다."
+                      errorResolution="잠시 후 다시 시도하거나 페이지를 새로고침 해주세요."
+                      buttonVariant="secondary"
+                      className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                    >
+                      삭제함 이동
+                    </DangerActionButton>
                   ) : null}
                   {bucket === 'deleted' ? (
-                    <form action={forceDeleteCaseAction}>
-                      <input type="hidden" name="caseId" value={item.id} />
-                      <input type="hidden" name="organizationId" value={item.organization_id} />
-                      <button
-                        type="submit"
-                        className="inline-flex h-9 items-center rounded-lg border border-rose-300 bg-white px-3 text-sm font-medium text-rose-700 hover:bg-rose-50"
-                      >
-                        강제삭제
-                      </button>
-                    </form>
+                    <DangerActionButton
+                      action={forceDeleteCaseAction}
+                      fields={{ caseId: item.id, organizationId: item.organization_id }}
+                      confirmTitle="사건을 영구 삭제할까요?"
+                      confirmDescription="이 작업은 되돌릴 수 없습니다. 사건에 연결된 모든 문서·청구·메시지 기록도 함께 영구 삭제됩니다."
+                      highlightedInfo={item.title}
+                      confirmLabel="영구 삭제"
+                      variant="danger"
+                      successTitle="사건이 영구 삭제되었습니다."
+                      errorTitle="영구 삭제에 실패했습니다."
+                      errorCause="서버 처리 중 문제가 발생했습니다."
+                      errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
+                      buttonVariant="destructive"
+                    >
+                      영구 삭제
+                    </DangerActionButton>
                   ) : null}
                 </div>
               </div>

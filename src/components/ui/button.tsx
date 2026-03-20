@@ -1,14 +1,25 @@
-import * as React from 'react';
+import type { ButtonHTMLAttributes } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
+  /**
+   * 마우스 호버 / 포커스 시 표시할 툴팁.
+   * 실제 렌더링은 EnhancedButton (tooltip 인터랙션 필요 시) 또는
+   * DangerActionButton 등 'use client' 컴포넌트에서 처리됩니다.
+   */
+  tooltip?: string;
+  /**
+   * disabled 상태일 때 표시할 이유 (스크린리더 + 툴팁).
+   * 실제 렌더링은 EnhancedButton에서 처리됩니다.
+   */
+  disabledReason?: string;
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -62,6 +73,12 @@ export function Button({
   type = 'button',
   disabled,
   isLoading = false,
+  // tooltip/disabledReason are typed here for prop-passing convenience but
+  // interactive rendering is handled by EnhancedButton ('use client' wrapper).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  tooltip: _tooltip,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  disabledReason: _disabledReason,
   ...props
 }: ButtonProps) {
   return (

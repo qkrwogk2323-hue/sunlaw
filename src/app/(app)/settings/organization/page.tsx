@@ -16,6 +16,7 @@ import {
 } from '@/lib/actions/settings-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 const kindLabel: Record<string, string> = {
   platform_management: '플랫폼 관리조직',
@@ -78,7 +79,14 @@ export default async function OrganizationSettingsPage({
             <Card>
               <CardHeader><CardTitle>회사소개 수정</CardTitle></CardHeader>
               <CardContent>
-                <form action={updateOrganizationIntroAction} className="space-y-3">
+                <ClientActionForm
+                  action={updateOrganizationIntroAction}
+                  successTitle="회사소개가 저장되었습니다."
+                  errorTitle="회사소개 저장에 실패했습니다."
+                  errorCause="입력값 검증 또는 서버 오류"
+                  errorResolution="내용을 다시 확인하고 저장해 주세요."
+                  className="space-y-3"
+                >
                   <input type="hidden" name="organizationId" value={organizationId} />
                   <textarea
                     name="intro"
@@ -87,7 +95,7 @@ export default async function OrganizationSettingsPage({
                     className="min-h-40 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                   />
                   <SubmitButton pendingLabel="저장 중...">회사소개 저장</SubmitButton>
-                </form>
+                </ClientActionForm>
               </CardContent>
             </Card>
           ) : null}
@@ -96,7 +104,14 @@ export default async function OrganizationSettingsPage({
             <Card>
               <CardHeader><CardTitle>회사정보 수정</CardTitle></CardHeader>
               <CardContent>
-                <form action={updateOrganizationProfileAction} className="grid gap-3 md:grid-cols-2">
+                <ClientActionForm
+                  action={updateOrganizationProfileAction}
+                  successTitle="회사정보가 저장되었습니다."
+                  errorTitle="회사정보 저장에 실패했습니다."
+                  errorCause="필수 항목 누락 또는 서버 오류"
+                  errorResolution="입력값을 확인하고 다시 저장해 주세요."
+                  className="grid gap-3 md:grid-cols-2"
+                >
                   <input type="hidden" name="organizationId" value={organizationId} />
                   <label className="text-sm text-slate-600">회사명
                     <input name="name" defaultValue={workspace.organization.name ?? ''} required className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
@@ -159,7 +174,7 @@ export default async function OrganizationSettingsPage({
                   <div className="md:col-span-2">
                     <SubmitButton pendingLabel="저장 중...">회사정보 저장</SubmitButton>
                   </div>
-                </form>
+                </ClientActionForm>
               </CardContent>
             </Card>
           ) : null}
@@ -202,7 +217,15 @@ export default async function OrganizationSettingsPage({
               {latestExitRequest.reviewed_note ? <p className="mt-1 text-slate-600">검토 메모: {latestExitRequest.reviewed_note}</p> : null}
             </div>
           ) : null}
-          <form action={createOrganizationExitRequestAction} className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
+          <ClientActionForm
+            action={createOrganizationExitRequestAction}
+            successTitle="탈퇴 신청이 접수되었습니다."
+            successMessage="플랫폼 관리자 검토 후 처리됩니다. 승인 전까지 조직 운영은 유지됩니다."
+            errorTitle="탈퇴 신청에 실패했습니다."
+            errorCause="이미 대기 중인 신청이 있거나 서버 오류가 발생했습니다."
+            errorResolution="기존 신청 상태를 확인하거나 잠시 후 다시 시도해 주세요."
+            className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4"
+          >
             <input type="hidden" name="organizationId" value={organizationId} />
             <textarea
               name="reason"
@@ -211,7 +234,7 @@ export default async function OrganizationSettingsPage({
               className="min-h-24 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
             />
             <SubmitButton variant="destructive" pendingLabel="신청 중...">플랫폼 관리자 승인 요청</SubmitButton>
-          </form>
+          </ClientActionForm>
         </CardContent>
       </Card>
 
@@ -220,7 +243,15 @@ export default async function OrganizationSettingsPage({
           <CardTitle>조직 비활성화 / 삭제</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <form action={deactivateOrganizationAction} className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <ClientActionForm
+            action={deactivateOrganizationAction}
+            successTitle="조직이 비활성화되었습니다."
+            successMessage="새 작업이 중지되고 운영 대상에서 제외됩니다."
+            errorTitle="비활성화에 실패했습니다."
+            errorCause="확인 문구가 틀렸거나 권한이 없습니다."
+            errorResolution="확인 문구 '비활성화'를 정확히 입력했는지 확인해 주세요."
+            className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4"
+          >
             <input type="hidden" name="organizationId" value={organizationId} />
             <p className="text-sm text-slate-700">조직을 비활성화하면 새 작업이 중지되고 목록에서 운영 대상에서 제외됩니다.</p>
             <label className="block text-xs font-medium text-slate-600">
@@ -233,9 +264,17 @@ export default async function OrganizationSettingsPage({
               />
             </label>
             <SubmitButton pendingLabel="비활성화 중..." variant="secondary">조직 비활성화</SubmitButton>
-          </form>
+          </ClientActionForm>
 
-          <form action={deleteOrganizationAction} className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
+          <ClientActionForm
+            action={deleteOrganizationAction}
+            successTitle="조직 삭제 처리가 완료되었습니다."
+            successMessage="활성 구성원 상태와 기본 조직 연결이 해제되었습니다."
+            errorTitle="조직 삭제에 실패했습니다."
+            errorCause="확인 문구가 틀렸거나 권한이 없습니다."
+            errorResolution="확인 문구 '삭제'를 정확히 입력했는지 확인하고, 문제가 지속되면 관리자에게 문의해 주세요."
+            className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4"
+          >
             <input type="hidden" name="organizationId" value={organizationId} />
             <p className="text-sm text-slate-700">조직 삭제는 안전 삭제로 처리되며, 활성 구성원 상태와 기본 조직 연결을 해제합니다.</p>
             <label className="block text-xs font-medium text-slate-600">
@@ -248,7 +287,7 @@ export default async function OrganizationSettingsPage({
               />
             </label>
             <SubmitButton pendingLabel="삭제 처리 중..." variant="destructive">조직 삭제</SubmitButton>
-          </form>
+          </ClientActionForm>
         </CardContent>
       </Card>
     </div>

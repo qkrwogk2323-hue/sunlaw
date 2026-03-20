@@ -2,11 +2,12 @@ import { addFeeAgreementAction } from '@/lib/actions/case-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function FeeAgreementForm({ caseId }: { caseId: string }) {
   const action = addFeeAgreementAction.bind(null, caseId);
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="비용 약정이 등록되었습니다." className="grid gap-3 md:grid-cols-2">
       <select name="agreementType" defaultValue="retainer" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="retainer">착수금</option>
         <option value="flat_fee">정액 보수</option>
@@ -31,6 +32,6 @@ export function FeeAgreementForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="등록 중...">약정 등록</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

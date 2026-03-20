@@ -10,6 +10,7 @@ import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/toast-provider';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 
@@ -326,12 +327,16 @@ function useDashboardPlannerState({
   organizationId,
   caseOptions,
   memberOptions,
-  router
+  router,
+  onSuccess,
+  onError
 }: {
   organizationId: string | null;
   caseOptions: CaseOption[];
   memberOptions: Array<{ membershipId: string; profileId: string; label: string; roleLabel: string }>;
   router: ReturnType<typeof useRouter>;
+  onSuccess: (title: string, opts?: { message?: string }) => void;
+  onError: (title: string, opts?: { message?: string }) => void;
 }) {
   const [plannerEnabled, setPlannerEnabled] = useState(true);
   const [plannerInput, setPlannerInput] = useState('');
@@ -344,29 +349,35 @@ function useDashboardPlannerState({
 
   const commitPlanner = () => {
     if (!organizationId || !plannerPreview || !plannerCaseId) return;
-    if (!window.confirm('이렇게 바꿀까요?')) return;
 
     startPlannerTransition(async () => {
-      const response = await fetch('/api/dashboard-ai/commit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId,
-          caseId: plannerCaseId,
-          content: plannerInput,
-          title: plannerPreview.title,
-          summary: plannerPreview.summary,
-          dueAt: plannerPreview.dueAt,
-          scheduleKind: plannerPreview.scheduleKind,
-          isImportant: plannerPreview.isImportant,
-          recipientMembershipId: plannerRecipientMembershipId || null
-        })
-      });
+      try {
+        const response = await fetch('/api/dashboard-ai/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId,
+            caseId: plannerCaseId,
+            content: plannerInput,
+            title: plannerPreview.title,
+            summary: plannerPreview.summary,
+            dueAt: plannerPreview.dueAt,
+            scheduleKind: plannerPreview.scheduleKind,
+            isImportant: plannerPreview.isImportant,
+            recipientMembershipId: plannerRecipientMembershipId || null
+          })
+        });
 
-      if (response.ok) {
-        setPlannerInput('');
-        setPlannerPreview(null);
-        router.refresh();
+        if (response.ok) {
+          setPlannerInput('');
+          setPlannerPreview(null);
+          router.refresh();
+          onSuccess('AI 플래너 일정이 등록되었습니다.', { message: `"${plannerPreview.title}" 일정이 사건에 추가되었습니다.` });
+        } else {
+          onError('일정 등록에 실패했습니다.', { message: '잠시 후 다시 시도해 주세요.' });
+        }
+      } catch {
+        onError('일정 등록 중 오류가 발생했습니다.', { message: '네트워크 연결을 확인하고 다시 시도해 주세요.' });
       }
     });
   };
@@ -418,13 +429,17 @@ function useDashboardCommunicationState({
   currentUserId,
   scenarioMode,
   data,
-  router
+  router,
+  onSuccess,
+  onError
 }: {
   organizationId: string | null;
   currentUserId: string;
   scenarioMode?: PlatformScenarioMode | null;
   data: DashboardSnapshot;
   router: ReturnType<typeof useRouter>;
+  onSuccess: (title: string, opts?: { message?: string }) => void;
+  onError: (title: string, opts?: { message?: string }) => void;
 }) {
   const ALL_RECIPIENT_MEMBERSHIP_ID = '__all__';
   const [messageCaseId, setMessageCaseId] = useState(data.caseOptions[0]?.id ?? '');
@@ -658,6 +673,9 @@ function useDashboardCommunicationState({
       if ((Array.isArray(response) && response.every((item) => item.ok)) || (!Array.isArray(response) && response.ok)) {
         setMessageInput('');
         router.refresh();
+        onSuccess('메시지가 전송되었습니다.');
+      } else {
+        onError('메시지 전송에 실패했습니다.', { message: '잠시 후 다시 시도해 주세요.' });
       }
     });
   };
@@ -773,27 +791,33 @@ function useDashboardCommunicationState({
     }
 
     if (!organizationId) return;
-    if (!window.confirm('이렇게 바꿀까요?')) return;
 
     startCoordinationTransition(async () => {
-      const response = await fetch('/api/dashboard-ai/coordination-commit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId,
-          caseId: messageCaseId,
-          title: `오늘 대화 AI 정리 · ${selectedMessageCase?.title ?? '사건 대화'}`,
-          summary: coordinationPreview.summary,
-          recipientMode: activeOrgRecipient ? 'one' : 'self',
-          recipientMembershipId: activeOrgRecipient?.membershipId ?? null,
-          selectedItems
-        })
-      });
+      try {
+        const response = await fetch('/api/dashboard-ai/coordination-commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId,
+            caseId: messageCaseId,
+            title: `오늘 대화 AI 정리 · ${selectedMessageCase?.title ?? '사건 대화'}`,
+            summary: coordinationPreview.summary,
+            recipientMode: activeOrgRecipient ? 'one' : 'self',
+            recipientMembershipId: activeOrgRecipient?.membershipId ?? null,
+            selectedItems
+          })
+        });
 
-      if (response.ok) {
-        setCoordinationPreview(null);
-        setSelectedChecklistIds([]);
-        router.refresh();
+        if (response.ok) {
+          setCoordinationPreview(null);
+          setSelectedChecklistIds([]);
+          router.refresh();
+          onSuccess('AI 조율 항목이 등록되었습니다.', { message: `${selectedItems.length}개 체크리스트가 사건 기록에 추가되었습니다.` });
+        } else {
+          onError('조율 항목 등록에 실패했습니다.', { message: '잠시 후 다시 시도해 주세요.' });
+        }
+      } catch {
+        onError('등록 중 오류가 발생했습니다.', { message: '네트워크 연결을 확인하고 다시 시도해 주세요.' });
       }
     });
   };
@@ -851,18 +875,23 @@ export function DashboardHubClient({
   data: DashboardSnapshot;
 }) {
   const router = useRouter();
+  const { success: toastSuccess, error: toastError } = useToast();
   const communication = useDashboardCommunicationState({
     organizationId,
     currentUserId,
     scenarioMode,
     data,
-    router
+    router,
+    onSuccess: toastSuccess,
+    onError: toastError
   });
   const planner = useDashboardPlannerState({
     organizationId,
     caseOptions: data.caseOptions,
     memberOptions: communication.memberOptions,
-    router
+    router,
+    onSuccess: toastSuccess,
+    onError: toastError
   });
   const {
     plannerEnabled,

@@ -2,12 +2,13 @@ import { addScheduleAction } from '@/lib/actions/case-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function ScheduleCreateForm({ caseId }: { caseId: string }) {
   const action = addScheduleAction.bind(null, caseId);
 
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="일정이 등록되었습니다." className="grid gap-3 md:grid-cols-2">
       <Input name="title" placeholder="일정 제목" required className="md:col-span-2" />
       <select name="scheduleKind" defaultValue="deadline" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="hearing">기일</option>
@@ -32,6 +33,6 @@ export function ScheduleCreateForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="일정 저장 중...">일정 등록</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

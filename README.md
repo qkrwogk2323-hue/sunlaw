@@ -58,6 +58,10 @@ pnpm check:migrations
 pnpm dev
 ```
 
+## UX Reference
+
+- 액션 설계 체크리스트: `docs/ux-action-checklist.md`
+
 ## CI
 
 - `pnpm check:all`은 마이그레이션 번호 검증, lint, typecheck, test, build를 한 번에 실행합니다.

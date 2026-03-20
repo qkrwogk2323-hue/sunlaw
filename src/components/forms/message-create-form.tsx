@@ -1,11 +1,12 @@
 import { addMessageAction } from '@/lib/actions/case-actions';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function MessageCreateForm({ caseId, allowInternal = true }: { caseId: string; allowInternal?: boolean }) {
   const action = addMessageAction.bind(null, caseId);
   return (
-    <form action={action} className="space-y-3">
+    <ClientActionForm action={action} successTitle="메시지가 등록되었습니다." className="space-y-3">
       <Textarea name="body" placeholder="사건별 메시지를 남기세요" />
       {allowInternal ? (
         <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -14,6 +15,6 @@ export function MessageCreateForm({ caseId, allowInternal = true }: { caseId: st
         </label>
       ) : null}
       <SubmitButton pendingLabel="전송 중...">메시지 등록</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

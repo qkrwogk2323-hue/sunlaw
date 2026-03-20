@@ -2,11 +2,12 @@ import { recordPaymentAction } from '@/lib/actions/case-actions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function PaymentRecordForm({ caseId }: { caseId: string }) {
   const action = recordPaymentAction.bind(null, caseId);
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="입금이 기록되었습니다." className="grid gap-3 md:grid-cols-2">
       <select name="payerPartyKind" defaultValue="case_client" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="case_client">의뢰인</option>
         <option value="case_organization">참여 조직</option>
@@ -27,6 +28,6 @@ export function PaymentRecordForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="기록 중...">입금 기록</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

@@ -10,7 +10,7 @@ export function CaseOrganizationForm({ caseId }: { caseId: string }) {
       <Input name="organizationId" placeholder="참여 조직 ID" required />
       <select name="role" defaultValue="partner_org" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="principal_client_org">주고객조직</option>
-        <option value="collection_org">추심조직</option>
+        <option value="collection_org">신용정보회사</option>
         <option value="legal_counsel_org">법률수행조직</option>
         <option value="co_counsel_org">공동수행조직</option>
         <option value="partner_org">기타 파트너조직</option>

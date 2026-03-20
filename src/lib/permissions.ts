@@ -85,7 +85,7 @@ export const TEMPLATE_LABELS: Record<string, string> = {
   admin_general: '관리자',
   lawyer: '변호사',
   office_manager: '사무장',
-  collection_agent: '추심직원',
+  collection_agent: '신용정보사',
   intern_readonly: '인턴/열람전용'
 };
 

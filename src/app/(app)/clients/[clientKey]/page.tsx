@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { createClientSpecialNoteAction, linkRelatedClientAction } from '@/lib/actions/client-management-actions';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
@@ -90,7 +91,15 @@ export default async function ClientDetailPage({
           <Card>
             <CardHeader><CardTitle>특이사항 추가</CardTitle></CardHeader>
             <CardContent>
-              <form action={createClientSpecialNoteAction} className="space-y-3">
+              <ClientActionForm
+                action={createClientSpecialNoteAction}
+                successTitle="특이사항이 추가되었습니다."
+                successMessage="의뢰인 누적 목록에 기록되었습니다."
+                errorTitle="특이사항 추가에 실패했습니다."
+                errorCause="내용이 비어 있거나 서버 오류가 발생했습니다."
+                errorResolution="내용을 입력하고 다시 시도해 주세요."
+                className="space-y-3"
+              >
                 <input type="hidden" name="organizationId" value={organizationId} />
                 <input type="hidden" name="clientKey" value={clientKey} />
                 <input type="hidden" name="returnPath" value={`/clients/${clientKey}`} />
@@ -109,7 +118,7 @@ export default async function ClientDetailPage({
                   required
                 />
                 <SubmitButton pendingLabel="저장 중..." className="w-full justify-center">누적 목록에 추가</SubmitButton>
-              </form>
+              </ClientActionForm>
             </CardContent>
           </Card>
         ) : null}
@@ -125,7 +134,14 @@ export default async function ClientDetailPage({
                       관련인 연동
                     </span>
                   </summary>
-                  <form action={linkRelatedClientAction} className="mt-3 w-[20rem] max-w-full space-y-2 rounded-xl border border-slate-200 p-3">
+                  <ClientActionForm
+                    action={linkRelatedClientAction}
+                    successTitle="관련인이 연동되었습니다."
+                    errorTitle="관련인 연동에 실패했습니다."
+                    errorCause="이미 연동된 의뢰인이거나 서버 오류가 발생했습니다."
+                    errorResolution="다른 의뢰인을 선택하거나 잠시 후 다시 시도해 주세요."
+                    className="mt-3 w-[20rem] max-w-full space-y-2 rounded-xl border border-slate-200 p-3"
+                  >
                     <input type="hidden" name="organizationId" value={organizationId} />
                     <input type="hidden" name="clientKey" value={clientKey} />
                     <input type="hidden" name="returnPath" value={`/clients/${clientKey}`} />
@@ -142,7 +158,7 @@ export default async function ClientDetailPage({
                       required
                     />
                     <SubmitButton pendingLabel="연동 중..." className="w-full justify-center">저장</SubmitButton>
-                  </form>
+                  </ClientActionForm>
                 </details>
               ) : null}
             </div>

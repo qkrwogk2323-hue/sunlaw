@@ -13,6 +13,8 @@ import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-fo
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -185,7 +187,14 @@ export default async function TeamSettingsPage({
                   ) : null}
                   {canManage && !row.isInviteOnly && row.raw.role !== 'org_owner' ? (
                     <>
-                      <form action={updateMembershipAdminSummaryAction}>
+                      <ClientActionForm
+                        action={updateMembershipAdminSummaryAction}
+                        successTitle={row.raw.status === 'suspended' ? '구성원을 활성화했습니다.' : '구성원을 비활성화했습니다.'}
+                        successMessage={row.raw.status === 'suspended' ? '조직 접근이 복원되었습니다.' : '해당 구성원의 조직 접근이 중지됩니다.'}
+                        errorTitle="상태 변경에 실패했습니다."
+                        errorCause="권한 부족 또는 서버 오류가 발생했습니다."
+                        errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
+                      >
                         <input type="hidden" name="organizationId" value={organizationId} />
                         <input type="hidden" name="membershipId" value={row.raw.id} />
                         <input type="hidden" name="actorCategory" value={row.raw.actor_category ?? 'staff'} />
@@ -194,14 +203,25 @@ export default async function TeamSettingsPage({
                         <SubmitButton variant="ghost" pendingLabel="처리 중..." className="h-8 px-3 text-xs">
                           {row.raw.status === 'suspended' ? '활성화' : '비활성화'}
                         </SubmitButton>
-                      </form>
-                      <form action={deleteMembershipAction}>
-                        <input type="hidden" name="organizationId" value={organizationId} />
-                        <input type="hidden" name="membershipId" value={row.raw.id} />
-                        <SubmitButton variant="ghost" pendingLabel="삭제 중..." className="h-8 px-3 text-xs text-rose-700">
-                          삭제
-                        </SubmitButton>
-                      </form>
+                      </ClientActionForm>
+                      <DangerActionButton
+                        action={deleteMembershipAction}
+                        fields={{ organizationId, membershipId: row.raw.id }}
+                        confirmTitle="구성원을 삭제할까요?"
+                        confirmDescription="이 구성원의 조직 접근 권한이 즉시 해제됩니다. 진행 중인 업무 인수인계 후 삭제를 권장합니다."
+                        highlightedInfo={`${row.raw.profile?.full_name ?? '-'} (${row.raw.profile?.email ?? '-'})`}
+                        confirmLabel="삭제"
+                        variant="danger"
+                        successTitle="구성원이 삭제되었습니다."
+                        successMessage="해당 구성원의 모든 접근 권한이 해제되었습니다."
+                        errorTitle="구성원 삭제에 실패했습니다."
+                        errorCause="서버 처리 중 오류가 발생했습니다."
+                        errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
+                        buttonVariant="ghost"
+                        className="h-8 px-3 text-xs text-rose-700 hover:bg-rose-50"
+                      >
+                        삭제
+                      </DangerActionButton>
                     </>
                   ) : null}
                 </div>

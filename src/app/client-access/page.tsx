@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 function kindLabel(kind: string | null | undefined) {
   if (kind === 'law_firm') return '법률 조직';
-  if (kind === 'collection_company') return '추심 조직';
+  if (kind === 'collection_company') return '신용정보회사';
   if (kind === 'mixed_practice') return '복합 운영 조직';
   return '일반 조직';
 }

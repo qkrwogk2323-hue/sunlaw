@@ -11,6 +11,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { ImmediateDeleteForm } from '@/components/notifications/immediate-delete-form';
 import { formatNotificationDate } from '@/lib/format';
 import { requireAuthenticatedUser } from '@/lib/auth';
@@ -99,24 +101,24 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         </a>
 
         {(item.status === 'active' || item.status === 'read') ? (
-          <form action={markNotificationResolvedAction}>
+          <ClientActionForm action={markNotificationResolvedAction} successTitle="해결 처리되었습니다.">
             <input type="hidden" name="notificationId" value={item.notificationId} />
             <SubmitButton variant="ghost" pendingLabel="처리 중..." className="h-8 px-3 text-xs">해결 처리</SubmitButton>
-          </form>
+          </ClientActionForm>
         ) : null}
 
         {item.status === 'active' ? (
-          <form action={markNotificationReadAction}>
+          <ClientActionForm action={markNotificationReadAction} successTitle="읽음으로 표시했습니다.">
             <input type="hidden" name="notificationId" value={item.notificationId} />
             <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">읽음 처리</SubmitButton>
-          </form>
+          </ClientActionForm>
         ) : null}
 
         {item.status === 'resolved' ? (
-          <form action={moveNotificationToTrashAction}>
+          <ClientActionForm action={moveNotificationToTrashAction} successTitle="보관함으로 이동했습니다.">
             <input type="hidden" name="notificationId" value={item.notificationId} />
             <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">완료함 이동</SubmitButton>
-          </form>
+          </ClientActionForm>
         ) : null}
       </div>
     </div>
@@ -313,9 +315,9 @@ export default async function NotificationsPage({
             선택 완료함 이동
           </button>
         </form>
-        <form action={markAllNotificationsReadAction}>
+        <ClientActionForm action={markAllNotificationsReadAction} successTitle="모든 알림을 확인 표시했습니다.">
           <SubmitButton variant="secondary" pendingLabel="반영 중...">모두 확인 표시</SubmitButton>
-        </form>
+        </ClientActionForm>
       </div>
 
       {queueView ? (
@@ -329,7 +331,14 @@ export default async function NotificationsPage({
       <Card className="border-slate-100">
         <CardHeader><CardTitle>알림 수신 설정</CardTitle></CardHeader>
         <CardContent>
-          <form action={updateNotificationChannelPreferenceAction} className="grid gap-3 md:grid-cols-2">
+          <ClientActionForm
+            action={updateNotificationChannelPreferenceAction}
+            successTitle="수신 설정이 저장되었습니다."
+            successMessage="변경된 설정이 즉시 적용됩니다."
+            errorTitle="수신 설정 저장에 실패했습니다."
+            errorResolution="잠시 후 다시 시도해 주세요."
+            className="grid gap-3 md:grid-cols-2"
+          >
             <label className="inline-flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" name="kakao_enabled" defaultChecked={Boolean(channelPreferences?.kakao_enabled)} className="size-4" />
               카카오톡 알림 받기
@@ -357,7 +366,7 @@ export default async function NotificationsPage({
             <div className="md:col-span-2">
               <SubmitButton pendingLabel="저장 중...">수신 설정 저장</SubmitButton>
             </div>
-          </form>
+          </ClientActionForm>
         </CardContent>
       </Card>
 
@@ -372,9 +381,23 @@ export default async function NotificationsPage({
                 ) : null}
               </div>
               {notificationCenter.trashedNotifications.length > 0 ? (
-                <form action={emptyNotificationTrashAction}>
-                  <SubmitButton variant="destructive" pendingLabel="비우는 중..." className="rounded-full px-5">보관함 비우기</SubmitButton>
-                </form>
+                <DangerActionButton
+                  action={emptyNotificationTrashAction}
+                  fields={{}}
+                  confirmTitle="보관함을 비울까요?"
+                  confirmDescription={`보관함의 알림 ${notificationCenter.trashedNotifications.length}건이 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`}
+                  confirmLabel="모두 삭제"
+                  variant="danger"
+                  successTitle="보관함을 비웠습니다."
+                  successMessage="보관된 알림이 모두 영구 삭제되었습니다."
+                  errorTitle="보관함 비우기에 실패했습니다."
+                  errorCause="서버 처리 중 오류가 발생했습니다."
+                  errorResolution="잠시 후 다시 시도해 주세요."
+                  buttonVariant="destructive"
+                  className="rounded-full px-5"
+                >
+                  보관함 비우기
+                </DangerActionButton>
               ) : null}
             </div>
           </CardHeader>
@@ -398,10 +421,16 @@ export default async function NotificationsPage({
                       <span>보관 {formatNotificationDate(notification.trashed_at)}</span>
                     </div>
                   </div>
-                  <form action={restoreNotificationAction} className="shrink-0">
+                  <ClientActionForm
+                    action={restoreNotificationAction}
+                    successTitle="알림이 복원되었습니다."
+                    errorTitle="복원에 실패했습니다."
+                    errorResolution="잠시 후 다시 시도해 주세요."
+                    className="shrink-0"
+                  >
                     <input type="hidden" name="notificationId" value={notification.id} />
                     <SubmitButton variant="secondary" pendingLabel="복원 중..." className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs">복원</SubmitButton>
-                  </form>
+                  </ClientActionForm>
                   <ImmediateDeleteForm notificationId={notification.id} />
                 </div>
               ))

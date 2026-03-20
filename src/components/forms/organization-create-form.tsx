@@ -8,7 +8,7 @@ export function OrganizationCreateForm() {
       <Input name="name" placeholder="조직명" required />
       <select name="kind" defaultValue="law_firm" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="law_firm">법률사무소/법무법인</option>
-        <option value="collection_company">추심회사</option>
+        <option value="collection_company">신용정보회사</option>
         <option value="mixed_practice">혼합형 조직</option>
         <option value="corporate_legal_team">기업 법무팀</option>
         <option value="other">기타</option>

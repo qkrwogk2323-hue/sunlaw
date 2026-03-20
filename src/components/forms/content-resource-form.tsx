@@ -1,9 +1,10 @@
 import { upsertContentResourceAction } from '@/lib/actions/settings-actions';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 
 export function ContentResourceForm({ organizationId, initial }: { organizationId?: string | null; initial?: any }) {
   return (
-    <form action={upsertContentResourceAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+    <ClientActionForm action={upsertContentResourceAction} successTitle="문구 리소스가 저장되었습니다." className="space-y-3 rounded-xl border border-slate-200 p-4">
       {organizationId ? <input type="hidden" name="organizationId" value={organizationId} /> : null}
       <div className="grid gap-3 md:grid-cols-3">
         <input name="namespace" defaultValue={initial?.namespace ?? ''} placeholder="namespace" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
@@ -20,6 +21,6 @@ export function ContentResourceForm({ organizationId, initial }: { organizationI
         <input name="reason" placeholder="변경 사유" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
       </div>
       <SubmitButton variant="secondary" pendingLabel="저장 중...">문구 저장</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }
