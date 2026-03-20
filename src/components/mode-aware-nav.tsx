@@ -107,8 +107,16 @@ function getOrganizationSections({
         ? { count: unreadNotificationCount, variant: 'default' }
         : null;
   const conversationBadge: NavBadge | null = unreadConversationCount > 0 ? { count: unreadConversationCount, variant: 'default' } : null;
+  const organization = membership?.organization;
+  const isPlatformManagementOrganization = Boolean(
+    organization?.slug === 'vein-bn-1'
+      || organization?.is_platform_root === true
+      || organization?.kind === 'platform_management'
+  );
 
-  const commonItems = mode === 'client_communication'
+  const commonItems = isPlatformManagementOrganization
+    ? []
+    : mode === 'client_communication'
     ? uniqueItems([
         { href: '/notifications', label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification }
       ])
@@ -122,7 +130,13 @@ function getOrganizationSections({
   const collaborationItems: NavItem[] = [];
   const companyManagementItems: NavItem[] = [];
 
-  if (mode === 'client_communication') {
+  if (isPlatformManagementOrganization) {
+    organizationItems.push(
+      { href: '/admin/organization-requests', label: '조직 신청 관리', icon: FileText },
+      { href: '/admin/organizations', label: '조직 관리', icon: Building2 },
+      { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 }
+    );
+  } else if (mode === 'client_communication') {
     organizationItems.push(
       { href: '/portal', label: '의뢰인 홈', icon: LayoutDashboard },
       { href: '/portal/cases', label: '내 사건', icon: FileText },
@@ -146,23 +160,26 @@ function getOrganizationSections({
     }
   }
 
-  collaborationItems.push(
-    { href: '/inbox', label: '사건허브', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
-  );
-  if (mode !== 'client_communication') {
+  if (!isPlatformManagementOrganization) {
+    collaborationItems.push(
+      { href: '/inbox', label: '사건허브', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
+    );
+  }
+  if (!isPlatformManagementOrganization && mode !== 'client_communication') {
     collaborationItems.push({ href: '/organizations', label: '조직 찾기', icon: Building2 });
   }
 
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
-  if (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin') {
+  if (!isPlatformManagementOrganization && (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')) {
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
       { href: '/settings/team', label: '구성원 관리', icon: Building2 }
     );
   }
 
-  const sections: NavSection[] = [{ id: 'common-menu', label: '공통 메뉴', items: commonItems }];
-  if (organizationItems.length) sections.push({ id: 'organization-menu', label: '조직 메뉴', items: uniqueItems(organizationItems) });
+  const sections: NavSection[] = [];
+  if (commonItems.length) sections.push({ id: 'common-menu', label: '공통 메뉴', items: commonItems });
+  if (organizationItems.length) sections.push({ id: 'organization-menu', label: isPlatformManagementOrganization ? '플랫폼 운영' : '조직 메뉴', items: uniqueItems(organizationItems) });
   if (collaborationItems.length) sections.push({ id: 'collaboration-menu', label: '협업 메뉴', items: uniqueItems(collaborationItems) });
   if (companyManagementItems.length) sections.push({ id: 'company-management-menu', label: '회사 관리', items: uniqueItems(companyManagementItems) });
 

@@ -93,7 +93,7 @@ isManagementRole(role) = org_owner || org_manager
 - 파일명 형식: `NNNN_설명.sql` (연속 번호, 4자리)
 - `pnpm check:migrations` 로 번호 누락/중복 자동 차단
 - 현재 최신: `0048_case_cover_fields.sql`
-- **미적용**: `0048_case_cover_fields.sql`은 아직 live DB에 미적용 — Supabase SQL Editor에서 직접 실행 필요
+- **적용 완료**: `0048_case_cover_fields.sql` live DB 적용 완료 ✅
 - 다음 번호: `0049_*`
 
 ### 2-2. lifecycle_status 타입 (DB 전역 enum)
