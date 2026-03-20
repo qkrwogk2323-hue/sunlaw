@@ -1670,6 +1670,7 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   });
 
   const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 선등록할 수 있습니다.');
+  const orgName = auth.memberships.find((membership) => membership.organization_id === parsed.organizationId)?.organization?.name ?? '현재 조직';
   const admin = createSupabaseAdminClient();
   const resolvedCaseId = parsed.caseId || null;
   const loginId = await generateUniqueClientTempLoginId(admin);
@@ -1739,7 +1740,7 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   }
 
   revalidatePath('/clients');
-  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}`);
+  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedClientTempPassword=${encodeURIComponent(tempPassword)}&issuedOrgName=${encodeURIComponent(orgName)}`);
 }
 
 export async function resendInvitationLinkAction(formData: FormData) {

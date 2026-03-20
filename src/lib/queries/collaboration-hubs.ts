@@ -82,6 +82,11 @@ export type CollaborationHubDetail = {
   relatedCases: CollaborationHubCase[];
 };
 
+export type CaseHubRegistration = {
+  firstHubId: string | null;
+  sharedHubId: string | null;
+};
+
 function emptyOverview(currentOrganizationId: string | null): CollaborationOverview {
   return {
     currentOrganizationId,
@@ -336,4 +341,62 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
       return `${item.title} ${item.referenceNo ?? ''} ${item.caseStatus ?? ''}`.toLowerCase().includes(normalizedQuery);
     })
   } satisfies CollaborationHubDetail;
+}
+
+export async function getCaseHubRegistrations(
+  organizationId?: string | null,
+  caseIds?: string[]
+): Promise<Record<string, CaseHubRegistration>> {
+  const auth = await getCurrentAuth();
+  const currentOrganizationId = organizationId ?? null;
+  const normalizedCaseIds = [...new Set((caseIds ?? []).filter(Boolean))];
+  if (!auth || !currentOrganizationId || !normalizedCaseIds.length) {
+    return {};
+  }
+
+  if (!auth.memberships.some((membership) => membership.organization_id === currentOrganizationId)) {
+    return {};
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: hubRows, error: hubError } = await admin
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id, updated_at')
+    .eq('status', 'active')
+    .or(`primary_organization_id.eq.${currentOrganizationId},partner_organization_id.eq.${currentOrganizationId}`)
+    .order('updated_at', { ascending: false })
+    .limit(30);
+
+  if (hubError) throw hubError;
+  const hubIds = (hubRows ?? []).map((row: any) => row.id).filter(Boolean);
+  const firstHubId = hubIds[0] ?? null;
+  if (!hubIds.length) {
+    return Object.fromEntries(normalizedCaseIds.map((caseId) => [caseId, { firstHubId: null, sharedHubId: null }]));
+  }
+
+  const { data: shareRows, error: shareError } = await admin
+    .from('organization_collaboration_case_shares')
+    .select('hub_id, case_id, created_at')
+    .in('hub_id', hubIds)
+    .in('case_id', normalizedCaseIds)
+    .order('created_at', { ascending: false });
+
+  if (shareError) throw shareError;
+
+  const latestByCaseId = (shareRows ?? []).reduce<Record<string, string>>((acc, row: any) => {
+    if (!acc[row.case_id]) {
+      acc[row.case_id] = row.hub_id;
+    }
+    return acc;
+  }, {});
+
+  return Object.fromEntries(
+    normalizedCaseIds.map((caseId) => [
+      caseId,
+      {
+        firstHubId,
+        sharedHubId: latestByCaseId[caseId] ?? null
+      } satisfies CaseHubRegistration
+    ])
+  );
 }

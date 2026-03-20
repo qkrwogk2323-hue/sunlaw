@@ -70,6 +70,33 @@ export default async function OrganizationsPage() {
         <div className="grid gap-6">
           <Card>
             <CardHeader>
+              <CardTitle>승인 대기 협업 제안</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {collaboration.inboundRequests.length ? (
+                collaboration.inboundRequests.slice(0, 8).map((request) => (
+                  <div key={request.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-slate-900">{request.sourceOrganization?.name ?? '상대 조직'} · {request.title}</p>
+                      <Badge tone={requestStatusTone(request.status)}>{requestStatusLabel(request.status)}</Badge>
+                    </div>
+                    {request.proposalNote ? <p className="mt-2 text-sm text-slate-600 line-clamp-3">{request.proposalNote}</p> : null}
+                    <p className="mt-2 text-xs text-slate-400">{new Date(request.createdAt).toLocaleString('ko-KR')}</p>
+                    {request.sourceOrganizationId ? (
+                      <Link href={`/organizations/${request.sourceOrganizationId}` as Route} className="mt-2 inline-flex text-xs font-medium text-sky-700">
+                        상세 확인
+                      </Link>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">현재 승인 대기 협업 제안이 없습니다.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>내가 보낸 제안</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">

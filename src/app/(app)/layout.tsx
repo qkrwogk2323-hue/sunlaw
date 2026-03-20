@@ -12,6 +12,7 @@ import { signOutAction } from '@/lib/actions/auth-actions';
 import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
 import { GlobalCommandPalette } from '@/components/global-command-palette';
+import { FloatingExportWidget } from '@/components/floating-export-widget';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           ) : null}
           {children}
+          <FloatingExportWidget />
           <GlobalCommandPalette />
         </main>
       </div>

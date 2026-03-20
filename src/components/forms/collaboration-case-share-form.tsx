@@ -12,13 +12,19 @@ export function CollaborationCaseShareForm({
   hubId,
   organizationId,
   returnPath,
-  cases
+  cases,
+  initialCaseId
 }: {
   hubId: string;
   organizationId: string;
   returnPath?: string;
   cases: CaseOption[];
+  initialCaseId?: string | null;
 }) {
+  const defaultCaseId = initialCaseId && cases.some((item) => item.id === initialCaseId)
+    ? initialCaseId
+    : cases[0]?.id;
+
   return (
     <form action={shareCaseToCollaborationHubAction} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
       <input type="hidden" name="hubId" value={hubId} />
@@ -26,7 +32,7 @@ export function CollaborationCaseShareForm({
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500">공유할 사건</label>
-        <select name="caseId" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" required>
+        <select name="caseId" defaultValue={defaultCaseId} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" required>
           {cases.map((item) => (
             <option key={item.id} value={item.id}>{item.title}{item.referenceNo ? ` · ${item.referenceNo}` : ''}</option>
           ))}

@@ -17,12 +17,14 @@ import { RecoveryCreateForm } from '@/components/forms/recovery-create-form';
 import { RequestCreateForm } from '@/components/forms/request-create-form';
 import { ScheduleCreateForm } from '@/components/forms/schedule-create-form';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { CaseDetailHubConnectButton } from '@/components/case-detail-hub-connect-button';
 import { findMembership, requireAuthenticatedUser } from '@/lib/auth';
 import { requestDocumentReviewAction, updateCaseStageAction } from '@/lib/actions/case-actions';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { hasPermission, isWorkspaceAdmin } from '@/lib/permissions';
 import { getCaseDetail } from '@/lib/queries/cases';
+import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
 import { ExportLinks } from '@/components/export-links';
 
 const tabs = ['overview', 'communication', 'documents', 'schedule', 'participants', 'billing', 'timeline'] as const;
@@ -31,13 +33,13 @@ type TabKey = (typeof tabs)[number] | 'collection';
 
 function getTabLabel(tab: TabKey, collectionFocused: boolean) {
   if (tab === 'overview') return '기본정보';
-  if (tab === 'communication') return collectionFocused ? '소통기록' : 'Communication';
-  if (tab === 'documents') return collectionFocused ? '문서' : 'Documents';
-  if (tab === 'schedule') return collectionFocused ? '일정' : 'Schedule';
-  if (tab === 'participants') return collectionFocused ? '관련자' : 'Participants';
-  if (tab === 'billing') return collectionFocused ? '약정/회수금' : 'Billing';
-  if (tab === 'timeline') return collectionFocused ? '진행이력' : 'Timeline';
-  return collectionFocused ? '추심실행' : 'Collection';
+  if (tab === 'communication') return collectionFocused ? '소통기록' : '소통';
+  if (tab === 'documents') return '문서';
+  if (tab === 'schedule') return '일정';
+  if (tab === 'participants') return '관련자';
+  if (tab === 'billing') return collectionFocused ? '약정/회수금' : '비용/정산';
+  if (tab === 'timeline') return '진행이력';
+  return '추심실행';
 }
 
 function TabLink({ caseId, tab, current, children }: { caseId: string; tab: TabKey; current: string; children: ReactNode }) {
@@ -45,7 +47,7 @@ function TabLink({ caseId, tab, current, children }: { caseId: string; tab: TabK
   return (
     <Link
       href={`/cases/${caseId}?tab=${tab}`}
-      className={`rounded-full px-4 py-2 text-sm font-medium ${active ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
+      className={`rounded-full px-4 py-2 text-sm font-medium ${active ? 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white shadow-[0_10px_20px_rgba(8,47,73,0.22)]' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
     >
       {children}
     </Link>
@@ -58,6 +60,191 @@ function toneForApproval(status: string) {
   if (status === 'rejected') return 'red';
   if (status === 'stale') return 'amber';
   return 'slate';
+}
+
+function mapLabel(value: string | null | undefined, labels: Record<string, string>, fallback = '-') {
+  if (!value) return fallback;
+  return labels[value] ?? value;
+}
+
+function getCaseTypeLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    civil: '민사',
+    debt_collection: '채권추심',
+    execution: '강제집행',
+    injunction: '가처분',
+    criminal: '형사',
+    advisory: '자문',
+    other: '기타'
+  });
+}
+
+function getCaseStatusLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    intake: '접수',
+    active: '진행중',
+    pending_review: '검토대기',
+    approved: '승인',
+    closed: '종결',
+    archived: '보관'
+  });
+}
+
+function getApprovalStatusLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    draft: '초안',
+    pending_review: '검토대기',
+    approved: '승인',
+    rejected: '반려',
+    stale: '재확인 필요'
+  });
+}
+
+function getVisibilityLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    internal_only: '내부 전용',
+    client_visible: '의뢰인 공개',
+    cross_org_only: '조직 간 공유'
+  });
+}
+
+function getScheduleKindLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    hearing: '기일',
+    deadline: '마감',
+    meeting: '회의',
+    reminder: '리마인더',
+    collection_visit: '현장방문',
+    other: '기타'
+  });
+}
+
+function getRequestKindLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    question: '질문',
+    document_submission: '서류 제출',
+    document_request: '서류 요청',
+    schedule_request: '일정 요청',
+    call_request: '통화 요청',
+    meeting_request: '미팅 요청',
+    status_check: '진행상태 확인',
+    signature_request: '서명 요청',
+    other: '기타'
+  });
+}
+
+function getDocumentKindLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    complaint: '소장',
+    answer: '답변서',
+    brief: '준비서면',
+    evidence: '증거자료',
+    contract: '계약서',
+    order: '결정문',
+    notice: '통지서',
+    opinion: '의견서',
+    internal_memo: '내부메모',
+    other: '기타'
+  });
+}
+
+function getWorkflowStatusLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    open: '진행중',
+    pending: '대기',
+    completed: '완료',
+    approved: '승인',
+    rejected: '반려',
+    paid: '지급완료',
+    unpaid: '미수',
+    overdue: '연체',
+    void: '무효',
+    active: '활성'
+  });
+}
+
+function getPartyRoleLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    creditor: '채권자',
+    debtor: '채무자',
+    plaintiff: '원고',
+    defendant: '피고',
+    respondent: '피신청인',
+    petitioner: '신청인',
+    other: '기타'
+  });
+}
+
+function getEntityTypeLabel(value: string | null | undefined) {
+  return mapLabel(value, { individual: '개인', corporation: '법인' });
+}
+
+function getOrgRoleLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    managing_org: '주관 조직',
+    principal_client_org: '의뢰인 본사',
+    collection_org: '추심 조직',
+    legal_counsel_org: '법률 대리 조직',
+    co_counsel_org: '공동 대리 조직',
+    partner_org: '협업 조직'
+  });
+}
+
+function getAccessScopeLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    full: '전체',
+    collection_only: '추심만',
+    legal_only: '법률만',
+    billing_only: '정산만',
+    read_only: '읽기 전용'
+  });
+}
+
+function getBillingScopeLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    none: '없음',
+    direct_client_billing: '의뢰인 직접 청구',
+    upstream_settlement: '상위 조직 정산',
+    internal_settlement_only: '내부 정산만'
+  });
+}
+
+function getAgreementTypeLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    retainer: '착수금',
+    flat_fee: '정액',
+    success_fee: '성공보수',
+    expense_reimbursement: '실비정산',
+    installment_plan: '분납',
+    internal_settlement: '내부정산'
+  });
+}
+
+function getPaymentMethodLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    bank_transfer: '계좌이체',
+    card: '카드',
+    cash: '현금',
+    offset: '상계',
+    other: '기타'
+  });
+}
+
+function getPaymentStatusLabel(value: string | null | undefined) {
+  return mapLabel(value, { pending: '대기', confirmed: '확정', reversed: '취소' });
+}
+
+function getActivityKindLabel(value: string | null | undefined) {
+  return mapLabel(value, {
+    call: '전화',
+    letter: '문자/내용증명',
+    visit: '방문',
+    negotiation: '협상',
+    payment: '입금',
+    asset_check: '재산조회',
+    legal_action: '법적조치',
+    other: '기타'
+  });
 }
 
 export default async function CaseDetailPage({
@@ -93,6 +280,12 @@ export default async function CaseDetailPage({
     .reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
   const activeAgreement = caseDetail.feeAgreements.find((item: any) => item.is_active) ?? caseDetail.feeAgreements[0] ?? null;
   const legalRequests = caseDetail.requests.filter((item: any) => ['document_request', 'signature_request', 'schedule_request'].includes(item.request_kind));
+  const caseHubRegistration = (await getCaseHubRegistrations(caseDetail.organization_id, [caseId]))[caseId] ?? {
+    firstHubId: null,
+    sharedHubId: null
+  };
+  const isClientLinked = (caseDetail.clients?.length ?? 0) > 0;
+  const isHubLinked = Boolean(caseHubRegistration.sharedHubId);
 
   return (
     <div className="space-y-6">
@@ -101,14 +294,47 @@ export default async function CaseDetailPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{caseDetail.title}</h1>
           <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-500">
             <span>{caseDetail.reference_no ?? '-'}</span>
-            <span>{caseDetail.case_type}</span>
-            <span>{caseDetail.case_status}</span>
+            <span>{getCaseTypeLabel(caseDetail.case_type)}</span>
+            <span>{getCaseStatusLabel(caseDetail.case_status)}</span>
             <span>{getCaseStageLabel(caseDetail.stage_key)}</span>
             <span>{formatDate(caseDetail.opened_on)}</span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Badge tone="blue">{caseDetail.case_status}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/clients"
+            className={`inline-flex h-12 items-center rounded-2xl border px-5 text-base font-semibold transition ${
+              isClientLinked
+                ? 'border-cyan-200 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+                : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {isClientLinked ? '의뢰인 연동' : '의뢰인 미연동'}
+          </Link>
+          {isHubLinked ? (
+            <Link
+              href={`/inbox/${caseHubRegistration.sharedHubId}?caseId=${caseId}`}
+              className="inline-flex h-12 items-center rounded-2xl border border-sky-200 bg-sky-50 px-5 text-base font-semibold text-sky-800 transition hover:bg-sky-100"
+            >
+              허브 연동
+            </Link>
+          ) : isClientLinked && caseHubRegistration.firstHubId ? (
+            <CaseDetailHubConnectButton
+              hubId={caseHubRegistration.firstHubId}
+              organizationId={caseDetail.organization_id}
+              caseId={caseId}
+              returnPath={`/cases/${caseId}`}
+            />
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="inline-flex h-12 cursor-not-allowed items-center rounded-2xl border border-slate-200 bg-slate-100 px-5 text-base font-semibold text-slate-500"
+            >
+              허브 미연동
+            </button>
+          )}
+          <Badge tone="blue">{getCaseStatusLabel(caseDetail.case_status)}</Badge>
           <Badge tone="slate">{getCaseStageLabel(caseDetail.stage_key)}</Badge>
           {stageStale ? <Badge tone="amber">단계 7일 이상 미갱신</Badge> : null}
         </div>
@@ -190,10 +416,10 @@ export default async function CaseDetailPage({
                 <div key={party.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{party.display_name}</p>
-                    <Badge tone={party.is_primary ? 'blue' : 'slate'}>{party.party_role}</Badge>
+                    <Badge tone={party.is_primary ? 'blue' : 'slate'}>{getPartyRoleLabel(party.party_role)}</Badge>
                   </div>
                   <div className="mt-2 space-y-1 text-slate-500">
-                    <p>구분: {party.entity_type}</p>
+                    <p>구분: {getEntityTypeLabel(party.entity_type)}</p>
                     <p>연락처: {party.phone ?? '-'}</p>
                     <p>이메일: {party.email ?? '-'}</p>
                     <p>주소: {party.address_summary ?? '-'}</p>
@@ -210,12 +436,12 @@ export default async function CaseDetailPage({
                   <div key={org.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{org.organization?.name ?? '-'}</p>
-                      <Badge tone={org.is_lead ? 'blue' : 'slate'}>{org.role}</Badge>
+                      <Badge tone={org.is_lead ? 'blue' : 'slate'}>{getOrgRoleLabel(org.role)}</Badge>
                     </div>
                     <div className="mt-2 space-y-1 text-slate-500">
-                      <p>접근 범위: {org.access_scope}</p>
-                      <p>Billing 범위: {org.billing_scope}</p>
-                      <p>소통 범위: {org.communication_scope}</p>
+                      <p>접근 범위: {getAccessScopeLabel(org.access_scope)}</p>
+                      <p>정산 범위: {getBillingScopeLabel(org.billing_scope)}</p>
+                      <p>소통 범위: {getVisibilityLabel(org.communication_scope)}</p>
                       <p>메모: {org.agreement_summary ?? '-'}</p>
                     </div>
                   </div>
@@ -264,12 +490,12 @@ export default async function CaseDetailPage({
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="font-medium text-slate-900">{document.title}</p>
-                      <p className="text-sm text-slate-500">{document.document_kind}</p>
+                      <p className="text-sm text-slate-500">{getDocumentKindLabel(document.document_kind)}</p>
                     </div>
-                    <Badge tone={toneForApproval(document.approval_status)}>{document.approval_status}</Badge>
+                    <Badge tone={toneForApproval(document.approval_status)}>{getApprovalStatusLabel(document.approval_status)}</Badge>
                   </div>
                   <div className="mt-3 space-y-2 text-sm text-slate-600">
-                    <p>공개범위: {document.client_visibility}</p>
+                    <p>공개범위: {getVisibilityLabel(document.client_visibility)}</p>
                     <p>작성자: {document.created_by_name ?? '-'}</p>
                     <p>요약: {document.summary ?? '-'}</p>
                     {document.reviewed_at ? <p>최종 검토: {document.reviewed_by_name ?? '-'} · {formatDateTime(document.reviewed_at)}</p> : null}
@@ -309,12 +535,12 @@ export default async function CaseDetailPage({
                 <div key={schedule.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{schedule.title}</p>
-                    <Badge tone={schedule.is_important ? 'red' : 'slate'}>{schedule.schedule_kind}</Badge>
+                    <Badge tone={schedule.is_important ? 'red' : 'slate'}>{getScheduleKindLabel(schedule.schedule_kind)}</Badge>
                   </div>
                   <div className="mt-2 space-y-1 text-slate-500">
                     <p>시작: {formatDateTime(schedule.scheduled_start)}</p>
                     <p>종료: {formatDateTime(schedule.scheduled_end)}</p>
-                    <p>공개범위: {schedule.client_visibility}</p>
+                    <p>공개범위: {getVisibilityLabel(schedule.client_visibility)}</p>
                     <p>위치: {schedule.location ?? '-'}</p>
                   </div>
                 </div>
@@ -328,7 +554,7 @@ export default async function CaseDetailPage({
       {currentTab === 'billing' ? (
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <Card>
-            <CardHeader><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><CardTitle>{collectionFocused ? '약정 및 회수금' : 'Billing'}</CardTitle><ExportLinks resource="billing" caseId={caseId} /></div></CardHeader>
+            <CardHeader><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><CardTitle>{collectionFocused ? '약정 및 회수금' : '비용/정산'}</CardTitle><ExportLinks resource="billing" caseId={caseId} /></div></CardHeader>
             <CardContent className="space-y-6">
               {collectionFocused ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -360,7 +586,7 @@ export default async function CaseDetailPage({
                   <div key={agreement.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{agreement.title}</p>
-                      <Badge tone={agreement.is_active ? 'green' : 'slate'}>{agreement.agreement_type}</Badge>
+                      <Badge tone={agreement.is_active ? 'green' : 'slate'}>{getAgreementTypeLabel(agreement.agreement_type)}</Badge>
                     </div>
                     <p className="mt-2 text-slate-500">고정금액: {formatCurrency(agreement.fixed_amount)}</p>
                     <p className="text-slate-500">비율: {agreement.rate ?? '-'}%</p>
@@ -374,7 +600,7 @@ export default async function CaseDetailPage({
                   <div key={entry.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{entry.title}</p>
-                      <Badge tone="slate">{entry.status}</Badge>
+                      <Badge tone="slate">{getWorkflowStatusLabel(entry.status)}</Badge>
                     </div>
                     <p className="mt-2 text-slate-500">금액: {formatCurrency(entry.amount)}</p>
                     <p className="text-slate-500">세액: {formatCurrency(entry.tax_amount)}</p>
@@ -389,7 +615,7 @@ export default async function CaseDetailPage({
                     <div key={invoice.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                       <p className="font-medium text-slate-900">{invoice.invoice_no}</p>
                       <p className="text-slate-500">{invoice.title}</p>
-                      <p className="text-slate-500">{formatCurrency(invoice.total_amount)} · {invoice.status}</p>
+                      <p className="text-slate-500">{formatCurrency(invoice.total_amount)} · {getWorkflowStatusLabel(invoice.status)}</p>
                     </div>
                   )) : <p className="text-sm text-slate-500">청구서가 없습니다.</p>}
                 </div>
@@ -398,7 +624,7 @@ export default async function CaseDetailPage({
                   {caseDetail.payments.length ? caseDetail.payments.map((payment: any) => (
                     <div key={payment.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                       <p className="font-medium text-slate-900">{formatCurrency(payment.amount)}</p>
-                      <p className="text-slate-500">{payment.payment_method} · {payment.payment_status}</p>
+                      <p className="text-slate-500">{getPaymentMethodLabel(payment.payment_method)} · {getPaymentStatusLabel(payment.payment_status)}</p>
                       <p className="text-slate-500">{formatDateTime(payment.received_at)}</p>
                     </div>
                   )) : <p className="text-sm text-slate-500">입금 내역이 없습니다.</p>}
@@ -408,7 +634,7 @@ export default async function CaseDetailPage({
                       {caseDetail.orgSettlements.length ? caseDetail.orgSettlements.map((settlement: any) => (
                         <div key={settlement.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                           <p className="font-medium text-slate-900">{settlement.title}</p>
-                          <p className="text-slate-500">{formatCurrency(settlement.amount)} · {settlement.status}</p>
+                          <p className="text-slate-500">{formatCurrency(settlement.amount)} · {getWorkflowStatusLabel(settlement.status)}</p>
                           <p className="text-slate-500">기한: {formatDate(settlement.due_on)}</p>
                         </div>
                       )) : <p className="text-sm text-slate-500">정산 대기 내역이 없습니다.</p>}
@@ -431,7 +657,7 @@ export default async function CaseDetailPage({
       {currentTab === 'timeline' ? (
         <section className="grid gap-4">
           <Card>
-            <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
+            <CardHeader><CardTitle>진행이력</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm text-slate-700">
               {caseDetail.documents.slice(0, 5).map((document: any) => (
                 <div key={`doc-${document.id}`} className="rounded-xl border border-slate-200 p-4">문서 · {document.title} · {formatDateTime(document.updated_at)}</div>
@@ -475,7 +701,7 @@ export default async function CaseDetailPage({
               {caseDetail.recoveryActivities.length ? caseDetail.recoveryActivities.map((activity: any) => (
                 <div key={activity.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-900">{activity.activity_kind}</p>
+                    <p className="font-medium text-slate-900">{getActivityKindLabel(activity.activity_kind)}</p>
                     <Badge tone="slate">{formatDateTime(activity.occurred_at)}</Badge>
                   </div>
                   <p className="mt-2 text-slate-500">금액: {formatCurrency(activity.amount)}</p>
@@ -490,9 +716,9 @@ export default async function CaseDetailPage({
                   <div key={request.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{request.title}</p>
-                      <Badge tone={request.status === 'completed' ? 'green' : request.status === 'open' ? 'amber' : 'slate'}>{request.status}</Badge>
+                      <Badge tone={request.status === 'completed' ? 'green' : request.status === 'open' ? 'amber' : 'slate'}>{getWorkflowStatusLabel(request.status)}</Badge>
                     </div>
-                    <p className="mt-1 text-slate-500">유형: {request.request_kind}</p>
+                    <p className="mt-1 text-slate-500">유형: {getRequestKindLabel(request.request_kind)}</p>
                     <p className="text-slate-500">마감: {formatDateTime(request.due_at)}</p>
                     <p className="mt-2 whitespace-pre-wrap text-slate-600">{request.body}</p>
                   </div>
@@ -504,9 +730,9 @@ export default async function CaseDetailPage({
                   <div key={document.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{document.title}</p>
-                      <Badge tone={toneForApproval(document.approval_status)}>{document.approval_status}</Badge>
+                      <Badge tone={toneForApproval(document.approval_status)}>{getApprovalStatusLabel(document.approval_status)}</Badge>
                     </div>
-                    <p className="mt-1 text-slate-500">유형: {document.document_kind}</p>
+                    <p className="mt-1 text-slate-500">유형: {getDocumentKindLabel(document.document_kind)}</p>
                     <p className="text-slate-500">요약: {document.summary ?? '-'}</p>
                   </div>
                 )) : <p className="text-sm text-slate-500">사건에 연결된 실행 자료가 없습니다.</p>}
