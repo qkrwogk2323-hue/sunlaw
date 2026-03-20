@@ -24,6 +24,7 @@ import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
 import { segmentStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { useToast } from '@/components/ui/toast-provider';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE } from '@/lib/view-mode';
@@ -303,7 +304,7 @@ function MobileSectionBar({
         <div className={`absolute left-0 top-0 h-full w-[84vw] max-w-[22rem] overflow-y-auto border-r border-slate-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-900">메뉴</p>
-            <button type="button" onClick={() => setDrawerOpen(false)} className="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700">
+            <button type="button" onClick={() => setDrawerOpen(false)} aria-label="메뉴 닫기" className="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700">
               <X className="size-4" />
             </button>
           </div>
@@ -394,9 +395,9 @@ export function ModeAwareNav({
   });
   const [pulseNotification, setPulseNotification] = useState(false);
   const [pulseConversation, setPulseConversation] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [orgPickerOpen, setOrgPickerOpen] = useState(false);
   const [quickSearchQuery, setQuickSearchQuery] = useState('');
+  const { success } = useToast();
 
   const isModeKey = (value: string | null | undefined): value is ModeKey => (
     value === 'law_admin'
@@ -479,16 +480,14 @@ export function ModeAwareNav({
 
           if (notificationDelta > 0) {
             setPulseNotification(true);
-            setToastMessage(`새 알림 ${notificationDelta}건이 도착했습니다.`);
+            success(`새 알림 ${notificationDelta}건이 도착했습니다.`);
             window.setTimeout(() => setPulseNotification(false), 3200);
-            window.setTimeout(() => setToastMessage(null), 2600);
           }
 
           if (conversationDelta > 0) {
             setPulseConversation(true);
-            setToastMessage(`새 대화 ${conversationDelta}건이 도착했습니다.`);
+            success(`새 대화 ${conversationDelta}건이 도착했습니다.`);
             window.setTimeout(() => setPulseConversation(false), 3200);
-            window.setTimeout(() => setToastMessage(null), 2600);
           }
 
           if (
@@ -569,12 +568,13 @@ export function ModeAwareNav({
               <p className="px-1 pb-1 text-xs font-semibold text-slate-500">공통 메뉴 빠른 검색</p>
               <div className="flex items-center gap-2">
                 <input
+                  aria-label="사건, 의뢰인, 문서 검색"
                   value={quickSearchQuery}
                   onChange={(event) => setQuickSearchQuery(event.target.value)}
                   placeholder="사건, 의뢰인, 문서 검색"
                   className="h-9 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
                 />
-                <button type="submit" className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100">
+                <button type="submit" aria-label="검색" className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100">
                   <Search className="size-4" />
                 </button>
               </div>
@@ -584,6 +584,7 @@ export function ModeAwareNav({
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">조직</p>
               <button
                 type="button"
+                aria-label={`조직 전환: ${currentOrganization?.name ?? '선택된 조직 없음'}`}
                 onClick={() => setOrgPickerOpen((prev) => !prev)}
                 className="mt-1 inline-flex items-center gap-2 text-left text-2xl font-semibold tracking-tight text-slate-950 hover:text-slate-700"
               >
@@ -594,6 +595,7 @@ export function ModeAwareNav({
                 <ClientActionForm action={switchDefaultOrganizationAction} successTitle="조직이 전환되었습니다." className="mt-3 flex items-center gap-2">
                   <input type="hidden" name="contextOrganizationId" value={currentOrganization?.id ?? ''} />
                   <select
+                    aria-label="전환할 조직 선택"
                     name="organizationId"
                     defaultValue={currentOrganization?.id ?? orgOptions[0]?.id}
                     className="h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
@@ -658,11 +660,7 @@ export function ModeAwareNav({
         </div>
       </div>
 
-      {toastMessage ? (
-        <div className="fixed bottom-5 right-5 z-50 rounded-xl border border-slate-200 bg-slate-900 px-3 py-2 text-xs font-medium text-white shadow-[0_10px_28px_rgba(15,23,42,0.32)]">
-          {toastMessage}
-        </div>
-      ) : null}
+      {/* Rule 4-2: 인라인 토스트 제거 — useToast()로 대체 완료 */}
     </div>
   );
 }
