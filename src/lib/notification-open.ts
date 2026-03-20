@@ -43,7 +43,7 @@ export async function resolveNotificationOpenTarget({
   const id = notificationId.trim();
 
   if (!id) {
-    throw new Error('notificationId is required');
+    throw new Error('알림 식별자가 누락되었습니다.');
   }
 
   const resolvedOrganizationId = `${nextOrganizationId ?? ''}`.trim();

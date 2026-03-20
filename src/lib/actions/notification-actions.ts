@@ -45,7 +45,7 @@ async function getOwnedNotification(notificationId: string) {
 export async function markNotificationReadAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('notificationId is required');
+    throw new Error('알림 식별자가 누락되었습니다.');
   }
 
   const supabase = await createSupabaseServerClient();
@@ -160,7 +160,7 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
 export async function markNotificationResolvedAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('notificationId is required');
+    throw new Error('알림 식별자가 누락되었습니다.');
   }
 
   const auth = await requireAuthenticatedUser();
@@ -187,7 +187,7 @@ export async function markNotificationResolvedAction(formData: FormData) {
 export async function moveNotificationToTrashAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('notificationId is required');
+    throw new Error('알림 식별자가 누락되었습니다.');
   }
 
   const { auth, supabase, notification } = await getOwnedNotification(id);
@@ -218,7 +218,7 @@ export async function moveNotificationToTrashAction(formData: FormData) {
 export async function restoreNotificationAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('notificationId is required');
+    throw new Error('알림 식별자가 누락되었습니다.');
   }
 
   const auth = await requireAuthenticatedUser();
@@ -257,7 +257,7 @@ export async function emptyNotificationTrashAction() {
 export async function permanentlyDeleteNotificationAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('notificationId is required');
+    throw new Error('알림 식별자가 누락되었습니다.');
   }
 
   const auth = await requireAuthenticatedUser();

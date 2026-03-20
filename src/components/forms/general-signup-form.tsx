@@ -87,54 +87,54 @@ export function GeneralSignupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-email" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">이메일</span>
-          <Input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" />
+          <Input id="general-signup-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@veinspiral.com" />
         </label>
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-password" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">비밀번호</span>
-          <Input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="8자 이상 입력해 주세요" />
+          <Input id="general-signup-password" type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="8자 이상 입력해 주세요" />
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-legal-name" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">이름</span>
-          <Input required value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="홍길동" />
+          <Input id="general-signup-legal-name" required value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="홍길동" />
         </label>
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-phone" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">연락처</span>
-          <Input required value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="01012345678" />
+          <Input id="general-signup-phone" required value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="01012345678" />
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-resident-number" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">주민등록번호</span>
-          <Input required value={residentNumber} onChange={(event) => setResidentNumber(event.target.value)} placeholder="생년월일 6자리와 뒤 7자리를 입력해 주세요" />
+          <Input id="general-signup-resident-number" required value={residentNumber} onChange={(event) => setResidentNumber(event.target.value)} placeholder="생년월일 6자리와 뒤 7자리를 입력해 주세요" />
           {residentNumberInvalid ? <p className="text-xs leading-6 text-rose-600">유효한 주민등록번호를 입력해 주세요.</p> : null}
         </label>
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-resident-number-confirm" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">주민등록번호 확인</span>
-          <Input required value={residentNumberConfirm} onChange={(event) => setResidentNumberConfirm(event.target.value)} placeholder="주민등록번호를 한 번 더 입력해 주세요" />
+          <Input id="general-signup-resident-number-confirm" required value={residentNumberConfirm} onChange={(event) => setResidentNumberConfirm(event.target.value)} placeholder="주민등록번호를 한 번 더 입력해 주세요" />
           {residentNumberMismatch ? <p className="text-xs leading-6 text-rose-600">주민번호가 다릅니다.</p> : null}
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px]">
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-address-line1" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">주소</span>
-          <Input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} placeholder="선택 입력" />
+          <Input id="general-signup-address-line1" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} placeholder="선택 입력" />
         </label>
-        <label className="space-y-2 text-sm text-slate-700">
+        <label htmlFor="general-signup-postal-code" className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">우편번호</span>
-          <Input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="선택 입력" />
+          <Input id="general-signup-postal-code" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="선택 입력" />
         </label>
       </div>
 
-      <label className="space-y-2 text-sm text-slate-700">
+      <label htmlFor="general-signup-address-line2" className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">상세 주소</span>
-        <Input value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} placeholder="선택 입력" />
+        <Input id="general-signup-address-line2" value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} placeholder="선택 입력" />
       </label>
 
       <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">

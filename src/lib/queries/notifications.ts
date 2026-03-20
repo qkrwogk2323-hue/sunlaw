@@ -112,11 +112,13 @@ function normalizeNotification(record: NotificationRecord): NotificationItem {
 async function purgeExpiredNotificationTrash(userId: string) {
   const supabase = await createSupabaseServerClient();
   const expiresAt = new Date(Date.now() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const deletedAt = new Date().toISOString();
 
   const { error } = await supabase
     .from('notifications')
-    .delete()
+    .update({ status: 'deleted', deleted_at: deletedAt })
     .eq('recipient_profile_id', userId)
+    .eq('status', 'archived')
     .lt('trashed_at', expiresAt);
 
   if (error && !isMissingColumnError(error)) {

@@ -21,7 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
-import { segmentStyles } from '@/components/ui/button';
+import { Button, segmentStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useToast } from '@/components/ui/toast-provider';
@@ -557,28 +557,33 @@ export function ModeAwareNav({
       <div className="hidden lg:block">
         <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <form
-              className="rounded-xl border border-slate-200 bg-slate-50 p-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const query = quickSearchQuery.trim();
-                window.dispatchEvent(new CustomEvent('open-global-search', { detail: { query } }));
-              }}
-            >
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
               <p className="px-1 pb-1 text-xs font-semibold text-slate-500">공통 메뉴 빠른 검색</p>
               <div className="flex items-center gap-2">
+                <label htmlFor="quick-search-query" className="sr-only">공통 메뉴 빠른 검색</label>
                 <input
+                  id="quick-search-query"
                   aria-label="사건, 의뢰인, 문서 검색"
                   value={quickSearchQuery}
                   onChange={(event) => setQuickSearchQuery(event.target.value)}
                   placeholder="사건, 의뢰인, 문서 검색"
                   className="h-9 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
                 />
-                <button type="submit" aria-label="검색" className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  aria-label="검색"
+                  className="size-9 px-0"
+                  onClick={() => {
+                    const query = quickSearchQuery.trim();
+                    window.dispatchEvent(new CustomEvent('open-global-search', { detail: { query } }));
+                  }}
+                >
                   <Search className="size-4" />
-                </button>
+                </Button>
               </div>
-            </form>
+            </div>
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">조직</p>

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { formatDateTime } from '@/lib/format';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listAuditChangeLog } from '@/lib/queries/audit';
@@ -77,30 +78,35 @@ export default async function AdminAuditPage({
           <CardTitle>필터</CardTitle>
         </CardHeader>
         <CardContent>
-          <form method="get" action="/admin/audit" className="flex flex-wrap items-end gap-3">
-            <input type="hidden" name="tab" value={tab} />
-            <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <UnifiedListSearch
+            action="/admin/audit"
+            placeholder="감사 로그 검색어는 선택 입력입니다."
+            defaultValue=""
+            ariaLabel="감사 로그 필터"
+            submitLabel="적용"
+            hiddenFields={{ tab }}
+          >
+            <label htmlFor="audit-table" className="flex flex-col gap-1 text-sm text-slate-600">
               <span>테이블명</span>
               <input
+                id="audit-table"
                 name="table"
                 defaultValue={table ?? ''}
                 placeholder="예: notifications"
                 className="h-10 w-52 rounded-lg border border-slate-200 px-3 text-sm text-slate-900"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-slate-600">
+            <label htmlFor="audit-actor" className="flex flex-col gap-1 text-sm text-slate-600">
               <span>행위자 ID</span>
               <input
+                id="audit-actor"
                 name="actor"
                 defaultValue={actor ?? ''}
                 placeholder="프로필 UUID"
                 className="h-10 w-72 rounded-lg border border-slate-200 px-3 text-sm text-slate-900"
               />
             </label>
-            <button type="submit" className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              적용
-            </button>
-          </form>
+          </UnifiedListSearch>
         </CardContent>
       </Card>
 

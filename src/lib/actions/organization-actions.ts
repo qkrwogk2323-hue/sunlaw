@@ -2830,6 +2830,7 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
 
     if (profileError) {
       if (insertedCaseClientId) {
+        // Compensating delete: remove the row created in this failed approval flow.
         await adminClient.from('case_clients').delete().eq('id', insertedCaseClientId);
       } else if (existingClient?.id) {
         await adminClient

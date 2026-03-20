@@ -290,6 +290,7 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
 
   if (logRow.target_type === 'platform_setting') {
     if (logRow.old_value_json == null) {
+      // Compensating delete: setting rows use row absence as the canonical rollback state.
       await admin.from('platform_settings').delete().eq('key', logRow.target_key);
     } else {
       await admin.from('platform_settings').upsert({
@@ -302,6 +303,7 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
     revalidateTag('settings:platform', 'max');
   } else if (logRow.target_type === 'organization_setting' && logRow.organization_id) {
     if (logRow.old_value_json == null) {
+      // Compensating delete: organization setting rollback restores the original "row does not exist" state.
       await admin.from('organization_settings')
         .delete()
         .eq('organization_id', logRow.organization_id)

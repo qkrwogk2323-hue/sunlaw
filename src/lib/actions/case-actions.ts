@@ -179,7 +179,7 @@ async function loadCaseOrThrow(caseId: string) {
     .single();
 
   if (error || !caseRecord) {
-    throw error ?? new Error('Case not found');
+    throw error ?? new Error('사건을 찾을 수 없습니다.');
   }
 
   return { supabase, caseRecord };
@@ -318,6 +318,7 @@ async function createCaseCoreWrite({
       moduleFlags
     };
   } catch (writeError) {
+    // Compensating delete: remove rows created in this failed request so a partial case does not remain.
     await supabase.from('case_handlers').delete().eq('case_id', caseRecord.id);
     await supabase.from('case_organizations').delete().eq('case_id', caseRecord.id);
     await supabase.from('cases').delete().eq('id', caseRecord.id);
@@ -1473,18 +1474,24 @@ export async function forceDeleteCaseAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   if (!caseId || !organizationId) {
-    throw new Error('강제 삭제 요청 정보가 올바르지 않습니다.');
+    throw new Error('최종 보관 요청 정보가 올바르지 않습니다.');
   }
 
   await requireOrganizationActionAccess(organizationId, {
     permission: 'case_assign',
-    errorMessage: '강제 삭제 권한이 없습니다.'
+    errorMessage: '최종 보관 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
+  const archivedAt = new Date().toISOString();
 
   const { error } = await supabase
     .from('cases')
-    .delete()
+    .update({
+      lifecycle_status: 'archived',
+      case_status: 'archived',
+      deleted_at: archivedAt,
+      updated_at: archivedAt
+    })
     .eq('id', caseId)
     .eq('organization_id', organizationId)
     .eq('lifecycle_status', 'soft_deleted');

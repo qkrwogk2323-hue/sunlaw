@@ -15,6 +15,7 @@ import { isClientAccountActive } from '@/lib/client-account';
 import { formatDateTime } from '@/lib/format';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
 export default async function CollaborationHubPage({
   params,
@@ -187,18 +188,14 @@ export default async function CollaborationHubPage({
 
           <Card>
             <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-3">
                 <CardTitle>관련 사건 검색</CardTitle>
-                <form className="flex gap-2" action={`/inbox/${hub.id}`}>
-                  <input
-                    type="text"
-                    name="q"
-                    defaultValue={searchQuery}
-                    placeholder="사건명, 사건번호, 상태 검색"
-                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
-                  />
-                  <button type="submit" className="rounded-lg bg-slate-900 px-4 text-sm font-medium text-white">검색</button>
-                </form>
+                <UnifiedListSearch
+                  action={`/inbox/${hub.id}`}
+                  defaultValue={searchQuery}
+                  placeholder="사건명, 사건번호, 상태 검색"
+                  ariaLabel="관련 사건 검색"
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-3">

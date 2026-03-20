@@ -158,18 +158,18 @@ export default async function CasesPage({
             <DangerActionButton
               action={forceDeleteCaseAction}
               fields={{ caseId: item.id, organizationId: item.organization_id }}
-              confirmTitle="사건을 영구 삭제할까요?"
-              confirmDescription="이 작업은 되돌릴 수 없습니다. 사건에 연결된 모든 문서·청구·메시지 기록도 함께 영구 삭제됩니다."
+              confirmTitle="사건을 최종 보관 처리할까요?"
+              confirmDescription="이 작업을 완료하면 삭제함에서 더 이상 보이지 않습니다. 최종 보관 처리된 사건은 일반 목록과 대시보드에서 제외됩니다."
               highlightedInfo={item.title}
-              confirmLabel="영구 삭제"
+              confirmLabel="최종 보관"
               variant="danger"
-              successTitle="사건이 영구 삭제되었습니다."
-              errorTitle="영구 삭제에 실패했습니다."
-              errorCause="서버 처리 중 문제가 발생했습니다."
-              errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
+              successTitle="사건이 최종 보관 처리되었습니다."
+              errorTitle="최종 보관 처리에 실패했습니다."
+              errorCause="삭제함 상태가 아니거나 서버 처리 중 문제가 발생했습니다."
+              errorResolution="삭제함 상태를 확인한 뒤 다시 시도하거나 관리자에게 문의해 주세요."
               buttonVariant="destructive"
             >
-              영구 삭제
+              최종 보관
             </DangerActionButton>
           ) : null}
         </div>

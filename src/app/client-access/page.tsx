@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { ArrowRight, Building2, Search } from 'lucide-react';
+import { ArrowRight, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
 import { getCurrentAuth } from '@/lib/auth';
@@ -9,6 +9,7 @@ import { ClientAccessRequestForm } from '@/components/forms/client-access-reques
 import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entry-form';
 import { searchPublicOrganizations, listMyClientAccessRequests } from '@/lib/queries/client-access';
 import { Badge } from '@/components/ui/badge';
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,21 +101,14 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
             <CardTitle className="text-2xl">초대번호가 없으면 조직가입신청하기</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-              <label className="flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 shadow-inner">
-                <Search className="size-4 text-slate-400" />
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={query}
-                  placeholder="조직명 또는 조직 키를 입력해 주세요"
-                  className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                />
-              </label>
-              <button type="submit" className={buttonStyles({ className: 'min-h-12 rounded-[1.25rem] px-5' })}>
-                검색하기
-              </button>
-            </form>
+            <UnifiedListSearch
+              action="/client-access"
+              defaultValue={query}
+              placeholder="조직명 또는 조직 키를 입력해 주세요"
+              ariaLabel="조직 연결 요청 검색"
+              submitLabel="검색하기"
+              className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+            />
           </CardContent>
         </Card>
 

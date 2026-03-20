@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, KeyRound } from 'lucide-react';
-import { buttonStyles } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 
 function normalizeInvitationCode(value: string) {
   const trimmed = value.trim();
@@ -71,9 +71,10 @@ export function InvitationCodeEntryForm({
             <p className="mt-1 text-sm leading-7 text-slate-600">{description}</p>
           </div>
         </div>
-        <label className="mt-4 block">
+        <label htmlFor="invitation-code-input" className="mt-4 block">
           <span className="sr-only">초대번호 또는 초대 링크</span>
           <input
+            id="invitation-code-input"
             type="text"
             value={value}
             onChange={(event) => {
@@ -88,10 +89,10 @@ export function InvitationCodeEntryForm({
         </label>
         {error ? <p className="mt-3 text-sm text-rose-600">{error}</p> : null}
       </div>
-      <button type="submit" className={buttonStyles({ className: 'min-h-12 w-full justify-between rounded-[1.2rem] px-4' })}>
+      <Button type="submit" className="min-h-12 w-full justify-between rounded-[1.2rem] px-4">
         {submitLabel}
         <ArrowRight className="size-4" />
-      </button>
+      </Button>
     </form>
   );
 }

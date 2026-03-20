@@ -11,10 +11,16 @@ export async function purgeDeletedCasesPastRetention(organizationId?: string | n
   const scope = await getCaseScopeAccess(auth, organizationId);
   const supabase = await createSupabaseServerClient();
   const cutoffIso = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  const archivedAt = new Date().toISOString();
 
   let query = supabase
     .from('cases')
-    .delete()
+    .update({
+      lifecycle_status: 'archived',
+      case_status: 'archived',
+      deleted_at: archivedAt,
+      updated_at: archivedAt
+    })
     .eq('lifecycle_status', 'soft_deleted')
     .lt('updated_at', cutoffIso);
 
@@ -46,7 +52,7 @@ export async function listCases(
   if (bucket === 'deleted') {
     query = query.eq('lifecycle_status', 'soft_deleted');
   } else {
-    query = query.neq('lifecycle_status', 'soft_deleted');
+    query = query.neq('lifecycle_status', 'soft_deleted').neq('lifecycle_status', 'archived');
   }
 
   if (bucket === 'completed') {
@@ -85,6 +91,7 @@ export async function getCaseDetail(caseId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: caseRecord } = await supabase.from('cases').select('*').eq('id', caseId).maybeSingle();
   if (!caseRecord) return null;
+  if (caseRecord.lifecycle_status === 'archived') return null;
   const scope = await getCaseScopeAccess(auth, caseRecord.organization_id);
   if (scope.restrictedOrganizationIds.length && !scope.assignedCaseIds.includes(caseId)) {
     return null;

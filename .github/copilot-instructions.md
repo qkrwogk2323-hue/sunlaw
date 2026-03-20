@@ -25,8 +25,7 @@
 - 삭제 후 `undo()` 토스트 필수 (8초 복구)
 - Trash UI 제공 필수: `?tab=trash` 또는 `/trash` 에서 복구 버튼
 - 목록 쿼리: `.neq('lifecycle_status', 'soft_deleted')` 또는 `.is('deleted_at', null)` 필수
-
-**현재 위반**: `deleteMembershipAction` hard delete ❌, Cases 보관함 UI 없음 ❌
+- 단, 같은 요청 안에서 방금 생성한 row를 실패 복구하는 내부 보상 삭제는 `PROJECT_RULES.md 2-5-1`을 따른다
 
 ### 폼 제출
 - `<form action={serverAction}>` **금지** → 반드시 `<ClientActionForm action={...} successTitle="...">` 사용

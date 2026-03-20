@@ -157,13 +157,14 @@ import { LoadingOverlay, InlineLoadingSpinner } from '@/components/ui/loading';
 ## 🗑 Soft Delete + Trash Bin 규칙 (UX #8 강제)
 
 > **UX 체크리스트 #8 "취소 및 복구"를 강제 구현한 규칙이다.**  
-> 이 규칙은 **절대 예외 없이** 모든 destructive action에 적용된다.
+> 사용자에게 노출되는 destructive action에는 절대 예외 없이 적용한다. 단, `PROJECT_RULES.md 2-5-1`의 보상 삭제 예외는 내부 롤백 처리에 한해 허용한다.
 
 ### 원칙
 - 모든 삭제/비활성화는 **즉시 hard delete 금지**
 - 반드시 `lifecycle_status = 'soft_deleted'` 또는 `deleted_at` 업데이트로 처리
 - Soft delete 후 → UI에서 즉시 사라지되, `/trash` 페이지에서 복구 가능해야 함
 - 복구(restore) 버튼 하나로 즉시 활성화 가능해야 함
+- 단, 같은 요청 안에서 방금 생성한 row를 롤백하는 내부 보상 삭제는 `PROJECT_RULES.md 2-5-1`을 따른다
 
 ### 구현 패턴
 

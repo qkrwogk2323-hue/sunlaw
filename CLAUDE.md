@@ -64,10 +64,7 @@ await supabase.from('table')
 - 목록 쿼리: `.neq('lifecycle_status', 'soft_deleted')` 또는 `.is('deleted_at', null)` 필수
 - 삭제 후 반드시 `undo()` 토스트 + "보관함에서 복구 가능" 안내
 - Trash UI(`?tab=trash` 또는 `/trash`): 복구 버튼 + 관리자만 영구삭제 가능
-
-**현재 위반 중인 항목:**
-- `deleteMembershipAction` — `organization_memberships` 즉시 hard delete ❌ → 수정 필요
-- Cases 보관함 UI — `moveCaseToDeletedAction` 있지만 복구 UI 없음 ❌ → 수정 필요
+- 내부 롤백 삭제는 `PROJECT_RULES.md 2-5-1` 보상 삭제 예외를 따른다
 
 ### 폼 제출
 ```tsx
