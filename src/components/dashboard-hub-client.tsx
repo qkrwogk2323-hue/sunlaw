@@ -400,9 +400,7 @@ function useDashboardPlannerState({
 
   useEffect(() => {
     if (!memberOptions.some((item) => item.membershipId === plannerRecipientMembershipId)) {
-      queueMicrotask(() => {
-        setPlannerRecipientMembershipId('');
-      });
+      setPlannerRecipientMembershipId('');
     }
   }, [memberOptions, plannerRecipientMembershipId]);
 
@@ -484,9 +482,7 @@ function useDashboardCommunicationState({
   const activeScenarioConversation = scenarioConversationRooms.find((room) => room.id === selectedScenarioConversationId) ?? scenarioConversationRooms[0] ?? null;
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setScenarioMessageItems(data.recentMessageItems);
-    });
+    setScenarioMessageItems(data.recentMessageItems);
   }, [data.recentMessageItems, scenarioMode]);
 
   useEffect(() => {
@@ -499,10 +495,8 @@ function useDashboardCommunicationState({
     const rawReads = window.localStorage.getItem(scenarioReadStorageKey(scenarioMode, effectiveCurrentUserId));
     const nextReadState = rawReads ? JSON.parse(rawReads) as Record<string, string> : {};
 
-    queueMicrotask(() => {
-      setScenarioMessageItems(merged);
-      setScenarioReadState(nextReadState);
-    });
+    setScenarioMessageItems(merged);
+    setScenarioReadState(nextReadState);
   }, [data.recentMessageItems, effectiveCurrentUserId, scenarioMode]);
 
   useEffect(() => {
@@ -545,10 +539,8 @@ function useDashboardCommunicationState({
 
   useEffect(() => {
     if (!scenarioMode) {
-      queueMicrotask(() => {
-        setScenarioCurrentUserId(null);
-        setCommunicationView('organization');
-      });
+      setScenarioCurrentUserId(null);
+      setCommunicationView('organization');
       return;
     }
 
@@ -559,35 +551,27 @@ function useDashboardCommunicationState({
     const resolvedMemberId = data.teamMembers.some((member) => (profileRecord(member.profile)?.id ?? member.id) === nextMemberId)
       ? nextMemberId
       : fallbackMemberId;
-    queueMicrotask(() => {
-      setScenarioCurrentUserId(resolvedMemberId);
-    });
+    setScenarioCurrentUserId(resolvedMemberId);
   }, [data.teamMembers, scenarioMode]);
 
   useEffect(() => {
     if (!scenarioMode) return;
 
     if (!scenarioConversationRooms.some((room) => room.id === selectedScenarioConversationId)) {
-      queueMicrotask(() => {
-        setSelectedScenarioConversationId(scenarioConversationRooms[0]?.id ?? '');
-      });
+      setSelectedScenarioConversationId(scenarioConversationRooms[0]?.id ?? '');
     }
   }, [scenarioConversationRooms, scenarioMode, selectedScenarioConversationId]);
 
   useEffect(() => {
     if (orgRecipientMembershipId === ALL_RECIPIENT_MEMBERSHIP_ID) return;
     if (!filteredOrgMembers.length || !filteredOrgMembers.some((member) => member.membershipId === orgRecipientMembershipId)) {
-      queueMicrotask(() => {
-        setOrgRecipientMembershipId(ALL_RECIPIENT_MEMBERSHIP_ID);
-      });
+      setOrgRecipientMembershipId(ALL_RECIPIENT_MEMBERSHIP_ID);
     }
   }, [filteredOrgMembers, orgRecipientMembershipId]);
 
   useEffect(() => {
     if (!scenarioMode || !activeOrgRecipient?.profileId) return;
-    queueMicrotask(() => {
-      setScenarioReadState((current) => ({ ...current, [activeOrgRecipient.profileId]: new Date().toISOString() }));
-    });
+    setScenarioReadState((current) => ({ ...current, [activeOrgRecipient.profileId]: new Date().toISOString() }));
   }, [activeOrgRecipient?.profileId, scenarioMode]);
 
   const visibleMessages = useMemo(() => {
