@@ -3008,3 +3008,103 @@ export async function bulkInviteClientsAction(formData: FormData) {
   revalidatePath('/clients');
   redirect(`/clients?invited=${invited}`);
 }
+
+const CASE_TYPE_CSV_MAP: Record<string, string> = {
+  민사: 'civil', 민사소송: 'civil', civil: 'civil',
+  채권: 'debt_collection', 수금: 'debt_collection', debt_collection: 'debt_collection',
+  집행: 'execution', 강제집행: 'execution', execution: 'execution',
+  가처분: 'injunction', 가압류: 'injunction', injunction: 'injunction',
+  형사: 'criminal', criminal: 'criminal',
+  자문: 'advisory', advisory: 'advisory',
+  기타: 'other', other: 'other',
+};
+
+export async function importCasesCsvAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+
+  const { auth } = await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_create',
+    errorMessage: '사건 생성 권한이 없습니다.',
+  });
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) throw new Error('CSV 파일을 선택해 주세요.');
+
+  const rows = await parseCsvFile(file);
+  if (!rows.length) throw new Error('CSV에서 읽을 수 있는 행이 없습니다.');
+
+  const supabase = await createSupabaseServerClient();
+  const org = auth.memberships.find((m) => m.organization_id === organizationId)?.organization;
+  const orgSlug = org?.slug ?? organizationId;
+
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowNum = i + 2;
+
+    const title = pickCsvValue(row, ['사건명', '제목', 'title']);
+    if (!title) { skipped++; continue; }
+
+    const rawType = pickCsvValue(row, ['사건유형', '유형', 'case_type', 'type']);
+    const caseType = CASE_TYPE_CSV_MAP[rawType.toLowerCase().replace(/\s/g, '')] ?? 'other';
+    const stageTemplateKey = caseType === 'debt_collection' ? 'debt_collection' : caseType === 'civil' ? 'civil' : caseType === 'criminal' ? 'criminal' : 'general';
+    const moduleFlags = caseType === 'debt_collection' ? { billing: true, collection: true } : { billing: true };
+
+    const caseNumber = pickCsvValue(row, ['사건번호', '번호', 'case_number']) || null;
+    const courtName = pickCsvValue(row, ['법원명', '법원', 'court_name', 'court']) || null;
+    const rawAmount = pickCsvValue(row, ['의뢰금액', '금액', '청구금액', 'amount', 'principal_amount']);
+    const principalAmount = rawAmount ? Math.max(0, Number(rawAmount.replace(/[^0-9.-]/g, ''))) : 0;
+    const openedOn = pickCsvValue(row, ['개시일', '시작일', '접수일', 'opened_on', 'date']) || null;
+    const clientName = pickCsvValue(row, ['의뢰인', '의뢰인명', 'client', 'client_name']);
+    const opponentName = pickCsvValue(row, ['상대방', '상대방명', 'opponent', 'opponent_name']);
+    const summary = pickCsvValue(row, ['요약', '내용', '메모', 'summary', 'memo']);
+    const mergedSummary = [summary, clientName ? `의뢰인: ${clientName}` : '', opponentName ? `상대방: ${opponentName}` : ''].filter(Boolean).join('\n') || null;
+
+    const { data: newCase, error } = await supabase
+      .from('cases')
+      .insert({
+        organization_id: organizationId,
+        title,
+        case_type: caseType,
+        case_status: 'intake',
+        stage_key: 'intake',
+        stage_template_key: stageTemplateKey,
+        case_number: caseNumber,
+        court_name: courtName,
+        principal_amount: isNaN(principalAmount) ? 0 : principalAmount,
+        opened_on: openedOn,
+        summary: mergedSummary,
+        module_flags: moduleFlags,
+        slug: `${orgSlug}-${Date.now()}-${i}`,
+        created_by: auth.user.id,
+        updated_by: auth.user.id,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      errors.push(`${rowNum}행: "${title}" — ${error.message}`);
+      skipped++;
+    } else {
+      imported++;
+      void supabase.from('audit_logs').insert({
+        actor_id: auth.user.id,
+        action: 'case.created_via_csv',
+        resource_type: 'case',
+        resource_id: newCase.id,
+        organization_id: organizationId,
+        meta: { title, caseType },
+      });
+    }
+  }
+
+  revalidatePath('/cases');
+  if (errors.length) {
+    throw new Error(`${imported}건 등록 완료, ${skipped}건 실패:\n${errors.slice(0, 5).join('\n')}`);
+  }
+  redirect(`/cases?imported=${imported}` as Route);
+}
