@@ -17,7 +17,9 @@ import { ImmediateDeleteForm } from '@/components/notifications/immediate-delete
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { formatNotificationDate } from '@/lib/format';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { HubContextStrip } from '@/components/hub-context-strip';
+import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 40, 80] as const;
@@ -195,6 +197,7 @@ export default async function NotificationsPage({
   searchParams?: Promise<{ size?: string; q?: string; entity?: string; section?: string; priority?: string; state?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
+  const organizationId = getEffectiveOrganizationId(auth);
   const resolved = searchParams ? await searchParams : undefined;
   const requestedSize = Number(resolved?.size ?? 20);
   const keyword = `${resolved?.q ?? ''}`.trim();
@@ -204,9 +207,10 @@ export default async function NotificationsPage({
   const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived';
   const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize as (typeof PAGE_SIZE_OPTIONS)[number]) ? requestedSize : 20;
 
-  const [notificationCenter, channelPreferences] = await Promise.all([
+  const [notificationCenter, channelPreferences, hubs] = await Promise.all([
     getNotificationCenter(pageSize),
-    getNotificationChannelPreferences()
+    getNotificationChannelPreferences(),
+    getCaseHubList(organizationId)
   ]);
 
   const queueView = await getNotificationQueueView({
@@ -220,6 +224,7 @@ export default async function NotificationsPage({
 
   return (
     <div className="space-y-5">
+      <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="알림 센터" />
       <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f3f8fd)] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

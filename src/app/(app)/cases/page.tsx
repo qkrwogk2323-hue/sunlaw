@@ -9,6 +9,8 @@ import { getCaseClientLinkedMap, listCases, purgeDeletedCasesPastRetention } fro
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
+import { getCaseHubsForCases } from '@/lib/queries/case-hubs';
+import { CaseHubConnectButton } from '@/components/case-hub-connect-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
@@ -71,9 +73,10 @@ export default async function CasesPage({
   });
 
   const allCaseIds = [...activeCases, ...completedCases, ...deletedCases].map((item: any) => item.id);
-  const [hubRegistrations, caseClientLinkedMap] = await Promise.all([
+  const [hubRegistrations, caseClientLinkedMap, caseHubMap] = await Promise.all([
     getCaseHubRegistrations(currentOrganizationId, allCaseIds),
-    getCaseClientLinkedMap(allCaseIds)
+    getCaseClientLinkedMap(allCaseIds),
+    getCaseHubsForCases(currentOrganizationId, allCaseIds)
   ]);
 
   const organizations = auth.memberships.map((membership) => ({
@@ -113,7 +116,18 @@ export default async function CasesPage({
             <span>{formatDateTime(item.updated_at)}</span>
           </div>
         </Link>
-        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          {/* 허브 연동/입장 버튼 */}
+          {bucket !== 'deleted' && (
+            <CaseHubConnectButton
+              caseId={item.id}
+              caseTitle={item.title}
+              organizationId={item.organization_id ?? currentOrganizationId}
+              hasClients={Boolean(caseClientLinkedMap[item.id])}
+              hub={caseHubMap[item.id] ?? null}
+            />
+          )}
+          <div className="flex flex-wrap items-center gap-2">
           {bucket !== 'deleted' ? (
             <DangerActionButton
               action={moveCaseToDeletedAction}
@@ -172,6 +186,7 @@ export default async function CasesPage({
               최종 보관
             </DangerActionButton>
           ) : null}
+          </div>
         </div>
       </div>
     );

@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   MessageSquareText,
   Menu,
+  Network,
   Search,
   Settings,
   ShieldAlert,
@@ -168,7 +169,8 @@ function getOrganizationSections({
 
   if (!isPlatformManagementOrganization) {
     collaborationItems.push(
-      { href: '/inbox', label: '사건허브', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
+      { href: '/case-hubs', label: '사건허브', icon: Network },
+      { href: '/inbox', label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
     );
   }
   if (!isPlatformManagementOrganization && mode !== 'client_communication') {

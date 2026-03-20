@@ -2,7 +2,9 @@ import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAu
 import { hasPermission } from '@/lib/permissions';
 import { getCalendarBoardSnapshot } from '@/lib/queries/calendar';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { CalendarBoardClient } from '@/components/calendar-board-client';
+import { HubContextStrip } from '@/components/hub-context-strip';
 
 export default async function CalendarPage({
   searchParams
@@ -22,18 +24,22 @@ export default async function CalendarPage({
     )
   );
 
-  const [calendarSnapshot, dashboardSnapshot] = await Promise.all([
+  const [calendarSnapshot, dashboardSnapshot, hubs] = await Promise.all([
     getCalendarBoardSnapshot(organizationId, month),
-    getDashboardSnapshot(organizationId)
+    getDashboardSnapshot(organizationId),
+    getCaseHubList(organizationId)
   ]);
 
   return (
-    <CalendarBoardClient
-      organizationId={organizationId}
-      currentUserId={auth.user.id}
-      canManage={canManage}
-      snapshot={calendarSnapshot}
-      caseOptions={dashboardSnapshot.caseOptions}
-    />
+    <div className="space-y-6">
+      <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="일정 확인" />
+      <CalendarBoardClient
+        organizationId={organizationId}
+        currentUserId={auth.user.id}
+        canManage={canManage}
+        snapshot={calendarSnapshot}
+        caseOptions={dashboardSnapshot.caseOptions}
+      />
+    </div>
   );
 }
