@@ -126,10 +126,20 @@ function getOrganizationSections({
       { href: '/portal/notifications', label: '알림 확인', icon: BellRing }
     );
   } else {
+    const organizationKind = membership?.organization?.kind;
+
+    if (organizationKind === 'other') {
+      organizationItems.push({ href: '/clients', label: '의뢰인 관리', icon: Users });
+    } else {
+    if (mode === 'collection_admin') {
+      organizationItems.push({ href: '/collections', label: '신용정보 운영', icon: FileText });
+    }
+
     organizationItems.push(
       { href: '/cases', label: '사건 목록', icon: FileText },
       { href: '/clients', label: '의뢰인 관리', icon: Users }
     );
+    }
   }
 
   collaborationItems.push(
@@ -565,6 +575,7 @@ export function ModeAwareNav({
               </button>
               {orgPickerOpen ? (
                 <form action={switchDefaultOrganizationAction} className="mt-3 flex items-center gap-2">
+                  <input type="hidden" name="contextOrganizationId" value={currentOrganization?.id ?? ''} />
                   <select
                     name="organizationId"
                     defaultValue={currentOrganization?.id ?? orgOptions[0]?.id}

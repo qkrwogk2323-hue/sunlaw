@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const membership = findMembership(auth, organizationId);
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, organizationId);
   if (!membership && !isPlatformAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

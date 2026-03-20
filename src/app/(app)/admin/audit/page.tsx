@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/format';
-import { hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
+import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listAuditChangeLog } from '@/lib/queries/audit';
 
 export default async function AdminAuditPage({
@@ -10,7 +10,7 @@ export default async function AdminAuditPage({
   searchParams?: Promise<{ table?: string; actor?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
 
   if (!isPlatformAdmin) {
     return (

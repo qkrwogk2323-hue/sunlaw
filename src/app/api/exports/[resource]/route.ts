@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuthenticatedUser, getEffectiveOrganizationId, hasActivePlatformAdminView } from '@/lib/auth';
+import { requireAuthenticatedUser, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { buildDocxBuffer, buildPdfBuffer, buildXlsxBuffer, type ExportFormat } from '@/lib/export/generate';
@@ -20,7 +20,9 @@ function sanitizeFileName(input: string) {
 
 export async function GET(request: NextRequest, context: { params: Promise<{ resource: string }> }) {
   const auth = await requireAuthenticatedUser();
-  const organizationId = getEffectiveOrganizationId(auth);
+  const requestedOrganizationId = `${request.nextUrl.searchParams.get('organizationId') ?? ''}`.trim() || null;
+  const organizationId = requestedOrganizationId ?? getEffectiveOrganizationId(auth);
+  const platformContextOrganizationId = requestedOrganizationId ?? getPlatformOrganizationContextId(auth);
   const supabase = await createSupabaseServerClient();
   const { resource } = await context.params;
   const format = (request.nextUrl.searchParams.get('format') ?? 'xlsx') as ExportFormat;
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
 
 
   const ensurePermission = async () => {
-    if (await hasActivePlatformAdminView(auth)) return true;
+    if (await hasActivePlatformAdminView(auth, platformContextOrganizationId)) return true;
     if (resource === 'calendar') return Boolean(organizationId && hasPermission(auth, organizationId, 'calendar_export'));
     if (resource === 'case-board') return Boolean(organizationId && hasPermission(auth, organizationId, 'case_board_export'));
     if (resource === 'collections') return Boolean(organizationId && hasPermission(auth, organizationId, 'collection_compensation_export'));

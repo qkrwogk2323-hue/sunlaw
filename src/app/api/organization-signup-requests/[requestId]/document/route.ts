@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getCurrentAuth, hasActivePlatformAdminView } from '@/lib/auth';
+import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Document not found' }, { status: 404 });
   }
 
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
   if (!isPlatformAdmin && requestRow.requester_profile_id !== auth.user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

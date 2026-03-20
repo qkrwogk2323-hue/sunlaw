@@ -195,9 +195,27 @@ export async function getActiveViewMode() {
   return normalizeActiveViewMode(cookieStore.get(ACTIVE_VIEW_MODE_COOKIE)?.value);
 }
 
-export async function hasActivePlatformAdminView(auth: AuthContext) {
-  if (!isPlatformOperator(auth)) return false;
-  return hasPlatformAdminSecurityClearance(auth);
+export function getPlatformOrganizationContextId(auth: AuthContext) {
+  const membership = auth.memberships.find((item) => (
+    item.organization?.slug === PLATFORM_ORGANIZATION_SLUG
+    && item.organization?.is_platform_root === true
+    && isManagementRole(item.role)
+  ));
+  return membership?.organization_id ?? null;
+}
+
+export async function hasActivePlatformAdminView(auth: AuthContext, organizationId: string | null | undefined) {
+  if (!organizationId) return false;
+
+  const membership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
+  if (!membership) return false;
+
+  return Boolean(
+    membership.organization?.slug === PLATFORM_ORGANIZATION_SLUG
+    && membership.organization?.is_platform_root === true
+    && isManagementRole(membership.role)
+    && hasPlatformAdminSecurityClearance(auth)
+  );
 }
 
 export async function hasActivePlatformScenarioView(auth: AuthContext, activeViewMode?: string | null) {
@@ -206,17 +224,19 @@ export async function hasActivePlatformScenarioView(auth: AuthContext, activeVie
   return false;
 }
 
-export async function requirePlatformAdmin() {
+export async function requirePlatformAdmin(organizationId?: string | null) {
   const auth = await requireAuthenticatedUser();
-  if (!(await hasActivePlatformAdminView(auth))) {
+  const platformOrganizationId = organizationId ?? getPlatformOrganizationContextId(auth);
+  if (!(await hasActivePlatformAdminView(auth, platformOrganizationId))) {
     redirect('/dashboard');
   }
   return auth;
 }
 
-export async function requirePlatformAdminAction(errorMessage = '플랫폼 관리자만 접근할 수 있습니다.') {
+export async function requirePlatformAdminAction(errorMessage = '플랫폼 관리자만 접근할 수 있습니다.', organizationId?: string | null) {
   const auth = await requireAuthenticatedUser();
-  assertPlatformAdminAccess(await hasActivePlatformAdminView(auth), errorMessage);
+  const platformOrganizationId = organizationId ?? getPlatformOrganizationContextId(auth);
+  assertPlatformAdminAccess(await hasActivePlatformAdminView(auth, platformOrganizationId), errorMessage);
   return auth;
 }
 

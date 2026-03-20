@@ -3,7 +3,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { getEffectiveOrganizationId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
+import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -84,7 +84,8 @@ async function assertOrgAdmin(organizationId: string) {
 
 export async function upsertPlatformSettingAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
-  if (!(await hasActivePlatformAdminView(auth))) {
+  const platformOrganizationId = getPlatformOrganizationContextId(auth);
+  if (!(await hasActivePlatformAdminView(auth, platformOrganizationId))) {
     throw new Error('플랫폼 관리자만 수정할 수 있습니다.');
   }
 
@@ -177,7 +178,7 @@ export async function upsertContentResourceAction(formData: FormData) {
   const organizationId = parsed.organizationId || null;
   if (organizationId) {
     await assertOrgAdmin(organizationId);
-  } else if (!(await hasActivePlatformAdminView(auth))) {
+  } else if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) {
     throw new Error('플랫폼 문구는 플랫폼 관리자만 수정할 수 있습니다.');
   }
 
@@ -212,7 +213,7 @@ export async function upsertContentResourceAction(formData: FormData) {
 
 export async function upsertFeatureFlagAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
-  if (!(await hasActivePlatformAdminView(auth))) {
+  if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) {
     throw new Error('플랫폼 관리자만 기능 플래그를 수정할 수 있습니다.');
   }
 
@@ -272,7 +273,7 @@ export async function upsertFeatureFlagAction(formData: FormData) {
 
 export async function rollbackLatestSettingChangeAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
-  if (!(await hasActivePlatformAdminView(auth))) {
+  if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) {
     throw new Error('플랫폼 관리자만 롤백할 수 있습니다.');
   }
 
@@ -494,7 +495,7 @@ export async function updateOrganizationProfileAction(formData: FormData) {
     throw existingOrganizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
   }
 
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, parsed.organizationId);
   const isPlatformRootOrganization = existingOrganization.slug === PLATFORM_ORGANIZATION_SLUG || existingOrganization.is_platform_root === true;
 
   if (parsed.kind === 'platform_management' && existingOrganization.slug !== PLATFORM_ORGANIZATION_SLUG) {

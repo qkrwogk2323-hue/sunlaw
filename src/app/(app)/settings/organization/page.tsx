@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 const kindLabel: Record<string, string> = {
   platform_management: '플랫폼 관리조직',
   law_firm: '법률사무소/로펌',
-  collection_company: '추심조직',
+  collection_company: '신용정보회사',
   mixed_practice: '복합업무조직',
   corporate_legal_team: '기업 법무팀',
   other: '기타'
@@ -45,7 +45,7 @@ export default async function OrganizationSettingsPage({
   if (!workspace) notFound();
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, organizationId);
   const isPlatformManagementOrganization = workspace.organization?.slug === PLATFORM_ORGANIZATION_SLUG
     || workspace.organization?.is_platform_root === true
     || workspace.organization?.kind === 'platform_management';

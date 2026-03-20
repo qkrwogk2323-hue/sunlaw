@@ -341,6 +341,7 @@ async function createOrganizationCore({
   createdBy,
   name,
   kind,
+  organizationIndustry,
   businessNumber,
   representativeName,
   representativeTitle,
@@ -357,6 +358,7 @@ async function createOrganizationCore({
   createdBy: string;
   name: string;
   kind: 'law_firm' | 'collection_company' | 'mixed_practice' | 'corporate_legal_team' | 'other';
+  organizationIndustry?: string | null;
   businessNumber?: string | null;
   representativeName?: string | null;
   representativeTitle?: string | null;
@@ -389,6 +391,7 @@ async function createOrganizationCore({
         slug,
         name,
         kind,
+        organization_industry: organizationIndustry || null,
         business_number: businessNumber || null,
         representative_name: representativeName || null,
         representative_title: representativeTitle || null,
@@ -924,6 +927,7 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
     const parsed = organizationSignupSchema.parse({
       name: formData.get('name'),
       kind: formData.get('kind') || 'law_firm',
+      organizationIndustry: formData.get('organizationIndustry'),
       businessNumber: formData.get('businessNumber'),
       businessRegistrationDocument: formData.get('businessRegistrationDocument'),
       representativeName: formData.get('representativeName'),
@@ -957,6 +961,7 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
       requester_email: requesterEmail,
       organization_name: parsed.name,
       organization_kind: parsed.kind,
+      organization_industry: parsed.organizationIndustry || null,
       business_number: normalizedBusinessNumber,
       representative_name: parsed.representativeName || null,
       representative_title: parsed.representativeTitle || null,
@@ -1075,6 +1080,7 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
       requestId,
       name: formData.get('name'),
       kind: formData.get('kind') || 'law_firm',
+      organizationIndustry: formData.get('organizationIndustry'),
       businessNumber: formData.get('businessNumber'),
       businessRegistrationDocument: formData.get('businessRegistrationDocument'),
       representativeName: formData.get('representativeName'),
@@ -1136,6 +1142,7 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
         requester_email: requesterEmail,
         organization_name: parsed.name,
         organization_kind: parsed.kind,
+        organization_industry: parsed.organizationIndustry || null,
         business_number: normalizedBusinessNumber,
         representative_name: parsed.representativeName || null,
         representative_title: parsed.representativeTitle || null,
@@ -1312,6 +1319,7 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
         createdBy: requestRow.requester_profile_id,
         name: requestRow.organization_name,
         kind: requestRow.organization_kind,
+        organizationIndustry: requestRow.organization_industry,
         businessNumber: requestRow.business_number,
         representativeName: requestRow.representative_name,
         representativeTitle: requestRow.representative_title,
@@ -1985,7 +1993,11 @@ export async function updateMembershipPermissionsAction(formData: FormData) {
 export async function switchDefaultOrganizationAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const organizationId = `${formData.get('organizationId') ?? ''}`;
-  const canUsePlatformScope = await hasActivePlatformAdminView(auth);
+  const contextOrganizationId = `${formData.get('contextOrganizationId') ?? ''}`.trim() || null;
+  if (!contextOrganizationId) {
+    throw new Error('contextOrganizationId is required');
+  }
+  const canUsePlatformScope = await hasActivePlatformAdminView(auth, contextOrganizationId);
 
   if (!organizationId) {
     throw new Error('organizationId is required');

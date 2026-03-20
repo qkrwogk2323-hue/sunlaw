@@ -11,7 +11,7 @@ export default async function ContentResourcesPage() {
   const organizationId = getEffectiveOrganizationId(auth);
   const membership = organizationId ? findMembership(auth, organizationId) : null;
   const canManageOrg = Boolean(membership && isWorkspaceAdmin(membership));
-  const canManagePlatform = await hasActivePlatformAdminView(auth);
+  const canManagePlatform = await hasActivePlatformAdminView(auth, organizationId);
   if (!canManageOrg && !canManagePlatform) notFound();
   const data = await getSettingsAdminData(organizationId);
 

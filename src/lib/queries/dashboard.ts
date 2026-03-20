@@ -101,7 +101,7 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
   }
   const canViewPartnerContacts = Boolean(
     auth
-    && (await hasActivePlatformAdminView(auth)
+    && (await hasActivePlatformAdminView(auth, organizationId)
       || auth.memberships.some((membership) => membership.organization_id === organizationId && isManagementRole(membership.role)))
   );
   const supabase = await createSupabaseServerClient();

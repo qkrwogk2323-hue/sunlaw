@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
-import { hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
+import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { FeatureFlagForm } from '@/components/forms/feature-flag-form';
 
 export default async function FeatureFlagsPage() {
   const auth = await requireAuthenticatedUser();
-  if (!(await hasActivePlatformAdminView(auth))) notFound();
+  if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) notFound();
   const data = await getSettingsAdminData();
 
   return (

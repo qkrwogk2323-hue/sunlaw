@@ -76,6 +76,7 @@ export function OrganizationSwitcher({
               }}
               className="rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
             >
+              <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />
               <select
                 id="organizationId"
                 name="organizationId"
@@ -109,6 +110,7 @@ export function OrganizationSwitcher({
 
   return (
     <form action={switchDefaultOrganizationAction} className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+      <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />
       <label htmlFor="organizationId" className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
         현재 조직
       </label>

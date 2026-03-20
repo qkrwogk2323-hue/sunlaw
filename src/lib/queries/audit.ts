@@ -1,4 +1,4 @@
-import { getCurrentAuth, hasActivePlatformAdminView } from '@/lib/auth';
+import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function listAuditChangeLog({
@@ -13,7 +13,7 @@ export async function listAuditChangeLog({
   const auth = await getCurrentAuth();
   if (!auth) return [];
 
-  const canView = await hasActivePlatformAdminView(auth);
+  const canView = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
   if (!canView) return [];
 
   const supabase = await createSupabaseServerClient();

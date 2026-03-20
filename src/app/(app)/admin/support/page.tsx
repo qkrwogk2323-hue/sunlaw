@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { SupportRequestForm } from '@/components/forms/support-request-form';
-import { hasActivePlatformAdminView, requireAuthenticatedUser, isManagementRole } from '@/lib/auth';
+import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser, isManagementRole } from '@/lib/auth';
 import { listAccessibleOrganizations } from '@/lib/queries/organizations';
 import { listSupportRequests } from '@/lib/queries/support';
 import { beginSupportSessionAction, decideSupportRequestAction } from '@/lib/actions/support-actions';
@@ -10,7 +10,7 @@ import { formatDateTime } from '@/lib/format';
 
 export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
   const isOrgManager = auth.memberships.some((membership) => isManagementRole(membership.role));
 
   if (!isPlatformAdmin && !isOrgManager) {
