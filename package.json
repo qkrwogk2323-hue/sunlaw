@@ -14,16 +14,17 @@
     "test:e2e:public-smoke": "playwright test --config=playwright.config.ts",
     "test:e2e:prod-smoke": "pnpm build && playwright test --config=playwright.prod-smoke.config.ts",
     "test:e2e:auth-prod-smoke": "pnpm build && playwright test --config=playwright.authenticated-prod-smoke.config.ts",
-    "typecheck": "tsc --noEmit"
-    ,"ops:preflight": "node ./scripts/preflight-env.mjs"
-    ,"git:main:sync": "./scripts/main-sync.sh"
-    ,"supabase:projects": "./scripts/run-with-env.sh supabase projects list"
-    ,"supabase:migration:list": "./scripts/run-with-env.sh supabase migration list"
-    ,"supabase:db:push": "./scripts/run-with-env.sh supabase db push"
+    "typecheck": "tsc --noEmit",
+    "ops:preflight": "node ./scripts/preflight-env.mjs",
+    "git:main:sync": "./scripts/main-sync.sh",
+    "supabase:projects": "./scripts/run-with-env.sh supabase projects list",
+    "supabase:migration:list": "./scripts/run-with-env.sh supabase migration list",
+    "supabase:db:push": "./scripts/run-with-env.sh supabase db push"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/speed-insights": "^2.0.0",
     "clsx": "^2.1.1",
     "docx": "^9.5.1",
     "lucide-react": "^0.482.0",
