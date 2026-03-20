@@ -22,6 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
+import { MobileOrganizationSwitcher } from '@/components/mobile-organization-switcher';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -254,7 +255,10 @@ function MobileSectionBar({
   currentOrgMembership,
   baseRoleLabel,
   currentOrganizationName,
-  hasUnreadNotifications
+  hasUnreadNotifications,
+  memberships,
+  currentOrganizationId,
+  platformOrganizations
 }: {
   sections: NavSection[];
   pathname: string;
@@ -262,6 +266,9 @@ function MobileSectionBar({
   baseRoleLabel: string;
   currentOrganizationName: string;
   hasUnreadNotifications: boolean;
+  memberships: Membership[];
+  currentOrganizationId: string | null;
+  platformOrganizations?: OrganizationOption[];
 }) {
   const derivedSectionId = useMemo(
     () => resolveSectionIdByPath(sections, pathname),
@@ -280,10 +287,13 @@ function MobileSectionBar({
     <div className="space-y-3 lg:hidden">
       <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold tracking-tight text-slate-950">{currentOrganizationName || currentOrgMembership?.organization?.name || '협업 조직'}</p>
-            <p className="mt-0.5 text-xs text-slate-600">{baseRoleLabel}</p>
-          </div>
+          <MobileOrganizationSwitcher
+            memberships={memberships}
+            currentOrganizationId={currentOrganizationId}
+            currentOrganizationName={currentOrganizationName}
+            baseRoleLabel={baseRoleLabel}
+            platformOrganizations={platformOrganizations}
+          />
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -553,6 +563,9 @@ export function ModeAwareNav({
         baseRoleLabel={baseRoleLabel}
         currentOrganizationName={currentOrganization?.name ?? ''}
         hasUnreadNotifications={hasUnreadNotifications}
+        memberships={memberships}
+        currentOrganizationId={profile.default_organization_id}
+        platformOrganizations={platformOrganizations.length ? platformOrganizations : undefined}
       />
 
       <div className="hidden lg:block">

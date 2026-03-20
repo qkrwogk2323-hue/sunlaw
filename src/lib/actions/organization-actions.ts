@@ -2045,6 +2045,12 @@ export async function switchDefaultOrganizationAction(formData: FormData) {
 
   revalidatePath('/dashboard');
   revalidatePath('/cases');
+  revalidatePath('/case-hubs');
+  revalidatePath('/clients');
+  revalidatePath('/calendar');
+  revalidatePath('/inbox');
+  revalidatePath('/notifications');
+  revalidatePath('/collections');
   revalidatePath('/settings/team');
   revalidatePath('/organizations');
 }
