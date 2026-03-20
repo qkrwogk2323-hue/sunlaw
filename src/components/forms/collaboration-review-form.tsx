@@ -1,4 +1,5 @@
 import { reviewOrganizationCollaborationRequestAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -12,7 +13,7 @@ export function CollaborationReviewForm({
   returnPath?: string;
 }) {
   return (
-    <form action={reviewOrganizationCollaborationRequestAction} className="space-y-3">
+    <ClientActionForm action={reviewOrganizationCollaborationRequestAction} successTitle="협업 요청을 승인했습니다." className="space-y-3">
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="organizationId" value={organizationId} />
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
@@ -28,7 +29,7 @@ export function CollaborationReviewForm({
         <input type="hidden" name="decision" value="approved" />
         <SubmitButton pendingLabel="승인 처리 중...">승인하기</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }
 
@@ -42,7 +43,7 @@ export function CollaborationRejectForm({
   returnPath?: string;
 }) {
   return (
-    <form action={reviewOrganizationCollaborationRequestAction} className="space-y-3">
+    <ClientActionForm action={reviewOrganizationCollaborationRequestAction} successTitle="협업 요청을 반려했습니다." className="space-y-3">
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="decision" value="rejected" />
@@ -53,6 +54,6 @@ export function CollaborationRejectForm({
         placeholder="반려 사유를 남겨 주세요."
       />
       <SubmitButton variant="secondary" pendingLabel="반려 처리 중...">반려하기</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

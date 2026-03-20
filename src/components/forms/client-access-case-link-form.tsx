@@ -1,6 +1,7 @@
 'use client';
 
 import { attachClientAccessRequestToCaseAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -20,7 +21,7 @@ export function ClientAccessCaseLinkForm({
   cases: CaseOption[];
 }) {
   return (
-    <form action={attachClientAccessRequestToCaseAction} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
+    <ClientActionForm action={attachClientAccessRequestToCaseAction} successTitle="요청이 사건에 연결되었습니다." className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="space-y-2">
@@ -50,6 +51,6 @@ export function ClientAccessCaseLinkForm({
       <SubmitButton variant="secondary" pendingLabel="연결 중..." className="w-full justify-center rounded-[1.2rem]">
         사건에 연결하기
       </SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { Loader2, Sparkles } from 'lucide-react';
 import { createCaseAction } from '@/lib/actions/case-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -93,13 +94,13 @@ export function CaseCreateForm({
 
         patchFields(json.data ?? {});
       } catch (error) {
-        setParseError(error instanceof Error ? error.message : '자동입력 요청 중 오류가 발생했습니다.');
+        setParseError(error instanceof Error ? error.message : '원인: 자동입력 응답을 처리하지 못했습니다. 해결 방법: 파일 형식을 확인하고 다시 시도해 주세요.');
       }
     });
   }
 
   return (
-    <form action={createCaseAction} className="space-y-4">
+    <ClientActionForm action={createCaseAction} successTitle="사건이 등록되었습니다." className="space-y-4">
       <input type="hidden" name="organizationId" value={defaultOrganization} />
       <input type="hidden" name="principalAmount" value="0" />
       <input type="hidden" name="specialNote" value="" />
@@ -210,6 +211,6 @@ export function CaseCreateForm({
       </div>
 
       <SubmitButton pendingLabel="생성 중...">생성하기</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

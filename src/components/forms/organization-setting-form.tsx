@@ -1,9 +1,10 @@
 import { upsertOrganizationSettingAction } from '@/lib/actions/settings-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function OrganizationSettingForm({ item, organizationId, currentValue }: { item: any; organizationId: string; currentValue?: any }) {
   return (
-    <form action={upsertOrganizationSettingAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+    <ClientActionForm action={upsertOrganizationSettingAction} successTitle="조직 설정이 저장되었습니다." className="space-y-3 rounded-xl border border-slate-200 p-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="key" value={item.key} />
       <div>
@@ -20,6 +21,6 @@ export function OrganizationSettingForm({ item, organizationId, currentValue }: 
         <span>{item.domain} · org override</span>
         <SubmitButton variant="secondary" pendingLabel="저장 중...">조직 값 저장</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

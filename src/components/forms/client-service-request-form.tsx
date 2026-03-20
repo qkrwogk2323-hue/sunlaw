@@ -1,6 +1,7 @@
 'use client';
 
 import { createClientServiceRequestAction } from '@/lib/actions/client-account-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function ClientServiceRequestForm({
@@ -15,7 +16,7 @@ export function ClientServiceRequestForm({
   description: string;
 }) {
   return (
-    <form action={createClientServiceRequestAction} className="space-y-3 rounded-[1.5rem] border border-slate-200 bg-white p-4">
+    <ClientActionForm action={createClientServiceRequestAction} successTitle="문의가 접수되었습니다." className="space-y-3 rounded-[1.5rem] border border-slate-200 bg-white p-4">
       <input type="hidden" name="organizationId" value={organizationId ?? ''} />
       <input type="hidden" name="requestKind" value={requestKind} />
       <div>
@@ -39,6 +40,6 @@ export function ClientServiceRequestForm({
       <SubmitButton variant="secondary" pendingLabel="문의 접수 중..." className="w-full justify-center rounded-[1.2rem]">
         문의 접수하기
       </SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

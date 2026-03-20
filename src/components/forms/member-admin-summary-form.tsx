@@ -1,4 +1,5 @@
 import { updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -16,7 +17,7 @@ export function MemberAdminSummaryForm({
   title?: string | null;
 }) {
   return (
-    <form action={updateMembershipAdminSummaryAction} className="grid gap-3 rounded-xl border border-slate-200 p-3 md:grid-cols-4">
+    <ClientActionForm action={updateMembershipAdminSummaryAction} successTitle="구성원 상태가 저장되었습니다." className="grid gap-3 rounded-xl border border-slate-200 p-3 md:grid-cols-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="membershipId" value={membershipId} />
       <label className="text-xs text-slate-500">구분
@@ -37,6 +38,6 @@ export function MemberAdminSummaryForm({
       <div className="md:col-span-4">
         <SubmitButton variant="secondary" pendingLabel="저장 중...">관리자 상태 저장</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

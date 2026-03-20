@@ -377,7 +377,7 @@ function useDashboardPlannerState({
           onError('일정 등록에 실패했습니다.', { message: '잠시 후 다시 시도해 주세요.' });
         }
       } catch {
-        onError('일정 등록 중 오류가 발생했습니다.', { message: '네트워크 연결을 확인하고 다시 시도해 주세요.' });
+        onError('일정 등록에 실패했습니다.', { message: '원인: 네트워크 연결 또는 응답 처리에 문제가 있습니다. 해결 방법: 연결 상태를 확인한 뒤 다시 시도해 주세요.' });
       }
     });
   };
@@ -801,7 +801,7 @@ function useDashboardCommunicationState({
           onError('조율 항목 등록에 실패했습니다.', { message: '잠시 후 다시 시도해 주세요.' });
         }
       } catch {
-        onError('등록 중 오류가 발생했습니다.', { message: '네트워크 연결을 확인하고 다시 시도해 주세요.' });
+        onError('조율 항목 등록에 실패했습니다.', { message: '원인: 네트워크 연결 또는 응답 처리에 문제가 있습니다. 해결 방법: 연결 상태를 확인한 뒤 다시 시도해 주세요.' });
       }
     });
   };
@@ -1021,7 +1021,7 @@ export function DashboardHubClient({
     try {
       const response = await fetch(`/api/search/global?q=${encodeURIComponent(keyword)}&limit=5`, { cache: 'no-store' });
       if (!response.ok) {
-        setWorkspaceSearchHint('검색 중 오류가 발생했습니다.');
+        setWorkspaceSearchHint('검색 요청을 처리하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
         return;
       }
       const payload = await response.json() as {
@@ -1049,7 +1049,7 @@ export function DashboardHubClient({
 
       setWorkspaceSearchHint('검색 결과가 없습니다.');
     } catch {
-      setWorkspaceSearchHint('검색 중 오류가 발생했습니다.');
+      setWorkspaceSearchHint('검색 요청을 처리하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
     } finally {
       setWorkspaceSearchBusy(false);
     }

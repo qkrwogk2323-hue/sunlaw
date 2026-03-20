@@ -7,6 +7,8 @@ import { HomepageDemoVideo } from '@/components/homepage-demo-video';
 import { buttonStyles } from '@/components/ui/button';
 import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { signOutAction } from '@/lib/actions/auth-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 
 export const dynamic = 'force-dynamic';
@@ -98,11 +100,11 @@ export default async function MarketingPage({
                 <div className="justify-self-center">
                   <p className="text-lg font-semibold text-white">{greetingLabel(auth.profile.full_name)}</p>
                 </div>
-                <form action={signOutAction} className="justify-self-end">
-                  <button className={buttonStyles({ variant: 'secondary', className: 'min-h-12 rounded-[1.1rem] px-5 text-base font-semibold whitespace-nowrap' })}>
+                <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다." className="justify-self-end">
+                  <SubmitButton variant="secondary" pendingLabel="로그아웃 중..." className={buttonStyles({ variant: 'secondary', className: 'min-h-12 rounded-[1.1rem] px-5 text-base font-semibold whitespace-nowrap' })}>
                     로그아웃
-                  </button>
-                </form>
+                  </SubmitButton>
+                </ClientActionForm>
               </div>
             ) : null}
           </div>

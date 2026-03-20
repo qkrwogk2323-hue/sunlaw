@@ -6,6 +6,8 @@ import { MessageSquareText, Bell, LogOut, Sparkles, FolderOpen } from 'lucide-re
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { signOutAction } from '@/lib/actions/auth-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { PageBackButton } from '@/components/page-back-button';
 import { buttonStyles } from '@/components/ui/button';
 import { countActivePortalLinks } from '@/lib/queries/portal';
@@ -74,11 +76,11 @@ export default async function PortalLayout({ children }: { children: ReactNode }
               </Link>
             </div>
           </nav>
-          <form action={signOutAction}>
-            <button className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>
+          <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다.">
+            <SubmitButton variant="secondary" pendingLabel="로그아웃 중..." className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>
               <LogOut className="size-4" /> 로그아웃
-            </button>
-          </form>
+            </SubmitButton>
+          </ClientActionForm>
         </aside>
         <main className="space-y-4">
           <PageBackButton fallbackHref="/portal" topLevelRoutes={['/portal']} />

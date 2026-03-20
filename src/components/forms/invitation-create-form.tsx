@@ -1,10 +1,11 @@
 import { createStaffInvitationAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function StaffInvitationCreateForm({ organizationId }: { organizationId: string }) {
   return (
-    <form action={createStaffInvitationAction} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={createStaffInvitationAction} successTitle="직원 초대 링크가 생성되었습니다." className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <Input name="email" type="email" placeholder="직원 이메일" required className="md:col-span-2" />
       <div>
@@ -38,6 +39,6 @@ export function StaffInvitationCreateForm({ organizationId }: { organizationId: 
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="생성 중...">직원 초대 링크 생성</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

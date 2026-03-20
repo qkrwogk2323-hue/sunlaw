@@ -1,10 +1,11 @@
 import { createStaffInvitationAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function StaffDirectInviteForm({ organizationId, returnPath }: { organizationId: string; returnPath?: string }) {
   return (
-    <form action={createStaffInvitationAction} className="space-y-3">
+    <ClientActionForm action={createStaffInvitationAction} successTitle="직원 초대 링크가 생성되었습니다." className="space-y-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
       <Input name="email" type="email" placeholder="직원 이메일" required />
@@ -17,6 +18,6 @@ export function StaffDirectInviteForm({ organizationId, returnPath }: { organiza
       </label>
       <Input name="membershipTitle" placeholder="직책(선택)" />
       <SubmitButton pendingLabel="생성 중...">직접 초대 링크 생성</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

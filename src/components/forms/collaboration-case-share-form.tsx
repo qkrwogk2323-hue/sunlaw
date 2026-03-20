@@ -1,4 +1,5 @@
 import { shareCaseToCollaborationHubAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -26,7 +27,7 @@ export function CollaborationCaseShareForm({
     : cases[0]?.id;
 
   return (
-    <form action={shareCaseToCollaborationHubAction} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <ClientActionForm action={shareCaseToCollaborationHubAction} successTitle="사건이 공유되었습니다." className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
       <input type="hidden" name="hubId" value={hubId} />
       <input type="hidden" name="organizationId" value={organizationId} />
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
@@ -51,6 +52,6 @@ export function CollaborationCaseShareForm({
         <Textarea name="note" className="min-h-24" placeholder="상대 조직이 이 사건을 어떤 맥락으로 보면 되는지 적어 주세요." />
       </div>
       <SubmitButton pendingLabel="공유 중...">사건 공유하기</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

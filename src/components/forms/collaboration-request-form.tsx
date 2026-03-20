@@ -1,4 +1,5 @@
 import { createOrganizationCollaborationRequestAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +16,7 @@ export function CollaborationRequestForm({
   returnPath?: string;
 }) {
   return (
-    <form action={createOrganizationCollaborationRequestAction} className="space-y-3">
+    <ClientActionForm action={createOrganizationCollaborationRequestAction} successTitle="협업 제안이 등록되었습니다." className="space-y-3">
       <input type="hidden" name="sourceOrganizationId" value={sourceOrganizationId} />
       <input type="hidden" name="targetOrganizationId" value={targetOrganizationId} />
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
@@ -32,6 +33,6 @@ export function CollaborationRequestForm({
         />
       </div>
       <SubmitButton pendingLabel="제안 등록 중...">제안하기</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

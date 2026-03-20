@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { completeMemberOnboardingProfileAction } from '@/lib/actions/profile-actions';
@@ -29,7 +30,7 @@ export default async function MemberProfileOnboardingPage() {
           <p className="text-sm text-slate-600">임시 계정은 아래 정보를 입력하기 전까지 메뉴를 볼 수 없습니다.</p>
         </CardHeader>
         <CardContent>
-          <form action={completeMemberOnboardingProfileAction} className="space-y-4">
+          <ClientActionForm action={completeMemberOnboardingProfileAction} successTitle="본인 정보가 저장되었습니다." className="space-y-4">
             <div>
               <label className="mb-1 block text-sm text-slate-700">연락처</label>
               <Input name="phone" placeholder="01012345678" required />
@@ -48,7 +49,7 @@ export default async function MemberProfileOnboardingPage() {
             </div>
             <p className="text-xs text-slate-500">입력 완료 후 조직 관리자에게 연결 확인 알림이 전송됩니다.</p>
             <SubmitButton pendingLabel="저장 중..." className="w-full justify-center">저장하고 시작</SubmitButton>
-          </form>
+          </ClientActionForm>
         </CardContent>
       </Card>
     </main>

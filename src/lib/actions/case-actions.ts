@@ -1438,6 +1438,37 @@ export async function moveCaseToDeletedAction(formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+export async function restoreCaseAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!caseId || !organizationId) {
+    throw new Error('복구 요청 정보가 올바르지 않습니다.');
+  }
+
+  const { auth } = await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_assign',
+    errorMessage: '사건 복구 권한이 없습니다.'
+  });
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('cases')
+    .update({
+      lifecycle_status: 'active',
+      case_status: 'active',
+      updated_by: auth.user.id
+    })
+    .eq('id', caseId)
+    .eq('organization_id', organizationId)
+    .eq('lifecycle_status', 'soft_deleted');
+
+  if (error) throw error;
+
+  revalidatePath('/cases');
+  revalidatePath(`/cases/${caseId}`);
+  revalidatePath('/dashboard');
+}
+
 export async function forceDeleteCaseAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();

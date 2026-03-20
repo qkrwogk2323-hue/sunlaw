@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import { Button, segmentStyles } from '@/components/ui/button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { membershipRoleLabel } from '@/lib/membership-labels';
 import type { Membership, OrganizationOption } from '@/lib/types';
@@ -69,11 +70,10 @@ export function OrganizationSwitcher({
 
         {isOpen ? (
           selectOptions.length ? (
-            <form
-              action={async (formData) => {
-                await switchDefaultOrganizationAction(formData);
-                setIsOpen(false);
-              }}
+            <ClientActionForm
+              action={switchDefaultOrganizationAction}
+              successTitle="조직이 전환되었습니다."
+              onSuccess={() => setIsOpen(false)}
               className="rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
             >
               <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />
@@ -97,7 +97,7 @@ export function OrganizationSwitcher({
                   닫기
                 </Button>
               </div>
-            </form>
+            </ClientActionForm>
           ) : (
             <div className="rounded-[1.4rem] border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
               선택 가능한 조직 데이터가 아직 없습니다.
@@ -109,7 +109,7 @@ export function OrganizationSwitcher({
   }
 
   return (
-    <form action={switchDefaultOrganizationAction} className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+    <ClientActionForm action={switchDefaultOrganizationAction} successTitle="조직이 전환되었습니다." className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm">
       <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />
       <label htmlFor="organizationId" className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
         현재 조직
@@ -129,6 +129,6 @@ export function OrganizationSwitcher({
       <SubmitButton variant="secondary" pendingLabel="전환 중..." className="w-full justify-center">
         조직 전환
       </SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

@@ -137,7 +137,7 @@ export default async function OrganizationRequestsPage() {
                     successTitle="조직 가입 신청이 승인되었습니다."
                     successMessage="새 조직이 생성되고 신청자에게 알림이 발송됩니다."
                     errorTitle="승인 처리에 실패했습니다."
-                    errorCause="이미 처리된 신청이거나 조직 생성 중 오류가 발생했습니다."
+                    errorCause="이미 처리된 신청이거나 조직 생성 단계의 검증에 실패했습니다."
                     errorResolution="신청 상태를 새로고침하고 다시 시도해 주세요."
                     className="space-y-3 rounded-xl border border-slate-200 p-4"
                   >
@@ -150,7 +150,7 @@ export default async function OrganizationRequestsPage() {
                     action={reviewOrganizationSignupRequestAction}
                     successTitle="조직 가입 신청이 반려되었습니다."
                     errorTitle="반려 처리에 실패했습니다."
-                    errorCause="이미 처리된 신청이거나 서버 오류가 발생했습니다."
+                    errorCause="이미 처리된 신청이거나 검토 상태 저장에 실패했습니다."
                     errorResolution="신청 상태를 새로고침하고 다시 시도해 주세요."
                     className="space-y-3 rounded-xl border border-slate-200 p-4"
                   >
@@ -194,7 +194,7 @@ export default async function OrganizationRequestsPage() {
                     successTitle="조직 탈퇴 신청이 승인되었습니다."
                     successMessage="해당 조직의 탈퇴 절차가 진행됩니다."
                     errorTitle="탈퇴 신청 승인에 실패했습니다."
-                    errorCause="이미 처리된 신청이거나 서버 오류가 발생했습니다."
+                    errorCause="이미 처리된 신청이거나 탈퇴 승인 상태 저장에 실패했습니다."
                     errorResolution="잠시 후 다시 시도해 주세요."
                     className="space-y-2 rounded-xl border border-slate-200 p-3"
                   >
@@ -207,7 +207,7 @@ export default async function OrganizationRequestsPage() {
                     action={reviewOrganizationExitRequestAction}
                     successTitle="조직 탈퇴 신청이 반려되었습니다."
                     errorTitle="탈퇴 신청 반려에 실패했습니다."
-                    errorCause="이미 처리된 신청이거나 서버 오류가 발생했습니다."
+                    errorCause="이미 처리된 신청이거나 탈퇴 반려 상태 저장에 실패했습니다."
                     errorResolution="잠시 후 다시 시도해 주세요."
                     className="space-y-2 rounded-xl border border-slate-200 p-3"
                   >

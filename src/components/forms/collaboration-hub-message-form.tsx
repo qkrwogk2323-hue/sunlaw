@@ -1,4 +1,5 @@
 import { postCollaborationHubMessageAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -20,7 +21,7 @@ export function CollaborationHubMessageForm({
   cases: CaseOption[];
 }) {
   return (
-    <form action={postCollaborationHubMessageAction} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <ClientActionForm action={postCollaborationHubMessageAction} successTitle="메시지가 전송되었습니다." className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
       <input type="hidden" name="hubId" value={hubId} />
       <input type="hidden" name="organizationId" value={organizationId} />
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
@@ -38,6 +39,6 @@ export function CollaborationHubMessageForm({
         </select>
       </div>
       <SubmitButton pendingLabel="전송 중...">메시지 보내기</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

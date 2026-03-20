@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { isValidResidentRegistrationNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
 import { submitClientSignupAction } from '@/lib/actions/client-account-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -18,7 +19,7 @@ export function ClientSignupForm() {
   const residentNumberInvalid = residentNumber.length > 0 && normalizedResidentNumber.length === 13 && !isValidResidentRegistrationNumber(normalizedResidentNumber);
 
   return (
-    <form action={submitClientSignupAction} className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+    <ClientActionForm action={submitClientSignupAction} successTitle="가입 신청이 접수되었습니다." className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm text-slate-700">
           <span className="font-medium text-slate-900">이름</span>
@@ -84,6 +85,6 @@ export function ClientSignupForm() {
       <SubmitButton className="w-full justify-center rounded-[1.2rem]" pendingLabel="가입 접수 중..." disabled={residentNumberMismatch || residentNumberInvalid}>
         본인정보 등록하고 승인 대기 시작
       </SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

@@ -1,4 +1,5 @@
 import { updateSelfMemberProfileAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -18,7 +19,7 @@ export function MemberSelfProfileForm({
   hasSavedAddress?: boolean;
 }) {
   return (
-    <form action={updateSelfMemberProfileAction} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={updateSelfMemberProfileAction} successTitle="본인 정보가 저장되었습니다." className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">이름</label>
@@ -46,6 +47,6 @@ export function MemberSelfProfileForm({
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="저장 중...">본인 정보 저장</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

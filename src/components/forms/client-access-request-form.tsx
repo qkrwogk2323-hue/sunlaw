@@ -1,6 +1,7 @@
 'use client';
 
 import { submitClientAccessRequestAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function ClientAccessRequestForm({
@@ -15,7 +16,7 @@ export function ClientAccessRequestForm({
   disabledLabel?: string;
 }) {
   return (
-    <form action={submitClientAccessRequestAction} className="space-y-3">
+    <ClientActionForm action={submitClientAccessRequestAction} successTitle="조직 가입 신청을 보냈습니다." className="space-y-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="organizationKey" value={organizationKey} />
       <textarea
@@ -31,6 +32,6 @@ export function ClientAccessRequestForm({
           조직가입신청 보내기
         </SubmitButton>
       )}
-    </form>
+    </ClientActionForm>
   );
 }

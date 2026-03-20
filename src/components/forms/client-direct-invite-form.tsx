@@ -1,4 +1,5 @@
 import { createClientDirectInvitationAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -6,7 +7,7 @@ type CaseOption = { id: string; title: string };
 
 export function ClientDirectInviteForm({ organizationId, cases, returnPath }: { organizationId: string; cases: CaseOption[]; returnPath?: string }) {
   return (
-    <form action={createClientDirectInvitationAction} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={createClientDirectInvitationAction} successTitle="의뢰인 초대 링크가 발송되었습니다." className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       {returnPath ? <input type="hidden" name="returnPath" value={returnPath} /> : null}
       <div className="md:col-span-2">
@@ -22,6 +23,6 @@ export function ClientDirectInviteForm({ organizationId, cases, returnPath }: { 
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="발송 중...">의뢰인 초대 링크 발송</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

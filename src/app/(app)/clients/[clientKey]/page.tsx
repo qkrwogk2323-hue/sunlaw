@@ -96,7 +96,7 @@ export default async function ClientDetailPage({
                 successTitle="특이사항이 추가되었습니다."
                 successMessage="의뢰인 누적 목록에 기록되었습니다."
                 errorTitle="특이사항 추가에 실패했습니다."
-                errorCause="내용이 비어 있거나 서버 오류가 발생했습니다."
+                errorCause="내용이 비어 있거나 특이사항 저장 단계에서 검증에 실패했습니다."
                 errorResolution="내용을 입력하고 다시 시도해 주세요."
                 className="space-y-3"
               >
@@ -138,7 +138,7 @@ export default async function ClientDetailPage({
                     action={linkRelatedClientAction}
                     successTitle="관련인이 연동되었습니다."
                     errorTitle="관련인 연동에 실패했습니다."
-                    errorCause="이미 연동된 의뢰인이거나 서버 오류가 발생했습니다."
+                    errorCause="이미 연동된 의뢰인이거나 관계 저장 단계에서 검증에 실패했습니다."
                     errorResolution="다른 의뢰인을 선택하거나 잠시 후 다시 시도해 주세요."
                     className="mt-3 w-[20rem] max-w-full space-y-2 rounded-xl border border-slate-200 p-3"
                   >

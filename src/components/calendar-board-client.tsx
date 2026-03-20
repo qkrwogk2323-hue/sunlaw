@@ -9,7 +9,9 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 
 type ScheduleItem = {
@@ -281,6 +283,7 @@ export function CalendarBoardClient({
 
   const prevMonth = monthShift(snapshot.focusMonth, -1);
   const nextMonth = monthShift(snapshot.focusMonth, 1);
+  const createScheduleAction = createCaseId ? addScheduleAction.bind(null, createCaseId) : async () => {};
 
   const categoryCards = [
     { key: 'today' as const, label: '오늘', value: summary.today, icon: Clock3 },
@@ -451,7 +454,13 @@ export function CalendarBoardClient({
                 날짜를 누르면 해당 날짜로 일정 등록이 바로 열립니다. 기본 화면은 일정 목록 확인에 집중합니다.
               </div>
             ) : (
-              <form action={createCaseId ? addScheduleAction.bind(null, createCaseId) : undefined} className="grid gap-3 xl:grid-cols-[1.1fr_1.4fr_0.9fr_1fr_auto]">
+              <ClientActionForm
+                action={createScheduleAction}
+                successTitle="일정 등록 완료"
+                errorCause="일정 등록 정보를 저장하지 못했습니다."
+                errorResolution="사건 선택과 일정 입력값을 확인한 뒤 다시 등록해 주세요."
+                className="grid gap-3 xl:grid-cols-[1.1fr_1.4fr_0.9fr_1fr_auto]"
+              >
                 <input type="hidden" name="clientVisibility" value="internal_only" />
                 <select
                   value={createCaseId}
@@ -472,7 +481,7 @@ export function CalendarBoardClient({
                   <option value="other">기타</option>
                 </select>
                 <Input name="scheduledStart" type="datetime-local" required value={createScheduledStart} onChange={(event) => setCreateScheduledStart(event.target.value)} />
-                <Button type="submit" disabled={!organizationId || !createCaseId}>등록</Button>
+                <SubmitButton disabled={!organizationId || !createCaseId}>등록</SubmitButton>
                 <details className="xl:col-span-5">
                   <summary className="cursor-pointer text-sm font-medium text-slate-600">추가 항목</summary>
                   <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
@@ -484,7 +493,7 @@ export function CalendarBoardClient({
                     </label>
                   </div>
                 </details>
-              </form>
+              </ClientActionForm>
             )}
           </CardContent>
         </Card>
@@ -529,7 +538,13 @@ export function CalendarBoardClient({
                   </div>
 
                   {editable && editingScheduleId === entry.id && entry.raw ? (
-                    <form action={updateScheduleAction.bind(null, entry.id)} className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                    <ClientActionForm
+                      action={updateScheduleAction.bind(null, entry.id)}
+                      successTitle="일정 수정 완료"
+                      errorCause="일정 수정 정보를 저장하지 못했습니다."
+                      errorResolution="일정 시간과 입력값을 확인한 뒤 다시 저장해 주세요."
+                      className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2"
+                    >
                       <input type="hidden" name="clientVisibility" value="internal_only" />
                       <Input name="title" defaultValue={entry.raw.title} required className="md:col-span-2" />
                       <select name="scheduleKind" defaultValue={entry.raw.schedule_kind} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
@@ -552,9 +567,9 @@ export function CalendarBoardClient({
                         중요 일정으로 유지
                       </label>
                       <div className="md:col-span-2">
-                        <Button type="submit">일정 수정 저장</Button>
+                        <SubmitButton>일정 수정 저장</SubmitButton>
                       </div>
-                    </form>
+                    </ClientActionForm>
                   ) : null}
                 </div>
               );

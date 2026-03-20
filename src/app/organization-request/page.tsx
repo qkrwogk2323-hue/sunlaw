@@ -1,6 +1,8 @@
 import { OrganizationSignupForm } from '@/components/forms/organization-signup-form';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cancelOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
 import { getCurrentAuth } from '@/lib/auth';
@@ -124,10 +126,10 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <a href={`/organization-request?edit=${activePendingRequest.id}`} className={buttonStyles({ className: 'min-h-11 rounded-[1rem] px-4' })}>수정하기</a>
-                    <form action={cancelOrganizationSignupRequestAction}>
+                    <ClientActionForm action={cancelOrganizationSignupRequestAction} successTitle="조직 신청이 취소되었습니다.">
                       <input type="hidden" name="requestId" value={activePendingRequest.id} />
-                      <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-[1rem] px-4' })}>취소하기</button>
-                    </form>
+                      <SubmitButton variant="secondary" pendingLabel="취소 중..." className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-[1rem] px-4' })}>취소하기</SubmitButton>
+                    </ClientActionForm>
                   </div>
                 </div>
               ) : null}

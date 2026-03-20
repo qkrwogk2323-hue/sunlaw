@@ -16,11 +16,14 @@ import {
   Menu,
   Search,
   Settings,
+  ShieldAlert,
   Users,
   X
 } from 'lucide-react';
 import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
 import { segmentStyles } from '@/components/ui/button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE } from '@/lib/view-mode';
@@ -135,6 +138,7 @@ function getOrganizationSections({
       { href: '/admin/organization-requests', label: '조직 신청 관리', icon: FileText },
       { href: '/admin/organizations', label: '조직 관리', icon: Building2 },
       { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
+      { href: '/admin/audit', label: '감사 로그', icon: ShieldAlert },
       { href: '/settings/organization', label: '조직 설정', icon: Settings }
     );
   } else if (mode === 'client_communication') {
@@ -587,7 +591,7 @@ export function ModeAwareNav({
                 {orgPickerOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
               </button>
               {orgPickerOpen ? (
-                <form action={switchDefaultOrganizationAction} className="mt-3 flex items-center gap-2">
+                <ClientActionForm action={switchDefaultOrganizationAction} successTitle="조직이 전환되었습니다." className="mt-3 flex items-center gap-2">
                   <input type="hidden" name="contextOrganizationId" value={currentOrganization?.id ?? ''} />
                   <select
                     name="organizationId"
@@ -598,10 +602,10 @@ export function ModeAwareNav({
                       <option key={option.id} value={option.id}>{option.name}</option>
                     ))}
                   </select>
-                  <button type="submit" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <SubmitButton variant="secondary" pendingLabel="변경 중..." className="h-10 px-3 text-sm">
                     변경
-                  </button>
-                </form>
+                  </SubmitButton>
+                </ClientActionForm>
               ) : null}
             </div>
 

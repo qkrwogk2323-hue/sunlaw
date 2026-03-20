@@ -108,7 +108,7 @@ export function DangerActionButton({
         setModalOpen(false);
         success(successTitle, { message: successMessage });
       } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : '알 수 없는 오류';
+        const rawMessage = err instanceof Error ? err.message : '원인을 확인할 수 없었습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.';
         showError(errorTitle, {
           message: `${errorCause ? `원인: ${errorCause} · ` : ''}${rawMessage}`,
           duration: 9000,

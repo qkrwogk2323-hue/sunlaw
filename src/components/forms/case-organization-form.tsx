@@ -1,4 +1,5 @@
 import { addCaseOrganizationAction } from '@/lib/actions/case-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -6,7 +7,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 export function CaseOrganizationForm({ caseId }: { caseId: string }) {
   const action = addCaseOrganizationAction.bind(null, caseId);
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={action} successTitle="참여 조직이 추가되었습니다." className="grid gap-3 md:grid-cols-2">
       <Input name="organizationId" placeholder="참여 조직 ID" required />
       <select name="role" defaultValue="partner_org" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="principal_client_org">주고객조직</option>
@@ -42,6 +43,6 @@ export function CaseOrganizationForm({ caseId }: { caseId: string }) {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="추가 중...">참여 조직 추가</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

@@ -1,12 +1,13 @@
 'use client';
 
 import { reviewClientAccessRequestAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function ClientAccessReviewForm({ requestId, organizationId }: { requestId: string; organizationId: string }) {
   return (
     <div className="space-y-3">
-      <form action={reviewClientAccessRequestAction} className="space-y-3">
+      <ClientActionForm action={reviewClientAccessRequestAction} successTitle="요청을 승인했습니다." className="space-y-3">
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="decision" value="approved" />
@@ -19,8 +20,8 @@ export function ClientAccessReviewForm({ requestId, organizationId }: { requestI
         <SubmitButton variant="secondary" pendingLabel="반영 중..." className="w-full justify-center rounded-[1.2rem]">
           승인하기
         </SubmitButton>
-      </form>
-      <form action={reviewClientAccessRequestAction} className="space-y-3">
+      </ClientActionForm>
+      <ClientActionForm action={reviewClientAccessRequestAction} successTitle="요청을 반려했습니다." className="space-y-3">
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="decision" value="rejected" />
@@ -33,7 +34,7 @@ export function ClientAccessReviewForm({ requestId, organizationId }: { requestI
         <SubmitButton variant="ghost" pendingLabel="반영 중..." className="w-full justify-center rounded-[1.2rem] border border-slate-200">
           반려하기
         </SubmitButton>
-      </form>
+      </ClientActionForm>
     </div>
   );
 }

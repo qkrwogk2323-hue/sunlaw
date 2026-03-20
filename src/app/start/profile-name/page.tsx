@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { completeLegalNameAction } from '@/lib/actions/profile-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath, hasCompletedLegalName } from '@/lib/client-account';
 
@@ -31,7 +33,7 @@ export default async function ProfileNamePage() {
           </p>
         </CardHeader>
         <CardContent className="space-y-5">
-          <form action={completeLegalNameAction} className="space-y-4">
+          <ClientActionForm action={completeLegalNameAction} successTitle="실명이 저장되었습니다." className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="legalName" className="text-sm font-medium text-slate-900">본인 실명</label>
               <input
@@ -45,10 +47,10 @@ export default async function ProfileNamePage() {
                 required
               />
             </div>
-            <button type="submit" className={buttonStyles({ className: 'min-h-12 w-full rounded-[1.25rem] px-4 text-base' })}>
+            <SubmitButton className={buttonStyles({ className: 'min-h-12 w-full rounded-[1.25rem] px-4 text-base' })} pendingLabel="저장 중...">
               실명 저장하고 계속
-            </button>
-          </form>
+            </SubmitButton>
+          </ClientActionForm>
 
           <div className="rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-500">
             실명은 승인, 지원 접속, 의뢰인 안내, 문서 결재 기록에 사용됩니다. 문제가 있으면 <Link href={'/login' as Route} className="font-medium text-sky-700">로그인 화면</Link>으로 돌아갈 수 있습니다.

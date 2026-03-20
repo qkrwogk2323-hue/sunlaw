@@ -1,10 +1,11 @@
 import { createOrganizationAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function OrganizationCreateForm() {
   return (
-    <form action={createOrganizationAction} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm action={createOrganizationAction} successTitle="조직이 생성되었습니다." className="grid gap-3 md:grid-cols-2">
       <Input name="name" placeholder="조직명" required />
       <select name="kind" defaultValue="law_firm" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="law_firm">법률사무소/법무법인</option>
@@ -40,6 +41,6 @@ export function OrganizationCreateForm() {
       <div className="md:col-span-2">
         <SubmitButton pendingLabel="조직 생성 중...">조직 생성</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

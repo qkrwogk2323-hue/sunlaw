@@ -391,7 +391,7 @@ export default async function NotificationsPage({
                   successTitle="보관함을 비웠습니다."
                   successMessage="보관된 알림이 모두 영구 삭제되었습니다."
                   errorTitle="보관함 비우기에 실패했습니다."
-                  errorCause="서버 처리 중 오류가 발생했습니다."
+                  errorCause="알림 보관함을 비우는 중 서버 응답이 실패했습니다."
                   errorResolution="잠시 후 다시 시도해 주세요."
                   buttonVariant="destructive"
                   className="rounded-full px-5"

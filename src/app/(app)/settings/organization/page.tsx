@@ -246,7 +246,7 @@ export default async function OrganizationSettingsPage({
             successTitle="탈퇴 신청이 접수되었습니다."
             successMessage="플랫폼 관리자 검토 후 처리됩니다. 승인 전까지 조직 운영은 유지됩니다."
             errorTitle="탈퇴 신청에 실패했습니다."
-            errorCause="이미 대기 중인 신청이 있거나 서버 오류가 발생했습니다."
+            errorCause="이미 대기 중인 신청이 있거나 탈퇴 요청 저장에 실패했습니다."
             errorResolution="기존 신청 상태를 확인하거나 잠시 후 다시 시도해 주세요."
             className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4"
           >

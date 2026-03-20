@@ -1951,7 +1951,10 @@ export async function deleteMembershipAction(formData: FormData) {
 
   const { error } = await supabase
     .from('organization_memberships')
-    .delete()
+    .update({
+      status: 'suspended',
+      title: targetMember.role === 'org_staff' ? '삭제 처리됨' : null
+    })
     .eq('id', parsed.membershipId)
     .eq('organization_id', parsed.organizationId);
 

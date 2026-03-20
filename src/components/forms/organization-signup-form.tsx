@@ -3,6 +3,7 @@
 import type { ChangeEvent } from 'react';
 import { useState } from 'react';
 import { submitOrganizationSignupRequestAction, updateOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -118,6 +119,7 @@ export function OrganizationSignupForm({
   const isEditMode = Boolean(requestId);
   const [organizationKind, setOrganizationKind] = useState(defaultValues?.kind ?? 'law_firm');
   const showIndustryInput = organizationKind === 'law_firm' || organizationKind === 'collection_company' || organizationKind === 'other';
+  const formAction = isEditMode ? updateOrganizationSignupRequestAction : submitOrganizationSignupRequestAction;
 
   const handleDocumentChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -142,7 +144,13 @@ export function OrganizationSignupForm({
   };
 
   return (
-    <form action={isEditMode ? updateOrganizationSignupRequestAction : submitOrganizationSignupRequestAction} className="grid gap-3 md:grid-cols-2">
+    <ClientActionForm
+      action={formAction}
+      successTitle={isEditMode ? '조직 개설 신청 수정 완료' : '조직 개설 신청 완료'}
+      errorCause={isEditMode ? '조직 개설 신청 수정 정보를 저장하지 못했습니다.' : '조직 개설 신청 정보를 접수하지 못했습니다.'}
+      errorResolution="입력값과 첨부 파일 형식을 확인한 뒤 다시 제출해 주세요."
+      className="grid gap-3 md:grid-cols-2"
+    >
       {requestId ? <input type="hidden" name="requestId" value={requestId} /> : null}
       <Input name="name" placeholder="조직명" defaultValue={defaultValues?.name ?? ''} required />
       <select
@@ -193,6 +201,6 @@ export function OrganizationSignupForm({
       <div className="md:col-span-2">
         <SubmitButton pendingLabel={isEditMode ? '수정 중...' : '신청 중...'} disabled={Boolean(documentError)}>{isEditMode ? '신청 내용 수정' : '조직 개설 신청'}</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

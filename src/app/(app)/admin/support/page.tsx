@@ -83,7 +83,7 @@ export default async function SupportPage() {
                       successTitle="지원 요청이 승인되었습니다."
                       successMessage="플랫폼 관리자가 지원 접속을 진행할 수 있습니다."
                       errorTitle="승인 처리에 실패했습니다."
-                      errorCause="이미 처리된 요청이거나 서버 오류가 발생했습니다."
+                      errorCause="이미 처리된 요청이거나 승인 상태 저장에 실패했습니다."
                       errorResolution="요청 상태를 새로고침하고 다시 시도해 주세요."
                       className="space-y-3 rounded-xl border border-slate-200 p-4"
                     >
@@ -96,7 +96,7 @@ export default async function SupportPage() {
                       action={decideSupportRequestAction}
                       successTitle="지원 요청이 반려되었습니다."
                       errorTitle="반려 처리에 실패했습니다."
-                      errorCause="이미 처리된 요청이거나 서버 오류가 발생했습니다."
+                      errorCause="이미 처리된 요청이거나 반려 상태 저장에 실패했습니다."
                       errorResolution="요청 상태를 새로고침하고 다시 시도해 주세요."
                       className="space-y-3 rounded-xl border border-slate-200 p-4"
                     >

@@ -1,4 +1,5 @@
 import { updateMembershipPermissionsAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { PERMISSION_GROUPS, PERMISSION_LABELS, PERMISSION_KEYS } from '@/lib/permissions';
 
@@ -24,7 +25,7 @@ export function MembershipPermissionForm({
   title: string;
 }) {
   return (
-    <form action={updateMembershipPermissionsAction} className="space-y-4 rounded-xl border border-slate-200 p-4">
+    <ClientActionForm action={updateMembershipPermissionsAction} successTitle="권한 설정이 저장되었습니다." className="space-y-4 rounded-xl border border-slate-200 p-4">
       <input type="hidden" name="membershipId" value={membershipId} />
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -75,6 +76,6 @@ export function MembershipPermissionForm({
       </div>
       {PERMISSION_KEYS.length ? null : null}
       <SubmitButton variant="secondary" pendingLabel="저장 중...">권한 저장</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

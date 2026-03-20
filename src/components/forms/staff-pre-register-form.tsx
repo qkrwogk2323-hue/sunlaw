@@ -1,10 +1,11 @@
 import { createStaffPreRegisteredInvitationAction } from '@/lib/actions/organization-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function StaffPreRegisterForm({ organizationId }: { organizationId: string }) {
   return (
-    <form action={createStaffPreRegisteredInvitationAction} className="space-y-3">
+    <ClientActionForm action={createStaffPreRegisteredInvitationAction} successTitle="임시 계정이 발급되었습니다." className="space-y-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <Input name="name" placeholder="이름" required />
       <Input name="email" type="email" placeholder="연락 이메일(선택)" />
@@ -24,6 +25,6 @@ export function StaffPreRegisterForm({ organizationId }: { organizationId: strin
         placeholder="메모(선택)"
       />
       <SubmitButton pendingLabel="발급 중...">임시 아이디/비밀번호 발급</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

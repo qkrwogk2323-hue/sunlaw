@@ -352,7 +352,7 @@ export default async function CaseDetailPage({
               successTitle="사건 단계가 저장되었습니다."
               successMessage="변경된 단계가 타임라인에 기록됩니다."
               errorTitle="단계 저장에 실패했습니다."
-              errorCause="권한 부족 또는 서버 오류가 발생했습니다."
+              errorCause="권한이 없거나 사건 단계 저장에 실패했습니다."
               errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
               className="grid gap-3 lg:grid-cols-[220px_1fr_auto] lg:items-end"
             >

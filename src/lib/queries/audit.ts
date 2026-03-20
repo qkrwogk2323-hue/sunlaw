@@ -4,11 +4,15 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 export async function listAuditChangeLog({
   limit = 100,
   actorUserId,
-  tableName
+  tableName,
+  actionPrefix,
+  actionIn
 }: {
   limit?: number;
   actorUserId?: string | null;
   tableName?: string | null;
+  actionPrefix?: string | null;
+  actionIn?: string[] | null;
 } = {}) {
   const auth = await getCurrentAuth();
   if (!auth) return [];
@@ -30,6 +34,14 @@ export async function listAuditChangeLog({
 
   if (tableName) {
     query = query.eq('table_name', tableName);
+  }
+
+  if (actionPrefix) {
+    query = query.ilike('action', `${actionPrefix}%`);
+  }
+
+  if (actionIn?.length) {
+    query = query.in('action', actionIn);
   }
 
   const { data, error } = await query;

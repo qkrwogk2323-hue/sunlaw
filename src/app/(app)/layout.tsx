@@ -14,6 +14,8 @@ import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
 import { GlobalCommandPalette } from '@/components/global-command-palette';
 import { FloatingExportWidget } from '@/components/floating-export-widget';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { ToastProvider } from '@/components/ui/toast-provider';
 
 export const dynamic = 'force-dynamic';
@@ -62,11 +64,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             unreadConversationCount={navCounts.unreadConversationCount}
           />
 
-          <form action={signOutAction}>
-            <button className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>
+          <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다.">
+            <SubmitButton variant="secondary" pendingLabel="로그아웃 중..." className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>
               <LogOut className="size-4" /> 로그아웃
-            </button>
-          </form>
+            </SubmitButton>
+          </ClientActionForm>
         </aside>
 
         <main className="space-y-6">

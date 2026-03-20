@@ -4,7 +4,9 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronRight, Sparkles } from 'lucide-react';
 import { addScheduleAction } from '@/lib/actions/case-actions';
 import { Button } from '@/components/ui/button';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 import { parseNaturalLanguageSchedule, formatParsedPreview } from '@/lib/utils/natural-language-schedule';
 
@@ -23,6 +25,7 @@ export function CalendarCreateForm({
   onClose?: () => void;
 }) {
   const [createCaseId, setCreateCaseId] = useState(caseOptions[0]?.id ?? '');
+  const createScheduleAction = createCaseId ? addScheduleAction.bind(null, createCaseId) : async () => {};
   
   // Natural Language Input State
   const [naturalInput, setNaturalInput] = useState('');
@@ -53,7 +56,13 @@ export function CalendarCreateForm({
   }, [naturalInput, parsedSchedule]);
 
   return (
-    <form action={createCaseId ? addScheduleAction.bind(null, createCaseId) : undefined} className="space-y-4">
+    <ClientActionForm
+      action={createScheduleAction}
+      successTitle="일정 등록 완료"
+      errorCause="일정 등록 정보를 저장하지 못했습니다."
+      errorResolution="사건 선택과 일정 입력값을 확인한 뒤 다시 등록해 주세요."
+      className="space-y-4"
+    >
       <input type="hidden" name="clientVisibility" value="internal_only" />
       
       {/* Natural Language Input Section */}
@@ -164,8 +173,8 @@ export function CalendarCreateForm({
          {onClose && (
             <Button type="button" variant="ghost" onClick={onClose}>취소</Button>
          )}
-         <Button type="submit" disabled={!organizationId || !createCaseId}>일정 등록</Button>
+         <SubmitButton disabled={!organizationId || !createCaseId}>일정 등록</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

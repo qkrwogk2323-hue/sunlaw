@@ -1,4 +1,5 @@
 import { addCollectionCompensationPlanAction } from '@/lib/actions/collection-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +12,7 @@ export function CompensationPlanForm({
   membershipOptions: Array<{ id: string; label: string }>;
 }) {
   return (
-    <form action={addCollectionCompensationPlanAction} className="grid gap-3">
+    <ClientActionForm action={addCollectionCompensationPlanAction} successTitle="보수 규칙이 등록되었습니다." className="grid gap-3">
       <select name="caseId" required className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
         <option value="">사건 선택</option>
         {cases.map((item) => (
@@ -47,6 +48,6 @@ export function CompensationPlanForm({
       <Textarea name="description" placeholder="설명" rows={3} />
       <Textarea name="ruleJson" placeholder='추가 규칙 JSON (예: {"cap":1000000})' rows={3} />
       <SubmitButton pendingLabel="저장 중...">보수 규칙 등록</SubmitButton>
-    </form>
+    </ClientActionForm>
   );
 }

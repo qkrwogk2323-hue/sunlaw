@@ -9,6 +9,8 @@ import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAu
 import { hasPermission } from '@/lib/permissions';
 import { listCases } from '@/lib/queries/cases';
 import { listClientRosterSummary } from '@/lib/queries/clients';
+import { CollapsibleList } from '@/components/ui/collapsible-list';
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
 function statusTone(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -20,7 +22,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedOrgName?: string }>;
+  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedOrgName?: string; q?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -39,9 +41,44 @@ export default async function ClientsPage({
     cookies()
   ]);
   const inviteToken = resolvedSearchParams?.invite;
+  const queryFilter = `${resolvedSearchParams?.q ?? ''}`.trim().toLowerCase();
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
   const issuedClientTempPassword = cookieStore.get('_vs_issued_pw')?.value ?? null;
   const issuedOrgName = resolvedSearchParams?.issuedOrgName ?? (organizationId ? (auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? '현재 조직') : '현재 조직');
+  const filteredRoster = roster.filter((item: any) => {
+    if (!queryFilter) return true;
+    const haystack = `${item.name ?? ''} ${item.email ?? ''} ${item.contactPhone ?? ''} ${item.addressSummary ?? ''}`.toLowerCase();
+    return haystack.includes(queryFilter);
+  });
+
+  function renderRosterCard(item: any) {
+    return (
+      <div key={item.id} className="relative rounded-xl border border-slate-200 p-4">
+        <Link
+          href={`/clients/${item.clientKey ?? item.id}` as Route}
+          className="absolute inset-0 rounded-xl"
+          aria-label={`${item.name} 상세보기`}
+        />
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-medium text-slate-900">{item.name}</p>
+            <p className="mt-1 text-sm text-slate-600">주민번호: <span className="font-medium text-slate-900">{item.residentNumberMasked ?? '-'}</span></p>
+            <p className="mt-1 text-sm text-slate-600">주소: <span className="font-medium text-slate-900">{item.addressSummary ?? '-'}</span></p>
+            <p className="mt-1 text-sm text-slate-600">연락처: <span className="font-medium text-slate-900">{item.contactPhone ?? '-'}</span></p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={item.caseId ? 'blue' : 'slate'}>{item.caseId ? '사건 연결' : '사건 미연결'}</Badge>
+            <Badge tone="slate">의뢰인 상세 관리</Badge>
+          </div>
+        </div>
+        {canManage && item.source === 'invite' && item.invitationId ? (
+          <div className="relative z-20 mt-3">
+            <ResendInvitationForm invitationId={item.invitationId} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -109,32 +146,25 @@ export default async function ClientsPage({
       <Card>
         <CardHeader><CardTitle>의뢰인 목록</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {roster.length ? roster.map((item: any) => (
-            <div key={item.id} className="relative rounded-xl border border-slate-200 p-4">
-              <Link
-                href={`/clients/${item.clientKey ?? item.id}` as Route}
-                className="absolute inset-0 rounded-xl"
-                aria-label={`${item.name} 상세보기`}
-              />
-              <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-slate-900">{item.name}</p>
-                  <p className="mt-1 text-sm text-slate-600">주민번호: <span className="font-medium text-slate-900">{item.residentNumberMasked ?? '-'}</span></p>
-                  <p className="mt-1 text-sm text-slate-600">주소: <span className="font-medium text-slate-900">{item.addressSummary ?? '-'}</span></p>
-                  <p className="mt-1 text-sm text-slate-600">연락처: <span className="font-medium text-slate-900">{item.contactPhone ?? '-'}</span></p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone={item.caseId ? 'blue' : 'slate'}>{item.caseId ? '사건 연결' : '사건 미연결'}</Badge>
-                  <Badge tone="slate">의뢰인 상세 관리</Badge>
-                </div>
-              </div>
-              {canManage && item.source === 'invite' && item.invitationId ? (
-                <div className="relative z-20 mt-3">
-                  <ResendInvitationForm invitationId={item.invitationId} />
-                </div>
-              ) : null}
-            </div>
-          )) : <p className="text-sm text-slate-500">의뢰인 데이터가 없습니다.</p>}
+          <UnifiedListSearch
+            action="/clients"
+            defaultValue={queryFilter}
+            placeholder="의뢰인 이름, 이메일, 연락처 검색"
+            ariaLabel="의뢰인 목록 검색"
+            hiddenFields={{
+              invite: inviteToken ?? '',
+              issuedClientLoginId: issuedClientLoginId ?? '',
+              issuedOrgName: issuedOrgName ?? ''
+            }}
+          />
+          {filteredRoster.length ? (
+            <CollapsibleList
+              label="의뢰인"
+              totalCount={filteredRoster.length}
+              visibleContent={filteredRoster.slice(0, 7).map(renderRosterCard)}
+              hiddenContent={filteredRoster.slice(7).map(renderRosterCard)}
+            />
+          ) : <p className="text-sm text-slate-500">의뢰인 데이터가 없습니다.</p>}
         </CardContent>
       </Card>
     </div>

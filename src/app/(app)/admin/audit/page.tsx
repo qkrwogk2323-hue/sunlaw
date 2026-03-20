@@ -1,14 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/format';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listAuditChangeLog } from '@/lib/queries/audit';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
+type AuditTab = 'general' | 'delete' | 'violation' | 'restore';
+
+function parseTab(value?: string): AuditTab {
+  if (value === 'delete' || value === 'violation' || value === 'restore') return value;
+  return 'general';
+}
+
 export default async function AdminAuditPage({
   searchParams
 }: {
-  searchParams?: Promise<{ table?: string; actor?: string }>;
+  searchParams?: Promise<{ table?: string; actor?: string; tab?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
@@ -24,9 +32,22 @@ export default async function AdminAuditPage({
   }
 
   const resolved = searchParams ? await searchParams : undefined;
+  const tab = parseTab(resolved?.tab);
   const table = `${resolved?.table ?? ''}`.trim() || null;
   const actor = `${resolved?.actor ?? ''}`.trim() || null;
-  const logs = await listAuditChangeLog({ limit: 150, tableName: table, actorUserId: actor });
+  const logs = await listAuditChangeLog({
+    limit: 150,
+    tableName: table,
+    actorUserId: actor,
+    actionPrefix: tab === 'violation' ? 'VIOLATION' : tab === 'restore' ? 'RESTORE' : null,
+    actionIn: tab === 'delete' ? ['DELETE', 'SOFT_DELETE', 'ARCHIVE'] : null
+  });
+  const tabs: Array<{ key: AuditTab; label: string }> = [
+    { key: 'general', label: '일반 작업' },
+    { key: 'delete', label: '삭제 기록' },
+    { key: 'violation', label: '위반 기록' },
+    { key: 'restore', label: '복구 기록' }
+  ];
 
   return (
     <div className="space-y-6">
@@ -37,10 +58,27 @@ export default async function AdminAuditPage({
 
       <Card>
         <CardHeader>
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((item) => (
+              <a
+                key={item.key}
+                href={`/admin/audit?tab=${item.key}${table ? `&table=${encodeURIComponent(table)}` : ''}${actor ? `&actor=${encodeURIComponent(actor)}` : ''}`}
+                className={buttonStyles({ variant: item.key === tab ? 'primary' : 'secondary', size: 'sm' })}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>필터</CardTitle>
         </CardHeader>
         <CardContent>
           <form method="get" action="/admin/audit" className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="tab" value={tab} />
             <label className="flex flex-col gap-1 text-sm text-slate-600">
               <span>테이블명</span>
               <input
@@ -69,7 +107,7 @@ export default async function AdminAuditPage({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>최근 변경</CardTitle>
+            <CardTitle>{tabs.find((item) => item.key === tab)?.label ?? '최근 변경'}</CardTitle>
             <Badge tone="slate">{logs.length}</Badge>
           </div>
         </CardHeader>

@@ -1,9 +1,10 @@
 import { upsertPlatformSettingAction } from '@/lib/actions/settings-actions';
+import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 export function PlatformSettingForm({ item, currentValue }: { item: any; currentValue?: any }) {
   return (
-    <form action={upsertPlatformSettingAction} className="space-y-3 rounded-xl border border-slate-200 p-4">
+    <ClientActionForm action={upsertPlatformSettingAction} successTitle="플랫폼 설정이 저장되었습니다." className="space-y-3 rounded-xl border border-slate-200 p-4">
       <input type="hidden" name="key" value={item.key} />
       <div>
         <p className="text-sm font-medium text-slate-900">{item.key}</p>
@@ -19,6 +20,6 @@ export function PlatformSettingForm({ item, currentValue }: { item: any; current
         <span>{item.domain} · {item.value_type} · {item.scope}</span>
         <SubmitButton variant="secondary" pendingLabel="저장 중...">플랫폼 값 저장</SubmitButton>
       </div>
-    </form>
+    </ClientActionForm>
   );
 }

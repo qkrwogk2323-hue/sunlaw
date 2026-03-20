@@ -196,7 +196,7 @@ export default async function TeamSettingsPage({
                         successTitle={row.raw.status === 'suspended' ? '구성원을 활성화했습니다.' : '구성원을 비활성화했습니다.'}
                         successMessage={row.raw.status === 'suspended' ? '조직 접근이 복원되었습니다.' : '해당 구성원의 조직 접근이 중지됩니다.'}
                         errorTitle="상태 변경에 실패했습니다."
-                        errorCause="권한 부족 또는 서버 오류가 발생했습니다."
+                        errorCause="권한이 없거나 구성원 상태 저장에 실패했습니다."
                         errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
                       >
                         <input type="hidden" name="organizationId" value={organizationId} />
@@ -219,7 +219,7 @@ export default async function TeamSettingsPage({
                         successTitle="구성원이 삭제되었습니다."
                         successMessage="해당 구성원의 모든 접근 권한이 해제되었습니다."
                         errorTitle="구성원 삭제에 실패했습니다."
-                        errorCause="서버 처리 중 오류가 발생했습니다."
+                        errorCause="구성원 상태 변경 저장에 실패했습니다."
                         errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
                         buttonVariant="ghost"
                         className="h-8 px-3 text-xs text-rose-700 hover:bg-rose-50"
