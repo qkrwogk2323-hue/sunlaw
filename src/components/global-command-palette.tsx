@@ -90,8 +90,10 @@ export function GlobalCommandPalette() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/45 p-4" onClick={() => setOpen(false)}>
-      <div className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-slate-950/45" onClick={() => setOpen(false)} />
+      <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-4">
+      <div className="pointer-events-auto mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2">
           <Search className="size-4 text-slate-500" />
           <input
@@ -148,6 +150,7 @@ export function GlobalCommandPalette() {
             </div>
           ) : null}
         </div>
+      </div>
       </div>
     </div>
   );

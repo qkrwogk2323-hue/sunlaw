@@ -19,7 +19,7 @@ export function BrandMark({ className }: { className?: string }) {
         <g transform="translate(60 60)">
           {Array.from({ length: 8 }).map((_, index) => (
             <path
-              key={index}
+            key={`blade-${index}`}
               d="M5 -47 C26 -53 44 -45 57 -26 C42 -26 28 -22 15 -12 C3 -21 -4 -34 5 -47 Z"
               fill="url(#vs-blade)"
               opacity={1 - index * 0.06}

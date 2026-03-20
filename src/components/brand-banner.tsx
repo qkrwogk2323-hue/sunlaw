@@ -71,7 +71,7 @@ export function BrandBanner({ href, className, theme = 'dark' }: { href?: Route;
         if (pathname === href) {
           event.preventDefault();
           replayHomepageDemoIfNeeded(href);
-          window.setTimeout(() => router.refresh(), 120);
+          router.refresh();
         }
       }}
       className="block w-full"
