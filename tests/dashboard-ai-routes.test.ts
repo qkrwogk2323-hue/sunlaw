@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getCurrentAuth: vi.fn(),
   hasActivePlatformAdminView: vi.fn(),
+  getPlatformOrganizationContextId: vi.fn(() => null),
   createSupabaseServerClient: vi.fn(),
   createSupabaseAdminClient: vi.fn()
 }));
@@ -19,7 +20,8 @@ vi.mock('next/server', () => ({
 
 vi.mock('@/lib/auth', () => ({
   getCurrentAuth: mocks.getCurrentAuth,
-  hasActivePlatformAdminView: mocks.hasActivePlatformAdminView
+  hasActivePlatformAdminView: mocks.hasActivePlatformAdminView,
+  getPlatformOrganizationContextId: mocks.getPlatformOrganizationContextId
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -102,7 +104,12 @@ describe('dashboard ai routes', () => {
     }));
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ error: '작업 요청 생성 권한이 없습니다.' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: '작업 요청 생성이 차단되었습니다.',
+      feedback: {
+        blocked: '작업 요청 생성이 차단되었습니다.'
+      }
+    });
     expect(mocks.createSupabaseServerClient).not.toHaveBeenCalled();
   });
 
@@ -122,7 +129,12 @@ describe('dashboard ai routes', () => {
     }));
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ error: '알림 생성 권한이 없습니다.' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: '알림 생성이 차단되었습니다.',
+      feedback: {
+        blocked: '알림 생성이 차단되었습니다.'
+      }
+    });
     expect(mocks.createSupabaseServerClient).not.toHaveBeenCalled();
   });
 });

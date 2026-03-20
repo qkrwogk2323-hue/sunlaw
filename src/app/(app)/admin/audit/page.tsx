@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/format';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listAuditChangeLog } from '@/lib/queries/audit';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 export default async function AdminAuditPage({
   searchParams
@@ -14,9 +15,11 @@ export default async function AdminAuditPage({
 
   if (!isPlatformAdmin) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-        운영 관리자 권한이 있어야 감사 로그를 볼 수 있습니다.
-      </div>
+      <AccessDeniedBlock
+        blocked="감사 로그 접근이 차단되었습니다."
+        cause="현재 조직 또는 현재 계정 권한으로는 감사 로그를 조회할 수 없습니다."
+        resolution="플랫폼 조직 관리자 권한으로 전환하거나, 권한 승인을 요청해 주세요."
+      />
     );
   }
 

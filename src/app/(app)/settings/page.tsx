@@ -1,13 +1,21 @@
-import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
 import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 export default async function SettingsIndexPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  if (!organizationId && !isPlatformOperator(auth)) notFound();
+  if (!organizationId && !isPlatformOperator(auth)) {
+    return (
+      <AccessDeniedBlock
+        blocked="설정 화면 접근이 차단되었습니다."
+        cause="현재 계정에 접근 가능한 조직 컨텍스트가 없습니다."
+        resolution="조직 가입을 완료하거나 조직 전환 후 다시 시도해 주세요."
+      />
+    );
+  }
   const data = await getSettingsAdminData(organizationId);
 
   return (

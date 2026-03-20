@@ -3,11 +3,17 @@ import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdmi
 import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { guardAccessDeniedResponse, guardConditionFailedResponse, guardServerErrorResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 
 export async function POST(request: Request) {
   const auth = await getCurrentAuth();
   if (!auth) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    return guardAccessDeniedResponse(401, {
+      code: 'AUTH_REQUIRED',
+      blocked: '인증이 필요해 요청이 차단되었습니다.',
+      cause: '로그인 세션이 없거나 만료되었습니다.',
+      resolution: '다시 로그인한 뒤 요청을 재시도해 주세요.'
+    });
   }
 
   const body = await request.json();
@@ -22,7 +28,11 @@ export async function POST(request: Request) {
   const recipientMembershipId = body.recipientMembershipId ? String(body.recipientMembershipId) : null;
 
   if (!organizationId || !caseId || !title || !summary) {
-    return NextResponse.json({ error: '필수 항목이 비어 있습니다.' }, { status: 400 });
+    return guardValidationFailedResponse(400, {
+      blocked: 'AI 실행 요청이 차단되었습니다.',
+      cause: 'organizationId, caseId, title, summary 중 필수 항목이 누락되었습니다.',
+      resolution: '필수 항목을 입력한 뒤 다시 실행해 주세요.'
+    });
   }
 
   const membership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
@@ -30,19 +40,35 @@ export async function POST(request: Request) {
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
 
   if (!membership && !isPlatformAdmin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return guardAccessDeniedResponse(403, {
+      blocked: 'AI 작업 반영이 차단되었습니다.',
+      cause: '현재 조직 멤버십 또는 플랫폼 관리자 권한이 확인되지 않았습니다.',
+      resolution: '조직을 다시 선택하거나 권한 승인을 요청해 주세요.'
+    });
   }
 
   if (!isPlatformAdmin && !hasPermission(auth, organizationId, 'request_create')) {
-    return NextResponse.json({ error: '작업 요청 생성 권한이 없습니다.' }, { status: 403 });
+    return guardAccessDeniedResponse(403, {
+      blocked: '작업 요청 생성이 차단되었습니다.',
+      cause: '현재 계정에 요청 생성 권한이 없습니다.',
+      resolution: '조직 관리자에게 request_create 권한 승인을 요청해 주세요.'
+    });
   }
 
   if (dueAt && !isPlatformAdmin && !hasPermission(auth, organizationId, 'schedule_create')) {
-    return NextResponse.json({ error: '일정 생성 권한이 없습니다.' }, { status: 403 });
+    return guardAccessDeniedResponse(403, {
+      blocked: '일정 생성이 차단되었습니다.',
+      cause: '현재 계정에 일정 생성 권한이 없습니다.',
+      resolution: '조직 관리자에게 schedule_create 권한 승인을 요청해 주세요.'
+    });
   }
 
   if (recipientMembershipId && !isPlatformAdmin && !hasPermission(auth, organizationId, 'notification_create')) {
-    return NextResponse.json({ error: '알림 생성 권한이 없습니다.' }, { status: 403 });
+    return guardAccessDeniedResponse(403, {
+      blocked: '알림 생성이 차단되었습니다.',
+      cause: '현재 계정에 알림 생성 권한이 없습니다.',
+      resolution: '조직 관리자에게 notification_create 권한 승인을 요청해 주세요.'
+    });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -56,7 +82,11 @@ export async function POST(request: Request) {
     .single();
 
   if (caseError || !caseRow) {
-    return NextResponse.json({ error: '사건을 찾을 수 없습니다.' }, { status: 404 });
+    return guardConditionFailedResponse(404, {
+      blocked: '요청한 사건을 찾지 못해 작업이 차단되었습니다.',
+      cause: '사건이 삭제되었거나 현재 조직과 일치하지 않습니다.',
+      resolution: '사건 목록에서 유효한 사건을 다시 선택해 주세요.'
+    });
   }
 
   const { data: requestRow, error: requestError } = await supabase.from('case_requests').insert({
@@ -71,7 +101,7 @@ export async function POST(request: Request) {
   }).select('id').single();
 
   if (requestError || !requestRow) {
-    return NextResponse.json({ error: requestError?.message ?? '작업 요청을 생성하지 못했습니다.' }, { status: 500 });
+    return guardServerErrorResponse(500, '작업 요청 생성에 실패해 AI 반영이 차단되었습니다.');
   }
 
   if (dueAt) {
@@ -92,7 +122,7 @@ export async function POST(request: Request) {
     });
 
     if (scheduleError) {
-      return NextResponse.json({ error: scheduleError.message }, { status: 500 });
+      return guardServerErrorResponse(500, '일정 생성에 실패해 AI 반영이 차단되었습니다.');
     }
   }
 
@@ -106,7 +136,7 @@ export async function POST(request: Request) {
   });
 
   if (messageError) {
-    return NextResponse.json({ error: messageError.message }, { status: 500 });
+    return guardServerErrorResponse(500, '메시지 기록에 실패해 AI 반영이 차단되었습니다.');
   }
 
   let recipientProfileId: string | null = null;
@@ -145,7 +175,7 @@ export async function POST(request: Request) {
     );
 
     if (notificationError) {
-      return NextResponse.json({ error: notificationError.message }, { status: 500 });
+      return guardServerErrorResponse(500, '알림 생성에 실패해 AI 반영이 차단되었습니다.');
     }
   }
 

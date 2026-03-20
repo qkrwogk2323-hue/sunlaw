@@ -22,8 +22,10 @@
  */
 
 import { createContext, useContext, type FormEvent, type ReactNode } from 'react';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
+import { InlineErrorMessage } from '@/components/ui/inline-error';
+import { createConditionFailedFeedback, formatGuardFeedbackMessage, normalizeGuardFeedback, type GuardFeedback } from '@/lib/guard-feedback';
 
 /** SubmitButton이 ClientActionForm 내부에서도 isPending을 읽을 수 있도록 하는 컨텍스트 */
 export const ActionFormPendingContext = createContext(false);
@@ -65,6 +67,7 @@ export function ClientActionForm({
 }: ClientActionFormProps) {
   const [isPending, startTransition] = useTransition();
   const { success, error: showError } = useToast();
+  const [inlineError, setInlineError] = useState<GuardFeedback | null>(null);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,16 +76,21 @@ export function ClientActionForm({
 
     startTransition(async () => {
       try {
+        setInlineError(null);
         await action(formData);
         success(successTitle, { message: successMessage });
         onSuccess?.();
       } catch (err) {
-        const rawMsg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-        const detail = [
-          errorCause ? `원인: ${errorCause}` : rawMsg,
-          `해결 방법: ${errorResolution}`,
-        ].join(' · ');
-        showError(errorTitle, { message: detail, duration: 9000 });
+        const normalized = normalizeGuardFeedback(
+          err,
+          createConditionFailedFeedback({
+            blocked: errorTitle,
+            cause: errorCause ?? '요청 처리 중 조건 검증에 실패했습니다.',
+            resolution: errorResolution
+          })
+        );
+        setInlineError(normalized);
+        showError(normalized.blocked, { message: formatGuardFeedbackMessage(normalized), duration: 9000 });
         // 폼 상태 유지 (사용자가 재시도 가능)
         void formEl;
       }
@@ -97,6 +105,13 @@ export function ClientActionForm({
         onSubmit={handleSubmit}
         aria-busy={isPending}
       >
+        {inlineError ? (
+          <InlineErrorMessage
+            title={inlineError.blocked}
+            cause={inlineError.cause}
+            resolution={inlineError.resolution}
+          />
+        ) : null}
         {children}
       </form>
     </ActionFormPendingContext.Provider>

@@ -2,11 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
-import { requirePlatformAdmin } from '@/lib/auth';
+import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listOrganizationExitRequests, listOrganizationSignupRequests } from '@/lib/queries/organization-requests';
 import { reviewOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
 import { reviewOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
 import { formatBusinessNumber, formatDateTime } from '@/lib/format';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 const verificationLabels: Record<string, string> = {
   matched: '자동 일치',
@@ -53,7 +54,17 @@ function getReviewPriority(request: any) {
 }
 
 export default async function OrganizationRequestsPage() {
-  await requirePlatformAdmin();
+  const auth = await requireAuthenticatedUser();
+  const canAccess = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
+  if (!canAccess) {
+    return (
+      <AccessDeniedBlock
+        blocked="플랫폼 관리자 전용 화면 접근이 차단되었습니다."
+        cause="현재 조직 또는 현재 계정 권한으로는 조직 신청 검토를 수행할 수 없습니다."
+        resolution="플랫폼 조직 관리자 권한으로 전환하거나, 권한 승인을 요청해 주세요."
+      />
+    );
+  }
   const [requests, exitRequests] = await Promise.all([
     listOrganizationSignupRequests(),
     listOrganizationExitRequests()

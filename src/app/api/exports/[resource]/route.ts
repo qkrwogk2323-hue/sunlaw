@@ -4,6 +4,7 @@ import { hasPermission } from '@/lib/permissions';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { buildDocxBuffer, buildPdfBuffer, buildXlsxBuffer, type ExportFormat } from '@/lib/export/generate';
 import { getBillingExportRows, getCalendarExportRows, getCaseBoardExportRows, getCollectionsExportRows, getReportExportRows } from '@/lib/queries/exports';
+import { guardAccessDeniedResponse, guardConditionFailedResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 
 const MIME: Record<ExportFormat, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -30,7 +31,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
   const period = request.nextUrl.searchParams.get('period') ?? 'month';
 
   if (!['xlsx', 'docx', 'pdf'].includes(format)) {
-    return NextResponse.json({ error: '지원하지 않는 내보내기 형식입니다.' }, { status: 400 });
+    return guardValidationFailedResponse(400, {
+      blocked: '내보내기 요청이 차단되었습니다.',
+      cause: '지원하지 않는 파일 형식입니다.',
+      resolution: 'xlsx, docx, pdf 중 하나를 선택해 주세요.'
+    });
   }
 
 
@@ -48,7 +53,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
   };
 
   if (!(await ensurePermission())) {
-    return NextResponse.json({ error: '내보내기 권한이 없습니다.' }, { status: 403 });
+    return guardAccessDeniedResponse(403, {
+      blocked: '내보내기 요청이 차단되었습니다.',
+      cause: '현재 조직 또는 현재 계정 권한으로는 이 리소스를 내보낼 수 없습니다.',
+      resolution: '조직 권한을 확인하거나 플랫폼 조직 관리자 권한으로 전환해 주세요.'
+    });
   }
   let title = 'vein-spiral-export';
   let rows: Record<string, unknown>[] = [];
@@ -67,7 +76,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
       rows = await getCollectionsExportRows(organizationId, period);
       break;
     case 'billing':
-      if (!caseId) return NextResponse.json({ error: 'caseId가 필요합니다.' }, { status: 400 });
+      if (!caseId) {
+        return guardValidationFailedResponse(400, {
+          blocked: '청구 내보내기 요청이 차단되었습니다.',
+          cause: 'caseId가 누락되었습니다.',
+          resolution: '내보낼 사건을 선택한 뒤 다시 시도해 주세요.'
+        });
+      }
       title = `billing-${caseId}`;
       rows = await getBillingExportRows(caseId);
       break;
@@ -76,7 +91,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
       rows = await getReportExportRows(organizationId);
       break;
     default:
-      return NextResponse.json({ error: '지원하지 않는 리소스입니다.' }, { status: 404 });
+      return guardConditionFailedResponse(404, {
+        blocked: '내보내기 요청이 차단되었습니다.',
+        cause: '지원하지 않는 리소스 경로입니다.',
+        resolution: '캘린더/사건/정산/리포트 메뉴에서 다시 실행해 주세요.'
+      });
   }
 
   let buffer: Buffer;

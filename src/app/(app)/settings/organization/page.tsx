@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
@@ -17,6 +16,7 @@ import {
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { ClientActionForm } from '@/components/ui/client-action-form';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 const kindLabel: Record<string, string> = {
   platform_management: '플랫폼 관리조직',
@@ -35,15 +35,39 @@ export default async function OrganizationSettingsPage({
   const auth = await requireAuthenticatedUser();
 
   const organizationId = getEffectiveOrganizationId(auth);
-  if (!organizationId) notFound();
+  if (!organizationId) {
+    return (
+      <AccessDeniedBlock
+        blocked="조직 설정 화면 접근이 차단되었습니다."
+        cause="현재 요청에는 유효한 조직 컨텍스트가 포함되지 않았습니다."
+        resolution="조직을 선택한 뒤 다시 시도해 주세요."
+      />
+    );
+  }
   const membership = findMembership(auth, organizationId);
-  if (!membership || !isWorkspaceAdmin(membership)) notFound();
+  if (!membership || !isWorkspaceAdmin(membership)) {
+    return (
+      <AccessDeniedBlock
+        blocked="조직 설정 수정이 차단되었습니다."
+        cause="현재 조직에서 관리자 권한(오너/매니저)이 확인되지 않았습니다."
+        resolution="조직 관리자 권한으로 전환하거나 권한 승인을 요청해 주세요."
+      />
+    );
+  }
   const [workspace, data, latestExitRequest] = await Promise.all([
     getOrganizationWorkspace(organizationId),
     getSettingsAdminData(organizationId),
     getLatestOrganizationExitRequest(organizationId)
   ]);
-  if (!workspace) notFound();
+  if (!workspace) {
+    return (
+      <AccessDeniedBlock
+        blocked="조직 정보를 불러오지 못해 설정 화면이 차단되었습니다."
+        cause="요청한 조직 데이터가 없거나 비활성 상태입니다."
+        resolution="조직 상태를 확인하고, 문제가 지속되면 관리자에게 문의해 주세요."
+      />
+    );
+  }
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
   const platformContextId = getPlatformOrganizationContextId(auth);

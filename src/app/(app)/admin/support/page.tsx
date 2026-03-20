@@ -9,6 +9,7 @@ import { listAccessibleOrganizations } from '@/lib/queries/organizations';
 import { listSupportRequests } from '@/lib/queries/support';
 import { beginSupportSessionAction, decideSupportRequestAction } from '@/lib/actions/support-actions';
 import { formatDateTime } from '@/lib/format';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
@@ -18,9 +19,11 @@ export default async function SupportPage() {
 
   if (!isPlatformAdmin && !isOrgManager) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-        이 페이지는 플랫폼 관리자 또는 조직 오너/매니저만 접근할 수 있습니다.
-      </div>
+      <AccessDeniedBlock
+        blocked="지원 요청 관리 접근이 차단되었습니다."
+        cause="현재 계정은 플랫폼 관리자 또는 조직 관리자 권한이 아닙니다."
+        resolution="플랫폼 조직 관리자 권한으로 전환하거나, 조직 오너/매니저 권한 승인을 요청해 주세요."
+      />
     );
   }
 

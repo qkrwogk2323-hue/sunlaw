@@ -3,8 +3,9 @@ import type { Route } from 'next';
 import { Boxes, Building2, CreditCard, FileStack, Scale, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { requirePlatformAdmin } from '@/lib/auth';
+import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { moduleCatalog } from '@/lib/module-catalog';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 const toneClasses = {
   blue: 'border-sky-200 bg-sky-50 text-sky-700',
@@ -26,7 +27,17 @@ function getGroupIcon(groupKey: string) {
 }
 
 export default async function AdminModulesPage() {
-  await requirePlatformAdmin();
+  const auth = await requireAuthenticatedUser();
+  const canAccess = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
+  if (!canAccess) {
+    return (
+      <AccessDeniedBlock
+        blocked="플랫폼 관리자 전용 화면 접근이 차단되었습니다."
+        cause="현재 조직 또는 현재 계정 권한으로는 모듈 카탈로그를 관리할 수 없습니다."
+        resolution="플랫폼 조직 관리자 권한으로 전환하거나, 권한 승인을 요청해 주세요."
+      />
+    );
+  }
 
   const totalFamilies = moduleCatalog.length;
   const totalModules = moduleCatalog.reduce((sum, group) => sum + group.entries.length, 0);

@@ -18,6 +18,7 @@ describe('organizationSignupSchema', () => {
     const result = organizationSignupSchema.safeParse({
       name: '새온가람법',
       kind: 'law_firm',
+      organizationIndustry: '법률',
       businessNumber: '123-45-67891',
       representativeName: '홍길동',
       representativeTitle: '대표',

@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { buildCoordinationPlan } from '@/lib/ai/task-planner';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { guardAccessDeniedResponse, guardServerErrorResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 
 export async function POST(request: Request) {
   const auth = await getCurrentAuth();
   if (!auth) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    return guardAccessDeniedResponse(401, {
+      code: 'AUTH_REQUIRED',
+      blocked: '인증이 필요해 요청이 차단되었습니다.',
+      cause: '로그인 세션이 없거나 만료되었습니다.',
+      resolution: '다시 로그인한 뒤 요청을 재시도해 주세요.'
+    });
   }
 
   const body = await request.json();
@@ -14,14 +20,22 @@ export async function POST(request: Request) {
   const content = String(body.content || '').trim();
 
   if (!organizationId || !content) {
-    return NextResponse.json({ error: 'organizationId and content are required' }, { status: 400 });
+    return guardValidationFailedResponse(400, {
+      blocked: '조직 소통 AI 미리보기 요청이 차단되었습니다.',
+      cause: 'organizationId 또는 content가 누락되었습니다.',
+      resolution: '조직과 입력 내용을 확인한 뒤 다시 시도해 주세요.'
+    });
   }
 
   const hasMembership = auth.memberships.some((membership) => membership.organization_id === organizationId);
   const platformContextId = getPlatformOrganizationContextId(auth);
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
   if (!hasMembership && !isPlatformAdmin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return guardAccessDeniedResponse(403, {
+      blocked: '조직 소통 AI 미리보기 접근이 차단되었습니다.',
+      cause: '현재 조직 멤버십 또는 플랫폼 관리자 권한이 확인되지 않았습니다.',
+      resolution: '조직을 다시 선택하거나, 필요한 권한 승인을 요청해 주세요.'
+    });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -34,9 +48,9 @@ export async function POST(request: Request) {
     .limit(20);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return guardServerErrorResponse(500, '사건 데이터를 조회하지 못해 AI 미리보기가 차단되었습니다.');
   }
 
   const preview = await buildCoordinationPlan(content, (cases ?? []) as Array<{ id: string; title: string }>);
-  return NextResponse.json({ preview });
+  return NextResponse.json({ ok: true, preview });
 }

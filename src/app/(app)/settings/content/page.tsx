@@ -1,10 +1,10 @@
-import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
 import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { ContentResourceForm } from '@/components/forms/content-resource-form';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 export default async function ContentResourcesPage() {
   const auth = await requireAuthenticatedUser();
@@ -13,7 +13,15 @@ export default async function ContentResourcesPage() {
   const canManageOrg = Boolean(membership && isWorkspaceAdmin(membership));
   const platformContextId = getPlatformOrganizationContextId(auth);
   const canManagePlatform = await hasActivePlatformAdminView(auth, platformContextId);
-  if (!canManageOrg && !canManagePlatform) notFound();
+  if (!canManageOrg && !canManagePlatform) {
+    return (
+      <AccessDeniedBlock
+        blocked="문구/리소스 관리 화면 접근이 차단되었습니다."
+        cause="현재 조직 또는 현재 계정 권한으로는 문구/리소스를 수정할 수 없습니다."
+        resolution="조직 관리자 또는 플랫폼 조직 관리자 권한으로 전환한 뒤 다시 시도해 주세요."
+      />
+    );
+  }
   const data = await getSettingsAdminData(organizationId);
 
   return (

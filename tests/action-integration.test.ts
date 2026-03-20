@@ -285,6 +285,7 @@ describe('server action integration', () => {
     const formData = new FormData();
     formData.set('name', '시그니처 검증 테스트 조직');
     formData.set('kind', 'law_firm');
+    formData.set('organizationIndustry', '법률');
     formData.set('businessNumber', '220-81-62517');
     formData.set('representativeName', '');
     formData.set('representativeTitle', '');
@@ -671,6 +672,7 @@ describe('server action integration', () => {
     const formData = new FormData();
     formData.set('name', '테스트 조직');
     formData.set('kind', 'law_firm');
+    formData.set('organizationIndustry', '법률');
     formData.set('businessNumber', '123-45-67891');
     formData.set('representativeName', '');
     formData.set('representativeTitle', '');
@@ -734,6 +736,7 @@ describe('server action integration', () => {
     const formData = new FormData();
     formData.set('name', '알림 실패 테스트 조직');
     formData.set('kind', 'law_firm');
+    formData.set('organizationIndustry', '법률');
     formData.set('businessNumber', '220-81-62517');
     formData.set('representativeName', '대표자');
     formData.set('representativeTitle', '대표');

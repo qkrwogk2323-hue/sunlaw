@@ -1,13 +1,21 @@
-import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { FeatureFlagForm } from '@/components/forms/feature-flag-form';
+import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 export default async function FeatureFlagsPage() {
   const auth = await requireAuthenticatedUser();
-  if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) notFound();
+  if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) {
+    return (
+      <AccessDeniedBlock
+        blocked="플랫폼 관리자 전용 화면 접근이 차단되었습니다."
+        cause="현재 조직 또는 현재 계정 권한으로는 기능 플래그를 관리할 수 없습니다."
+        resolution="플랫폼 조직 관리자 권한으로 전환하거나, 권한 승인을 요청해 주세요."
+      />
+    );
+  }
   const data = await getSettingsAdminData();
 
   return (
