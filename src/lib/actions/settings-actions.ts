@@ -3,7 +3,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
+import { getEffectiveOrganizationId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -51,7 +51,7 @@ const organizationIntroUpdateSchema = z.object({
 const organizationProfileUpdateSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().trim().min(2).max(120),
-  kind: z.enum(['law_firm', 'collection_company', 'mixed_practice', 'corporate_legal_team', 'other']),
+  kind: z.enum(['platform_management', 'law_firm', 'collection_company', 'mixed_practice', 'corporate_legal_team', 'other']),
   isDirectoryPublic: z.boolean().default(true),
   representativeName: z.string().trim().max(80).optional().or(z.literal('')),
   representativeTitle: z.string().trim().max(80).optional().or(z.literal('')),
@@ -487,7 +487,7 @@ export async function updateOrganizationProfileAction(formData: FormData) {
   const now = new Date().toISOString();
   const { data: existingOrganization, error: existingOrganizationError } = await admin
     .from('organizations')
-    .select('id, kind')
+    .select('id, slug, kind, is_platform_root')
     .eq('id', parsed.organizationId)
     .maybeSingle();
   if (existingOrganizationError || !existingOrganization) {
@@ -495,6 +495,16 @@ export async function updateOrganizationProfileAction(formData: FormData) {
   }
 
   const isPlatformAdmin = await hasActivePlatformAdminView(auth);
+  const isPlatformRootOrganization = existingOrganization.slug === PLATFORM_ORGANIZATION_SLUG || existingOrganization.is_platform_root === true;
+
+  if (parsed.kind === 'platform_management' && existingOrganization.slug !== PLATFORM_ORGANIZATION_SLUG) {
+    throw new Error('플랫폼 관리조직은 vein-bn-1 하나만 지정할 수 있습니다.');
+  }
+
+  if (isPlatformRootOrganization && parsed.kind !== 'platform_management') {
+    throw new Error('플랫폼 관리조직의 유형은 platform_management로 고정됩니다.');
+  }
+
   if (!isPlatformAdmin && existingOrganization.kind !== parsed.kind) {
     throw new Error('조직유형 변경은 플랫폼 관리자만 가능합니다.');
   }
@@ -503,7 +513,9 @@ export async function updateOrganizationProfileAction(formData: FormData) {
     .from('organizations')
     .update({
       name: parsed.name,
-      kind: isPlatformAdmin ? parsed.kind : existingOrganization.kind,
+      kind: isPlatformRootOrganization
+        ? 'platform_management'
+        : (isPlatformAdmin ? parsed.kind : existingOrganization.kind),
       is_directory_public: parsed.isDirectoryPublic,
       representative_name: parsed.representativeName?.trim() || null,
       representative_title: parsed.representativeTitle?.trim() || null,

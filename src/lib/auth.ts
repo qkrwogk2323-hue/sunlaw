@@ -7,6 +7,8 @@ import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, normalizeActiveViewMode } from '@/lib/view-mode';
 
+export const PLATFORM_ORGANIZATION_SLUG = 'vein-bn-1';
+
 type CoreProfile = Pick<
   Profile,
   'id' | 'email' | 'full_name' | 'platform_role' | 'default_organization_id' | 'is_active'
@@ -145,7 +147,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
         actor_category,
         permission_template_key,
         case_scope_policy,
-        organization:organizations(id, name, slug, kind, enabled_modules),
+        organization:organizations(id, name, slug, kind, is_platform_root, enabled_modules),
         permission_overrides:organization_membership_permission_overrides(permission_key, effect)
       `)
       .eq('profile_id', user.id)
@@ -232,7 +234,8 @@ export function isManagementRole(role?: string | null) {
 
 export function hasPlatformManagementMembership(auth: AuthContext) {
   return auth.memberships.some((membership) => (
-    membership.organization?.kind === 'platform_management'
+    membership.organization?.slug === PLATFORM_ORGANIZATION_SLUG
+    && membership.organization?.is_platform_root === true
     && isManagementRole(membership.role)
   ));
 }

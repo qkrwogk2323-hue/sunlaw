@@ -3,7 +3,7 @@
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
+import { PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
 import { clientAccountStatusLabel } from '@/lib/client-account';
 import { formatResidentRegistrationNumberMasked } from '@/lib/format';
 import { encryptString } from '@/lib/pii';
@@ -15,13 +15,13 @@ async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('organization_memberships')
-    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, kind)')
+    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, slug, is_platform_root)')
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
   return (data ?? [])
-    .filter((row: any) => row.organization?.kind === 'platform_management' && row.profile?.is_active !== false)
+    .filter((row: any) => row.organization?.slug === PLATFORM_ORGANIZATION_SLUG && row.organization?.is_platform_root === true && row.profile?.is_active !== false)
     .map((row: any) => row.profile_id)
     .filter(Boolean);
 }

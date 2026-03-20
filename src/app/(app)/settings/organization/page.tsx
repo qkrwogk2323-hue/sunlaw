@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
@@ -46,7 +46,9 @@ export default async function OrganizationSettingsPage({
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
   const isPlatformAdmin = await hasActivePlatformAdminView(auth);
-  const isPlatformManagementOrganization = workspace.organization?.kind === 'platform_management';
+  const isPlatformManagementOrganization = workspace.organization?.slug === PLATFORM_ORGANIZATION_SLUG
+    || workspace.organization?.is_platform_root === true
+    || workspace.organization?.kind === 'platform_management';
   const resolved = searchParams ? await searchParams : undefined;
   const section = `${resolved?.section ?? 'intro'}`.trim();
   const activeSection = section === 'info' || section === 'env' ? section : 'intro';
@@ -99,7 +101,7 @@ export default async function OrganizationSettingsPage({
                     <input name="name" defaultValue={workspace.organization.name ?? ''} required className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label className="text-sm text-slate-600">조직유형
-                    {isPlatformAdmin ? (
+                    {isPlatformAdmin && !isPlatformManagementOrganization ? (
                       <select name="kind" defaultValue={workspace.organization.kind ?? 'law_firm'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
                         <option value="law_firm">{kindLabel.law_firm}</option>
                         <option value="collection_company">{kindLabel.collection_company}</option>
@@ -109,7 +111,7 @@ export default async function OrganizationSettingsPage({
                       </select>
                     ) : (
                       <>
-                        <input type="hidden" name="kind" value={workspace.organization.kind ?? 'law_firm'} />
+                        <input type="hidden" name="kind" value={isPlatformManagementOrganization ? 'platform_management' : (workspace.organization.kind ?? 'law_firm')} />
                         <div className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
                           {isPlatformManagementOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
                         </div>

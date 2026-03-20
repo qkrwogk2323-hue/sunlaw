@@ -1,5 +1,6 @@
 import type { Route } from 'next';
 import type { AuthContext, Profile } from '@/lib/types';
+import { PLATFORM_ORGANIZATION_SLUG } from '@/lib/auth';
 
 export const CLIENT_ACCOUNT_STATUSES = [
   'active',
@@ -72,7 +73,9 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
   }
 
   const isPlatformOperator = auth.memberships.some(
-    (membership) => membership.organization?.kind === 'platform_management' && (membership.role === 'org_owner' || membership.role === 'org_manager')
+    (membership) => membership.organization?.slug === PLATFORM_ORGANIZATION_SLUG
+      && membership.organization?.is_platform_root === true
+      && (membership.role === 'org_owner' || membership.role === 'org_manager')
   );
 
   if (!auth.memberships.length && !isPlatformOperator) {
