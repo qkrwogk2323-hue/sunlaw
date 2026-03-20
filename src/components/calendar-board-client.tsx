@@ -340,8 +340,11 @@ export function CalendarBoardClient({
             onClick={() => setCategory(item.key)}
             className={`flex min-h-40 flex-col rounded-2xl border p-4 text-left transition ${category === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
           >
-            <item.icon className={`size-5 ${category === item.key ? 'text-white' : 'text-slate-700'}`} />
-            <p className={`mt-3 text-xs font-semibold tracking-[0.18em] ${category === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.label}</p>
+            {/* Rule 3-9-2: 1행(라벨+아이콘) → 2행(핵심값) → 3행(보조설명) */}
+            <p className={`flex items-center gap-1.5 text-xs font-semibold tracking-[0.18em] ${category === item.key ? 'text-slate-200' : 'text-slate-500'}`}>
+              <item.icon className="size-4 shrink-0" />
+              {item.label}
+            </p>
             <p className="mt-2 text-3xl font-semibold leading-none">{item.value}</p>
             <p className={`mt-auto pt-4 text-xs ${category === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.helper}</p>
           </button>
@@ -527,7 +530,7 @@ export function CalendarBoardClient({
                 <details className="xl:col-span-5">
                   <summary className="cursor-pointer text-sm font-medium text-slate-600">추가 항목</summary>
                   <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-                    <Input name="location" placeholder="장소" className="md:col-span-2" />
+                    <Input name="location" aria-label="장소" placeholder="장소" className="md:col-span-2" />
                     <Textarea name="notes" placeholder="메모" className="md:col-span-2 min-h-24" />
                     <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
                       <input type="checkbox" name="isImportant" className="size-4 rounded border-slate-300" />
@@ -622,7 +625,7 @@ export function CalendarBoardClient({
                         </label>
                         <Input id={`edit-end-${entry.id}`} name="scheduledEnd" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_end)} />
                       </div>
-                      <Input name="location" defaultValue={entry.raw.location || ''} placeholder="장소" className="md:col-span-2" />
+                      <Input name="location" aria-label="장소" defaultValue={entry.raw.location || ''} placeholder="장소" className="md:col-span-2" />
                       <Textarea name="notes" defaultValue={entry.raw.notes || ''} className="md:col-span-2" />
                       <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
                         <input type="checkbox" name="isImportant" defaultChecked={Boolean(entry.raw.is_important)} className="size-4 rounded border-slate-300" />
@@ -637,7 +640,10 @@ export function CalendarBoardClient({
               );
             })
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">현재 선택한 보기 조건에 맞는 일정이 없습니다.</div>
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <p>현재 선택한 보기 조건에 맞는 일정이 없습니다.</p>
+              <p className="mt-1">카테고리를 변경하거나 새 일정을 등록해 보세요.</p>
+            </div>
           )}
         </CardContent>
       </Card>
