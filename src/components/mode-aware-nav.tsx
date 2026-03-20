@@ -188,12 +188,12 @@ function ModeNavItem({
   return (
     <Link
       href={href as Route}
-      className={`inline-flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition duration-200 ${
+      className={`inline-flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors duration-150 ${
         active
           ? accent.active
           : emphasize
-            ? 'border-amber-300 bg-amber-50/80 text-slate-900 shadow-[0_8px_18px_rgba(245,158,11,0.12)] hover:-translate-y-0.5 hover:border-amber-400'
-            : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'
+            ? 'border-amber-300 bg-amber-50/80 text-slate-900 shadow-[0_8px_18px_rgba(245,158,11,0.12)] hover:border-amber-400'
+            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'
       }`}
     >
       <span className={`inline-flex size-8 items-center justify-center rounded-lg ${active ? accent.icon : emphasize ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'} ${pulse || emphasize ? 'animate-pulse' : ''}`}>
@@ -234,26 +234,19 @@ function MobileSectionBar({
   currentOrganizationName: string;
   hasUnreadNotifications: boolean;
 }) {
-  const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? 'common-menu');
+  const derivedSectionId = useMemo(
+    () => resolveSectionIdByPath(sections, pathname),
+    [sections, pathname]
+  );
+  const [manualSectionId, setManualSectionId] = useState<string | null>(null);
+  const activeSectionId = manualSectionId ?? derivedSectionId;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
 
+  // pathname 변경 시 수동 선택 초기화
   useEffect(() => {
-    if (!sections.some((section) => section.id === activeSectionId)) {
-      queueMicrotask(() => {
-        setActiveSectionId(sections[0]?.id ?? 'common-menu');
-      });
-    }
-  }, [sections, activeSectionId]);
-
-  useEffect(() => {
-    const nextSectionId = resolveSectionIdByPath(sections, pathname);
-    if (nextSectionId !== activeSectionId) {
-      queueMicrotask(() => {
-        setActiveSectionId(nextSectionId);
-      });
-    }
-  }, [sections, pathname, activeSectionId]);
+    setManualSectionId(null);
+  }, [pathname]);
 
   return (
     <div className="space-y-3 lg:hidden">
@@ -296,7 +289,7 @@ function MobileSectionBar({
                 <button
                   key={section.id}
                   type="button"
-                  onClick={() => setActiveSectionId(section.id)}
+                  onClick={() => setManualSectionId(section.id)}
                   className={segmentStyles({
                     active: activeSectionId === section.id,
                     className: `min-h-11 rounded-xl px-2 py-2 text-center text-xs font-semibold leading-tight ${activeSectionId === section.id ? accent.mobile : ''}`
@@ -318,7 +311,7 @@ function MobileSectionBar({
                     key={item.href}
                     href={item.href as Route}
                     onClick={() => setDrawerOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors duration-150 ${
                       pathname === item.href || pathname.startsWith(`${item.href}/`)
                         ? accent.active
                         : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === '/notifications')
