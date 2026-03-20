@@ -165,20 +165,6 @@ import { LoadingOverlay, InlineLoadingSpinner } from '@/components/ui/loading';
 - Soft delete 후 → UI에서 즉시 사라지되, `/trash` 페이지에서 복구 가능해야 함
 - 복구(restore) 버튼 하나로 즉시 활성화 가능해야 함
 
-### 현재 위반 목록 (즉시 수정 필요)
-| 위반 항목 | 파일 | 문제 |
-|---------|------|------|
-| `deleteMembershipAction` | `organization-actions.ts` | `organization_memberships`를 즉시 hard delete |
-| Cases 보관함 UI 없음 | `/cases` | `moveCaseToDeletedAction` 존재하지만 복구 UI 없음 |
-
-### 이미 올바르게 구현된 것 (건드리지 말 것)
-| 항목 | 상태 |
-|------|------|
-| `moveCaseToDeletedAction` | ✅ `lifecycle_status = 'soft_deleted'` 설정 |
-| `forceDeleteCaseAction` | ✅ soft_deleted 상태에서만 hard delete |
-| Notifications `trashed_at` | ✅ soft archive 구현 완료 |
-| Organizations `lifecycle_status` | ✅ soft_deleted 상태 존재 |
-
 ### 구현 패턴
 
 #### 1. Soft Delete Action
@@ -374,3 +360,60 @@ src/components/ui/
 안내: "[다음 단계/상태 설명]"         예) "초대 이메일이 발송되었습니다"
 Undo: "[동작]됨 — [시간]초 내 취소 가능"  예) "삭제됨 — 8초 내 취소 가능"
 ```
+
+---
+
+## 📏 목록 성능 & 페이지네이션 규칙 (3-7)
+
+- **8개 이상** 항목은 접기(Collapsible) 또는 "더 보기"를 기본으로 제공한다.
+- **50개 이상** 항목은 서버 사이드 또는 커서 기반 페이지네이션을 사용한다.
+- 무한 길이 목록을 한 번에 전부 렌더링하지 않는다.
+- 검색과 정렬은 URL 쿼리 파라미터(`q`, `sort`)와 동기화할 수 있어야 한다.
+- 긴 목록 페이지의 검색창은 상단에 고정(`sticky`)할 수 있어야 한다.
+
+```tsx
+// ✅ 8개 초과 목록
+{items.length > 7 ? (
+  <CollapsibleList items={items} defaultShowCount={7} label="사건" />
+) : (
+  items.map((item) => <ListRow key={item.id} {...item} />)
+)}
+```
+
+---
+
+## 🔄 로딩·에러·중복 제출 방지 규칙 (3-8)
+
+- 네트워크 요청 중에는 버튼을 비활성화해 중복 제출을 막는다.
+- 낙관적 UI를 사용하는 경우 서버 실패 시 롤백 경로를 반드시 제공한다.
+- 복구 가능한 오류는 `<InlineError>`로 인라인 표시한다.
+- 복구 불가능한 오류는 에러 경계 또는 전역 에러 화면으로 처리한다.
+
+---
+
+## ✅ 새 기능 구현 전 체크리스트 (v2.0 — 22개 항목)
+
+아래 항목을 순서대로 확인한다.
+
+1. `PROJECT_RULES.md` 전체를 읽었는가.
+2. 서버 권한 가드(`requireXxxAccess`)를 적용했는가.
+3. 클라이언트 입력값을 서버에서 다시 검증하는가.
+4. soft delete 대상에 `.delete()`를 직접 호출하지 않았는가.
+5. 목록 기본 쿼리에서 삭제 데이터를 제외했는가.
+6. 폼에 `ClientActionForm`과 `SubmitButton`을 사용했는가.
+7. 파괴적 액션에 `DangerActionButton`을 사용했는가.
+8. 삭제 후 `undo()` 토스트와 보관함 복구 경로를 제공했는가.
+9. 필수 필드에 빨간 `*`를 표시했는가.
+10. `label htmlFor`와 `input id`를 연결했는가.
+11. 빈 상태 화면을 제공했는가.
+12. 새 메뉴를 `mode-aware-nav.tsx`에 등록했는가.
+13. 액션 성공 후 `revalidatePath()`를 호출했는가.
+14. ARIA 속성을 적용했는가.
+15. 타입 에러, 린트, 테스트, 빌드, 마이그레이션 검사를 통과했는가.
+16. 8개 이상 목록에 접기 또는 더 보기를 제공했는가.
+17. 50개 이상 목록에 서버 페이지네이션 또는 커서를 적용했는가.
+18. 플랫폼 관리자 전용 기능이면 `PROJECT_RULES.md` 카테고리 5-4 목록에 등록했는가.
+19. 플랫폼 관리자 메뉴의 기본 진입점이 목록 또는 대시보드인가.
+20. 용어를 `PROJECT_RULES.md` 6-1 정의와 일치하게 사용했는가.
+21. 로그와 사용자 메시지에 민감정보가 노출되지 않는가.
+22. 권한, RLS, soft delete 변경이면 회귀 테스트를 추가했는가.
