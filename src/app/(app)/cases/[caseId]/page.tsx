@@ -19,6 +19,7 @@ import { ScheduleCreateForm } from '@/components/forms/schedule-create-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { CaseDetailHubConnectButton } from '@/components/case-detail-hub-connect-button';
+import { CaseCoverForm } from '@/components/forms/case-cover-form';
 import { findMembership, requireAuthenticatedUser } from '@/lib/auth';
 import { requestDocumentReviewAction, updateCaseStageAction } from '@/lib/actions/case-actions';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
@@ -28,7 +29,7 @@ import { getCaseDetail } from '@/lib/queries/cases';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
 import { ExportLinks } from '@/components/export-links';
 
-const tabs = ['overview', 'communication', 'documents', 'schedule', 'participants', 'billing', 'timeline'] as const;
+const tabs = ['overview', 'communication', 'documents', 'schedule', 'participants', 'billing', 'timeline', 'cover'] as const;
 
 type TabKey = (typeof tabs)[number] | 'collection';
 
@@ -40,6 +41,7 @@ function getTabLabel(tab: TabKey, collectionFocused: boolean) {
   if (tab === 'participants') return '관련자';
   if (tab === 'billing') return collectionFocused ? '약정/회수금' : '비용/정산';
   if (tab === 'timeline') return '진행이력';
+  if (tab === 'cover') return '🖨 표지';
   return '추심실행';
 }
 
@@ -397,6 +399,7 @@ export default async function CaseDetailPage({
         <TabLink caseId={caseId} tab="participants" current={currentTab}>{getTabLabel('participants', collectionFocused)}</TabLink>
         <TabLink caseId={caseId} tab="billing" current={currentTab}>{getTabLabel('billing', collectionFocused)}</TabLink>
         <TabLink caseId={caseId} tab="timeline" current={currentTab}>{getTabLabel('timeline', collectionFocused)}</TabLink>
+        <TabLink caseId={caseId} tab="cover" current={currentTab}>{getTabLabel('cover', collectionFocused)}</TabLink>
         {showCollectionModule ? <TabLink caseId={caseId} tab="collection" current={currentTab}>{getTabLabel('collection', collectionFocused)}</TabLink> : null}
       </div>
 
@@ -690,6 +693,33 @@ export default async function CaseDetailPage({
                 <div key={`msg-${message.id}`} className="rounded-xl border border-slate-200 p-4">메시지 · {message.sender?.full_name ?? message.sender_role} · {formatDateTime(message.created_at)}</div>
               ))}
               {!caseDetail.documents.length && !caseDetail.requests.length && !caseDetail.messages.length ? <p className="text-sm text-slate-500">표시할 이력이 없습니다.</p> : null}
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {currentTab === 'cover' ? (
+        <section className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>소송기록 표지 정보</CardTitle>
+                <Link
+                  href={`/cases/${caseId}/cover` as import('next').Route}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                >
+                  🖨 표지 인쇄
+                </Link>
+              </div>
+              <p className="text-sm text-slate-500">생각날 때 채워두면 표지 출력 시 자동으로 반영됩니다.</p>
+            </CardHeader>
+            <CardContent>
+              <CaseCoverForm
+                caseId={caseId}
+                organizationId={caseDetail.organization_id}
+                coverFields={caseDetail}
+              />
             </CardContent>
           </Card>
         </section>

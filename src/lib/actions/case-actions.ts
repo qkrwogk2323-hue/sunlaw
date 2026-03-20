@@ -1013,6 +1013,51 @@ export async function addMessageAction(caseId: string, formData: FormData) {
   revalidatePath('/inbox');
 }
 
+export async function updateCaseCoverAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!caseId || !organizationId) throw new Error('사건 정보가 필요합니다.');
+
+  await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_create',
+    errorMessage: '사건 정보를 수정할 권한이 없습니다.',
+  });
+
+  const supabase = await createSupabaseServerClient();
+  const str = (key: string) => `${formData.get(key) ?? ''}`.trim() || null;
+  const dateVal = (key: string) => `${formData.get(key) ?? ''}`.trim() || null;
+
+  const { error } = await supabase.from('cases').update({
+    court_division: str('court_division'),
+    presiding_judge: str('presiding_judge'),
+    assigned_judge: str('assigned_judge'),
+    court_room: str('court_room'),
+    appeal_court_name: str('appeal_court_name'),
+    appeal_division: str('appeal_division'),
+    appeal_case_number: str('appeal_case_number'),
+    appeal_presiding_judge: str('appeal_presiding_judge'),
+    appeal_assigned_judge: str('appeal_assigned_judge'),
+    appeal_court_room: str('appeal_court_room'),
+    supreme_case_number: str('supreme_case_number'),
+    supreme_division: str('supreme_division'),
+    supreme_presiding_judge: str('supreme_presiding_judge'),
+    supreme_assigned_judge: str('supreme_assigned_judge'),
+    opponent_counsel_name: str('opponent_counsel_name'),
+    opponent_counsel_phone: str('opponent_counsel_phone'),
+    opponent_counsel_fax: str('opponent_counsel_fax'),
+    client_contact_address: str('client_contact_address'),
+    client_contact_phone: str('client_contact_phone'),
+    client_contact_fax: str('client_contact_fax'),
+    deadline_filing: dateVal('deadline_filing'),
+    deadline_appeal: dateVal('deadline_appeal'),
+    deadline_final_appeal: dateVal('deadline_final_appeal'),
+    cover_notes: str('cover_notes'),
+  }).eq('id', caseId).eq('organization_id', organizationId);
+
+  if (error) throw error;
+  revalidatePath(`/cases/${caseId}`);
+}
+
 export async function updateCaseStageAction(formData: FormData) {
   const parsed = caseStageUpdateSchema.parse({
     caseId: formData.get('caseId'),
