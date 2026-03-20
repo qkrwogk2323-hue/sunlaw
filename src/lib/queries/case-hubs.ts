@@ -226,8 +226,8 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
       .limit(hubIds.length * 3)
   ]);
 
-  if (casesResult.error) throw casesResult.error;
-  if (membersResult.error) throw membersResult.error;
+  if (casesResult.error) { console.error('[getCaseHubList] cases error:', casesResult.error.message); return []; }
+  if (membersResult.error) { console.error('[getCaseHubList] members error:', membersResult.error.message); return []; }
 
   const caseMap = ((casesResult.data ?? []) as any[]).reduce<Record<string, { title: string; reference_no: string | null }>>((acc, row) => {
     acc[row.id] = { title: row.title, reference_no: row.reference_no };
@@ -318,7 +318,7 @@ export async function getCaseHubDetail(
     .eq('lifecycle_status', 'active')
     .maybeSingle();
 
-  if (hubError) throw hubError;
+  if (hubError) { console.error('[getCaseHubDetail] hub error:', hubError.message); return null; }
   if (!hub) return null;
 
   const [caseResult, membersResult, activityResult, clientResult] = await Promise.all([
@@ -339,9 +339,9 @@ export async function getCaseHubDetail(
       : Promise.resolve({ data: null, error: null })
   ]);
 
-  if (caseResult.error) throw caseResult.error;
-  if (membersResult.error) throw membersResult.error;
-  if (activityResult.error) throw activityResult.error;
+  if (caseResult.error) { console.error('[getCaseHubDetail] case error:', caseResult.error.message); return null; }
+  if (membersResult.error) { console.error('[getCaseHubDetail] members error:', membersResult.error.message); return null; }
+  if (activityResult.error) { console.error('[getCaseHubDetail] activity error:', activityResult.error.message); return null; }
 
   // Resolve member profile names
   const memberProfileIds = ((membersResult.data ?? []) as any[]).map((m) => m.profile_id).filter(Boolean) as string[];
@@ -354,7 +354,7 @@ export async function getCaseHubDetail(
     ? await admin.from('profiles').select('id, full_name, email').in('id', allProfileIds)
     : { data: [], error: null };
 
-  if (profilesResult.error) throw profilesResult.error;
+  if (profilesResult.error) { console.error('[getCaseHubDetail] profiles error:', profilesResult.error.message); return null; }
 
   const profileMap = ((profilesResult.data ?? []) as any[]).reduce<Record<string, { full_name: string | null; email: string | null }>>((acc, p) => {
     acc[p.id] = { full_name: p.full_name, email: p.email };
