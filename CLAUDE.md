@@ -12,6 +12,40 @@
 
 ## 🔴 반드시 따를 코드 규칙
 
+### 폼 필드
+```tsx
+// ✅ 필수 입력란 — 빨간 * 표시 필수
+<div className="space-y-1">
+  <label htmlFor="name" className="text-sm font-medium">
+    이름 <span className="text-red-500" aria-hidden="true">*</span>
+  </label>
+  <Input id="name" name="name" required aria-required="true" />
+</div>
+// 폼 상단에 안내문
+<p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
+```
+- `required` 필드 → `<span className="text-red-500">*</span>` 필수
+- `label htmlFor` ↔ `input id` 반드시 연결
+- `placeholder`는 label 대체 불가, 보조 안내만
+
+### 새 페이지/메뉴 신설 필수 체크리스트
+1. `mode-aware-nav.tsx`에 메뉴 항목 등록 (안 하면 사이드바에 안 보임)
+2. 서버에서 `requireXxxAccess()` 권한 체크
+3. 빈 상태(empty state) 필수 — 데이터 없을 때 안내 문구
+4. 페이지 헤더 — `<h1>제목</h1>` + `<p>설명</p>`
+5. 모바일 반응형 — Tailwind `md:`, `lg:` 클래스
+
+```tsx
+// ✅ 빈 상태 패턴
+{items.length === 0 && (
+  <div className="py-12 text-center text-slate-400">
+    <Icon className="mx-auto mb-3 h-8 w-8 opacity-40" />
+    <p className="font-medium">아직 [항목]이 없습니다</p>
+    <p className="mt-1 text-sm">[다음 행동 안내]</p>
+  </div>
+)}
+```
+
 ### 폼 제출
 ```tsx
 // ❌ 금지

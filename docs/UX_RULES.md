@@ -154,6 +154,94 @@ import { LoadingOverlay, InlineLoadingSpinner } from '@/components/ui/loading';
 
 ---
 
+## 📋 폼 필드 & 입력 규칙
+
+### 필수 입력란 표시
+```tsx
+// ❌ 금지 — 필수 여부 불명확
+<label>이름</label>
+<Input name="name" required />
+
+// ✅ 필수 — 빨간 * 표시
+<label className="flex items-center gap-1">
+  이름 <span className="text-red-500" aria-hidden="true">*</span>
+</label>
+<Input name="name" required aria-required="true" />
+```
+
+**규칙:**
+- `required` 필드에는 반드시 `<span className="text-red-500" aria-hidden="true">*</span>` 표시
+- `aria-required="true"` 함께 추가
+- 폼 상단에 안내문 추가: `<p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>`
+
+### 폼 필드 레이아웃
+```tsx
+// ✅ label + input 쌍은 반드시 이 구조
+<div className="space-y-1">
+  <label htmlFor="fieldId" className="text-sm font-medium text-slate-700">
+    이름 <span className="text-red-500" aria-hidden="true">*</span>
+  </label>
+  <Input id="fieldId" name="name" required aria-required="true" />
+  {/* 검증 에러 있을 때만 표시 */}
+  {error && <p className="text-xs text-red-500">{error}</p>}
+</div>
+```
+
+**규칙:**
+- `label`의 `htmlFor`와 `input`의 `id` 반드시 연결
+- `placeholder`는 보조 안내용. label 대체 금지
+- 인라인 에러는 input 바로 아래 `text-xs text-red-500`
+
+### 클라이언트 검증
+```tsx
+// ✅ 제출 전 필수 필드 비어있으면 즉시 안내
+if (!fields.title.trim()) {
+  setFieldError('title', '사건명은 필수입니다.');
+  return;
+}
+```
+
+**규칙:**
+- 빈 필수 필드 제출 시 서버 에러 전에 클라이언트에서 먼저 차단
+- 에러 문구: `"[필드명]은(는) 필수입니다."` 형식
+
+---
+
+## 🗂 새 페이지/메뉴 신설 규칙
+
+### 메뉴 항목 추가 시 체크리스트
+새 라우트/메뉴를 만들 때 **반드시** 아래를 지켜야 합니다:
+
+1. **mode-aware-nav.tsx에 메뉴 등록** — 추가 않으면 사이드바에 안 보임
+2. **sectionAccent에 색상 등록** — 새 섹션이면 accent 색 정의 필수
+3. **페이지에 권한 체크** — 서버에서 `requireXxxAccess()` 호출, 권한 없으면 redirect
+4. **빈 상태(empty state) 필수** — 데이터 없을 때 `"아직 [항목]이 없습니다"` + 안내 문구
+5. **로딩 상태** — `Suspense` 또는 skeleton 처리
+6. **모바일 대응** — Tailwind 반응형 클래스 (`md:`, `lg:`) 적용
+
+### 빈 상태(Empty State) 패턴
+```tsx
+// ✅ 데이터 없을 때 반드시 이 패턴
+{items.length === 0 && (
+  <div className="py-12 text-center text-slate-400">
+    <Icon className="mx-auto mb-3 h-8 w-8 opacity-40" />
+    <p className="font-medium">아직 [항목]이 없습니다</p>
+    <p className="mt-1 text-sm">[다음 행동 안내]</p>
+  </div>
+)}
+```
+
+### 페이지 헤더 패턴
+```tsx
+// ✅ 새 페이지 상단 헤더 — 반드시 제목 + 설명 포함
+<div className="mb-6">
+  <h1 className="text-xl font-bold text-slate-900">페이지 제목</h1>
+  <p className="mt-1 text-sm text-slate-500">이 페이지에서 [무엇을] 할 수 있습니다.</p>
+</div>
+```
+
+---
+
 ## 🚫 절대 금지 목록
 
 | 금지 | 대체 |
@@ -164,6 +252,11 @@ import { LoadingOverlay, InlineLoadingSpinner } from '@/components/ui/loading';
 | `"에러가 발생했습니다"` | 원인 + 해결방법 명시 |
 | 로딩 중 버튼 활성화 | `isLoading` / `disabled` |
 | 삭제 후 토스트 없음 | `undo()` 토스트 |
+| `placeholder`만 있고 `label` 없는 input | `htmlFor`로 연결된 `<label>` 추가 |
+| 필수 필드에 `*` 없음 | `<span className="text-red-500">*</span>` |
+| 빈 상태 화면 없음 | empty state 패턴 필수 |
+| 메뉴 추가 후 nav 미등록 | mode-aware-nav.tsx에 항목 추가 |
+| 새 페이지에 권한 체크 없음 | `requireXxxAccess()` 서버에서 호출 |
 
 ---
 

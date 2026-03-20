@@ -7,6 +7,19 @@
 
 ## 🔴 코드 작성 시 반드시 따를 규칙
 
+### 폼 필드 (필수 입력란)
+- `required` 필드 → `<span className="text-red-500" aria-hidden="true">*</span>` 표시 필수
+- `label htmlFor` ↔ `input id` 반드시 연결
+- 폼 상단에 `<p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>` 추가
+- `placeholder`는 label 대체 불가
+
+### 새 페이지/메뉴 신설 필수 체크리스트
+- `mode-aware-nav.tsx`에 메뉴 항목 등록 (누락 시 사이드바에 안 보임)
+- 서버에서 `requireXxxAccess()` 권한 체크 필수
+- 빈 상태(empty state): 데이터 없을 때 안내 문구 + 아이콘
+- 페이지 헤더: `<h1>제목</h1>` + `<p className="text-sm text-slate-500">설명</p>`
+- 모바일 반응형: Tailwind `md:`, `lg:` 클래스
+
 ### 폼 제출
 - `<form action={serverAction}>` **금지** → 반드시 `<ClientActionForm action={...} successTitle="...">` 사용
 - `<button type="submit">` **금지** → `<SubmitButton>` 사용
