@@ -122,7 +122,7 @@ async function purgeExpiredNotificationTrash(userId: string) {
     .lt('trashed_at', expiresAt);
 
   if (error && !isMissingColumnError(error)) {
-    throw error;
+    console.error('[purgeExpiredNotificationTrash] query error:', error.message);
   }
 }
 
@@ -183,7 +183,8 @@ export async function getUnreadNotificationCount() {
   }
 
   if (!isMissingColumnError(upgraded.error)) {
-    throw upgraded.error;
+    console.error('[getUnreadNotificationCount] upgraded query error:', upgraded.error.message);
+    return 0;
   }
 
   const legacy = await supabase
@@ -193,7 +194,8 @@ export async function getUnreadNotificationCount() {
     .is('read_at', null);
 
   if (legacy.error) {
-    throw legacy.error;
+    console.error('[getUnreadNotificationCount] legacy query error:', legacy.error.message);
+    return 0;
   }
 
   return legacy.count ?? 0;
@@ -227,11 +229,13 @@ export async function getNavUnreadCounts(): Promise<NavUnreadCounts> {
   ]);
 
   if (unread.error && !isMissingColumnError(unread.error)) {
-    throw unread.error;
+    console.error('[getNavUnreadCounts] unread query error:', unread.error.message);
+    return { unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 };
   }
 
   if (actionRequired.error && !isMissingColumnError(actionRequired.error)) {
-    throw actionRequired.error;
+    console.error('[getNavUnreadCounts] actionRequired query error:', actionRequired.error.message);
+    return { unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 };
   }
 
   if (unread.error && isMissingColumnError(unread.error)) {
@@ -249,8 +253,14 @@ export async function getNavUnreadCounts(): Promise<NavUnreadCounts> {
         .is('resolved_at', null)
     ]);
 
-    if (legacyUnread.error) throw legacyUnread.error;
-    if (legacyRequired.error && !isMissingColumnError(legacyRequired.error)) throw legacyRequired.error;
+    if (legacyUnread.error) {
+      console.error('[getNavUnreadCounts] legacy unread query error:', legacyUnread.error.message);
+      return { unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 };
+    }
+    if (legacyRequired.error && !isMissingColumnError(legacyRequired.error)) {
+      console.error('[getNavUnreadCounts] legacy actionRequired query error:', legacyRequired.error.message);
+      return { unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 };
+    }
 
     return {
       unreadCount: legacyUnread.count ?? 0,
@@ -315,14 +325,30 @@ export async function getNotificationCenter(limit = 20) {
       .limit(limit);
 
     if (upgradedTrash.error) {
-      throw upgradedTrash.error;
+      console.error('[getNotificationCenter] upgraded trash query error:', upgradedTrash.error.message);
+    } else {
+      trashedNotifications = ((upgradedTrash.data ?? []) as NotificationRecord[]).map(normalizeNotification);
     }
 
     activeNotifications = ((upgradedActive.data ?? []) as NotificationRecord[]).map(normalizeNotification);
-    trashedNotifications = ((upgradedTrash.data ?? []) as NotificationRecord[]).map(normalizeNotification);
   } else {
     if (!isMissingColumnError(upgradedActive.error)) {
-      throw upgradedActive.error;
+      console.error('[getNotificationCenter] upgraded active query error:', upgradedActive.error.message);
+      return {
+        currentOrganizationId: getEffectiveOrganizationId(auth),
+        currentOrganizationName: null,
+        activeNotifications: [],
+        currentOrganizationNotifications: [],
+        otherOrganizationGroups: [],
+        trashedNotifications: [],
+        capabilities,
+        summary: {
+          unreadCount: 0,
+          actionRequiredCount: 0,
+          trashCount: 0,
+          activeCount: 0
+        }
+      };
     }
 
     capabilities = {
@@ -338,7 +364,22 @@ export async function getNotificationCenter(limit = 20) {
       .limit(limit);
 
     if (legacyActive.error) {
-      throw legacyActive.error;
+      console.error('[getNotificationCenter] legacy active query error:', legacyActive.error.message);
+      return {
+        currentOrganizationId: getEffectiveOrganizationId(auth),
+        currentOrganizationName: null,
+        activeNotifications: [],
+        currentOrganizationNotifications: [],
+        otherOrganizationGroups: [],
+        trashedNotifications: [],
+        capabilities,
+        summary: {
+          unreadCount: 0,
+          actionRequiredCount: 0,
+          trashCount: 0,
+          activeCount: 0
+        }
+      };
     }
 
     activeNotifications = ((legacyActive.data ?? []) as Record<string, unknown>[])
@@ -419,7 +460,8 @@ export async function getPortalNotifications(limit = 20) {
     .limit(limit);
 
   if (error) {
-    throw error;
+    console.error('[getPortalNotifications] query error:', error.message);
+    return [];
   }
 
   return data ?? [];
@@ -596,7 +638,10 @@ export async function getDashboardRecentNotifications(organizationId?: string | 
   }
 
   const { data, error } = await query;
-  if (error && !isMissingColumnError(error)) throw error;
+  if (error && !isMissingColumnError(error)) {
+    console.error('[getDashboardRecentNotifications] query error:', error.message);
+    return [];
+  }
 
   const normalized = ((data ?? []) as any[]).map(normalizeQueueItem);
   return normalized
@@ -654,7 +699,17 @@ export async function getNotificationQueueView({
 
   const { data, error } = await query;
   if (error && !isMissingColumnError(error)) {
-    throw error;
+    console.error('[getNotificationQueueView] query error:', error.message);
+    return {
+      currentOrganizationId: getEffectiveOrganizationId(auth),
+      items: [] as NotificationQueueItem[],
+      sections: {
+        immediate: [] as QueueGroup[],
+        confirm: [] as QueueGroup[],
+        reference: [] as QueueGroup[]
+      },
+      nextCursor: null as string | null
+    };
   }
 
   const keyword = `${q ?? ''}`.trim().toLowerCase();

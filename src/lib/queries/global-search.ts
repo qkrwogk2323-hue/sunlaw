@@ -71,9 +71,14 @@ export async function searchGlobalWorkspace(query: string, limit = 8): Promise<G
 
   const [casesRes, clientsRes, docsRes] = await Promise.all([casesQuery, clientsQuery, docsQuery]);
 
-  if (casesRes.error) throw casesRes.error;
-  if (clientsRes.error) throw clientsRes.error;
-  if (docsRes.error) throw docsRes.error;
+  if (casesRes.error || clientsRes.error || docsRes.error) {
+    console.error('[searchGlobalWorkspace] query error:', {
+      cases: casesRes.error?.message ?? null,
+      clients: clientsRes.error?.message ?? null,
+      documents: docsRes.error?.message ?? null
+    });
+    return { cases: [], clients: [], documents: [] };
+  }
 
   return {
     cases: (casesRes.data ?? []).map((row: any) => ({

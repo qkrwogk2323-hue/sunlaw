@@ -11,11 +11,16 @@ export async function listAccessibleOrganizations(options: OrganizationListOptio
 
   const supabase = await createSupabaseServerClient();
   if (options.includeAll) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('organizations')
       .select('id, name, slug, kind, business_number, representative_name, email, phone, lifecycle_status, enabled_modules, is_directory_public, updated_at')
       .neq('lifecycle_status', 'soft_deleted')
       .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[listAccessibleOrganizations] includeAll error:', error.message);
+      return [];
+    }
 
     return data ?? [];
   }
@@ -39,8 +44,13 @@ export async function listAccessibleOrganizations(options: OrganizationListOptio
       : Promise.resolve({ data: [], error: null })
   ]);
 
-  if (publicOrganizationsResponse.error) throw publicOrganizationsResponse.error;
-  if (memberOrganizationsResponse.error) throw memberOrganizationsResponse.error;
+  if (publicOrganizationsResponse.error || memberOrganizationsResponse.error) {
+    console.error('[listAccessibleOrganizations] query error:', {
+      publicOrganizations: publicOrganizationsResponse.error?.message ?? null,
+      memberOrganizations: memberOrganizationsResponse.error?.message ?? null
+    });
+    return [];
+  }
 
   const merged = [...(memberOrganizationsResponse.data ?? []), ...(publicOrganizationsResponse.data ?? [])];
   return merged.filter((organization, index, list) => list.findIndex((candidate) => candidate.id === organization.id) === index);
@@ -62,7 +72,12 @@ export async function listOrganizationMemberships(options: OrganizationListOptio
     query = query.eq('profile_id', auth.user.id);
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('[listOrganizationMemberships] query error:', error.message);
+    return [];
+  }
 
   return data ?? [];
 }
@@ -70,15 +85,25 @@ export async function listOrganizationMemberships(options: OrganizationListOptio
 export async function getOrganizationWorkspace(organizationId: string) {
   const supabase = await createSupabaseServerClient();
 
-  const { data: organization } = await supabase
+  const { data: organization, error: organizationError } = await supabase
     .from('organizations')
     .select('*')
     .eq('id', organizationId)
     .maybeSingle();
 
+  if (organizationError) {
+    console.error('[getOrganizationWorkspace] organization error:', organizationError.message);
+    return null;
+  }
+
   if (!organization) return null;
 
-  const [{ data: members }, { data: cases }, { data: invitations }, { count: caseCount }] = await Promise.all([
+  const [
+    { data: members, error: membersError },
+    { data: cases, error: casesError },
+    { data: invitations, error: invitationsError },
+    { count: caseCount, error: caseCountError }
+  ] = await Promise.all([
     supabase
       .from('organization_memberships')
       .select('id, role, actor_category, permission_template_key, case_scope_policy, status, title, permissions, is_primary, profile:profiles(id, full_name, email)')
@@ -103,6 +128,23 @@ export async function getOrganizationWorkspace(organizationId: string) {
       .eq('organization_id', organizationId)
       .neq('lifecycle_status', 'soft_deleted')
   ]);
+
+  if (membersError || casesError || invitationsError || caseCountError) {
+    console.error('[getOrganizationWorkspace] related query error:', {
+      members: membersError?.message ?? null,
+      cases: casesError?.message ?? null,
+      invitations: invitationsError?.message ?? null,
+      caseCount: caseCountError?.message ?? null
+    });
+
+    return {
+      organization,
+      members: [],
+      recentCases: [],
+      invitations: [],
+      caseCount: 0
+    };
+  }
 
   return {
     organization,

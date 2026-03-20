@@ -45,6 +45,9 @@ export async function listAuditChangeLog({
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error('[listAuditChangeLog] query error:', error.message);
+    return [];
+  }
   return data ?? [];
 }
