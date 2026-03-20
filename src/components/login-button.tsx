@@ -7,8 +7,20 @@ import { Button } from '@/components/ui/button';
 const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
 
 function resolveAuthOrigin() {
-  // OAuth PKCE verifier is stored per-origin. Always use the current origin
-  // so callback domain matches the origin where login started.
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configuredOrigin) {
+    try {
+      const parsed = new URL(configuredOrigin);
+      if (parsed.protocol === 'https:' || parsed.hostname === 'localhost') {
+        return parsed.origin;
+      }
+    } catch {
+      // Fall back to current origin when the configured URL is malformed.
+    }
+  }
+
+  // OAuth PKCE verifier is stored per-origin. In production we prefer the
+  // canonical public origin to avoid www/non-www mismatches.
   return window.location.origin;
 }
 
