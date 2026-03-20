@@ -46,6 +46,29 @@
 )}
 ```
 
+### Soft Delete (UX #8 강제)
+```ts
+// ❌ 절대 금지 — 즉시 hard delete
+await supabase.from('table').delete().eq('id', id);
+
+// ✅ 필수 — lifecycle_status 방식
+await supabase.from('table')
+  .update({ lifecycle_status: 'soft_deleted', updated_by: auth.user.id })
+  .eq('id', id);
+
+// ✅ 필수 — deleted_at 방식 (lifecycle_status 없는 테이블)
+await supabase.from('table')
+  .update({ deleted_at: new Date().toISOString() })
+  .eq('id', id);
+```
+- 목록 쿼리: `.neq('lifecycle_status', 'soft_deleted')` 또는 `.is('deleted_at', null)` 필수
+- 삭제 후 반드시 `undo()` 토스트 + "보관함에서 복구 가능" 안내
+- Trash UI(`?tab=trash` 또는 `/trash`): 복구 버튼 + 관리자만 영구삭제 가능
+
+**현재 위반 중인 항목:**
+- `deleteMembershipAction` — `organization_memberships` 즉시 hard delete ❌ → 수정 필요
+- Cases 보관함 UI — `moveCaseToDeletedAction` 있지만 복구 UI 없음 ❌ → 수정 필요
+
 ### 폼 제출
 ```tsx
 // ❌ 금지

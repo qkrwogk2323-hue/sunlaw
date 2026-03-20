@@ -20,6 +20,14 @@
 - 페이지 헤더: `<h1>제목</h1>` + `<p className="text-sm text-slate-500">설명</p>`
 - 모바일 반응형: Tailwind `md:`, `lg:` 클래스
 
+### Soft Delete (UX #8 — 절대 금지: 즉시 hard delete)
+- `.delete()` 직접 호출 금지 → `lifecycle_status = 'soft_deleted'` 또는 `deleted_at` 업데이트로 대체
+- 삭제 후 `undo()` 토스트 필수 (8초 복구)
+- Trash UI 제공 필수: `?tab=trash` 또는 `/trash` 에서 복구 버튼
+- 목록 쿼리: `.neq('lifecycle_status', 'soft_deleted')` 또는 `.is('deleted_at', null)` 필수
+
+**현재 위반**: `deleteMembershipAction` hard delete ❌, Cases 보관함 UI 없음 ❌
+
 ### 폼 제출
 - `<form action={serverAction}>` **금지** → 반드시 `<ClientActionForm action={...} successTitle="...">` 사용
 - `<button type="submit">` **금지** → `<SubmitButton>` 사용

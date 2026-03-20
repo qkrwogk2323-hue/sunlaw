@@ -154,6 +154,83 @@ import { LoadingOverlay, InlineLoadingSpinner } from '@/components/ui/loading';
 
 ---
 
+## 🗑 Soft Delete + Trash Bin 규칙 (UX #8 강제)
+
+> **UX 체크리스트 #8 "취소 및 복구"를 강제 구현한 규칙이다.**  
+> 이 규칙은 **절대 예외 없이** 모든 destructive action에 적용된다.
+
+### 원칙
+- 모든 삭제/비활성화는 **즉시 hard delete 금지**
+- 반드시 `lifecycle_status = 'soft_deleted'` 또는 `deleted_at` 업데이트로 처리
+- Soft delete 후 → UI에서 즉시 사라지되, `/trash` 페이지에서 복구 가능해야 함
+- 복구(restore) 버튼 하나로 즉시 활성화 가능해야 함
+
+### 현재 위반 목록 (즉시 수정 필요)
+| 위반 항목 | 파일 | 문제 |
+|---------|------|------|
+| `deleteMembershipAction` | `organization-actions.ts` | `organization_memberships`를 즉시 hard delete |
+| Cases 보관함 UI 없음 | `/cases` | `moveCaseToDeletedAction` 존재하지만 복구 UI 없음 |
+
+### 이미 올바르게 구현된 것 (건드리지 말 것)
+| 항목 | 상태 |
+|------|------|
+| `moveCaseToDeletedAction` | ✅ `lifecycle_status = 'soft_deleted'` 설정 |
+| `forceDeleteCaseAction` | ✅ soft_deleted 상태에서만 hard delete |
+| Notifications `trashed_at` | ✅ soft archive 구현 완료 |
+| Organizations `lifecycle_status` | ✅ soft_deleted 상태 존재 |
+
+### 구현 패턴
+
+#### 1. Soft Delete Action
+```ts
+// ❌ 금지
+await supabase.from('table').delete().eq('id', id);
+
+// ✅ 필수 — lifecycle_status가 있는 테이블
+await supabase.from('table')
+  .update({ lifecycle_status: 'soft_deleted', updated_by: auth.user.id })
+  .eq('id', id);
+
+// ✅ 필수 — deleted_at 방식 (lifecycle_status 없는 테이블)
+await supabase.from('table')
+  .update({ deleted_at: new Date().toISOString() })
+  .eq('id', id);
+revalidatePath('/...');
+// redirect는 하지 않음 — toast + undo 처리
+```
+
+#### 2. 목록 쿼리에서 soft-deleted 제외
+```ts
+// ✅ 필수 — 목록 조회 시 항상 필터
+.neq('lifecycle_status', 'soft_deleted')
+// 또는
+.is('deleted_at', null)
+```
+
+#### 3. Trash 페이지 패턴
+- `/cases?tab=trash` 또는 `/cases/trash` 로 접근
+- soft-deleted 항목 목록 표시
+- 각 항목마다 "복구" 버튼 (→ `lifecycle_status = 'active'` 로 되돌림)
+- 관리자만 "영구 삭제" (hard delete) 가능
+
+#### 4. 성공 토스트 패턴
+```tsx
+// ✅ soft delete 후 반드시 undo 토스트
+undo('사건이 보관함으로 이동되었습니다', {
+  message: '8초 내 취소 가능합니다. 보관함에서 언제든 복구할 수 있습니다.',
+  onUndo: async () => { await restoreAction({ id }); }
+});
+```
+
+### 금지 목록 추가
+| 금지 | 대체 |
+|------|------|
+| `.delete()` 직접 호출 (soft_deleted 전제 없이) | `lifecycle_status = 'soft_deleted'` 업데이트 |
+| 삭제 후 복구 UI 없음 | `/trash` 또는 `?tab=trash` 페이지 제공 |
+| 삭제 후 undo 토스트 없음 | `undo()` 토스트 8초 복구 옵션 필수 |
+
+---
+
 ## 📋 폼 필드 & 입력 규칙
 
 ### 필수 입력란 표시
