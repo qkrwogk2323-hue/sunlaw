@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 import { middleware } from '../middleware';
 
@@ -15,14 +16,14 @@ vi.mock('next/server', () => ({
   }
 }));
 
-function createRequest(url: string) {
+function createRequest(url: string): NextRequest {
   const nextUrl = new URL(url) as URL & { clone: () => URL };
   nextUrl.clone = () => new URL(nextUrl.toString());
 
   return {
     url,
     nextUrl
-  } as any;
+  } as unknown as NextRequest;
 }
 
 describe('root middleware', () => {
@@ -36,7 +37,7 @@ describe('root middleware', () => {
     });
   });
 
-  it('keeps oauth code callback redirect behavior', async () => {
+  it('redirects OAuth code callback from root to /auth/callback', async () => {
     const response = await middleware(createRequest('https://www.veinspiral.com/?code=test-code'));
 
     expect(response).toMatchObject({
