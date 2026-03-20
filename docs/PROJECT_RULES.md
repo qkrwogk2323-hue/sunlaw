@@ -328,6 +328,47 @@ Undo:  "[동작]됨 — [N]초 내 취소 가능"  예) "삭제됨 — 8초 내 
 | 빈 상태 | 콘텐츠 영역 중앙 | 빈 상태 패턴 |
 | 전역 경고/공지 | 헤더 하단 배너 | 별도 Banner 컴포넌트 |
 
+### 4-4. 목록 접기 + 통합 검색 규칙 (Collapsible List + Unified Search)
+
+**강제 규칙:**
+
+- 모든 목록은 항목이 **8개 이상**이면 자동 Accordion(접이식) 처리 필수
+- 목록 기본 표시 개수: **7개** (초과 시 "더 보기" 토글 또는 Accordion)
+- 각 페이지마다 별도 검색 로직 구현 **절대 금지** → `UnifiedListSearch` 컴포넌트 하나만 사용
+- 검색 컴포넌트: `src/components/ui/unified-list-search.tsx` (Single Source of Truth)
+- 검색 범위: 사건 + 의뢰인 + 조직 + 알림을 **단일 검색창**으로 처리
+- 목록이 긴 페이지에서는 검색창을 목록 상단에 고정(sticky)
+
+**컴포넌트 사용 패턴:**
+
+```tsx
+// ✅ 필수 — 모든 목록 페이지
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+
+<UnifiedListSearch
+  placeholder="사건명, 의뢰인, 사건번호 검색..."
+  onSearch={(query) => setSearchQuery(query)}
+  aria-label="목록 검색"
+/>
+
+// ✅ 8개 초과 목록 — Accordion 처리
+{items.length > 7 ? (
+  <CollapsibleList items={items} defaultShowCount={7} label="사건" />
+) : (
+  items.map((item) => <ListRow key={item.id} {...item} />)
+)}
+```
+
+**현재 위반 중인 목록 (수정 필요):**
+
+| 페이지 | 위반 내용 | 상태 |
+|--------|----------|------|
+| `/cases/page.tsx` | 무한 스크롤 없이 전체 목록 노출 | ❌ 수정 필요 |
+| `/clients/page.tsx` | 검색 없이 전체 의뢰인 목록 | ❌ 수정 필요 |
+| `/organizations/page.tsx` | 조직 목록 접기 없음 | ❌ 수정 필요 |
+| `/admin/organizations/page.tsx` | 관리자 조직 목록 접기 없음 | ❌ 수정 필요 |
+| `/notifications/page.tsx` | 알림 목록 전체 노출 | ❌ 수정 필요 |
+
 ---
 
 ## 🏗 카테고리 5: 아키텍처 규칙
@@ -355,6 +396,45 @@ Undo:  "[동작]됨 — [N]초 내 취소 가능"  예) "삭제됨 — 8초 내 
 - 고객센터 (`/admin/support`)
 
 일반 법무 메뉴(사건 목록, 의뢰인, 추심 등) **숨김**.
+
+### 5-4. 플랫폼 관리자 기능 거버넌스 (Platform Admin Governance)
+
+**강제 규칙:**
+
+- `isPlatformOperator(auth)` 가 `true`인 사용자만 접근할 수 있는 모든 기능은 **이 섹션에 명확히 나열**되어야 함
+- 플랫폼 관리자 전용 기능을 새로 추가할 때 반드시 이 목록을 먼저 업데이트
+- **"조직검색" 버튼**은 플랫폼 관리자에게만 노출, 일반 사용자에게 완전 숨김
+- 클릭 시 **조직 관리 대시보드** (`/admin/organizations`) 로 이동 — "조직 생성" 화면이 기본 노출되는 것 **금지**
+- 플랫폼 관리자 화면의 진입점은 반드시 **목록/대시보드** 가 기본이어야 함 (생성 폼 금지)
+
+**플랫폼 관리자 전용 기능 목록 (완전 목록):**
+
+| 기능 | 라우트 | 설명 |
+|------|--------|------|
+| 조직 신청 심사 | `/admin/organization-requests` | 신규 조직 가입 승인/거절 |
+| 조직 관리 대시보드 | `/admin/organizations` | 전체 조직 목록 조회/관리 |
+| 고객센터 | `/admin/support` | 사용자 문의 처리 |
+| 플랫폼 설정 | `/admin/modules` | 기능 모듈 on/off |
+| 감사 로그 | `/admin/audit` | 전체 액션 이력 조회 |
+
+**현재 위반 중인 항목:**
+
+| 위반 | 위치 | 상태 |
+|------|------|------|
+| 조직검색 클릭 → 조직 생성 화면 바로 노출 | `mode-aware-nav.tsx` 또는 관련 버튼 | ❌ 수정 필요 |
+| 플랫폼 관리자 기능 목록 미문서화 | `PROJECT_RULES.md` | ✅ 이번에 추가 완료 |
+
+**메뉴 가드 패턴:**
+
+```tsx
+// ✅ 플랫폼 관리자 전용 메뉴 — 서버 컴포넌트에서 조건 처리
+{isPlatformOperator && (
+  <NavItem href="/admin/organizations" label="조직 관리" />
+)}
+
+// ❌ 금지 — 일반 사용자에게 플랫폼 메뉴 노출
+<NavItem href="/admin/organizations" label="조직검색" /> // 권한 체크 없이
+```
 
 ---
 
@@ -437,3 +517,6 @@ src/components/mode-switcher.tsx    # ModeKey 타입, 모드 전환
 - [ ] `revalidatePath()` 호출했는가?
 - [ ] ARIA 속성 있는가?
 - [ ] 타입 에러 없는가? (`pnpm typecheck`)
+- [ ] 8개 이상 목록: `UnifiedListSearch` + Accordion 처리했는가?
+- [ ] 플랫폼 관리자 전용 기능: 이 파일 5-4 목록에 등록했는가?
+- [ ] 플랫폼 관리자 메뉴: 진입점이 목록/대시보드인가? (생성 폼 기본 노출 금지)
