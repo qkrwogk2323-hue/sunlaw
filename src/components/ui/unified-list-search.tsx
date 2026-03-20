@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 
 type UnifiedListSearchProps = {
@@ -8,6 +9,8 @@ type UnifiedListSearchProps = {
   hiddenFields?: Record<string, string | number | null | undefined>;
   sticky?: boolean;
   className?: string;
+  children?: ReactNode;
+  submitLabel?: string;
 };
 
 export function UnifiedListSearch({
@@ -17,7 +20,9 @@ export function UnifiedListSearch({
   ariaLabel,
   hiddenFields,
   sticky = false,
-  className
+  className,
+  children,
+  submitLabel = '검색'
 }: UnifiedListSearchProps) {
   return (
     <form
@@ -41,8 +46,9 @@ export function UnifiedListSearch({
         aria-label={ariaLabel}
         className="h-10 min-w-[14rem] flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
       />
+      {children}
       <Button type="submit" variant="secondary" size="sm" className="h-10 px-4">
-        검색
+        {submitLabel}
       </Button>
     </form>
   );

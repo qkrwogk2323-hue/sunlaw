@@ -14,6 +14,8 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { ImmediateDeleteForm } from '@/components/notifications/immediate-delete-form';
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { formatNotificationDate } from '@/lib/format';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
@@ -239,11 +241,19 @@ export default async function NotificationsPage({
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <form method="get" action="/notifications" className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="whitespace-nowrap">검색</span>
-            <input name="q" defaultValue={keyword} placeholder="제목 검색" className="h-9 w-40 rounded-lg border border-slate-200 px-2 text-sm" />
-          </label>
+        <UnifiedListSearch
+          action="/notifications"
+          defaultValue={keyword}
+          placeholder="제목, 조직, 처리 안내 검색"
+          ariaLabel="알림 센터 목록 검색"
+          hiddenFields={{
+            entity,
+            section,
+            priority,
+            state,
+            size: pageSize
+          }}
+        >
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <span className="whitespace-nowrap">유형</span>
             <select name="entity" defaultValue={entity} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
@@ -293,28 +303,30 @@ export default async function NotificationsPage({
                 <option key={opt} value={opt}>{opt}개</option>
               ))}
             </select>
-            <button
-              type="submit"
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:-translate-y-px hover:shadow-md"
-            >
-              검색/적용
-            </button>
           </label>
-        </form>
+        </UnifiedListSearch>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <form id="bulk-queue-form" action={bulkNotificationTransitionAction} className="flex flex-wrap items-center gap-2">
-          <button type="submit" name="operation" value="read" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+        <ClientActionForm
+          id="bulk-queue-form"
+          action={bulkNotificationTransitionAction}
+          successTitle="선택한 알림을 정리했습니다."
+          errorTitle="일괄 처리에 실패했습니다."
+          errorCause="선택한 알림을 처리하는 중 서버 응답이 실패했습니다."
+          errorResolution="선택 항목을 다시 확인한 뒤 다시 시도해 주세요."
+          className="flex flex-wrap items-center gap-2"
+        >
+          <SubmitButton name="operation" value="read" variant="secondary" pendingLabel="반영 중..." className="px-3">
             선택 읽음
-          </button>
-          <button type="submit" name="operation" value="resolve" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          </SubmitButton>
+          <SubmitButton name="operation" value="resolve" variant="secondary" pendingLabel="반영 중..." className="px-3">
             선택 해결
-          </button>
-          <button type="submit" name="operation" value="archive" className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          </SubmitButton>
+          <SubmitButton name="operation" value="archive" variant="secondary" pendingLabel="이동 중..." className="px-3">
             선택 완료함 이동
-          </button>
-        </form>
+          </SubmitButton>
+        </ClientActionForm>
         <ClientActionForm action={markAllNotificationsReadAction} successTitle="모든 알림을 확인 표시했습니다.">
           <SubmitButton variant="secondary" pendingLabel="반영 중...">모두 확인 표시</SubmitButton>
         </ClientActionForm>
@@ -322,9 +334,18 @@ export default async function NotificationsPage({
 
       {queueView ? (
         <div className="space-y-4">
-          <QueueSection section="immediate" groups={queueView.sections.immediate as any} />
-          <QueueSection section="confirm" groups={queueView.sections.confirm as any} />
-          <QueueSection section="reference" groups={queueView.sections.reference as any} />
+          <CollapsibleList
+            label="알림 큐 섹션"
+            totalCount={3}
+            defaultShowCount={2}
+            visibleContent={
+              <div className="space-y-4">
+                <QueueSection section="immediate" groups={queueView.sections.immediate} />
+                <QueueSection section="confirm" groups={queueView.sections.confirm} />
+              </div>
+            }
+            hiddenContent={<QueueSection section="reference" groups={queueView.sections.reference} />}
+          />
         </div>
       ) : null}
 

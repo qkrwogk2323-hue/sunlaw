@@ -12,7 +12,8 @@ export function SubmitButton({
   variant = 'primary',
   className,
   size = 'md',
-  disabled = false
+  disabled = false,
+  ...props
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -20,12 +21,20 @@ export function SubmitButton({
   size?: ButtonProps['size'];
   className?: string;
   disabled?: boolean;
-}) {
+} & Omit<ButtonProps, 'children' | 'variant' | 'size' | 'type' | 'disabled'>) {
   const { pending: formPending } = useFormStatus();
   const contextPending = useContext(ActionFormPendingContext);
   const pending = formPending || contextPending;
   return (
-    <Button type="submit" variant={variant} size={size} isLoading={pending} disabled={disabled} className={className}>
+    <Button
+      type="submit"
+      variant={variant}
+      size={size}
+      isLoading={pending}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {pending ? pendingLabel : children}
     </Button>
   );

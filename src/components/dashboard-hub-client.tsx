@@ -960,9 +960,27 @@ export function DashboardHubClient({
   });
 
   const summaryCards = [
-    { label: '오늘 우선 확인 사건', value: todayCaseFocus.length, className: 'border-rose-200 bg-rose-50/80', valueClassName: 'text-rose-950' },
-    { label: '신규 승인 요청', value: pendingClientAccessCount, className: 'border-emerald-200 bg-emerald-50/80', valueClassName: 'text-emerald-950' },
-    { label: '연결 후속 처리', value: approvedClientAccessCount, className: 'border-violet-200 bg-violet-50/80', valueClassName: 'text-violet-950' }
+    {
+      label: '중요 알림',
+      value: todayCaseFocus.length,
+      helper: '오늘 바로 확인할 사건 기준',
+      className: 'border-rose-200 bg-rose-50/80',
+      valueClassName: 'text-rose-950'
+    },
+    {
+      label: '승인 요청',
+      value: pendingClientAccessCount,
+      helper: '검토 대기 중인 신규 요청',
+      className: 'border-emerald-200 bg-emerald-50/80',
+      valueClassName: 'text-emerald-950'
+    },
+    {
+      label: '후속 처리',
+      value: approvedClientAccessCount,
+      helper: '연결 이후 처리할 항목',
+      className: 'border-violet-200 bg-violet-50/80',
+      valueClassName: 'text-violet-950'
+    }
   ];
   const [workspaceSearch, setWorkspaceSearch] = useState('');
   const [workspaceSearchBusy, setWorkspaceSearchBusy] = useState(false);
@@ -1083,9 +1101,10 @@ export function DashboardHubClient({
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
-              <div key={item.label} className={`min-w-28 rounded-2xl border px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)] ${item.className}`}>
+              <div key={item.label} className={`flex min-h-32 min-w-28 flex-col rounded-2xl border px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)] ${item.className}`}>
                 <p className="text-[11px] font-medium tracking-[0.16em] text-slate-500">{item.label}</p>
-                <p className={`mt-1.5 text-lg font-semibold ${item.valueClassName}`}>{item.value}</p>
+                <p className={`mt-2 text-2xl font-semibold leading-none ${item.valueClassName}`}>{item.value}</p>
+                <p className="mt-auto pt-3 text-xs text-slate-600">{item.helper}</p>
               </div>
             ))}
           </div>
