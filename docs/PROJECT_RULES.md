@@ -84,6 +84,54 @@ org_owner > org_manager > org_staff > client (포털 사용자)
 isManagementRole(role) = org_owner || org_manager
 ```
 
+### 1-5. 플랫폼 감사 로그 분류 규칙 (Platform Audit Log Categorization)
+
+**강제 규칙:**
+
+플랫폼 관리자(`isPlatformOperator`)가 조회하는 감사 로그(`/admin/audit`)는 반드시 아래 **4개 카테고리**를 별도 탭 또는 섹션으로 구분해야 한다.
+
+| 탭/섹션 | 내용 |
+|---------|------|
+| **일반 작업** | 사건 생성·수정, 설정 변경 등 정상 액션 |
+| **삭제 기록** | Soft Delete, Hard Delete, 보관함 이동 (`lifecycle_status = 'soft_deleted'`) |
+| **위반 기록** | 규칙 위반 시도, 권한 초과 시도, 금지 액션 시도 |
+| **복구 기록** | 보관함 복구, 아카이브 복원 (`lifecycle_status → 'active'`) |
+
+**위반 기록 필수 포함 필드:**
+
+```ts
+{
+  violator_email: string;        // 위반 시도 사용자 이메일
+  violator_profile_id: string;   // profile_id (UUID)
+  attempted_at: string;          // ISO 8601 타임스탬프
+  attempted_action: string;      // 예: "deleteMembershipAction 시도"
+  blocked_reason: string;        // 예: "권한 부족: org_staff는 멤버 삭제 불가"
+  ip_address?: string;           // 선택
+  user_agent?: string;           // 선택
+}
+```
+
+**로그 저장 원칙:**
+- 모든 감사 로그는 `audit.change_log` 테이블에 기록 (현재 `schema('audit')` 사용 중)
+- **플랫폼 관리자만 조회 가능** (`hasActivePlatformAdminView()` 체크)
+- 위반 기록은 `action = 'VIOLATION_ATTEMPT'` 값으로 구분
+- 삭제 기록은 `action IN ('DELETE', 'SOFT_DELETE', 'ARCHIVE')` 필터
+
+**현재 `/admin/audit` 위반 사항 (수정 필요):**
+
+| 위반 | 현황 | 상태 |
+|------|------|------|
+| 4개 카테고리 탭 없음 | 단일 목록만 표시 | ❌ 수정 필요 |
+| `action` 기준 탭 분기 없음 | `table` / `actor` 필터만 존재 | ❌ 수정 필요 |
+| 위반 기록 별도 필드 없음 | `VIOLATION_ATTEMPT` 액션 미정의 | ❌ 수정 필요 |
+| nav에 감사 로그 메뉴 없음 | `mode-aware-nav.tsx` 플랫폼 메뉴에 `/admin/audit` 누락 | ❌ 수정 필요 |
+
+**수정 계획 (우선순위 순):**
+1. `mode-aware-nav.tsx` — 플랫폼 관리자 메뉴에 `{ href: '/admin/audit', label: '감사 로그', icon: ShieldAlert }` 추가
+2. `audit.change_log` 테이블에 `action` 분류값 정의 → migration `0049_audit_action_types.sql` 신규 생성
+3. `/admin/audit/page.tsx` — 4개 탭으로 UI 재구성 (`?tab=general|delete|violation|restore`)
+4. `src/lib/queries/audit.ts` — `action` 필터 파라미터 추가
+
 ---
 
 ## 🗄 카테고리 2: DB & 마이그레이션 규칙
@@ -520,3 +568,28 @@ src/components/mode-switcher.tsx    # ModeKey 타입, 모드 전환
 - [ ] 8개 이상 목록: `UnifiedListSearch` + Accordion 처리했는가?
 - [ ] 플랫폼 관리자 전용 기능: 이 파일 5-4 목록에 등록했는가?
 - [ ] 플랫폼 관리자 메뉴: 진입점이 목록/대시보드인가? (생성 폼 기본 노출 금지)
+- [ ] 용어: 조직/의뢰인/허브 정의를 규칙 6-1 기준으로 사용했는가?
+
+---
+
+## 🗂 카테고리 6: 핵심 용어 정의 규칙 (Terminology)
+
+> 모든 코드, 문서, UI 레이블에서 아래 용어를 **정확히 이 정의대로** 사용한다.  
+> 새 기능 추가 시 이 목록에 없는 용어를 도입하면 먼저 이 섹션에 추가 후 사용한다.
+
+### 6-1. 핵심 용어 정의
+
+| 용어 (한국어) | 용어 (영어) | 정의 | 테이블/필드 |
+|-------------|------------|------|------------|
+| **조직** | Organization | 플랫폼의 독립 테넌트 단위. 법무법인·기업·그룹 등. `slug`가 고유 식별자. 모든 멤버·사건·설정은 조직 단위로 격리됨. | `organizations` — `slug`, `name`, `kind` (`law_firm` \| `company` \| `platform_management`), `is_platform_root` |
+| **의뢰인** | Client | 사건의 당사자 또는 의뢰인. 조직과 별개로 관리되며, 조직 소속일 수도 외부일 수도 있음. 사건 생성 시 필수 연결. | `clients`, `case_clients` |
+| **허브** | Hub (Collaboration Hub) | 사건 공유·읽음 추적·협업의 중앙 공간. 사건별로 생성되며 읽음 기록과 공유 권한을 관리함. | migration: `collaboration_hub_reads_and_case_shares.sql` |
+| **플랫폼 관리자** | Platform Operator | `is_platform_root=true` + `kind='platform_management'` 조직 소속 + `isManagementRole()` 을 만족하는 사용자. | `organizations.is_platform_root`, `organizations.kind` |
+| **사건** | Case | 플랫폼의 핵심 업무 단위. 여러 조직이 참여하는 협업 객체. | `cases`, `case_organizations` |
+| **멤버십** | Membership | 사용자와 조직 간의 소속 관계. 역할(`role`)과 권한 세트를 포함. | `organization_memberships` |
+| **스테이지** | Stage | 사건의 진행 단계 (예: 접수·심리·선고·종결). | `cases.stage_key`, `src/lib/case-stage.ts` |
+
+**규칙:**
+- UI 레이블에서 "조직" ↔ "Organization", "의뢰인" ↔ "Client", "허브" ↔ "Hub" 혼용 **금지** (한국어 UI는 한국어 용어 고정)
+- 코드 변수명/함수명은 영어 용어 기준 (예: `organizationId`, `clientId`, `hubId`)
+- 새 도메인 개념 추가 시 이 표에 먼저 등록 후 구현
