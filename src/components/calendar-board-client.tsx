@@ -6,6 +6,7 @@ import type { Route } from 'next';
 import { CalendarDays, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Plus } from 'lucide-react';
 import { addScheduleAction, updateScheduleAction } from '@/lib/actions/case-actions';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { billingStatusLabel, labelFrom } from '@/lib/status-labels';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,6 +94,22 @@ type CalendarCell = {
   key: string;
   date: Date;
   inMonth: boolean;
+};
+
+const scheduleKindLabels: Record<string, string> = {
+  hearing: '기일',
+  deadline: '마감',
+  meeting: '회의',
+  reminder: '리마인더',
+  collection_visit: '방문회수',
+  other: '기타'
+};
+
+const requestStatusLabels: Record<string, string> = {
+  open: '진행 중',
+  in_progress: '처리 중',
+  resolved: '해결됨',
+  closed: '종료됨'
 };
 
 function calendarDotClass(ownerScope: UnifiedEntry['ownerScope']) {
@@ -193,7 +210,7 @@ export function CalendarBoardClient({
         caseId: item.case_id ?? null,
         caseTitle: relatedTitle(item.cases) ?? '공통 일정',
         detail: item.location || item.notes || '일정 상세를 확인하세요.',
-        badge: item.schedule_kind,
+        badge: labelFrom(scheduleKindLabels, item.schedule_kind),
         tone: item.is_important ? 'amber' as const : 'blue' as const,
         isImportant: Boolean(item.is_important),
         isNew,
@@ -212,7 +229,7 @@ export function CalendarBoardClient({
         caseId: item.case_id ?? null,
         caseTitle: relatedTitle(item.cases) ?? '공통 요청',
         detail: item.body || '요청 상세를 확인하세요.',
-        badge: item.status,
+        badge: labelFrom(requestStatusLabels, item.status),
         tone: 'green' as const,
         isImportant: item.status === 'open',
         isNew: false,
@@ -228,8 +245,8 @@ export function CalendarBoardClient({
         when: `${item.due_on}T09:00:00+09:00`,
         caseId: item.case_id ?? null,
         caseTitle: relatedTitle(item.cases) ?? '공통 비용',
-        detail: `${formatCurrency(item.amount)} · ${item.status}`,
-        badge: 'billing',
+        detail: `${formatCurrency(item.amount)} · ${billingStatusLabel(item.status)}`,
+        badge: '청구',
         tone: 'amber' as const,
         isImportant: true,
         isNew: false,
@@ -286,10 +303,10 @@ export function CalendarBoardClient({
   const createScheduleAction = createCaseId ? addScheduleAction.bind(null, createCaseId) : async () => {};
 
   const categoryCards = [
-    { key: 'today' as const, label: '오늘', value: summary.today, icon: Clock3 },
-    { key: 'week' as const, label: '이번 주', value: summary.week, icon: CalendarDays },
-    { key: 'important' as const, label: '중요', value: summary.important, icon: CheckCircle2 },
-    { key: 'new' as const, label: 'NEW', value: summary.new, icon: CalendarRange }
+    { key: 'today' as const, label: '오늘 일정', value: summary.today, helper: '오늘 처리할 일정 수', icon: Clock3 },
+    { key: 'week' as const, label: '7일 내 일정', value: summary.week, helper: '이번 주 안에 다가오는 일정', icon: CalendarDays },
+    { key: 'important' as const, label: '중요 일정', value: summary.important, helper: '중요 표시된 일정 수', icon: CheckCircle2 },
+    { key: 'new' as const, label: '최근 갱신 일정', value: summary.new, helper: '최근 갱신된 사건 연동 일정', icon: CalendarRange }
   ];
 
   const weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
@@ -301,7 +318,7 @@ export function CalendarBoardClient({
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">일정 확인</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">개인 일정과 조직 일정을 한 화면에서 확인합니다.</h1>
-            <p className="mt-2 text-sm text-slate-600">NEW 배지는 사건 연동 일정이 최근 갱신된 경우에만 바로 표시됩니다.</p>
+            <p className="mt-2 text-sm text-slate-600">신규 배지는 사건 연동 일정이 최근 갱신된 경우에만 바로 표시됩니다.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
@@ -321,11 +338,12 @@ export function CalendarBoardClient({
             key={item.key}
             type="button"
             onClick={() => setCategory(item.key)}
-            className={`rounded-2xl border p-4 text-left transition ${category === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
+            className={`flex min-h-40 flex-col rounded-2xl border p-4 text-left transition ${category === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
           >
             <item.icon className={`size-5 ${category === item.key ? 'text-white' : 'text-slate-700'}`} />
             <p className={`mt-3 text-xs font-semibold tracking-[0.18em] ${category === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.label}</p>
-            <p className="mt-2 text-3xl font-semibold">{item.value}</p>
+            <p className="mt-2 text-3xl font-semibold leading-none">{item.value}</p>
+            <p className={`mt-auto pt-4 text-xs ${category === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.helper}</p>
           </button>
         ))}
       </div>
@@ -415,7 +433,7 @@ export function CalendarBoardClient({
                             <div className="flex items-center gap-1.5">
                               <span className={`size-2 rounded-full ${calendarDotClass(entry.ownerScope)}`} />
                               <span className="truncate font-medium">{entry.title}</span>
-                              {entry.isNew ? <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isSelected ? 'bg-emerald-400/25 text-emerald-100' : 'bg-emerald-100 text-emerald-700'}`}>NEW</span> : null}
+                              {entry.isNew ? <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isSelected ? 'bg-emerald-400/25 text-emerald-100' : 'bg-emerald-100 text-emerald-700'}`}>신규</span> : null}
                             </div>
                             <p className={`mt-1 truncate ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>{entry.caseTitle}</p>
                           </div>
@@ -462,26 +480,50 @@ export function CalendarBoardClient({
                 className="grid gap-3 xl:grid-cols-[1.1fr_1.4fr_0.9fr_1fr_auto]"
               >
                 <input type="hidden" name="clientVisibility" value="internal_only" />
-                <select
-                  value={createCaseId}
-                  onChange={(event) => setCreateCaseId(event.target.value)}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
-                >
-                  {caseOptions.map((item) => (
-                    <option key={item.id} value={item.id}>{item.title}</option>
-                  ))}
-                </select>
-                <Input name="title" placeholder="일정 제목" required />
-                <select name="scheduleKind" defaultValue="deadline" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
-                  <option value="hearing">기일</option>
-                  <option value="deadline">마감</option>
-                  <option value="meeting">회의</option>
-                  <option value="reminder">리마인더</option>
-                  <option value="collection_visit">방문회수</option>
-                  <option value="other">기타</option>
-                </select>
-                <Input name="scheduledStart" type="datetime-local" required value={createScheduledStart} onChange={(event) => setCreateScheduledStart(event.target.value)} />
-                <SubmitButton disabled={!organizationId || !createCaseId}>등록</SubmitButton>
+                <div className="space-y-1">
+                  <label htmlFor="create-case-id" className="text-sm font-medium text-slate-700">
+                    사건 선택 <span className="text-red-500" aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="create-case-id"
+                    aria-required="true"
+                    value={createCaseId}
+                    onChange={(event) => setCreateCaseId(event.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                  >
+                    {caseOptions.map((item) => (
+                      <option key={item.id} value={item.id}>{item.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="create-title" className="text-sm font-medium text-slate-700">
+                    일정 제목 <span className="text-red-500" aria-hidden="true">*</span>
+                  </label>
+                  <Input id="create-title" name="title" placeholder="일정 제목" required aria-required="true" />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="create-schedule-kind" className="text-sm font-medium text-slate-700">
+                    유형 <span className="text-red-500" aria-hidden="true">*</span>
+                  </label>
+                  <select id="create-schedule-kind" name="scheduleKind" defaultValue="deadline" aria-required="true" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                    <option value="hearing">기일</option>
+                    <option value="deadline">마감</option>
+                    <option value="meeting">회의</option>
+                    <option value="reminder">리마인더</option>
+                    <option value="collection_visit">방문회수</option>
+                    <option value="other">기타</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="create-scheduled-start" className="text-sm font-medium text-slate-700">
+                    일시 <span className="text-red-500" aria-hidden="true">*</span>
+                  </label>
+                  <Input id="create-scheduled-start" name="scheduledStart" type="datetime-local" required aria-required="true" value={createScheduledStart} onChange={(event) => setCreateScheduledStart(event.target.value)} />
+                </div>
+                <div className="flex items-end">
+                  <SubmitButton disabled={!organizationId || !createCaseId}>등록</SubmitButton>
+                </div>
                 <details className="xl:col-span-5">
                   <summary className="cursor-pointer text-sm font-medium text-slate-600">추가 항목</summary>
                   <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
@@ -506,7 +548,7 @@ export function CalendarBoardClient({
             <Badge tone="blue">{selectedEntries.length}건</Badge>
           </div>
           <p className="text-sm text-slate-500">
-            {selectedDateKey ? '선택한 날짜의 일정을 보여줍니다. 다시 누르면 선택이 해제됩니다.' : '초록색 NEW는 최근 갱신된 사건 연동 일정만 표시합니다.'}
+            {selectedDateKey ? '선택한 날짜의 일정을 보여줍니다. 다시 누르면 선택이 해제됩니다.' : '초록색 신규 배지는 최근 갱신된 사건 연동 일정만 표시합니다.'}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -521,7 +563,7 @@ export function CalendarBoardClient({
                         <p className="font-semibold text-slate-900">{entry.title}</p>
                         <Badge tone={entry.tone}>{entry.badge}</Badge>
                         {entry.isImportant ? <Badge tone="amber">중요</Badge> : null}
-                        {entry.isNew ? <Badge tone="green">NEW</Badge> : null}
+                        {entry.isNew ? <Badge tone="green">신규</Badge> : null}
                       </div>
                       <p className="mt-1 text-sm text-slate-500">{entry.caseTitle} · {formatDateTime(entry.when)}</p>
                       <p className="mt-2 text-sm leading-6 text-slate-600">{entry.detail}</p>
@@ -546,20 +588,40 @@ export function CalendarBoardClient({
                       className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2"
                     >
                       <input type="hidden" name="clientVisibility" value="internal_only" />
-                      <Input name="title" defaultValue={entry.raw.title} required className="md:col-span-2" />
-                      <select name="scheduleKind" defaultValue={entry.raw.schedule_kind} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
-                        <option value="hearing">기일</option>
-                        <option value="deadline">마감</option>
-                        <option value="meeting">회의</option>
-                        <option value="reminder">리마인더</option>
-                        <option value="collection_visit">방문회수</option>
-                        <option value="other">기타</option>
-                      </select>
+                      <div className="space-y-1 md:col-span-2">
+                        <label htmlFor={`edit-title-${entry.id}`} className="text-sm font-medium text-slate-700">
+                          일정 제목 <span className="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <Input id={`edit-title-${entry.id}`} name="title" defaultValue={entry.raw.title} required aria-required="true" className="md:col-span-2" />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor={`edit-kind-${entry.id}`} className="text-sm font-medium text-slate-700">
+                          유형 <span className="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <select id={`edit-kind-${entry.id}`} name="scheduleKind" defaultValue={entry.raw.schedule_kind} aria-required="true" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                          <option value="hearing">기일</option>
+                          <option value="deadline">마감</option>
+                          <option value="meeting">회의</option>
+                          <option value="reminder">리마인더</option>
+                          <option value="collection_visit">방문회수</option>
+                          <option value="other">기타</option>
+                        </select>
+                      </div>
                       <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-500">
                         공통 일정은 내부 전용으로만 관리됩니다.
                       </div>
-                      <Input name="scheduledStart" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_start)} required />
-                      <Input name="scheduledEnd" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_end)} />
+                      <div className="space-y-1">
+                        <label htmlFor={`edit-start-${entry.id}`} className="text-sm font-medium text-slate-700">
+                          시작 일시 <span className="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <Input id={`edit-start-${entry.id}`} name="scheduledStart" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_start)} required aria-required="true" />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor={`edit-end-${entry.id}`} className="text-sm font-medium text-slate-700">
+                          종료 일시
+                        </label>
+                        <Input id={`edit-end-${entry.id}`} name="scheduledEnd" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_end)} />
+                      </div>
                       <Input name="location" defaultValue={entry.raw.location || ''} placeholder="장소" className="md:col-span-2" />
                       <Textarea name="notes" defaultValue={entry.raw.notes || ''} className="md:col-span-2" />
                       <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
