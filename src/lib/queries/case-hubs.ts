@@ -205,7 +205,7 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
     .eq('lifecycle_status', 'active')
     .order('updated_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) { console.error('[getCaseHubList] query error:', error.message); return []; }
   if (!hubs?.length) return [];
 
   const hubIds = (hubs as any[]).map((h) => h.id as string);
