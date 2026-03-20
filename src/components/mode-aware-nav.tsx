@@ -134,7 +134,8 @@ function getOrganizationSections({
     organizationItems.push(
       { href: '/admin/organization-requests', label: '조직 신청 관리', icon: FileText },
       { href: '/admin/organizations', label: '조직 관리', icon: Building2 },
-      { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 }
+      { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
+      { href: '/settings/organization', label: '조직 설정', icon: Settings }
     );
   } else if (mode === 'client_communication') {
     organizationItems.push(
