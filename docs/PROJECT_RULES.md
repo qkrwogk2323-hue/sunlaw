@@ -1,54 +1,133 @@
 # Vein Spiral — 프로젝트 통합 규칙 (PROJECT_RULES.md)
 
-> **이 파일이 모든 규칙의 최상위 단일 원본(Single Source of Truth)입니다.**  
-> 새 기능을 만들기 전에 반드시 이 파일을 먼저 읽으십시오.  
-> 규칙 변경 시 이 파일을 수정하고, `docs/UX_RULES.md`, `CLAUDE.md`, `.github/copilot-instructions.md`에도 동일하게 반영하세요.
+> 이 파일은 Vein Spiral 저장소의 최상위 단일 원본(Single Source of Truth)이다.
+> 기능 구현, 버그 수정, UI 변경, DB 마이그레이션, 권한 변경, 릴리즈 전 검토는 모두 이 문서를 기준으로 판단한다.
+> 규칙이 바뀌면 같은 PR에서 `docs/UX_RULES.md`, `CLAUDE.md`, `.github/copilot-instructions.md`를 함께 동기화한다.
+
+문서 버전: 2.0.0  
+문서 상태: Production  
+적용 범위: `src/`, `supabase/`, `docs/`, `.github/`  
+동기화 책임: Product Owner + Tech Lead  
+규범 해석 기준: MUST = 반드시, SHOULD = 권장, MAY = 선택 가능
 
 ---
 
 ## 0-1. Rule-First 강제 준수 규칙 (Absolute Enforcement Rule) ★★★ 최우선 ★★★
 
-이 파일(PROJECT_RULES.md)이 Single Source of Truth이다.
+이 파일(`PROJECT_RULES.md`)이 Single Source of Truth이다.
 
-**모든 AI(Claude, GPT, Copilot 등)는 아래를 철저히 준수해야 한다:**
+모든 AI(Claude, GPT, Copilot 등)와 모든 개발자는 아래를 철저히 준수해야 한다.
 
-1. 어떤 기능을 추가·수정·삭제하려고 할 때, 반드시 먼저 PROJECT_RULES.md 전체를 읽는다.
-2. 변경 사항이 **어떤 규칙이라도 위반**될 경우:
-   - **절대 코드에 손대지 말 것**
-   - **즉시 작업 중단**
-   - 사용자에게 정확히 아래 문구로 답변:
-     “❌ 이 변경은 PROJECT_RULES.md의 [위반 규칙 번호]를 위반합니다. 법을 어길 수 없습니다. 규칙을 먼저 수정하거나 다른 방법을 제안해주세요.”
-3. 위반을 발견하면 수정 계획도 제시하지 말고, 위반 사실만 명확히 보고한 뒤 멈춘다.
-4. 이 Rule 0-1은 다른 모든 규칙보다 상위이며, 절대 예외를 허용하지 않는다.
-
-이 규칙을 위반하는 AI는 즉시 작업 자격을 상실한다.
+1. 어떤 기능을 추가·수정·삭제하려고 할 때 반드시 먼저 `PROJECT_RULES.md` 전체를 읽는다.
+2. 변경 사항이 어떤 규칙이라도 위반하면 다음을 따른다.
+   1. 절대 코드에 손대지 않는다.
+   2. 즉시 작업을 중단한다.
+   3. 사용자에게 정확히 아래 문구로 답변한다.  
+      `❌ 이 변경은 PROJECT_RULES.md의 [위반 규칙 번호]를 위반합니다. 법을 어길 수 없습니다. 규칙을 먼저 수정하거나 다른 방법을 제안해주세요.`
+3. 위반을 발견하면 수정 계획까지 제시하지 않는다. 위반 사실만 보고하고 멈춘다.
+4. 이 Rule 0-1은 다른 모든 규칙보다 우선한다. 예외는 없다.
+5. 단, 사용자가 명시적으로 `PROJECT_RULES.md` 자체의 개정을 지시한 경우에는 이 문서를 개정할 수 있다. 이때 개정본이 승인되는 즉시 새로운 Single Source of Truth가 된다.
 
 ## 0-2. 섹션 구조 강제 규칙 (Section Structure Enforcement Rule) ★★★ 최우선 ★★★
 
-PROJECT_RULES.md의 섹션 구조는 절대적으로 고정되어 있다. 
-이 구조를 벗어나는 행위는 Rule 0-1 위반으로 간주한다.
+`PROJECT_RULES.md`의 최상위 섹션 구조는 고정한다. 이 구조를 벗어나는 행위는 Rule 0-1 위반으로 간주한다.
 
-**금지 사항:**
-1. 기존 섹션 번호·순서·이름을 임의로 바꾸거나 삭제 금지
-2. 새로운 섹션을 임의로 추가 금지
-3. 새 규칙은 반드시 기존 섹션 안에만 번호를 붙여야 함
-4. “새 규칙 번호: X-X”라고 할 때 X가 기존 섹션 범위를 벗어나면 즉시 중단
+고정 구조는 아래와 같다.
 
-**허용되는 유일한 방법:**
-- 새 섹션이 정말 필요할 경우, 사용자에게 먼저 제안 → 사용자 승인 후에만 추가
+1. 0번 규칙 섹션
+2. 스택 & 기술 제약
+3. 카테고리 1: 권한 & 인증 규칙
+4. 카테고리 2: DB & 마이그레이션 규칙
+5. 카테고리 3: UX & 컴포넌트 규칙
+6. 카테고리 4: 메시지 체계 규칙
+7. 카테고리 5: 아키텍처 규칙
+8. 카테고리 6: 절대 금지 목록
+9. 핵심 파일 위치
+10. 새 기능 구현 전 체크리스트
 
-이 규칙을 위반하면 “❌ 섹션 구조를 어겼습니다. Rule 0-2 위반입니다.”라고만 답변하고 작업 중단.
+금지 사항은 아래와 같다.
+
+1. 기존 최상위 섹션의 번호·순서·이름을 임의로 바꾸거나 삭제하지 않는다.
+2. 새로운 최상위 섹션을 임의로 추가하지 않는다.
+3. 새 규칙은 반드시 기존 섹션 안에 하위 번호로 추가한다.
+4. 하위 번호는 기존 카테고리 범위 안에서만 부여한다.
+5. 카테고리 6은 한 번만 존재한다. 용어 정의는 카테고리 6의 하위 규칙으로만 둔다.
+
+0번 섹션의 하위 규칙(0-4, 0-5, …)은 필요에 따라 추가할 수 있다. 단 최상위 섹션 구조(카테고리 1~6)는 고정한다.
+
+허용되는 유일한 예외는 사용자가 명시적으로 이 파일의 구조 개편을 지시한 경우뿐이다.
+
+이 규칙을 위반하면 정확히 아래 문구로만 답변하고 작업을 중단한다.  
+`❌ 섹션 구조를 어겼습니다. Rule 0-2 위반입니다.`
 
 ## 0-3. 섹션 관련 언급·권유 절대 금지 규칙 (No Section Suggestion Rule) ★★★ 최우선 ★★★
 
-AI는 PROJECT_RULES.md의 섹션 구조를 절대적으로 불변으로 취급한다.
+AI는 기능 구현 또는 버그 수정 과정에서 `PROJECT_RULES.md`의 섹션 구조를 불변으로 취급한다.
 
-**엄격 금지 사항:**
-1. 섹션이 난잡하다고 **절대 언급하지 말 것**
-2. “섹션 정리할까요?”, “새 섹션 만드는 게 좋을 것 같아요” 같은 어떠한 권유·제안도 금지
-3. 섹션 관련해서 사용자에게 질문하는 것도 금지
+엄격 금지 사항은 아래와 같다.
 
-AI가 이 규칙을 위반하면 “❌ Rule 0-3 위반입니다. 섹션 관련 언급·권유는 절대 금지입니다.”라고만 답변하고 즉시 작업 중단.
+1. 섹션이 난잡하다고 언급하지 않는다.
+2. “섹션을 정리하자”, “새 섹션을 만들자”와 같은 제안을 하지 않는다.
+3. 섹션 구조 관련 질문을 사용자에게 먼저 던지지 않는다.
+
+단, 사용자가 이 파일 자체의 개정을 직접 지시한 경우에는 이 규칙이 적용되지 않는다.
+
+이 규칙을 위반하면 정확히 아래 문구로만 답변하고 작업을 중단한다.  
+`❌ Rule 0-3 위반입니다. 섹션 관련 언급·권유는 절대 금지입니다.`
+
+## 0-4. 규범 해석 우선순위 규칙
+
+규칙 충돌을 방지하기 위해 아래 순서로 해석한다.
+
+1. `0-1`, `0-2`, `0-3`
+2. 카테고리 1의 보안·권한 규칙
+3. 카테고리 2의 데이터 무결성 규칙
+4. 카테고리 3과 4의 UX·메시지 규칙
+5. 카테고리 5의 아키텍처 규칙
+6. 카테고리 6의 절대 금지 목록과 용어 정의
+
+같은 수준의 규칙이 충돌하면 더 보수적인 해석을 택한다.
+
+## 0-5. 규범과 현황의 분리 규칙
+
+이 문서는 영구 규칙만 담는다. 아래 항목은 이 문서에 두지 않는다.
+
+1. “현재 위반 중”, “수정 필요”, “이번 스프린트 우선순위”와 같은 상태표
+2. 특정 PR, 특정 브랜치, 특정 담당자에 종속되는 작업 메모
+3. 시간이 지나면 곧바로 낡아지는 체크 현황
+
+운영 현황, 미준수 항목, 우선순위는 이슈 트래커나 PR 설명에서 관리한다. `PROJECT_RULES.md`에는 규칙만 남긴다.
+
+## 0-6. 변경 통제 규칙
+
+이 파일을 수정하는 PR은 반드시 아래 요건을 충족해야 한다.
+
+1. PR 제목 또는 본문에 변경된 규칙 번호를 명시한다.
+2. 변경 이유와 기대 효과를 한 문단으로 요약한다.
+3. 동기화 대상 문서(`docs/UX_RULES.md`, `CLAUDE.md`, `.github/copilot-instructions.md`)를 같은 PR에서 함께 수정한다.
+4. 규칙 변경으로 인해 기존 코드가 위반 상태가 되면, 같은 PR에서 수정하거나 병행 이행 계획을 PR 본문에 명시한다.
+
+## 0-7. CI 강제 규칙
+
+머지 전 필수 검사는 아래와 같다.
+
+1. `pnpm typecheck`
+2. `pnpm lint`
+3. `pnpm build`
+4. `pnpm test`
+5. `pnpm check:migrations`
+
+위 5개 중 하나라도 실패하면 머지하지 않는다.
+
+## 0-8. 이행 원칙 규칙 (Incremental Enforcement Rule)
+
+이 문서의 모든 규칙은 아래 이행 원칙을 따른다.
+
+1. **신규 구현**: MUST. 모든 규칙을 즉시 적용한다.
+2. **기존 구현**: 단계적 이행 대상. 현재 위반 상태라도 즉시 강제하지 않는다.
+3. **기존 코드 수정 시**: 수정하는 파일과 관련된 규칙을 이 문서 기준으로 끌어올린다. 부분적으로 수정한 파일은 수정 범위 안에서 규칙을 준수한다.
+
+이 원칙의 목표는 코드베이스가 자연스럽게 규칙으로 수렴하게 하는 것이다. 기존 위반을 이슈 트래커에서 관리하고, 매 PR마다 한 걸음씩 규칙 기준으로 당긴다.
 
 ---
 
@@ -59,10 +138,18 @@ AI가 이 규칙을 위반하면 “❌ Rule 0-3 위반입니다. 섹션 관련 
 | Framework | Next.js 16 App Router + React 19 + TypeScript strict |
 | 스타일 | Tailwind v4 (CSS variables 기반), 커스텀 UI 컴포넌트 |
 | DB/Auth | Supabase (Auth + PostgreSQL + RLS) |
-| 금지 라이브러리 | shadcn/ui, Radix primitives, sonner — **신규 직접 사용 금지** (기존 button.tsx 등 extend는 허용, toast-provider.tsx로 대체 완료) |
-| cn() 경로 | `@/lib/cn` |
-| Server Components | 기본. Client Components는 인터랙션이 필요한 최소 범위만 |
-| `button.tsx` | `'use client'` **추가 금지** — 서버 컴포넌트가 `buttonStyles()` 직접 호출 |
+| 금지 라이브러리 | `shadcn/ui`, `@radix-ui/*` primitives, `sonner` 신규 직접 사용 금지 |
+| 허용 예외 | 기존 `button.tsx` 등 저장소 내 표준 컴포넌트 확장은 허용 |
+| `cn()` 경로 | `@/lib/cn` |
+| Server Components | 기본값. Client Components는 인터랙션이 필요한 최소 범위만 허용 |
+| `button.tsx` | `'use client'` 추가 금지. 서버 컴포넌트는 `buttonStyles()`를 직접 호출한다 |
+| 데이터 변경 경로 | 모든 쓰기 작업은 Server Action 또는 Route Handler에서만 수행한다 |
+
+추가 제약은 아래와 같다.
+
+1. 브라우저 번들에 `service_role` 키를 절대 포함하지 않는다.
+2. 클라이언트는 권한 판단의 보조 수단일 뿐이며, 최종 권한 판정은 서버에서만 한다.
+3. 새 라이브러리 도입은 기존 규칙과 충돌하지 않을 때만 허용한다.
 
 ---
 
@@ -70,7 +157,7 @@ AI가 이 규칙을 위반하면 “❌ Rule 0-3 위반입니다. 섹션 관련 
 
 ### 1-1. 권한 가드 함수 (서버 액션 & 페이지)
 
-모든 서버 액션과 보호 페이지는 **반드시** 아래 함수 중 하나로 시작해야 합니다:
+모든 서버 액션과 보호 페이지는 반드시 아래 함수 중 하나로 시작한다.
 
 ```ts
 // 페이지 보호 — 미인증 시 /login으로 redirect
@@ -78,105 +165,155 @@ const auth = await requireAuthenticatedUser();
 
 // 조직 액션 보호 — 조직 미소속 시 throw
 const { auth, membership } = await requireOrganizationActionAccess(organizationId, {
-  permission: 'case_create',       // 선택: 특정 권한 필요
-  requireManager: true,            // 선택: 관리자만
-  errorMessage: '...에러 메시지'
+  permission: 'case_create',
+  requireManager: true,
+  errorMessage: '권한이 없습니다.'
 });
 
-// 조직 구성원 관리 보호 (team invite, permission manage)
-const { auth } = await requireOrganizationUserManagementAccess(organizationId, '에러 메시지');
+// 조직 구성원 관리 보호
+const { auth } = await requireOrganizationUserManagementAccess(
+  organizationId,
+  '권한이 없습니다.'
+);
 
 // 플랫폼 관리자 전용 페이지
 const auth = await requirePlatformAdmin(organizationId?);
 
 // 플랫폼 관리자 전용 액션
-const auth = await requirePlatformAdminAction('에러 메시지', organizationId?);
+const auth = await requirePlatformAdminAction('권한이 없습니다.', organizationId?);
 ```
 
-**규칙:**
-- UI에서 버튼을 숨기는 것만으로 권한 제어 완료 불가 — **서버에서 반드시 재검증**
-- 권한 없으면 `redirect()` (페이지) 또는 `throw new Error()` (액션)
+세부 규칙은 아래와 같다.
+
+1. 모든 쓰기 액션은 UI 숨김만으로 끝내지 않는다. 서버에서 반드시 재검증한다.
+2. 페이지는 `redirect()`, 액션은 `throw new Error()` 또는 표준 액션 에러 계약으로 차단한다.
+3. `organizationId`, `caseId`, `clientId` 등 클라이언트 입력값을 신뢰하지 않는다. 서버에서 소속과 권한을 다시 계산한다.
+4. 권한 검사는 화면 진입 시점과 실제 실행 시점에 모두 적용한다.
+5. 권한 없는 시도는 가능하면 감사 로그에 남긴다.
 
 ### 1-2. 플랫폼 조직 모델
 
-```
+플랫폼 조직과 플랫폼 관리자는 아래 정의를 따른다.
+
+```txt
 플랫폼 조직 = organizations 테이블에서 is_platform_root=true 이고 kind='platform_management'인 단일 조직
 플랫폼 관리자 = 플랫폼 조직 소속 org_owner 또는 org_manager 멤버
 ```
 
-- `isPlatformOperator(auth)` → 플랫폼 조직 소속 관리자인지 확인
-- `hasPlatformManagementMembership(auth)` → 동일
-- `PLATFORM_ORGANIZATION_SLUG` = `'vein-bn-1'` (0046 migration 기준)
+세부 규칙은 아래와 같다.
+
+1. `isPlatformOperator(auth)`는 플랫폼 조직 소속 관리자인지 확인한다.
+2. `hasPlatformManagementMembership(auth)`는 같은 의미로만 사용한다.
+3. `PLATFORM_ORGANIZATION_SLUG`는 저장소 상수 한 곳에서만 관리한다.
+4. 플랫폼 관리자 여부를 UI 문자열이나 슬러그 비교로 직접 판정하지 않는다. 반드시 공용 함수로 계산한다.
 
 ### 1-3. 권한 키 목록 (`src/lib/permissions.ts`)
 
+권한 키의 단일 원본은 `src/lib/permissions.ts`이다.
+
 | 그룹 | 키 |
 |------|----|
-| organization | team_invite, team_permission_manage, organization_settings_manage, user_manage |
-| cases | case_create, case_edit, case_delete, case_assign, case_stage_manage |
-| documents | document_create, document_edit, document_approve, document_share, document_export |
-| requests | request_create, request_manage, request_close |
-| schedules | schedule_create, schedule_edit, schedule_confirm, schedule_manage, calendar_export |
-| billing | billing_view, billing_issue, billing_payment_confirm, billing_export, billing_manage |
-| collection | collection_view, collection_contact_manage, collection_payment_plan_manage, collection_payment_confirm, collection_metrics_view, collection_manage |
-| reports | report_view, report_export, case_board_export |
-| compensation | collection_compensation_view_self, collection_compensation_view_team, ... |
-| settlement | settlement_view, settlement_manage, settlement_export |
+| organization | `team_invite`, `team_permission_manage`, `organization_settings_manage`, `user_manage` |
+| cases | `case_create`, `case_edit`, `case_delete`, `case_assign`, `case_stage_manage` |
+| documents | `document_create`, `document_edit`, `document_approve`, `document_share`, `document_export` |
+| requests | `request_create`, `request_manage`, `request_close` |
+| schedules | `schedule_create`, `schedule_edit`, `schedule_confirm`, `schedule_manage`, `calendar_export` |
+| billing | `billing_view`, `billing_issue`, `billing_payment_confirm`, `billing_export`, `billing_manage` |
+| collection | `collection_view`, `collection_contact_manage`, `collection_payment_plan_manage`, `collection_payment_confirm`, `collection_metrics_view`, `collection_manage` |
+| reports | `report_view`, `report_export`, `case_board_export` |
+| compensation | `collection_compensation_view_self`, `collection_compensation_view_team` 등 |
+| settlement | `settlement_view`, `settlement_manage`, `settlement_export` |
+
+세부 규칙은 아래와 같다.
+
+1. 권한 키는 문자열 리터럴로 여기저기 흩어 쓰지 않는다.
+2. 새 권한 키를 추가할 때는 `permissions.ts`, 권한 체크 로직, UI 가드, 테스트를 같은 PR에서 갱신한다.
+3. 권한 키 삭제 또는 이름 변경은 DB, 서버 액션, UI, 테스트, 시드 데이터 영향 범위를 모두 확인한 후에만 수행한다.
 
 ### 1-4. 역할 계층
 
-```
-org_owner > org_manager > org_staff > client (포털 사용자)
+역할 계층은 아래 정의를 따른다.
+
+```txt
+org_owner > org_manager > org_staff > client
 isManagementRole(role) = org_owner || org_manager
 ```
 
+세부 규칙은 아래와 같다.
+
+1. 역할 계층을 우회하는 예외 분기를 금지한다.
+2. 관리 기능은 `isManagementRole()` 또는 동등한 중앙 함수로만 판정한다.
+3. UI 레이블과 코드 용어를 혼용하지 않는다. 예를 들어 한국어 UI에서는 “관리자”, 코드에서는 `org_manager`를 사용한다.
+
 ### 1-5. 플랫폼 감사 로그 분류 규칙 (Platform Audit Log Categorization)
 
-**강제 규칙:**
-
-플랫폼 관리자(`isPlatformOperator`)가 조회하는 감사 로그(`/admin/audit`)는 반드시 아래 **4개 카테고리**를 별도 탭 또는 섹션으로 구분해야 한다.
+플랫폼 관리자(`isPlatformOperator`)가 조회하는 감사 로그(`/admin/audit`)는 반드시 아래 4개 카테고리로 구분한다.
 
 | 탭/섹션 | 내용 |
 |---------|------|
-| **일반 작업** | 사건 생성·수정, 설정 변경 등 정상 액션 |
-| **삭제 기록** | Soft Delete, Hard Delete, 보관함 이동 (`lifecycle_status = 'soft_deleted'`) |
-| **위반 기록** | 규칙 위반 시도, 권한 초과 시도, 금지 액션 시도 |
-| **복구 기록** | 보관함 복구, 아카이브 복원 (`lifecycle_status → 'active'`) |
+| 일반 작업 | 사건 생성·수정, 설정 변경 등 정상 액션 |
+| 삭제 기록 | `DELETE`, `SOFT_DELETE`, `ARCHIVE` |
+| 위반 기록 | `VIOLATION_ATTEMPT`, 권한 초과 시도, 금지 액션 시도 |
+| 복구 기록 | `RESTORE`, `UNARCHIVE`, `lifecycle_status`가 `active`로 복귀한 경우 |
 
-**위반 기록 필수 포함 필드:**
+위반 기록은 최소 아래 필드를 포함해야 한다.
 
 ```ts
 {
-  violator_email: string;        // 위반 시도 사용자 이메일
-  violator_profile_id: string;   // profile_id (UUID)
-  attempted_at: string;          // ISO 8601 타임스탬프
-  attempted_action: string;      // 예: "deleteMembershipAction 시도"
-  blocked_reason: string;        // 예: "권한 부족: org_staff는 멤버 삭제 불가"
-  ip_address?: string;           // 선택
-  user_agent?: string;           // 선택
+  violator_email: string;
+  violator_profile_id: string;
+  attempted_at: string;       // ISO 8601
+  attempted_action: string;
+  blocked_reason: string;
+  request_id?: string;
+  ip_address?: string;
+  user_agent?: string;
 }
 ```
 
-**로그 저장 원칙:**
-- 모든 감사 로그는 `audit.change_log` 테이블에 기록 (현재 `schema('audit')` 사용 중)
-- **플랫폼 관리자만 조회 가능** (`hasActivePlatformAdminView()` 체크)
-- 위반 기록은 `action = 'VIOLATION_ATTEMPT'` 값으로 구분
-- 삭제 기록은 `action IN ('DELETE', 'SOFT_DELETE', 'ARCHIVE')` 필터
+감사 로그 공통 최소 필드는 아래와 같다.
 
-**현재 `/admin/audit` 위반 사항 (수정 필요):**
+```ts
+{
+  action: string;
+  category: 'general' | 'delete' | 'violation' | 'restore';
+  actor_profile_id: string | null;
+  actor_email: string | null;
+  organization_id: string | null;
+  target_table: string | null;
+  target_id: string | null;
+  before_json?: unknown;
+  after_json?: unknown;
+  reason?: string | null;
+  request_id?: string | null;
+  created_at: string;
+}
+```
 
-| 위반 | 현황 | 상태 |
-|------|------|------|
-| 4개 카테고리 탭 없음 | 단일 목록만 표시 | ❌ 수정 필요 |
-| `action` 기준 탭 분기 없음 | `table` / `actor` 필터만 존재 | ❌ 수정 필요 |
-| 위반 기록 별도 필드 없음 | `VIOLATION_ATTEMPT` 액션 미정의 | ❌ 수정 필요 |
-| nav에 감사 로그 메뉴 없음 | `mode-aware-nav.tsx` 플랫폼 메뉴에 `/admin/audit` 누락 | ❌ 수정 필요 |
+추가 규칙은 아래와 같다.
 
-**수정 계획 (우선순위 순):**
-1. `mode-aware-nav.tsx` — 플랫폼 관리자 메뉴에 `{ href: '/admin/audit', label: '감사 로그', icon: ShieldAlert }` 추가
-2. `audit.change_log` 테이블에 `action` 분류값 정의 → migration `0049_audit_action_types.sql` 신규 생성
-3. `/admin/audit/page.tsx` — 4개 탭으로 UI 재구성 (`?tab=general|delete|violation|restore`)
-4. `src/lib/queries/audit.ts` — `action` 필터 파라미터 추가
+1. 모든 감사 로그는 `audit.change_log`에 기록한다.
+2. 조회 권한은 플랫폼 관리자에게만 부여한다.
+3. 권한 거부, 규칙 위반, 금지 액션 시도도 로그에 남긴다.
+4. 관리자 화면은 카테고리 탭 기준으로 필터할 수 있어야 한다.
+5. 감사 로그는 사용자 UI 오류 메시지의 대체물이 아니다. 사용자에게는 적절한 UI 메시지를 별도로 보여준다.
+
+### 1-6. 기본 거부(Default Deny)와 이중 집행 규칙
+
+보안 기본값은 항상 `deny by default`다.
+
+1. 권한이 명시되지 않은 기능은 허용하지 않는다.
+2. UI는 숨김 또는 비활성화를 통해 사용 가능 범위를 안내한다.
+3. 서버는 실제 실행 권한을 최종 판정한다.
+4. 권한이 없는 버튼을 비활성화할 때는 가능한 경우 `disabledReason`을 제공한다.
+5. 읽기 권한과 쓰기 권한을 분리한다. 읽기 가능이 곧 쓰기 가능을 뜻하지 않는다.
+
+### 1-7. 비밀정보·민감정보 처리 규칙
+
+1. `service_role`, JWT secret, DB 비밀번호, 서드파티 API key는 클라이언트 번들, 로그, 에러 메시지에 노출하지 않는다.
+2. 로그에는 주민번호, 계좌번호, 카드번호, 전체 토큰 값을 남기지 않는다.
+3. 이메일 주소, 전화번호 등 PII가 꼭 필요한 경우 최소 범위로만 기록한다.
+4. 디버그 로그를 프로덕션에 남길 때는 민감정보를 마스킹한다.
 
 ---
 
@@ -184,105 +321,183 @@ isManagementRole(role) = org_owner || org_manager
 
 ### 2-1. 마이그레이션 파일 규칙
 
-- 파일명 형식: `NNNN_설명.sql` (연속 번호, 4자리)
-- `pnpm check:migrations` 로 번호 누락/중복 자동 차단
-- 현재 최신: `0048_case_cover_fields.sql`
-- **적용 완료**: `0048_case_cover_fields.sql` live DB 적용 완료 ✅
-- 다음 번호: `0049_*`
+마이그레이션 파일은 아래 형식을 따른다.
 
-### 2-2. lifecycle_status 타입 (DB 전역 enum)
+```txt
+NNNN_설명.sql
+```
+
+세부 규칙은 아래와 같다.
+
+1. 번호는 4자리 연속 증가 형식만 사용한다.
+2. 다음 번호는 저장소 HEAD 기준 최신 번호 + 1로 결정한다.
+3. `pnpm check:migrations`를 통과하지 못하면 머지하지 않는다.
+4. 이 문서에 “현재 최신 번호”를 고정값으로 적지 않는다. 최신 번호는 저장소가 단일 원본이다.
+5. 마이그레이션 제목은 실행 의도를 드러내는 명사구 또는 동사구로 쓴다.
+
+### 2-2. `lifecycle_status` 타입 (DB 전역 enum)
+
+전역 enum은 아래 값만 사용한다.
 
 ```sql
--- 0002_core_schema.sql에 정의됨
 'active' | 'soft_deleted' | 'archived' | 'legal_hold'
 ```
 
-`cases`, `organizations` 테이블에 `lifecycle_status` 컬럼 존재.
+세부 규칙은 아래와 같다.
 
-### 2-3. Soft Delete 규칙 ← **절대 금지: 즉시 hard delete**
+1. `cases`, `organizations` 등 라이프사이클이 있는 엔터티는 이 enum을 우선 사용한다.
+2. 같은 의미의 상태를 `deleted`, `inactive`, `removed` 같은 별도 문자열로 중복 정의하지 않는다.
+3. `legal_hold`는 삭제 우회 수단이 아니다. 별도 정책과 감사 대상이다.
+
+### 2-3. Soft Delete 규칙
+
+즉시 hard delete는 기본적으로 금지한다.
 
 ```ts
 // ❌ 금지
 await supabase.from('table').delete().eq('id', id);
 
 // ✅ lifecycle_status가 있는 테이블
-await supabase.from('table')
-  .update({ lifecycle_status: 'soft_deleted', updated_by: auth.user.id })
+await supabase
+  .from('table')
+  .update({
+    lifecycle_status: 'soft_deleted',
+    updated_by: auth.user.id,
+  })
   .eq('id', id);
 
-// ✅ lifecycle_status 없는 테이블 (deleted_at 컬럼 추가 후)
-await supabase.from('table')
-  .update({ deleted_at: new Date().toISOString() })
+// ✅ lifecycle_status가 없는 테이블
+await supabase
+  .from('table')
+  .update({
+    deleted_at: new Date().toISOString(),
+  })
   .eq('id', id);
 ```
 
-- 목록 쿼리에 `.neq('lifecycle_status', 'soft_deleted')` 또는 `.is('deleted_at', null)` 필수
-- 예외: soft_deleted 상태에서만 hard delete 허용 (`forceDeleteCaseAction` 패턴)
+세부 규칙은 아래와 같다.
 
-### 2-4. 현재 soft delete 위반 중인 항목
+1. 삭제 UI는 “삭제”가 아니라 “보관함으로 이동”을 기본 동작으로 설계한다.
+2. soft delete가 가능한 테이블에 `delete()`를 직접 호출하지 않는다.
+3. 삭제 후 복구 경로와 감사 로그를 함께 제공한다.
+4. `updated_by`, `deleted_at`, `deleted_by` 등 추적 필드를 가능한 범위에서 함께 남긴다.
 
-| 항목 | 파일 | 상태 |
-|------|------|------|
-| `deleteMembershipAction` | `organization-actions.ts` | ❌ hard delete — 수정 필요 |
-| Cases 보관함 UI | `/cases/page.tsx` | ❌ 복구 UI 없음 — 수정 필요 |
+### 2-4. 목록 쿼리와 보관함 쿼리 규칙
 
-### 2-5. 이미 올바르게 구현된 soft delete
+목록 기본 쿼리는 soft-deleted 데이터를 숨겨야 한다.
 
-| 항목 | 상태 |
-|------|------|
-| `moveCaseToDeletedAction` | ✅ lifecycle_status = 'soft_deleted' |
-| `forceDeleteCaseAction` | ✅ soft_deleted 상태에서만 hard delete |
-| Notifications (`trashed_at`) | ✅ soft archive 완료 |
-| Organizations (`lifecycle_status`) | ✅ soft_deleted 존재 |
+```ts
+// lifecycle_status 기반
+.neq('lifecycle_status', 'soft_deleted')
 
-### 2-6. revalidatePath 규칙
+// deleted_at 기반
+.is('deleted_at', null)
+```
 
-모든 Server Action 성공 후 **반드시** `revalidatePath()` 호출.
+세부 규칙은 아래와 같다.
+
+1. 일반 목록은 삭제된 데이터를 기본적으로 제외한다.
+2. 보관함 화면은 삭제된 데이터만 조회한다.
+3. soft delete가 있는 엔터티는 “기본 목록”과 “보관함 목록”의 쿼리를 명시적으로 분리한다.
+4. 복구 액션은 `active`로 되돌리고 일반 목록이 즉시 갱신되어야 한다.
+
+### 2-5. Hard Delete 예외 규칙
+
+hard delete는 아래 조건을 모두 만족할 때만 허용한다.
+
+1. 대상이 이미 `soft_deleted` 상태이거나 `deleted_at`이 존재한다.
+2. 보관함 화면 또는 관리자 전용 화면에서만 실행한다.
+3. 권한 가드를 통과한다.
+4. 감사 로그를 남긴다.
+5. 사용자에게 되돌릴 수 없음을 명확히 고지한다.
+
+### 2-6. `revalidatePath()` 규칙
+
+모든 Server Action 성공 후에는 반드시 `revalidatePath()`를 호출한다.
+
+세부 규칙은 아래와 같다.
+
+1. 변경이 반영되는 모든 주요 경로를 재검증한다.
+2. 낙관적 UI만으로 캐시 무효화를 대체하지 않는다.
+3. 태그 캐시를 쓰는 경우 `revalidateTag()`를 병행할 수 있으나 `revalidatePath()`를 생략하는 근거로 쓰지 않는다.
 
 ### 2-7. Enum 확장 규칙
 
-- `caseType` enum 확장 시 반드시 **별도 브랜치** (`feat/enum-expansion`)에서 진행
-- 행정(administrative) / 합의(settlement) / 도산(insolvency) 추가 예정
-- 확장 시 필수 작업:
-  1. DB enum migration 파일 생성 (`ALTER TYPE public.case_type ADD VALUE ...`)
-  2. 기존 데이터 backfill 스크립트 포함
-  3. `src/lib/validators.ts`의 `caseTypeEnum` 업데이트
-  4. `src/lib/status-labels.ts`의 `caseTypeLabels` 업데이트
-  5. `src/components/forms/case-create-form.tsx` 드롭다운 옵션 추가
-  6. `src/lib/actions/organization-actions.ts`의 `CASE_TYPE_CSV_MAP` 업데이트
+enum 확장은 스키마 호환성 검토 없이 진행하지 않는다.
+
+필수 작업은 아래와 같다.
+
+1. DB enum migration 생성
+2. 기존 데이터 backfill 또는 기본값 검토
+3. `src/lib/validators.ts` 갱신
+4. `src/lib/status-labels.ts` 갱신
+5. 폼 드롭다운 옵션 갱신
+6. CSV import 또는 export 매핑 갱신
+7. 테스트 갱신
+
+### 2-8. 트랜잭션·백필·락 관리 규칙
+
+1. 둘 이상의 테이블을 함께 변경하는 쓰기 작업은 트랜잭션 또는 원자적 RPC로 처리한다.
+2. 대용량 backfill은 재실행 가능한 형태로 작성한다.
+3. 운영 DB에 장시간 락을 유발하는 `ALTER TABLE` 또는 대량 `UPDATE`는 단계적으로 수행한다.
+4. 파괴적 변경은 실행 전 백업 전략과 롤백 절차를 검토한다.
+5. 마이그레이션 안에서 애플리케이션 코드에 의존하는 동적 로직을 넣지 않는다.
+
+### 2-9. RLS 및 테넌트 격리 규칙
+
+1. 조직 데이터가 저장되는 모든 테이블은 RLS를 활성화한다.
+2. `SELECT`, `INSERT`, `UPDATE`, `DELETE` 정책은 조직 범위를 명시적으로 제한한다.
+3. 플랫폼 관리자 예외 접근은 정책 또는 서버 계층에서만 허용하고, 모두 감사 대상에 포함한다.
+4. 새 테이블 추가 시 RLS 없는 상태로 머지하지 않는다.
+
+### 2-10. 인덱스와 조회 성능 검토 규칙
+
+1. 새 필터, 정렬, 조인 키를 도입하면 인덱스 필요성을 함께 검토한다.
+2. 무제한 목록 쿼리를 기본값으로 두지 않는다.
+3. `select('*')`는 상세 화면이 아닌 이상 지양한다.
+4. 대시보드와 목록은 필요한 컬럼만 선택한다.
 
 ---
 
 ## 🎨 카테고리 3: UX & 컴포넌트 규칙
 
-> 원본: `docs/UX_RULES.md` | 4단계 체크리스트: `docs/ux-action-checklist.md`
+> 원본 동기화 문서: `docs/UX_RULES.md`
 
 ### 3-1. UX 체크리스트 4단계 (모든 액션에 적용)
 
+모든 액션은 아래 4단계를 충족해야 한다.
+
 | Phase | 항목 | 핵심 |
 |-------|------|------|
-| 0 | 행동 유발 + 사전 안내 | 버튼 레이블 = 결과 중심, 영향 범위 미리 표시 |
-| 1 | 권한 검증 + 중간 확인 | UI + 서버 둘 다, 위험 액션은 ConfirmModal |
-| 2 | 처리 상태 + 결과 피드백 | 로딩 스피너, 버튼 비활성, 성공/실패 토스트 |
-| 3 | 취소/복구 + 일관성 + 메시지 체계 | undo 토스트, soft delete, 같은 액션 = 같은 컴포넌트 |
+| 0 | 행동 유발 + 사전 안내 | 버튼 레이블은 결과 중심으로 쓴다. 영향 범위를 미리 보여준다 |
+| 1 | 권한 검증 + 중간 확인 | UI와 서버를 모두 거친다. 위험 액션은 ConfirmModal을 거친다 |
+| 2 | 처리 상태 + 결과 피드백 | 로딩 표시, 버튼 비활성화, 성공/실패 피드백을 제공한다 |
+| 3 | 취소/복구 + 일관성 + 메시지 체계 | undo, soft delete, 일관된 컴포넌트, 같은 메시지 형식을 사용한다 |
 
 ### 3-2. 핵심 컴포넌트 사용 규칙
 
-#### 폼 제출
+폼 제출, 파괴적 액션, 버튼, 토스트, 로딩, 에러는 반드시 저장소 표준 컴포넌트를 사용한다.
+
 ```tsx
 // ❌ 금지
-<form action={serverAction}><button type="submit">저장</button></form>
+<form action={serverAction}>
+  <button type="submit">저장</button>
+</form>
 
 // ✅ 필수
-<ClientActionForm action={serverAction} successTitle="저장 완료" successMessage="...">
+<ClientActionForm
+  action={serverAction}
+  successTitle="저장 완료"
+  successMessage="변경사항이 저장되었습니다."
+>
   <SubmitButton>저장</SubmitButton>
 </ClientActionForm>
 ```
 
-#### Destructive 액션
 ```tsx
 // ❌ 금지
-window.confirm('삭제?') / alert() / <button onClick={...}>
+window.confirm('삭제?');
+alert('완료');
 
 // ✅ 필수
 <DangerActionButton
@@ -292,104 +507,153 @@ window.confirm('삭제?') / alert() / <button onClick={...}>
   description="삭제하면 보관함으로 이동되며, 언제든 복구할 수 있습니다."
   highlightedInfo={`사건명: ${item.title}`}
   confirmLabel="보관함으로 이동"
-  successTitle="보관함으로 이동되었습니다"
+  successTitle="보관함으로 이동 완료"
 />
 ```
 
-#### 버튼
 ```tsx
 // 서버 컴포넌트
 import { Button } from '@/components/ui/button';
 
-// 클라이언트 + 툴팁/disabled 이유
+// 클라이언트 컴포넌트
 import { EnhancedButton } from '@/components/ui/enhanced-button';
-<EnhancedButton disabled={!hasPermission} disabledReason="관리자만 가능합니다.">...</EnhancedButton>
+
+<EnhancedButton
+  disabled={!hasPermission}
+  disabledReason="관리자만 가능합니다."
+>
+  수정
+</EnhancedButton>
 ```
 
-#### 토스트
 ```tsx
 const { success, error, warning, undo } = useToast();
 
 success('저장 완료', { message: '변경사항이 저장되었습니다.' });
-error('저장 실패', { message: '네트워크 연결을 확인하고 다시 시도해주세요.' });  // "에러 발생" 금지
-undo('삭제됨', { message: '8초 내 취소 가능합니다.', onUndo: handleUndo });
+error('저장 실패 — 네트워크 오류', {
+  message: '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
+});
+undo('보관함으로 이동됨 — 8초 내 취소 가능', {
+  message: '지금 취소하면 즉시 복구됩니다.',
+  onUndo: handleUndo,
+});
 ```
 
-#### 에러 / 로딩
 ```tsx
-<InlineError title="업로드 실패" cause="파일이 10MB 초과" resolution="10MB 이하 파일 선택" onRetry={...} />
+<InlineError
+  title="업로드 실패"
+  cause="파일 크기가 10MB를 초과했습니다."
+  resolution="10MB 이하 파일을 선택해 주세요."
+  onRetry={retry}
+/>
+
 <LoadingOverlay message="저장 중..." />
 <InlineLoadingSpinner size="sm" />
 ```
 
 ### 3-3. 폼 필드 규칙
 
+모든 필수 입력 필드는 아래 패턴을 따른다.
+
 ```tsx
-// ✅ 필수 입력란 패턴
-<p className="text-xs text-slate-500 mb-4">
+<p className="mb-4 text-xs text-slate-500">
   <span className="text-red-500">*</span> 필수 입력 항목입니다
 </p>
+
 <div className="space-y-1">
   <label htmlFor="name" className="text-sm font-medium text-slate-700">
     이름 <span className="text-red-500" aria-hidden="true">*</span>
   </label>
-  <Input id="name" name="name" required aria-required="true" placeholder="홍길동" />
-  {fieldError.name && <p className="text-xs text-red-500">{fieldError.name}</p>}
+  <Input
+    id="name"
+    name="name"
+    required
+    aria-required="true"
+    placeholder="홍길동"
+  />
+  {fieldError.name && (
+    <p className="text-xs text-red-500">{fieldError.name}</p>
+  )}
 </div>
 ```
 
-**규칙:**
-- `required` 필드 → `<span className="text-red-500" aria-hidden="true">*</span>` 필수
-- `label htmlFor` ↔ `input id` 반드시 연결
-- `placeholder`는 label 대체 불가, 보조 안내만
-- 빈 필수 필드 → 클라이언트에서 먼저 차단 (에러 문구: `"[필드명]은(는) 필수입니다."`)
+세부 규칙은 아래와 같다.
+
+1. `required` 필드에는 빨간 `*`를 반드시 표시한다.
+2. `label htmlFor`와 `input id`는 반드시 연결한다.
+3. `placeholder`는 label의 대체물이 아니다.
+4. 빈 필수 필드는 클라이언트에서 먼저 차단한다.
+5. 에러 문구는 `[필드명]은(는) 필수입니다.` 형식으로 쓴다.
+6. 서버 검증 실패 시 필드 단위 에러와 폼 단위 에러를 구분해 보여준다.
 
 ### 3-4. 새 페이지/메뉴 신설 체크리스트
 
-새 라우트/메뉴 추가 시 **6가지 모두 필수**:
+새 라우트 또는 메뉴를 추가할 때는 아래 8개를 모두 충족한다.
 
-1. **`mode-aware-nav.tsx`에 메뉴 항목 등록** — 안 하면 사이드바에 안 보임
-2. **`sectionAccent` 색상 등록** — 새 섹션 ID 추가 시 accent 정의 필수
-3. **서버 권한 체크** — `requireXxxAccess()` 호출, 미인가 시 redirect
-4. **빈 상태(empty state)** — 데이터 없을 때 아이콘 + `"아직 [항목]이 없습니다"` + 안내
-5. **페이지 헤더** — `<h1>제목</h1>` + `<p className="text-sm text-slate-500">설명</p>`
-6. **모바일 반응형** — Tailwind `md:`, `lg:` 클래스
+1. `mode-aware-nav.tsx`에 메뉴를 등록한다.
+2. `sectionAccent` 색상을 등록한다.
+3. 서버 권한 체크를 구현한다.
+4. 빈 상태 화면을 제공한다.
+5. 페이지 헤더(`<h1>` + 설명 문장)를 제공한다.
+6. 모바일 반응형을 적용한다.
+7. 로딩 상태와 에러 상태를 제공한다.
+8. `metadata`의 제목과 설명을 설정한다.
+
+빈 상태 패턴은 아래를 따른다.
 
 ```tsx
-// ✅ 빈 상태 패턴
 {items.length === 0 && (
   <div className="py-12 text-center text-slate-400">
     <SomeIcon className="mx-auto mb-3 h-8 w-8 opacity-40" />
-    <p className="font-medium">아직 [항목]이 없습니다</p>
-    <p className="mt-1 text-sm">[다음에 할 행동 안내]</p>
+    <p className="font-medium">아직 사건이 없습니다</p>
+    <p className="mt-1 text-sm">새 사건을 등록해 업무를 시작해 주세요.</p>
   </div>
 )}
 ```
 
-### 3-5. ARIA & 접근성
+### 3-5. ARIA & 접근성 규칙
 
-- 모든 인터랙티브 요소에 `aria-label` 또는 `aria-describedby` 필수
-- 모달/드롭다운: ESC 닫기, Tab 포커스 트랩
-- 이미지: `alt` 필수 (장식용은 `alt=""`)
-- `aria-busy="true"` — 로딩 중인 섹션에 적용
+1. 모든 인터랙티브 요소에 `aria-label` 또는 `aria-describedby`를 제공한다.
+2. 모달과 드롭다운은 ESC 닫기와 Tab 포커스 트랩을 지원한다.
+3. 이미지는 `alt`를 제공한다. 장식용 이미지는 `alt=""`를 사용한다.
+4. 로딩 중인 섹션에는 `aria-busy="true"`를 적용한다.
+5. 키보드만으로 주요 작업을 수행할 수 있어야 한다.
+6. 색상만으로 상태를 구분하지 않는다.
 
 ### 3-6. Trash Bin / 보관함 패턴
 
-모든 Soft Delete 후 반드시 **보관함 UI** 제공:
+모든 soft delete는 반드시 보관함 UI와 함께 제공한다.
 
 ```ts
-// ✅ 삭제 → 보관함 이동 패턴
 // 1. lifecycle_status = 'soft_deleted' 업데이트
-// 2. "보관함으로 이동되었습니다" 성공 토스트
-// 3. undo() 토스트 8초 표시
-// 4. 복구 경로: /cases?tab=trash 또는 해당 목록 내 '보관함' 탭
+// 2. 성공 토스트 노출
+// 3. undo 토스트 8초 노출
+// 4. 복구 경로 제공
 ```
 
-- 삭제 후 토스트: `undo('보관함으로 이동됨', { message: '8초 내 복구 가능합니다.', onUndo: restoreAction })`
-- 보관함 탭/라우트: `?tab=trash` 쿼리파라미터 또는 `/trash` 서브라우트
-- 복구 액션: `restoreCaseAction` (lifecycle_status → 'active')
-- 영구 삭제: 보관함에서만 허용 (`forceDeleteCaseAction` 패턴, 관리자 전용)
-- **현재 미구현**: Cases 보관함 탭 (`/cases/page.tsx`) — 별도 세션에서 구현 예정
+세부 규칙은 아래와 같다.
+
+1. 삭제 성공 토스트는 `보관함으로 이동 완료` 또는 동등한 메시지로 표준화한다.
+2. undo 토스트는 8초 기준으로 통일한다.
+3. 복구 액션은 `restoreXxxAction` 명명 규칙을 따른다.
+4. 영구 삭제는 보관함에서만 허용한다.
+5. 영구 삭제 버튼은 관리자 권한이 있어야 한다.
+
+### 3-7. 목록 성능 및 페이지네이션 규칙
+
+1. 항목이 8개 이상이면 기본적으로 접기 또는 “더 보기”를 제공한다.
+2. 항목이 50개 이상이면 서버 사이드 페이지네이션 또는 커서 기반 페이지네이션을 사용한다.
+3. 무한 길이 목록을 한 번에 전부 렌더링하지 않는다.
+4. 검색과 정렬은 URL 쿼리 파라미터와 동기화할 수 있어야 한다.
+5. 긴 목록 페이지는 검색창을 상단에 고정할 수 있어야 한다.
+
+### 3-8. 로딩·에러·중복 제출 방지 규칙
+
+1. 네트워크 요청 중에는 중복 제출을 막기 위해 버튼을 비활성화한다.
+2. 낙관적 UI를 쓰더라도 서버 실패 시 롤백 경로를 제공한다.
+3. 복구 가능한 오류는 인라인 에러로 보여준다.
+4. 복구 불가능한 오류는 에러 경계 또는 전역 에러 화면으로 처리한다.
+5. hydration mismatch를 유발하는 조건부 렌더링을 피한다.
 
 ---
 
@@ -397,46 +661,56 @@ undo('삭제됨', { message: '8초 내 취소 가능합니다.', onUndo: handleU
 
 ### 4-1. 토스트 문구 형식
 
+토스트 문구는 아래 형식을 따른다.
+
+```txt
+성공:  "[대상] [동작] 완료"
+실패:  "[동작] 실패 — [원인]"
+경고:  "[조건] 확인 필요"
+안내:  "[다음 단계/상태]"
+Undo:  "[동작]됨 — [N]초 내 취소 가능"
 ```
-성공:  "[대상] [동작] 완료"              예) "사건 삭제 완료"
-실패:  "[동작] 실패 — [원인]"           예) "저장 실패 — 네트워크 오류"
-경고:  "[조건] 확인 필요"               예) "저장되지 않은 변경사항이 있습니다"
-안내:  "[다음 단계/상태]"               예) "초대 이메일이 발송되었습니다"
-Undo:  "[동작]됨 — [N]초 내 취소 가능"  예) "삭제됨 — 8초 내 취소 가능"
+
+예시는 아래와 같다.
+
+```txt
+사건 저장 완료
+저장 실패 — 네트워크 오류
+저장되지 않은 변경사항 확인 필요
+초대 이메일이 발송되었습니다
+보관함으로 이동됨 — 8초 내 취소 가능
 ```
 
 ### 4-2. 에러 메시지 금지 문구
 
+아래 표현은 금지한다.
+
 | 금지 | 대체 |
 |------|------|
-| "에러가 발생했습니다" | "저장 실패 — 네트워크 연결을 확인해 주세요" |
-| "오류가 발생했습니다" | 원인 + 해결 방법 명시 |
-| "알 수 없는 오류" | 가능한 원인 추정 + 다시 시도 안내 |
+| 에러가 발생했습니다 | 저장 실패 — 네트워크 연결을 확인해 주세요 |
+| 오류가 발생했습니다 | 원인과 해결 방법을 함께 제시 |
+| 알 수 없는 오류 | 가능한 원인과 다음 행동을 함께 제시 |
+
+추가 규칙은 아래와 같다.
+
+1. 사용자 메시지에는 스택 트레이스를 노출하지 않는다.
+2. 운영 로그에는 상세 에러를 남기되, UI에는 해결 가능한 언어로 번역한다.
+3. 같은 실패 원인은 같은 문구로 보여준다.
 
 ### 4-3. 메시지 타입별 노출 위치
 
 | 타입 | 위치 | 컴포넌트 |
 |------|------|---------|
 | 즉각 피드백 | 화면 우하단 | `useToast()` |
-| 페이지/섹션 에러 | 인라인 (해당 섹션 상단) | `InlineError` |
+| 페이지/섹션 에러 | 해당 섹션 상단 인라인 | `InlineError` |
 | 빈 상태 | 콘텐츠 영역 중앙 | 빈 상태 패턴 |
-| 전역 경고/공지 | 헤더 하단 배너 | 별도 Banner 컴포넌트 |
+| 전역 경고/공지 | 헤더 하단 배너 | Banner 컴포넌트 |
 
 ### 4-4. 목록 접기 + 통합 검색 규칙 (Collapsible List + Unified Search)
 
-**강제 규칙:**
-
-- 모든 목록은 항목이 **8개 이상**이면 자동 Accordion(접이식) 처리 필수
-- 목록 기본 표시 개수: **7개** (초과 시 "더 보기" 토글 또는 Accordion)
-- 각 페이지마다 별도 검색 로직 구현 **절대 금지** → `UnifiedListSearch` 컴포넌트 하나만 사용
-- 검색 컴포넌트: `src/components/ui/unified-list-search.tsx` (Single Source of Truth)
-- 검색 범위: 사건 + 의뢰인 + 조직 + 알림을 **단일 검색창**으로 처리
-- 목록이 긴 페이지에서는 검색창을 목록 상단에 고정(sticky)
-
-**컴포넌트 사용 패턴:**
+목록 페이지는 반드시 `UnifiedListSearch`를 단일 원본으로 사용한다.
 
 ```tsx
-// ✅ 필수 — 모든 목록 페이지
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
 <UnifiedListSearch
@@ -444,8 +718,9 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
   onSearch={(query) => setSearchQuery(query)}
   aria-label="목록 검색"
 />
+```
 
-// ✅ 8개 초과 목록 — Accordion 처리
+```tsx
 {items.length > 7 ? (
   <CollapsibleList items={items} defaultShowCount={7} label="사건" />
 ) : (
@@ -453,15 +728,36 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 )}
 ```
 
-**현재 위반 중인 목록 (수정 필요):**
+세부 규칙은 아래와 같다.
 
-| 페이지 | 위반 내용 | 상태 |
-|--------|----------|------|
-| `/cases/page.tsx` | 무한 스크롤 없이 전체 목록 노출 | ❌ 수정 필요 |
-| `/clients/page.tsx` | 검색 없이 전체 의뢰인 목록 | ❌ 수정 필요 |
-| `/organizations/page.tsx` | 조직 목록 접기 없음 | ❌ 수정 필요 |
-| `/admin/organizations/page.tsx` | 관리자 조직 목록 접기 없음 | ❌ 수정 필요 |
-| `/notifications/page.tsx` | 알림 목록 전체 노출 | ❌ 수정 필요 |
+1. 페이지별로 별도 검색 컴포넌트를 중복 구현하지 않는다.
+2. 기본 표시 개수는 7개다.
+3. 8개 이상이면 접기 또는 더 보기 동작을 반드시 제공한다.
+4. 검색어는 가능하면 URL 쿼리 파라미터(`q`)와 동기화한다.
+5. 사건, 의뢰인, 조직, 알림 목록은 같은 검색 경험을 유지한다.
+
+### 4-5. 메시지 단일 원본 규칙
+
+1. 반복 사용되는 사용자 메시지는 중앙 상수 또는 메시지 팩토리에서 관리한다.
+2. UI는 한국어 용어를 기준으로 통일한다.
+3. 감사 로그, 액션 코드, 에러 코드는 영어 식별자를 사용할 수 있다.
+4. 같은 의미의 메시지를 여러 문장으로 분산 정의하지 않는다.
+
+### 4-6. 액션 결과 계약 규칙
+
+Server Action은 아래 원칙을 따른다.
+
+1. 성공과 실패를 코드상에서 구분 가능한 형태로 반환하거나 일관되게 throw 한다.
+2. 사용자 표시용 메시지와 로깅용 상세 원인을 분리한다.
+3. 가능한 경우 `request_id` 또는 `logRef`를 포함해 운영 추적이 가능해야 한다.
+
+예시 계약은 아래와 같다.
+
+```ts
+type ActionResult =
+  | { ok: true; message?: string }
+  | { ok: false; code: string; userMessage: string; logRef?: string };
+```
 
 ---
 
@@ -469,66 +765,101 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
 ### 5-1. 사건(Case) 모델
 
-- 사건은 **다중 조직 참여형 협업 객체** (`case_organizations` 테이블)
-- Case Shell 공통 탭: Overview / Communication / Documents / Schedule / Participants / Billing / Timeline
-- 선택 모듈: Collection, Insolvency, Settlement
-- `caseType` enum: `civil | debt_collection | execution | injunction | criminal | advisory | other`
-- **이슈**: 행정, 합의, 도산은 아직 enum에 없음 → 별도 브랜치에서 확장 예정
+사건은 다중 조직 참여형 협업 객체다.
+
+1. 사건 참여 관계는 `case_organizations`를 기준으로 모델링한다.
+2. 공통 탭은 `Overview`, `Communication`, `Documents`, `Schedule`, `Participants`, `Billing`, `Timeline`을 유지한다.
+3. 선택 모듈은 `Collection`, `Insolvency`, `Settlement`를 사용한다.
+4. `caseType` enum은 저장소 단일 원본에서 관리한다.
+5. 사건 타입 확장은 카테고리 2의 enum 확장 규칙을 따른다.
 
 ### 5-2. 의뢰인 포털 권한 원칙
 
-```
+의뢰인 포털은 아래 범위만 허용한다.
+
+```txt
 허용: 공개 문서 보기, 공개 일정 보기, 메시지 보내기, 요청 생성, 자료 제출, 청구/입금 확인
 차단: 내부 메모, 타 사건, 결재 수정, 조직 정보
 ```
 
+세부 규칙은 아래와 같다.
+
+1. 포털 사용자는 자기 사건 범위를 넘는 데이터에 접근할 수 없다.
+2. 공개 여부 판단은 서버에서 수행한다.
+3. 내부 메모와 내부 첨부파일은 포털에 노출하지 않는다.
+
 ### 5-3. 플랫폼 조직 메뉴 원칙
 
-플랫폼 조직(`kind='platform_management'`) 소속 사용자는 아래 메뉴만 표시:
-- 조직 신청 관리 (`/admin/organization-requests`)
-- 조직 관리 (`/admin/organizations`)
-- 고객센터 (`/admin/support`)
+플랫폼 조직(`kind='platform_management'`) 소속 사용자는 아래 메뉴만 본다.
 
-일반 법무 메뉴(사건 목록, 의뢰인, 추심 등) **숨김**.
+1. 조직 신청 관리 (`/admin/organization-requests`)
+2. 조직 관리 (`/admin/organizations`)
+3. 고객센터 (`/admin/support`)
+4. 플랫폼 설정 (`/admin/modules`)
+5. 감사 로그 (`/admin/audit`)
+
+추가 규칙은 아래와 같다.
+
+1. 일반 법무 메뉴는 플랫폼 관리자에게 숨긴다.
+2. 플랫폼 관리 진입점은 항상 목록 또는 대시보드여야 한다.
+3. 생성 폼을 기본 랜딩 화면으로 두지 않는다.
 
 ### 5-4. 플랫폼 관리자 기능 거버넌스 (Platform Admin Governance)
 
-**강제 규칙:**
+`isPlatformOperator(auth)`가 `true`인 사용자만 접근하는 기능은 반드시 이 섹션에 명시한다.
 
-- `isPlatformOperator(auth)` 가 `true`인 사용자만 접근할 수 있는 모든 기능은 **이 섹션에 명확히 나열**되어야 함
-- 플랫폼 관리자 전용 기능을 새로 추가할 때 반드시 이 목록을 먼저 업데이트
-- **"조직검색" 버튼**은 플랫폼 관리자에게만 노출, 일반 사용자에게 완전 숨김
-- 클릭 시 **조직 관리 대시보드** (`/admin/organizations`) 로 이동 — "조직 생성" 화면이 기본 노출되는 것 **금지**
-- 플랫폼 관리자 화면의 진입점은 반드시 **목록/대시보드** 가 기본이어야 함 (생성 폼 금지)
-
-**플랫폼 관리자 전용 기능 목록 (완전 목록):**
+플랫폼 관리자 전용 기능 목록은 아래와 같다.
 
 | 기능 | 라우트 | 설명 |
 |------|--------|------|
-| 조직 신청 심사 | `/admin/organization-requests` | 신규 조직 가입 승인/거절 |
-| 조직 관리 대시보드 | `/admin/organizations` | 전체 조직 목록 조회/관리 |
+| 조직 신청 심사 | `/admin/organization-requests` | 신규 조직 가입 승인 또는 거절 |
+| 조직 관리 대시보드 | `/admin/organizations` | 전체 조직 목록 조회 및 관리 |
 | 고객센터 | `/admin/support` | 사용자 문의 처리 |
 | 플랫폼 설정 | `/admin/modules` | 기능 모듈 on/off |
 | 감사 로그 | `/admin/audit` | 전체 액션 이력 조회 |
 
-**현재 위반 중인 항목:**
+세부 규칙은 아래와 같다.
 
-| 위반 | 위치 | 상태 |
-|------|------|------|
-| 조직검색 클릭 → 조직 생성 화면 바로 노출 | `mode-aware-nav.tsx` 또는 관련 버튼 | ❌ 수정 필요 |
-| 플랫폼 관리자 기능 목록 미문서화 | `PROJECT_RULES.md` | ✅ 이번에 추가 완료 |
+1. “조직검색” 버튼은 플랫폼 관리자에게만 노출한다.
+2. 해당 버튼은 반드시 `/admin/organizations`로 이동한다.
+3. 플랫폼 관리자 화면의 기본 진입점은 대시보드 또는 목록이어야 한다.
+4. 새 플랫폼 관리자 기능을 추가하면 이 표를 먼저 갱신한다.
 
-**메뉴 가드 패턴:**
+### 5-5. Server/Client 경계 규칙
 
-```tsx
-// ✅ 플랫폼 관리자 전용 메뉴 — 서버 컴포넌트에서 조건 처리
-{isPlatformOperator && (
-  <NavItem href="/admin/organizations" label="조직 관리" />
-)}
+1. Server Components를 기본값으로 사용한다.
+2. Client Components는 인터랙션, 로컬 상태, 브라우저 API가 필요한 최소 범위로 제한한다.
+3. `button.tsx`에는 `'use client'`를 추가하지 않는다.
+4. DB 쓰기 작업을 클라이언트 컴포넌트에 직접 두지 않는다.
+5. 클라이언트 컴포넌트는 서버 권한 검사의 보조 수단일 뿐이다.
 
-// ❌ 금지 — 일반 사용자에게 플랫폼 메뉴 노출
-<NavItem href="/admin/organizations" label="조직검색" /> // 권한 체크 없이
-```
+### 5-6. 검증(Validation) 경계 규칙
+
+1. 모든 외부 입력은 서버 경계에서 검증한다.
+2. 폼 검증 스키마가 클라이언트와 서버에 함께 존재하더라도 서버 검증이 최종 원본이다.
+3. CSV import, URL query, multipart form, JSON body는 모두 검증 대상이다.
+4. 검증 실패는 사용자 메시지와 운영 로그를 분리해 처리한다.
+
+### 5-7. 테스트 및 릴리즈 게이트 규칙
+
+1. 머지 전 `typecheck`, `lint`, `test`, `build`, `check:migrations`를 모두 통과한다.
+2. 권한, RLS, soft delete, 결제, 관리자 기능 변경은 회귀 테스트를 추가한다.
+3. 신규 Server Action은 최소 한 개 이상의 성공 경로와 실패 경로 테스트를 갖는다.
+4. TODO 또는 FIXME는 이슈 번호와 제거 조건 없이 머지하지 않는다.
+
+### 5-8. 관측성(Observability) 규칙
+
+1. 모든 주요 변경 작업은 누가, 무엇을, 언제, 어떤 결과로 수행했는지 추적 가능해야 한다.
+2. 예상하지 못한 실패는 요청 식별자와 함께 로그에 남긴다.
+3. 운영에서 재현이 어려운 오류는 사용자 메시지에 참조 식별자를 노출할 수 있다.
+4. 로그는 디버깅에 충분해야 하지만 민감정보를 과도하게 담아서는 안 된다.
+
+### 5-9. 성능 규칙
+
+1. 목록 화면과 대시보드에서 N+1 쿼리를 허용하지 않는다.
+2. 무제한 데이터 렌더링을 금지한다.
+3. 상세 화면이 아닌 곳에서는 필요한 컬럼만 선택한다.
+4. 고비용 연산이 필요한 경우 캐시 또는 사전 계산 전략을 검토한다.
 
 ---
 
@@ -536,106 +867,119 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
 | 금지 | 대체 | 근거 |
 |------|------|------|
-| `window.confirm()` | `DangerActionButton` | UX #4 |
-| `alert()` | `useToast()` | UX #10 |
-| `<form action={fn}>` 날것 사용 | `<ClientActionForm>` | UX #5 |
-| `<button type="submit">` 날것 | `<SubmitButton>` | UX #5 |
-| `.delete()` hard delete (soft_deleted 게이트 없이) | `lifecycle_status='soft_deleted'` | UX #8 |
-| 삭제 후 복구 UI/토스트 없음 | `undo()` + Trash UI | UX #8 |
-| "에러가 발생했습니다" 문구 | 원인 + 해결방법 명시 | UX #6 |
-| 로딩 중 버튼 활성화 | `isLoading` / `disabled` | UX #5 |
-| `required` 필드에 `*` 없음 | `<span className="text-red-500">*</span>` | UX #1 |
-| `placeholder`만 쓰고 `label` 없음 | `htmlFor`로 연결된 `<label>` | 접근성 |
-| 빈 상태 화면 없음 | empty state 패턴 | UX #7 |
-| 메뉴 추가 후 nav 미등록 | `mode-aware-nav.tsx` 항목 추가 | 일관성 |
-| 새 페이지에 권한 체크 없음 | `requireXxxAccess()` 서버에서 호출 | UX #3 |
-| `button.tsx`에 `'use client'` 추가 | 서버 컴포넌트 호환 유지 | 기술 |
+| `window.confirm()` | `DangerActionButton` 또는 `ConfirmationModal` | 카테고리 3 |
+| `alert()` | `useToast()` | 카테고리 4 |
+| `<form action={fn}>` 날것 사용 | `<ClientActionForm>` | 카테고리 3 |
+| `<button type="submit">` 날것 사용 | `<SubmitButton>` | 카테고리 3 |
+| `.delete()` hard delete 직접 호출 | `soft_delete` 패턴 + 보관함 UI | 카테고리 2 |
+| 삭제 후 복구 UI 또는 undo 없음 | `undo()` + Trash UI | 카테고리 3 |
+| “에러가 발생했습니다” 같은 포괄 문구 | 원인 + 해결 방법 명시 | 카테고리 4 |
+| 로딩 중 버튼 활성화 | `disabled`, `isLoading`, `useTransition` | 카테고리 3 |
+| `required` 필드에 빨간 `*` 없음 | 필수 표시 추가 | 카테고리 3 |
+| `placeholder`만 있고 `label` 없음 | `htmlFor`가 연결된 `<label>` | 접근성 |
+| 빈 상태 화면 없음 | empty state 패턴 | 카테고리 3 |
+| 메뉴 추가 후 nav 미등록 | `mode-aware-nav.tsx` 등록 | 카테고리 3 |
+| 새 페이지에 서버 권한 체크 없음 | `requireXxxAccess()` 호출 | 카테고리 1 |
+| `button.tsx`에 `'use client'` 추가 | 서버 호환 유지 | 스택 제약 |
+| 클라이언트에 `service_role` 노출 | 서버 전용 비밀정보 관리 | 카테고리 1 |
+| RLS 없는 조직 데이터 테이블 머지 | RLS 정책 작성 후 머지 | 카테고리 2 |
+| 무제한 목록 전체 렌더링 | 페이지네이션 또는 접기 | 카테고리 3 |
+| `select('*')` 남용 | 필요한 컬럼만 선택 | 카테고리 2/5 |
+| 민감정보를 로그에 평문 저장 | 마스킹 또는 기록 금지 | 카테고리 1 |
+| 이슈 번호 없는 TODO/FIXME 머지 | 이슈 링크와 제거 조건 명시 | 카테고리 5 |
+
+### 6-1. 핵심 용어 정의 규칙 (Terminology)
+
+모든 코드, 문서, UI 레이블은 아래 용어를 정확히 이 정의대로 사용한다.
+
+| 용어 (한국어) | 용어 (영어) | 정의 | 테이블/필드 |
+|-------------|------------|------|------------|
+| 조직 | Organization | 플랫폼의 독립 테넌트 단위. 법무법인, 기업, 그룹 등을 포함한다. `slug`가 고유 식별자다. | `organizations.slug`, `organizations.name`, `organizations.kind`, `organizations.is_platform_root` |
+| 의뢰인 | Client | 사건의 당사자 또는 의뢰인. 조직과 별개로 관리되며 사건 생성 시 연결된다. | `clients`, `case_clients` |
+| 허브 | Hub | 사건 공유, 읽음 추적, 협업의 중앙 공간 | 관련 migration 및 공유 테이블 |
+| 플랫폼 관리자 | Platform Operator | `is_platform_root=true` 이고 `kind='platform_management'`인 조직 소속 관리 멤버 | `organizations`, `organization_memberships` |
+| 사건 | Case | 플랫폼의 핵심 업무 단위. 여러 조직이 참여하는 협업 객체 | `cases`, `case_organizations` |
+| 멤버십 | Membership | 사용자와 조직 간의 소속 관계. 역할과 권한 세트를 포함한다 | `organization_memberships` |
+| 스테이지 | Stage | 사건의 진행 단계 | `cases.stage_key`, `src/lib/case-stage.ts` |
+
+### 6-2. 용어 사용 규칙
+
+1. 한국어 UI에서는 “조직”, “의뢰인”, “허브”를 그대로 쓴다.
+2. 코드 변수명과 함수명은 영어 용어를 기준으로 쓴다. 예를 들어 `organizationId`, `clientId`, `hubId`를 사용한다.
+3. 새 도메인 개념을 도입할 때는 이 표에 먼저 정의한 후 구현한다.
+4. 같은 개념을 다른 용어로 혼용하지 않는다.
 
 ---
 
 ## 📁 핵심 파일 위치
 
 ### UI 컴포넌트
-```
+
+```txt
 src/components/ui/
-├── button.tsx              # 기본 버튼 (서버 안전)
-├── enhanced-button.tsx     # 툴팁/disabledReason (클라이언트)
-├── submit-button.tsx       # 폼 제출 버튼
-├── client-action-form.tsx  # 폼 래퍼 + useTransition + toast
-├── danger-action-button.tsx # destructive 액션 + ConfirmModal
-├── confirmation-modal.tsx  # 확인 모달 (native <dialog>)
-├── toast-provider.tsx      # useToast hook
-├── loading.tsx             # LoadingOverlay + InlineLoadingSpinner
-└── inline-error.tsx        # 인라인 에러 (원인 + 해결방법)
+├── button.tsx
+├── enhanced-button.tsx
+├── submit-button.tsx
+├── client-action-form.tsx
+├── danger-action-button.tsx
+├── confirmation-modal.tsx
+├── toast-provider.tsx
+├── loading.tsx
+└── inline-error.tsx
 ```
 
 ### 권한/인증
-```
-src/lib/auth.ts             # requireXxxAccess 함수들
-src/lib/permissions.ts      # PERMISSION_KEYS, hasPermission
-src/lib/types.ts            # PlatformRole, Organization types
+
+```txt
+src/lib/auth.ts
+src/lib/permissions.ts
+src/lib/types.ts
 ```
 
 ### 주요 Actions
-```
+
+```txt
 src/lib/actions/
-├── case-actions.ts         # 사건 CRUD, moveCaseToDeletedAction, forceDeleteCaseAction
-├── organization-actions.ts # 조직/초대/멤버/CSV import
-├── settings-actions.ts     # 조직 설정, 아카이브
-├── notification-actions.ts # 알림 soft archive (trashed_at)
-└── case-cover-action.ts    # 표지 인쇄 필드 저장
+├── case-actions.ts
+├── organization-actions.ts
+├── settings-actions.ts
+├── notification-actions.ts
+└── case-cover-action.ts
 ```
 
 ### 네비게이션
-```
-src/components/mode-aware-nav.tsx   # 사이드바 메뉴 (모든 메뉴 항목 여기에 등록)
-src/components/mode-switcher.tsx    # ModeKey 타입, 모드 전환
+
+```txt
+src/components/mode-aware-nav.tsx
+src/components/mode-switcher.tsx
 ```
 
 ---
 
 ## ✅ 새 기능 구현 전 체크리스트
 
-기능을 만들기 전에 아래를 순서대로 확인하세요:
+아래 항목을 순서대로 확인한다.
 
-- [ ] 이 규칙 파일(`PROJECT_RULES.md`)을 읽었는가?
-- [ ] 권한 가드: 서버 액션에 `requireXxxAccess()` 있는가?
-- [ ] Soft delete: `.delete()` 직접 호출 없는가?
-- [ ] 폼: `ClientActionForm` + `SubmitButton` 사용했는가?
-- [ ] Destructive: `DangerActionButton` 사용했는가?
-- [ ] 토스트: 삭제 후 `undo()` 토스트 있는가?
-- [ ] 필수 필드: 빨간 `*` 표시 있는가?
-- [ ] label-input 연결: `htmlFor` ↔ `id` 있는가?
-- [ ] 빈 상태: empty state 패턴 있는가?
-- [ ] 새 메뉴: `mode-aware-nav.tsx` 등록했는가?
-- [ ] `revalidatePath()` 호출했는가?
-- [ ] ARIA 속성 있는가?
-- [ ] 타입 에러 없는가? (`pnpm typecheck`)
-- [ ] 8개 이상 목록: `UnifiedListSearch` + Accordion 처리했는가?
-- [ ] 플랫폼 관리자 전용 기능: 이 파일 5-4 목록에 등록했는가?
-- [ ] 플랫폼 관리자 메뉴: 진입점이 목록/대시보드인가? (생성 폼 기본 노출 금지)
-- [ ] 용어: 조직/의뢰인/허브 정의를 규칙 6-1 기준으로 사용했는가?
+1. `PROJECT_RULES.md` 전체를 읽었는가.
+2. 서버 권한 가드(`requireXxxAccess`)를 적용했는가.
+3. 클라이언트 입력값을 서버에서 다시 검증하는가.
+4. soft delete 대상에 `.delete()`를 직접 호출하지 않았는가.
+5. 목록 기본 쿼리에서 삭제 데이터를 제외했는가.
+6. 폼에 `ClientActionForm`과 `SubmitButton`을 사용했는가.
+7. 파괴적 액션에 `DangerActionButton`을 사용했는가.
+8. 삭제 후 `undo()` 토스트와 보관함 복구 경로를 제공했는가.
+9. 필수 필드에 빨간 `*`를 표시했는가.
+10. `label htmlFor`와 `input id`를 연결했는가.
+11. 빈 상태 화면을 제공했는가.
+12. 새 메뉴를 `mode-aware-nav.tsx`에 등록했는가.
+13. 액션 성공 후 `revalidatePath()`를 호출했는가.
+14. ARIA 속성을 적용했는가.
+15. 타입 에러, 린트, 테스트, 빌드, 마이그레이션 검사를 통과했는가.
+16. 8개 이상 목록에 접기 또는 더 보기를 제공했는가.
+17. 50개 이상 목록에 서버 페이지네이션 또는 커서를 적용했는가.
+18. 플랫폼 관리자 전용 기능이면 카테고리 5-4 목록에 등록했는가.
+19. 플랫폼 관리자 메뉴의 기본 진입점이 목록 또는 대시보드인가.
+20. 용어를 카테고리 6-1 정의와 일치하게 사용했는가.
+21. 로그와 사용자 메시지에 민감정보가 노출되지 않는가.
+22. 권한, RLS, soft delete 변경이면 회귀 테스트를 추가했는가.
 
----
-
-## 🗂 카테고리 6: 핵심 용어 정의 규칙 (Terminology)
-
-> 모든 코드, 문서, UI 레이블에서 아래 용어를 **정확히 이 정의대로** 사용한다.  
-> 새 기능 추가 시 이 목록에 없는 용어를 도입하면 먼저 이 섹션에 추가 후 사용한다.
-
-### 6-1. 핵심 용어 정의
-
-| 용어 (한국어) | 용어 (영어) | 정의 | 테이블/필드 |
-|-------------|------------|------|------------|
-| **조직** | Organization | 플랫폼의 독립 테넌트 단위. 법무법인·기업·그룹 등. `slug`가 고유 식별자. 모든 멤버·사건·설정은 조직 단위로 격리됨. | `organizations` — `slug`, `name`, `kind` (`law_firm` \| `company` \| `platform_management`), `is_platform_root` |
-| **의뢰인** | Client | 사건의 당사자 또는 의뢰인. 조직과 별개로 관리되며, 조직 소속일 수도 외부일 수도 있음. 사건 생성 시 필수 연결. | `clients`, `case_clients` |
-| **허브** | Hub (Collaboration Hub) | 사건 공유·읽음 추적·협업의 중앙 공간. 사건별로 생성되며 읽음 기록과 공유 권한을 관리함. | migration: `collaboration_hub_reads_and_case_shares.sql` |
-| **플랫폼 관리자** | Platform Operator | `is_platform_root=true` + `kind='platform_management'` 조직 소속 + `isManagementRole()` 을 만족하는 사용자. | `organizations.is_platform_root`, `organizations.kind` |
-| **사건** | Case | 플랫폼의 핵심 업무 단위. 여러 조직이 참여하는 협업 객체. | `cases`, `case_organizations` |
-| **멤버십** | Membership | 사용자와 조직 간의 소속 관계. 역할(`role`)과 권한 세트를 포함. | `organization_memberships` |
-| **스테이지** | Stage | 사건의 진행 단계 (예: 접수·심리·선고·종결). | `cases.stage_key`, `src/lib/case-stage.ts` |
-
-**규칙:**
-- UI 레이블에서 "조직" ↔ "Organization", "의뢰인" ↔ "Client", "허브" ↔ "Hub" 혼용 **금지** (한국어 UI는 한국어 용어 고정)
-- 코드 변수명/함수명은 영어 용어 기준 (예: `organizationId`, `clientId`, `hubId`)
-- 새 도메인 개념 추가 시 이 표에 먼저 등록 후 구현
