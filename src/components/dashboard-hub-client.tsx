@@ -1097,7 +1097,7 @@ export function DashboardHubClient({
               업무 허브
             </div>
             <h1 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">오늘 바로 처리할 일</h1>
-            <p className="text-sm text-slate-600">사건 기준으로 우선 확인 항목을 빠르게 처리합니다.</p>
+            <p className="text-sm text-slate-600">중요 알림, 승인 요청, 후속 처리 항목을 같은 흐름에서 정리합니다.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
@@ -1114,8 +1114,8 @@ export function DashboardHubClient({
           <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">지금 처리해야 할 항목</p>
-                <p className="mt-1 text-xs text-slate-500">알림과 승인 큐를 같은 화면에서 바로 확인합니다.</p>
+                <p className="text-sm font-semibold text-slate-900">운영 큐</p>
+                <p className="mt-1 text-xs text-slate-500">알림 큐와 승인 요청을 같은 우선순위 기준으로 확인합니다.</p>
               </div>
               <Badge tone="red">우선순위</Badge>
             </div>
@@ -1250,35 +1250,55 @@ export function DashboardHubClient({
           <CardContent className="space-y-4">
             {plannerEnabled ? (
               <>
+                <div className="space-y-2">
+                  <label htmlFor="planner-case-id" className="text-sm font-medium text-slate-700">
+                    대상 사건 <span className="text-rose-600">*</span>
+                  </label>
                 <select
+                  id="planner-case-id"
                   value={plannerCaseId}
                   onChange={(event) => setPlannerCaseId(event.target.value)}
+                  aria-required="true"
                   className="h-10 w-full rounded-xl border border-sky-200 bg-white px-3 text-sm text-slate-900"
                 >
                   {data.caseOptions.map((item) => (
                     <option key={item.id} value={item.id}>{item.title}</option>
                   ))}
                 </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="planner-input" className="text-sm font-medium text-slate-700">
+                    일정 요청 내용 <span className="text-rose-600">*</span>
+                  </label>
                 <Textarea
+                  id="planner-input"
                   value={plannerInput}
                   onChange={(event) => setPlannerInput(event.target.value)}
+                  aria-required="true"
                   placeholder="예: 내일 오전 10시에 베인 사건 답변서 제출 일정 잡고, 담당자에게 알림까지 남겨줘"
                   className="min-h-28 border-sky-200 bg-white"
                 />
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={generatePlannerPreview} disabled={plannerPending || !organizationId || !plannerInput.trim()}>
                     {plannerPending ? 'AI 정리 중...' : '일정 초안 만들기'}
                   </Button>
-                  <select
-                    value={plannerRecipientMembershipId}
-                    onChange={(event) => setPlannerRecipientMembershipId(event.target.value)}
-                    className="h-10 rounded-xl border border-sky-200 bg-white px-3 text-sm text-slate-900"
-                  >
-                    <option value="">알림 없이 저장</option>
-                    {memberOptions.map((item) => (
-                      <option key={item.membershipId} value={item.membershipId}>{item.label}</option>
-                    ))}
-                  </select>
+                  <div className="min-w-56 space-y-2">
+                    <label htmlFor="planner-recipient-membership-id" className="text-sm font-medium text-slate-700">
+                      알림 대상
+                    </label>
+                    <select
+                      id="planner-recipient-membership-id"
+                      value={plannerRecipientMembershipId}
+                      onChange={(event) => setPlannerRecipientMembershipId(event.target.value)}
+                      className="h-10 w-full rounded-xl border border-sky-200 bg-white px-3 text-sm text-slate-900"
+                    >
+                      <option value="">알림 없이 저장</option>
+                      {memberOptions.map((item) => (
+                        <option key={item.membershipId} value={item.membershipId}>{item.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {plannerPreview ? (
@@ -1350,14 +1370,20 @@ export function DashboardHubClient({
                 {scenarioMode ? <Badge tone="blue">가상 조직간 협업방</Badge> : null}
                 {!scenarioMode ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative">
+                    <div className="space-y-2">
+                      <label htmlFor="workspace-search" className="text-sm font-medium text-slate-700">
+                        통합 검색
+                      </label>
+                      <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                       <Input
+                        id="workspace-search"
                         value={workspaceSearch}
                         onChange={(event) => setWorkspaceSearch(event.target.value)}
                         placeholder="사건·의뢰인·문서 검색"
                         className="h-10 w-64 pl-9"
                       />
+                    </div>
                     </div>
                     <Button variant="secondary" onClick={runWorkspaceSearch} disabled={workspaceSearchBusy || !workspaceSearch.trim()}>
                       {workspaceSearchBusy ? '확인 중...' : '확인'}
@@ -1386,8 +1412,11 @@ export function DashboardHubClient({
           {scenarioMode ? (
             <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-medium text-slate-500">대화방 선택</p>
+                  <label htmlFor="scenario-conversation-id" className="text-xs font-medium text-slate-500">
+                    대화방 선택
+                  </label>
                   <select
+                    id="scenario-conversation-id"
                     value={selectedScenarioConversationId}
                     onChange={(event) => setSelectedScenarioConversationId(event.target.value)}
                     className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
@@ -1460,12 +1489,19 @@ export function DashboardHubClient({
                 </div>
 
                 <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
+                  <div className="space-y-2">
+                    <label htmlFor="organization-message-input" className="text-sm font-medium text-slate-700">
+                      조직 소통 메시지 <span className="text-rose-600">*</span>
+                    </label>
                   <Textarea
+                    id="organization-message-input"
                     value={messageInput}
                     onChange={(event) => setMessageInput(event.target.value)}
+                    aria-required="true"
                     placeholder="조직 전체 소통방에 메시지를 입력하세요."
                     className="min-h-24"
                   />
+                  </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs text-slate-500">하루 지난 대화는 자동으로 보관함에서 확인됩니다.</span>
                     <Button
@@ -1538,14 +1574,20 @@ export function DashboardHubClient({
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <div className="relative">
+              <div className="space-y-2">
+                <label htmlFor="archive-query" className="text-sm font-medium text-slate-700">
+                  보관함 검색
+                </label>
+                <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <Input
+                  id="archive-query"
                   value={archiveQuery}
                   onChange={(event) => setArchiveQuery(event.target.value)}
                   placeholder="날짜, 작성자, 내용 검색"
                   className="h-10 w-72 pl-9"
                 />
+              </div>
               </div>
               <Button variant="secondary" onClick={runArchiveAiCheck}>
                 <Bot className="mr-1 size-4" />
