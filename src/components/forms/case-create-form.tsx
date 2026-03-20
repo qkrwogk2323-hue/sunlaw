@@ -101,12 +101,25 @@ export function CaseCreateForm({
   return (
     <form action={createCaseAction} className="space-y-4">
       <input type="hidden" name="organizationId" value={defaultOrganization} />
-      <input type="hidden" name="caseType" value="civil" />
       <input type="hidden" name="principalAmount" value="0" />
       <input type="hidden" name="specialNote" value="" />
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-3">
+          <select
+            name="caseType"
+            defaultValue="civil"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            aria-label="사건 유형"
+          >
+            <option value="civil">민사</option>
+            <option value="debt_collection">채권추심</option>
+            <option value="execution">민사집행</option>
+            <option value="injunction">가처분·보전</option>
+            <option value="criminal">형사</option>
+            <option value="advisory">자문</option>
+            <option value="other">기타</option>
+          </select>
           <Input
             name="caseNumber"
             value={fields.caseNumber}
