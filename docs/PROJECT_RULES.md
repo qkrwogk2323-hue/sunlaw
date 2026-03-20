@@ -13,7 +13,7 @@
 | Framework | Next.js 16 App Router + React 19 + TypeScript strict |
 | 스타일 | Tailwind v4 (CSS variables 기반), 커스텀 UI 컴포넌트 |
 | DB/Auth | Supabase (Auth + PostgreSQL + RLS) |
-| 금지 라이브러리 | shadcn/ui, Radix primitives, sonner — **사용 금지** (커스텀 구현으로 대체됨) |
+| 금지 라이브러리 | shadcn/ui, Radix primitives, sonner — **신규 직접 사용 금지** (기존 button.tsx 등 extend는 허용, toast-provider.tsx로 대체 완료) |
 | cn() 경로 | `@/lib/cn` |
 | Server Components | 기본. Client Components는 인터랙션이 필요한 최소 범위만 |
 | `button.tsx` | `'use client'` **추가 금지** — 서버 컴포넌트가 `buttonStyles()` 직접 호출 |
@@ -93,6 +93,7 @@ isManagementRole(role) = org_owner || org_manager
 - 파일명 형식: `NNNN_설명.sql` (연속 번호, 4자리)
 - `pnpm check:migrations` 로 번호 누락/중복 자동 차단
 - 현재 최신: `0048_case_cover_fields.sql`
+- **미적용**: `0048_case_cover_fields.sql`은 아직 live DB에 미적용 — Supabase SQL Editor에서 직접 실행 필요
 - 다음 번호: `0049_*`
 
 ### 2-2. lifecycle_status 타입 (DB 전역 enum)
@@ -143,6 +144,18 @@ await supabase.from('table')
 ### 2-6. revalidatePath 규칙
 
 모든 Server Action 성공 후 **반드시** `revalidatePath()` 호출.
+
+### 2-7. Enum 확장 규칙
+
+- `caseType` enum 확장 시 반드시 **별도 브랜치** (`feat/enum-expansion`)에서 진행
+- 행정(administrative) / 합의(settlement) / 도산(insolvency) 추가 예정
+- 확장 시 필수 작업:
+  1. DB enum migration 파일 생성 (`ALTER TYPE public.case_type ADD VALUE ...`)
+  2. 기존 데이터 backfill 스크립트 포함
+  3. `src/lib/validators.ts`의 `caseTypeEnum` 업데이트
+  4. `src/lib/status-labels.ts`의 `caseTypeLabels` 업데이트
+  5. `src/components/forms/case-create-form.tsx` 드롭다운 옵션 추가
+  6. `src/lib/actions/organization-actions.ts`의 `CASE_TYPE_CSV_MAP` 업데이트
 
 ---
 
@@ -265,6 +278,24 @@ undo('삭제됨', { message: '8초 내 취소 가능합니다.', onUndo: handleU
 - 모달/드롭다운: ESC 닫기, Tab 포커스 트랩
 - 이미지: `alt` 필수 (장식용은 `alt=""`)
 - `aria-busy="true"` — 로딩 중인 섹션에 적용
+
+### 3-6. Trash Bin / 보관함 패턴
+
+모든 Soft Delete 후 반드시 **보관함 UI** 제공:
+
+```ts
+// ✅ 삭제 → 보관함 이동 패턴
+// 1. lifecycle_status = 'soft_deleted' 업데이트
+// 2. "보관함으로 이동되었습니다" 성공 토스트
+// 3. undo() 토스트 8초 표시
+// 4. 복구 경로: /cases?tab=trash 또는 해당 목록 내 '보관함' 탭
+```
+
+- 삭제 후 토스트: `undo('보관함으로 이동됨', { message: '8초 내 복구 가능합니다.', onUndo: restoreAction })`
+- 보관함 탭/라우트: `?tab=trash` 쿼리파라미터 또는 `/trash` 서브라우트
+- 복구 액션: `restoreCaseAction` (lifecycle_status → 'active')
+- 영구 삭제: 보관함에서만 허용 (`forceDeleteCaseAction` 패턴, 관리자 전용)
+- **현재 미구현**: Cases 보관함 탭 (`/cases/page.tsx`) — 별도 세션에서 구현 예정
 
 ---
 
