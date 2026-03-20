@@ -1,7 +1,7 @@
 'use client';
 
 import { shareCaseToCollaborationHubAction } from '@/lib/actions/organization-actions';
-import { SubmitButton } from '@/components/ui/submit-button';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 
 export function CaseDetailHubConnectButton({
   hubId,
@@ -15,22 +15,18 @@ export function CaseDetailHubConnectButton({
   returnPath: string;
 }) {
   return (
-    <form
+    <DangerActionButton
       action={shareCaseToCollaborationHubAction}
-      onSubmit={(event) => {
-        if (!window.confirm('사건허브로 연동하시겠습니까?')) {
-          event.preventDefault();
-        }
-      }}
+      fields={{ hubId, organizationId, caseId, permissionScope: 'collaborate', returnPath }}
+      confirmTitle="허브 연동 확인"
+      confirmDescription="사건을 허브로 연동하시겠습니까?"
+      confirmLabel="연동"
+      variant="info"
+      buttonVariant="secondary"
+      successTitle="허브 연동 완료"
+      className="h-12 rounded-2xl px-5 text-base font-semibold"
     >
-      <input type="hidden" name="hubId" value={hubId} />
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="caseId" value={caseId} />
-      <input type="hidden" name="permissionScope" value="collaborate" />
-      <input type="hidden" name="returnPath" value={returnPath} />
-      <SubmitButton pendingLabel="연동 중..." className="h-12 rounded-2xl px-5 text-base font-semibold">
-        허브 미연동
-      </SubmitButton>
-    </form>
+      허브 미연동
+    </DangerActionButton>
   );
 }

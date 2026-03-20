@@ -108,11 +108,15 @@ function getOrganizationSections({
         : null;
   const conversationBadge: NavBadge | null = unreadConversationCount > 0 ? { count: unreadConversationCount, variant: 'default' } : null;
 
-  const commonItems = uniqueItems([
-    { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-    { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
-    { href: '/calendar', label: '일정 확인', icon: CalendarRange }
-  ]);
+  const commonItems = mode === 'client_communication'
+    ? uniqueItems([
+        { href: '/notifications', label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification }
+      ])
+    : uniqueItems([
+        { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
+        { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
+        { href: '/calendar', label: '일정 확인', icon: CalendarRange }
+      ]);
 
   const organizationItems: NavItem[] = [];
   const collaborationItems: NavItem[] = [];
@@ -270,7 +274,7 @@ function MobileSectionBar({
       <div className={`fixed inset-0 z-50 transition ${drawerOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <button
           type="button"
-          className={`absolute inset-0 bg-slate-950/35 transition ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-slate-950/35 transition ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
           aria-label="메뉴 닫기"
           onClick={() => setDrawerOpen(false)}
         />
@@ -510,9 +514,7 @@ export function ModeAwareNav({
   }, [profile.id, currentOrganization?.id]);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setMode(managerDefaultMode);
-    });
+    setMode(managerDefaultMode);
   }, [managerDefaultMode]);
 
   useEffect(() => {

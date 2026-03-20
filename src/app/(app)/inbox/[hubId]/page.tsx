@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CollaborationHubLiveShell } from '@/components/collaboration-hub-live-shell';
@@ -11,6 +11,7 @@ import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-fo
 import { CaseHubRoomPanel } from '@/components/case-hub-room-panel';
 import { CaseHubAiAssistant } from '@/components/case-hub-ai-assistant';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { isClientAccountActive } from '@/lib/client-account';
 import { formatDateTime } from '@/lib/format';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
@@ -34,7 +35,11 @@ export default async function CollaborationHubPage({
     organizationId ? getOrganizationWorkspace(organizationId) : Promise.resolve(null)
   ]);
 
-  if (!hub || !organizationId) {
+  if (!organizationId || isClientAccountActive(auth.profile)) {
+    redirect('/portal' as Route);
+  }
+
+  if (!hub) {
     notFound();
   }
 

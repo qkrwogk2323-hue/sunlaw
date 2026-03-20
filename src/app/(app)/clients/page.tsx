@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { cookies } from 'next/headers';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
@@ -19,7 +20,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedClientTempPassword?: string; issuedOrgName?: string }>;
+  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedOrgName?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -31,14 +32,15 @@ export default async function ClientsPage({
     && hasPermission(auth, organizationId, 'user_manage')
   );
 
-  const [roster, cases, resolvedSearchParams] = await Promise.all([
+  const [roster, cases, resolvedSearchParams, cookieStore] = await Promise.all([
     listClientRosterSummary(organizationId),
     canManage && organizationId ? listCases(organizationId) : Promise.resolve([]),
-    searchParams ? searchParams : Promise.resolve(undefined)
+    searchParams ? searchParams : Promise.resolve(undefined),
+    cookies()
   ]);
   const inviteToken = resolvedSearchParams?.invite;
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
-  const issuedClientTempPassword = resolvedSearchParams?.issuedClientTempPassword;
+  const issuedClientTempPassword = cookieStore.get('_vs_issued_pw')?.value ?? null;
   const issuedOrgName = resolvedSearchParams?.issuedOrgName ?? (organizationId ? (auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? '현재 조직') : '현재 조직');
 
   return (
@@ -49,8 +51,12 @@ export default async function ClientsPage({
       </div>
 
       {inviteToken ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-          생성된 초대 링크: <code className="font-mono">/invite/{inviteToken}</code>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
+          <p className="font-semibold">✅ 초대 링크가 생성되었습니다</p>
+          <p className="mt-1 text-xs text-emerald-700">아래 링크를 복사해서 의뢰인에게 전달하세요. 이 화면을 벗어나면 다시 확인할 수 없습니다.</p>
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 py-3">
+            <code className="flex-1 select-all font-mono text-sm text-slate-900">{`${process.env.NEXT_PUBLIC_APP_URL ?? ''}/invite/${inviteToken}`}</code>
+          </div>
         </div>
       ) : null}
 

@@ -1,23 +1,21 @@
 'use client';
 
 import { permanentlyDeleteNotificationAction } from '@/lib/actions/notification-actions';
-import { SubmitButton } from '@/components/ui/submit-button';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 
 export function ImmediateDeleteForm({ notificationId }: { notificationId: string }) {
   return (
-    <form
+    <DangerActionButton
       action={permanentlyDeleteNotificationAction}
-      className="shrink-0"
-      onSubmit={(event) => {
-        if (!window.confirm('이 알림을 즉시 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.')) {
-          event.preventDefault();
-        }
-      }}
+      fields={{ notificationId }}
+      confirmTitle="알림 즉시 삭제"
+      confirmDescription="이 알림을 즉시 삭제하시겠습니까? 삭제 후 복구할 수 없습니다."
+      confirmLabel="즉시 삭제"
+      buttonVariant="destructive"
+      successTitle="알림 삭제 완료"
+      className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs"
     >
-      <input type="hidden" name="notificationId" value={notificationId} />
-      <SubmitButton variant="destructive" pendingLabel="삭제 중..." className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs">
-        즉시 삭제
-      </SubmitButton>
-    </form>
+      즉시 삭제
+    </DangerActionButton>
   );
 }

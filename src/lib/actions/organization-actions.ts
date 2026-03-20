@@ -3,6 +3,7 @@
 import type { Route } from 'next';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   getEffectiveOrganizationId,
@@ -1749,7 +1750,14 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   }
 
   revalidatePath('/clients');
-  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedClientTempPassword=${encodeURIComponent(tempPassword)}&issuedOrgName=${encodeURIComponent(orgName)}`);
+  const cookieStore = await cookies();
+  cookieStore.set('_vs_issued_pw', tempPassword, {
+    maxAge: 120,
+    path: '/clients',
+    sameSite: 'strict',
+    httpOnly: false
+  });
+  redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedOrgName=${encodeURIComponent(orgName)}`);
 }
 
 export async function resendInvitationLinkAction(formData: FormData) {
