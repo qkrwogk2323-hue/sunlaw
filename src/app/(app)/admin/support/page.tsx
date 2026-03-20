@@ -10,7 +10,8 @@ import { formatDateTime } from '@/lib/format';
 
 export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
+  const platformContextId = getPlatformOrganizationContextId(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
   const isOrgManager = auth.memberships.some((membership) => isManagementRole(membership.role));
 
   if (!isPlatformAdmin && !isOrgManager) {

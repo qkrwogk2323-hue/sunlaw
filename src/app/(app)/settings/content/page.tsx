@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
-import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { ContentResourceForm } from '@/components/forms/content-resource-form';
@@ -11,7 +11,8 @@ export default async function ContentResourcesPage() {
   const organizationId = getEffectiveOrganizationId(auth);
   const membership = organizationId ? findMembership(auth, organizationId) : null;
   const canManageOrg = Boolean(membership && isWorkspaceAdmin(membership));
-  const canManagePlatform = await hasActivePlatformAdminView(auth, organizationId);
+  const platformContextId = getPlatformOrganizationContextId(auth);
+  const canManagePlatform = await hasActivePlatformAdminView(auth, platformContextId);
   if (!canManageOrg && !canManagePlatform) notFound();
   const data = await getSettingsAdminData(organizationId);
 

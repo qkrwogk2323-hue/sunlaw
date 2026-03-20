@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { findMembership, getEffectiveOrganizationId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser } from '@/lib/auth';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
@@ -45,7 +45,8 @@ export default async function OrganizationSettingsPage({
   if (!workspace) notFound();
 
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth, organizationId);
+  const platformContextId = getPlatformOrganizationContextId(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
   const isPlatformManagementOrganization = workspace.organization?.slug === PLATFORM_ORGANIZATION_SLUG
     || workspace.organization?.is_platform_root === true
     || workspace.organization?.kind === 'platform_management';
