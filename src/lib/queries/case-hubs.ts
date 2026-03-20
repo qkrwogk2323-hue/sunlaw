@@ -446,7 +446,10 @@ export async function getCaseClientsForHub(
     .eq('case_id', caseId)
     .order('created_at', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error('[case-hubs] getCaseClientsForHub failed', error);
+    return [];
+  }
   return ((data ?? []) as any[]).map((row) => ({
     id: row.id,
     name: row.client_name ?? '이름 없음',
