@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+const CANONICAL_HOST = 'www.veinspiral.com';
+const LEGACY_HOST = 'veinspiral.com';
+
 const AUTH_REQUIRED_PREFIXES = [
   '/dashboard',
   '/cases',
@@ -57,6 +60,12 @@ function shouldBypassMaintenance(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.protocol === 'https:' && request.nextUrl.hostname === LEGACY_HOST) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.hostname = CANONICAL_HOST;
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   if (isMaintenanceMode() && !shouldBypassMaintenance(request.nextUrl.pathname)) {
     const maintenanceUrl = request.nextUrl.clone();
     maintenanceUrl.pathname = '/maintenance';
