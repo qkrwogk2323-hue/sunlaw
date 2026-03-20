@@ -133,8 +133,14 @@ export async function getCollaborationOverview(organizationId?: string | null): 
       .limit(20)
   ]);
 
-  if (requestError) throw requestError;
-  if (hubError) throw hubError;
+  if (requestError) {
+    console.error('[getCollaborationOverview] requests error:', requestError.message);
+    return emptyOverview(currentOrganizationId);
+  }
+  if (hubError) {
+    console.error('[getCollaborationOverview] hubs error:', hubError.message);
+    return emptyOverview(currentOrganizationId);
+  }
 
   const orgIds = [...new Set([
     ...(requestRows ?? []).flatMap((row: any) => [row.source_organization_id, row.target_organization_id]),
@@ -163,16 +169,28 @@ export async function getCollaborationOverview(organizationId?: string | null): 
           : Promise.resolve({ data: [], error: null })
   ]);
 
-  if (orgError) throw orgError;
-  if (messageError) throw messageError;
-        if (readError) throw readError;
+  if (orgError) {
+    console.error('[getCollaborationOverview] organizations error:', orgError.message);
+    return emptyOverview(currentOrganizationId);
+  }
+  if (messageError) {
+    console.error('[getCollaborationOverview] messages error:', messageError.message);
+    return emptyOverview(currentOrganizationId);
+  }
+  if (readError) {
+    console.error('[getCollaborationOverview] reads error:', readError.message);
+    return emptyOverview(currentOrganizationId);
+  }
 
   const caseIds = [...new Set((messageRows ?? []).map((row: any) => row.case_id).filter(Boolean))];
   const { data: caseRows, error: caseError } = caseIds.length
     ? await admin.from('cases').select('id, title').in('id', caseIds)
     : { data: [], error: null };
 
-  if (caseError) throw caseError;
+  if (caseError) {
+    console.error('[getCollaborationOverview] cases error:', caseError.message);
+    return emptyOverview(currentOrganizationId);
+  }
 
   const organizations = buildOrganizationMap(orgRows ?? []);
   const caseTitleById = Object.fromEntries((caseRows ?? []).map((row: any) => [row.id, row.title ?? '사건'])) as Record<string, string>;
@@ -257,7 +275,10 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
     .eq('status', 'active')
     .maybeSingle();
 
-  if (hubError) throw hubError;
+  if (hubError) {
+    console.error('[getCollaborationHubDetail] hub error:', hubError.message);
+    return null;
+  }
   if (!hubRow) return null;
 
   if (![hubRow.primary_organization_id, hubRow.partner_organization_id].includes(currentOrganizationId)) {
@@ -284,9 +305,18 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
       .order('created_at', { ascending: false })
   ]);
 
-  if (orgError) throw orgError;
-  if (messageError) throw messageError;
-  if (caseShareError) throw caseShareError;
+  if (orgError) {
+    console.error('[getCollaborationHubDetail] organizations error:', orgError.message);
+    return null;
+  }
+  if (messageError) {
+    console.error('[getCollaborationHubDetail] messages error:', messageError.message);
+    return null;
+  }
+  if (caseShareError) {
+    console.error('[getCollaborationHubDetail] case shares error:', caseShareError.message);
+    return null;
+  }
 
   const senderIds = [...new Set((messageRows ?? []).map((row: any) => row.sender_profile_id).filter(Boolean))];
   const messageCaseIds = [...new Set((messageRows ?? []).map((row: any) => row.case_id).filter(Boolean))];
@@ -300,8 +330,14 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
       : Promise.resolve({ data: [], error: null })
   ]);
 
-  if (senderError) throw senderError;
-  if (messageCaseError) throw messageCaseError;
+  if (senderError) {
+    console.error('[getCollaborationHubDetail] senders error:', senderError.message);
+    return null;
+  }
+  if (messageCaseError) {
+    console.error('[getCollaborationHubDetail] message cases error:', messageCaseError.message);
+    return null;
+  }
 
   const organizations = buildOrganizationMap(orgRows ?? []);
   const senderNameById = Object.fromEntries((senderRows ?? []).map((row: any) => [row.id, row.full_name ?? '구성원'])) as Record<string, string>;
@@ -367,7 +403,10 @@ export async function getCaseHubRegistrations(
     .order('updated_at', { ascending: false })
     .limit(30);
 
-  if (hubError) throw hubError;
+  if (hubError) {
+    console.error('[getCaseHubRegistrations] hubs error:', hubError.message);
+    return Object.fromEntries(normalizedCaseIds.map((caseId) => [caseId, { firstHubId: null, sharedHubId: null }]));
+  }
   const hubIds = (hubRows ?? []).map((row: any) => row.id).filter(Boolean);
   const firstHubId = hubIds[0] ?? null;
   if (!hubIds.length) {
@@ -381,7 +420,10 @@ export async function getCaseHubRegistrations(
     .in('case_id', normalizedCaseIds)
     .order('created_at', { ascending: false });
 
-  if (shareError) throw shareError;
+  if (shareError) {
+    console.error('[getCaseHubRegistrations] shares error:', shareError.message);
+    return Object.fromEntries(normalizedCaseIds.map((caseId) => [caseId, { firstHubId, sharedHubId: null }]));
+  }
 
   const latestByCaseId = (shareRows ?? []).reduce<Record<string, string>>((acc, row: any) => {
     if (!acc[row.case_id]) {
