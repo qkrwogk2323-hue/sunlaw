@@ -15,6 +15,8 @@ export type HubReadinessScore = {
   capacityRatio: number;
 };
 
+const SLOT_COUNTS = [6, 8, 10, 12] as const;
+
 export function calculateHubReadiness(input: HubReadinessInput): HubReadinessScore {
   const setupReady = Boolean(
     input.primaryClientId &&
@@ -49,5 +51,23 @@ export function formatHubRelativeActivity(isoString: string | null): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}시간 전`;
   const days = Math.floor(hours / 24);
-  return `${days}일 전`;
+  if (days < 7) return `${days}일 전`;
+
+  const date = new Date(isoString);
+  const yyyy = date.getFullYear();
+  const mm = `${date.getMonth() + 1}`.padStart(2, '0');
+  const dd = `${date.getDate()}`.padStart(2, '0');
+  return `${yyyy}.${mm}.${dd}`;
+}
+
+export function normalizeSlotCount(limit: number): number {
+  const safeLimit = Math.max(1, limit);
+  return SLOT_COUNTS.find((count) => safeLimit <= count) ?? 12;
+}
+
+export function getHubReadinessStateLabel(percent: number): string {
+  if (percent < 40) return '설정 필요';
+  if (percent < 70) return '참여자 구성 중';
+  if (percent < 100) return '준비 완료';
+  return '협업 가능';
 }

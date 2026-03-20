@@ -7,11 +7,14 @@ export function ActivityFeedPanel({
 }: {
   items: Array<{ id: string; title: string; actor: string | null; createdAt: string }>;
 }) {
+  const visibleItems = items.slice(0, 7);
+  const hiddenItems = items.slice(7);
+
   return (
     <PremiumInfoPanel title="최근 활동" description="허브에서 막 일어난 변경을 우선순위대로 확인합니다.">
       {items.length ? (
         <div className="space-y-3">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700">
@@ -24,6 +27,28 @@ export function ActivityFeedPanel({
               </div>
             </div>
           ))}
+          {hiddenItems.length ? (
+            <details className="rounded-2xl border border-slate-200 bg-white/80 p-3">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
+                최근 활동 더 보기 ({hiddenItems.length})
+              </summary>
+              <div className="mt-3 space-y-3">
+                {hiddenItems.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700">
+                        <Activity className="size-4" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                        <p className="text-xs text-slate-500">{item.actor ?? '시스템'} · {formatHubRelativeActivity(item.createdAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center">

@@ -26,20 +26,17 @@ export function CaseHubCreateSheet({ open, onClose, caseId, caseTitle, organizat
   const [collaboratorLimit, setCollaboratorLimit] = useState(5);
   const [viewerLimit, setViewerLimit] = useState(12);
   const [selectedClientProfileId, setSelectedClientProfileId] = useState<string>('');
+  const effectiveSelectedClientProfileId = selectedClientProfileId || (clients.length === 1 ? clients[0]?.profileId ?? '' : '');
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open) {
       dialog.showModal();
-      // 자동 대표 의뢰인 선택 (1명이면 자동)
-      if (clients.length === 1 && clients[0].profileId) {
-        setSelectedClientProfileId(clients[0].profileId);
-      }
     } else {
       dialog.close();
     }
-  }, [open, clients]);
+  }, [open]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -86,7 +83,7 @@ export function CaseHubCreateSheet({ open, onClose, caseId, caseTitle, organizat
       >
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="caseId" value={caseId} />
-        <input type="hidden" name="primaryClientProfileId" value={selectedClientProfileId} />
+        <input type="hidden" name="primaryClientProfileId" value={effectiveSelectedClientProfileId} />
 
         {/* 사건 확인 */}
         <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">

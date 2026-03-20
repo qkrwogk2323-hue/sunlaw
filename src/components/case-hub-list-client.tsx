@@ -38,15 +38,28 @@ function HubCard({ hub }: { hub: CaseHubSummary }) {
       meta="허브 입장"
       actionLabel="로비 열기"
     >
-      <div className="grid gap-4 md:grid-cols-[auto_1fr] md:items-center">
-        <HubReadinessRing percent={hub.readinessPercent} size="sm" />
+      <div className="grid gap-4 xl:grid-cols-3">
         <div className="space-y-2">
-          <p className="text-sm text-slate-600">
-            공개 범위 {hub.visibilityScope === 'organization' ? '조직 전체' : hub.visibilityScope === 'private' ? '초대 전용' : hub.visibilityScope === 'custom' ? '사용자 지정' : '미설정'}
-          </p>
-          <p className="text-sm text-slate-600">
-            준비된 참여자 {hub.readyMemberCount}명 · 허브 상태 {STATUS_LABEL[hub.status]}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">사건 식별</p>
+          <p className="text-sm text-slate-600">{hub.caseReferenceNo ?? '참조번호 미지정'}</p>
+          <p className="text-sm text-slate-600">{hub.primaryClientName ? `대표 의뢰인 ${hub.primaryClientName}` : '대표 의뢰인 미지정'}</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-[auto_1fr] md:items-center">
+          <HubReadinessRing percent={hub.readinessPercent} size="sm" />
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">허브 상태</p>
+            <p className="text-sm text-slate-600">
+              공개 범위 {hub.visibilityScope === 'organization' ? '조직 전체' : hub.visibilityScope === 'private' ? '초대 전용' : hub.visibilityScope === 'custom' ? '사용자 지정' : '미설정'}
+            </p>
+            <p className="text-sm text-slate-600">
+              준비된 참여자 {hub.readyMemberCount}명 · 허브 상태 {STATUS_LABEL[hub.status]}
+            </p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">최근 활동</p>
+          <p className="text-sm text-slate-600">{formatHubRelativeActivity(hub.lastActivityAt)}</p>
+          <p className="text-sm text-slate-600">활성 액션은 로비 입장과 허브 관리 2개 이내로 유지합니다.</p>
         </div>
       </div>
     </PremiumCaseCard>
@@ -91,8 +104,9 @@ export function CaseHubListClient({ hubs, query = '' }: Props) {
   return (
     <div className="space-y-5">
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 py-10 text-center text-sm text-slate-500">
-          검색 결과가 없습니다. 사건명이나 의뢰인 이름을 다시 확인해 주세요.
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 py-10 text-center">
+          <p className="text-sm font-medium text-slate-700">조건에 맞는 사건허브가 없습니다.</p>
+          <p className="mt-1 text-sm text-slate-500">사건명이나 의뢰인 이름을 다시 확인하거나 검색어를 줄여 보세요.</p>
         </div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-3">

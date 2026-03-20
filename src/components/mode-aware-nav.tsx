@@ -268,14 +268,13 @@ function MobileSectionBar({
     [sections, pathname]
   );
   const [manualSectionId, setManualSectionId] = useState<string | null>(null);
-  const activeSectionId = manualSectionId ?? derivedSectionId;
+  const activeSectionId = useMemo(() => {
+    if (!manualSectionId) return derivedSectionId;
+    const matchedManualSection = sections.find((section) => section.id === manualSectionId);
+    return matchedManualSection ? manualSectionId : derivedSectionId;
+  }, [derivedSectionId, manualSectionId, sections]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
-
-  // pathname 변경 시 수동 선택 초기화
-  useEffect(() => {
-    setManualSectionId(null);
-  }, [pathname]);
 
   return (
     <div className="space-y-3 lg:hidden">
@@ -516,7 +515,7 @@ export function ModeAwareNav({
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, []);
+  }, [success]);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);

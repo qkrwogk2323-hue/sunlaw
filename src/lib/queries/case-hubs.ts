@@ -97,7 +97,7 @@ export async function getCaseHubsForCases(
     .eq('lifecycle_status', 'active')
     .in('case_id', caseIds);
 
-  if (error) throw error;
+  if (error) { console.error('[getCaseHubsForCases] query error:', error.message); return empty; }
   if (!hubs?.length) return empty;
 
   const hubIds = hubs.map((h: any) => h.id as string);
@@ -122,18 +122,15 @@ export async function getCaseHubsForCases(
       .limit(hubIds.length * 3)
   ]);
 
-  if (membersResult.error) throw membersResult.error;
+  if (membersResult.error) { console.error('[getCaseHubsForCases] members error:', membersResult.error.message); return empty; }
 
-  const membersByHub = (membersResult.data ?? []).reduce<Record<string, { collaborator: number; viewer: number; ready: number; lastReadAt: string | null }>>(
-    (acc: any, row: any) => {
+  const membersByHub = ((membersResult.data ?? []) as any[]).reduce<Record<string, { collaborator: number; viewer: number; ready: number; lastReadAt: string | null }>>((acc: any, row: any) => {
       if (!acc[row.hub_id]) acc[row.hub_id] = { collaborator: 0, viewer: 0, ready: 0, lastReadAt: null };
       acc[row.hub_id][row.seat_kind as HubSeatKind] += 1;
       if (row.is_ready) acc[row.hub_id].ready += 1;
       if (row.profile_id === currentProfileId) acc[row.hub_id].lastReadAt = row.last_read_at ?? null;
       return acc;
-    },
-    {}
-  );
+    }, {});
 
   const clientNameMap = ((clientsResult.data ?? []) as any[]).reduce<Record<string, string>>((acc, row) => {
     acc[row.id] = row.full_name ?? null;

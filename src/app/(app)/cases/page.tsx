@@ -9,11 +9,15 @@ import { getCaseClientLinkedMap, listCases, purgeDeletedCasesPastRetention } fro
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
-import { getCaseHubsForCases } from '@/lib/queries/case-hubs';
+import { getCaseHubList, getCaseHubsForCases } from '@/lib/queries/case-hubs';
 import { CaseHubConnectButton } from '@/components/case-hub-connect-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { HubContextStrip } from '@/components/hub-context-strip';
+import { PremiumInfoPanel } from '@/components/premium-info-panel';
+import { HubMetricBadge } from '@/components/hub-metric-badge';
+import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
@@ -73,10 +77,11 @@ export default async function CasesPage({
   });
 
   const allCaseIds = [...activeCases, ...completedCases, ...deletedCases].map((item: any) => item.id);
-  const [hubRegistrations, caseClientLinkedMap, caseHubMap] = await Promise.all([
+  const [hubRegistrations, caseClientLinkedMap, caseHubMap, hubList] = await Promise.all([
     getCaseHubRegistrations(currentOrganizationId, allCaseIds),
     getCaseClientLinkedMap(allCaseIds),
-    getCaseHubsForCases(currentOrganizationId, allCaseIds)
+    getCaseHubsForCases(currentOrganizationId, allCaseIds),
+    getCaseHubList(currentOrganizationId)
   ]);
 
   const organizations = auth.memberships.map((membership) => ({
@@ -194,27 +199,53 @@ export default async function CasesPage({
 
   return (
     <div className="space-y-6">
-      <div className="vs-brand-panel overflow-hidden rounded-[1.8rem] p-6 text-white shadow-[0_24px_54px_rgba(8,47,73,0.26)]">
-        <div className="grid gap-3 md:grid-cols-3">
-          {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
-            const count = key === 'active' ? activeCases.length : key === 'completed' ? completedCases.length : deletedCases.length;
-            const isActive = key === bucket;
-            return (
-              <Link
-                key={key}
-                href={`/cases?bucket=${key}`}
-                className={`rounded-2xl border p-4 text-center backdrop-blur-sm transition ${
-                  isActive
-                    ? 'border-sky-100/70 bg-white/18'
-                    : 'border-white/10 bg-white/8 hover:border-sky-100/40'
-                }`}
-              >
-                <p className="text-xs uppercase tracking-[0.24em] text-sky-100/75">{BUCKET_META[key].label}</p>
-                <p className="mt-3 text-4xl font-semibold text-white">{count}</p>
-              </Link>
-            );
-          })}
+      <HubContextStrip hubs={hubList.slice(0, 4)} currentLabel="사건 목록" />
+
+      <div className="grid gap-6 xl:grid-cols-[8fr_4fr]">
+        <div className="vs-brand-panel overflow-hidden rounded-[1.8rem] p-6 text-white shadow-[0_24px_54px_rgba(8,47,73,0.26)]">
+          <div className="grid gap-3 md:grid-cols-3">
+            {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
+              const count = key === 'active' ? activeCases.length : key === 'completed' ? completedCases.length : deletedCases.length;
+              const isActive = key === bucket;
+              return (
+                <Link
+                  key={key}
+                  href={`/cases?bucket=${key}`}
+                  className={`rounded-2xl border p-4 text-center backdrop-blur-sm transition ${
+                    isActive
+                      ? 'border-sky-100/70 bg-white/18'
+                      : 'border-white/10 bg-white/8 hover:border-sky-100/40'
+                  }`}
+                >
+                  <p className="text-xs uppercase tracking-[0.24em] text-sky-100/75">{BUCKET_META[key].label}</p>
+                  <p className="mt-3 text-4xl font-semibold text-white tabular-nums">{count}</p>
+                </Link>
+              );
+            })}
+          </div>
         </div>
+        <PremiumInfoPanel
+          title="사건허브 요약"
+          description="사건목록에서도 허브 상태를 잃지 않도록 최근 허브의 협업률과 활동 상태를 함께 고정합니다."
+        >
+          {hubList.length ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <HubMetricBadge label="협업" value={`${hubList[0].collaboratorCount}/${hubList[0].collaboratorLimit}`} tone="blue" />
+                <HubMetricBadge label="열람" value={`${hubList[0].viewerCount}/${hubList[0].viewerLimit}`} tone="violet" />
+                <HubMetricBadge label="미읽음" value={`${hubList[0].unreadCount}`} tone="amber" />
+                <HubMetricBadge label="최근 활동" value={formatHubRelativeActivity(hubList[0].lastActivityAt)} tone="slate" />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">{hubList[0].title ?? hubList[0].caseTitle ?? '사건허브'}</p>
+              <p className="text-sm text-slate-500">최근 허브를 기준으로 사건목록에서 바로 허브 입장과 허브 연동을 이어갑니다.</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-5 text-center">
+              <p className="text-sm font-medium text-slate-700">아직 연결된 사건허브가 없습니다.</p>
+              <p className="mt-1 text-sm text-slate-500">사건 카드의 허브 연동 버튼으로 첫 허브를 열어 보세요.</p>
+            </div>
+          )}
+        </PremiumInfoPanel>
       </div>
 
       <div className="space-y-3">

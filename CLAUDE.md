@@ -158,6 +158,13 @@ src/components/ui/
 - **5-8**: 주요 변경은 누가·무엇을·언제·결과 추적 가능해야 함
 - **5-9**: N+1 쿼리 금지. 무제한 렌더링 금지
 
+### 프리미엄 허브 추가 (3-10 ~ 3-12, 4-7, 5-10 ~ 5-12)
+- **3-10 메뉴 상단 구조**: 허브 결합도가 높은 메뉴는 첫 화면에 허브 요약 블록 포함
+- **3-11 허브 연동**: 사건 관련 메뉴는 허브 입장, 허브 상태 요약, 허브 기준 필터 중 최소 1개 제공
+- **3-12 허브 로비**: 데스크톱 `3:6:3` 레이아웃, 최근 활동 기본 7개, 협업률 링 + 열람률 보조 바
+- **4-7 수치 표기**: `협업 x/y → 열람 x/y → 미읽음 n → 최근 활동 t` 순서와 표기 고정
+- **5-10 ~ 5-12**: 사건허브를 메뉴 결합 중심축으로 유지하고, `PremiumPageHeader`, `HubContextStrip`, `HubMetricBadge`, `HubReadinessRing`, `ParticipantSlotRing`, `PremiumCaseCard`, `PremiumInfoPanel`, `ActivityFeedPanel`을 단일 원본 프리미티브로 사용
+
 ### 용어 사용 (6-2)
 - UI: "조직", "의뢰인", "허브" / 코드: `organizationId`, `clientId`, `hubId`
 

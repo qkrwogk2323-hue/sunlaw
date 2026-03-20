@@ -13,7 +13,7 @@ import { ParticipantSlotRing } from '@/components/participant-slot-ring';
 import { PremiumInfoPanel } from '@/components/premium-info-panel';
 import { PremiumPageHeader } from '@/components/premium-page-header';
 import { activateCaseHubAction, archiveCaseHubAction } from '@/lib/actions/case-hub-actions';
-import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
+import { formatHubRelativeActivity, getHubReadinessStateLabel } from '@/lib/case-hub-metrics';
 import type { CaseHubDetail, CaseHubStatus } from '@/lib/queries/case-hubs';
 
 const STATUS_LABEL: Record<CaseHubStatus, string> = {
@@ -53,9 +53,11 @@ interface Props {
 export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Props) {
   const canActivate = ['setup_required', 'ready', 'draft'].includes(hub.status);
   const currentMember = hub.members.find((member) => member.profileId === currentProfileId) ?? null;
+  const viewerFillRate = hub.viewerLimit > 0 ? Math.min(100, Math.round((hub.viewerCount / hub.viewerLimit) * 100)) : 0;
+  const readinessState = getHubReadinessStateLabel(hub.readinessPercent);
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-[1440px] space-y-8">
       <div className="flex items-center justify-between gap-3">
         <Link
           href={'/case-hubs' as Route}
@@ -87,7 +89,9 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
         title={hub.caseTitle ?? hub.title ?? '사건허브'}
         description="사건허브는 사건 관련 업무의 기준축입니다. 협업 좌석, 열람 범위, 미읽음, 최근 활동을 이 로비를 기준으로 연결합니다."
         metrics={[
-          { label: '준비도', value: `${hub.readinessPercent}%`, helper: '대표 의뢰인, 공개 범위, 참여 구성이 준비될수록 올라갑니다.' },
+          { label: '준비도', value: `${hub.readinessPercent}%`, helper: `${readinessState} 상태` },
+          { label: '협업 슬롯', value: `${hub.collaboratorCount}/${hub.collaboratorLimit}`, helper: '현재 협업 좌석 점유' },
+          { label: '열람 슬롯', value: `${hub.viewerCount}/${hub.viewerLimit}`, helper: '현재 열람 좌석 점유' },
           { label: '미읽음', value: hub.unreadCount, helper: '최근 활동 중 아직 확인하지 않은 항목' },
           { label: '최근 활동', value: formatHubRelativeActivity(hub.lastActivityAt), helper: '가장 마지막 갱신 시점' }
         ]}
@@ -100,7 +104,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
         )}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+      <div className="grid gap-6 lg:grid-cols-[3fr_6fr_3fr]">
         <aside className="space-y-4">
           <PremiumInfoPanel title="허브 지침" description="허브 입장 전에 현재 공개 범위와 내 좌석 상태를 확인합니다.">
             <div className="space-y-3">
@@ -150,7 +154,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
 
         <main className="space-y-6">
           <PremiumInfoPanel title="허브 중앙 로비" description="사건허브의 준비도, 슬롯 점유, 실행 액션을 중앙에서 집중 관리합니다.">
-            <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+            <div className="grid min-h-[220px] gap-6 md:min-h-[280px] lg:min-h-[360px] lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
               <div className="flex justify-center">
                 <HubReadinessRing percent={hub.readinessPercent} label="준비도" size="lg" />
               </div>
@@ -173,9 +177,20 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
                   <ParticipantSlotRing occupied={hub.collaboratorCount} limit={hub.collaboratorLimit} label="협업 슬롯" />
-                  <ParticipantSlotRing occupied={hub.viewerCount} limit={hub.viewerLimit} label="열람 슬롯" />
+                  <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">열람률</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950 tabular-nums">{hub.viewerCount}/{hub.viewerLimit}</p>
+                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-violet-500 transition-[width]"
+                        style={{ width: `${viewerFillRate}%` }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500">열람 좌석은 보조 집계 바로 표현합니다. 현재 {viewerFillRate}%가 배정되었습니다.</p>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">

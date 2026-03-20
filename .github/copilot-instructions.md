@@ -100,6 +100,12 @@ import { InlineError } from '@/components/ui/inline-error';
 - 주요 변경은 추적 가능해야 함 (5-8)
 - N+1 쿼리·무제한 렌더링 금지 (5-9)
 
+### 프리미엄 허브 추가 (3-10 ~ 3-12, 4-7, 5-10 ~ 5-12)
+- 허브 결합도가 높은 메뉴는 첫 화면에 허브 요약 블록 또는 허브 입장 CTA를 포함
+- 사건 관련 메뉴의 허브 배지는 `협업 x/y → 열람 x/y → 미읽음 n → 최근 활동 t` 순서를 고정
+- 사건허브 로비는 데스크톱 `3:6:3` 레이아웃, 최근 활동 기본 7개, 협업률 링 + 열람률 보조 바를 사용
+- `PremiumPageHeader`, `HubContextStrip`, `HubMetricBadge`, `HubReadinessRing`, `ParticipantSlotRing`, `PremiumCaseCard`, `PremiumInfoPanel`, `ActivityFeedPanel`을 공유 프리미티브로 재사용
+
 ### 용어 규칙 (6-2)
 - UI: "조직", "의뢰인", "허브" / 코드: `organizationId`, `clientId`, `hubId`
 

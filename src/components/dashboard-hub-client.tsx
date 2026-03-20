@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
@@ -344,6 +344,9 @@ function useDashboardPlannerState({
   const [plannerCaseId, setPlannerCaseId] = useState(caseOptions[0]?.id ?? '');
   const [plannerRecipientMembershipId, setPlannerRecipientMembershipId] = useState('');
   const [plannerPending, startPlannerTransition] = useTransition();
+  const effectivePlannerRecipientMembershipId = memberOptions.some((item) => item.membershipId === plannerRecipientMembershipId)
+    ? plannerRecipientMembershipId
+    : '';
 
   const selectedPlannerCase = caseOptions.find((item) => item.id === plannerCaseId) ?? null;
 
@@ -364,7 +367,7 @@ function useDashboardPlannerState({
             dueAt: plannerPreview.dueAt,
             scheduleKind: plannerPreview.scheduleKind,
             isImportant: plannerPreview.isImportant,
-            recipientMembershipId: plannerRecipientMembershipId || null
+            recipientMembershipId: effectivePlannerRecipientMembershipId || null
           })
         });
 
@@ -398,12 +401,6 @@ function useDashboardPlannerState({
     });
   };
 
-  useEffect(() => {
-    if (!memberOptions.some((item) => item.membershipId === plannerRecipientMembershipId)) {
-      setPlannerRecipientMembershipId('');
-    }
-  }, [memberOptions, plannerRecipientMembershipId]);
-
   return {
     plannerEnabled,
     setPlannerEnabled,
@@ -413,7 +410,7 @@ function useDashboardPlannerState({
     setPlannerPreview,
     plannerCaseId,
     setPlannerCaseId,
-    plannerRecipientMembershipId,
+    plannerRecipientMembershipId: effectivePlannerRecipientMembershipId,
     setPlannerRecipientMembershipId,
     plannerPending,
     selectedPlannerCase,
@@ -441,18 +438,34 @@ function useDashboardCommunicationState({
 }) {
   const ALL_RECIPIENT_MEMBERSHIP_ID = '__all__';
   const [messageCaseId, setMessageCaseId] = useState(data.caseOptions[0]?.id ?? '');
-  const [orgRecipientMembershipId, setOrgRecipientMembershipId] = useState(ALL_RECIPIENT_MEMBERSHIP_ID);
+  const [orgRecipientMembershipIdState, setOrgRecipientMembershipIdState] = useState(ALL_RECIPIENT_MEMBERSHIP_ID);
   const [targetSearch, setTargetSearch] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [coordinationPreview, setCoordinationPreview] = useState<CoordinationPlan | null>(null);
   const [selectedChecklistIds, setSelectedChecklistIds] = useState<string[]>([]);
   const [communicationView, setCommunicationView] = useState<'organization' | 'direct'>('organization');
-  const [scenarioCurrentUserId, setScenarioCurrentUserId] = useState<string | null>(null);
-  const [scenarioMessageItems, setScenarioMessageItems] = useState<MessageItem[]>(data.recentMessageItems);
-  const [scenarioReadState, setScenarioReadState] = useState<Record<string, string>>({});
-  const [selectedScenarioConversationId, setSelectedScenarioConversationId] = useState(data.organizationConversations[0]?.id ?? '');
+  const [scenarioDraftMessages, setScenarioDraftMessages] = useState<MessageItem[]>([]);
+  const [scenarioReadStateOverrides, setScenarioReadStateOverrides] = useState<Record<string, string>>({});
+  const [selectedScenarioConversationIdState, setSelectedScenarioConversationIdState] = useState(data.organizationConversations[0]?.id ?? '');
   const [messagePending, startMessageTransition] = useTransition();
   const [coordinationPending, startCoordinationTransition] = useTransition();
+  const scenarioCurrentUserId = useMemo(() => {
+    if (!scenarioMode) return null;
+
+    const fallbackMemberId = data.teamMembers[0]
+      ? profileRecord(data.teamMembers[0].profile)?.id ?? data.teamMembers[0].id
+      : null;
+
+    if (typeof window === 'undefined') return fallbackMemberId;
+
+    const raw = window.localStorage.getItem(PLATFORM_SCENARIO_MEMBER_STORAGE_KEY);
+    const savedSelections = raw ? JSON.parse(raw) as Record<string, string> : {};
+    const nextMemberId = savedSelections[scenarioMode];
+
+    return data.teamMembers.some((member) => (profileRecord(member.profile)?.id ?? member.id) === nextMemberId)
+      ? nextMemberId
+      : fallbackMemberId;
+  }, [data.teamMembers, scenarioMode]);
   const effectiveCurrentUserId = scenarioCurrentUserId ?? currentUserId;
   const selectedMessageCase = data.caseOptions.find((item) => item.id === messageCaseId) ?? null;
 
@@ -470,34 +483,45 @@ function useDashboardCommunicationState({
     if (!normalizedSearch) return true;
     return `${item.label} ${item.roleLabel}`.toLowerCase().includes(normalizedSearch);
   });
+  const orgRecipientMembershipId = orgRecipientMembershipIdState === ALL_RECIPIENT_MEMBERSHIP_ID
+    ? ALL_RECIPIENT_MEMBERSHIP_ID
+    : filteredOrgMembers.some((item) => item.membershipId === orgRecipientMembershipIdState)
+      ? orgRecipientMembershipIdState
+      : ALL_RECIPIENT_MEMBERSHIP_ID;
   const activeOrgRecipient = filteredOrgMembers.find((item) => item.membershipId === orgRecipientMembershipId) ?? null;
   const isOrganizationWideRoom = orgRecipientMembershipId === ALL_RECIPIENT_MEMBERSHIP_ID;
   const currentMemberProfile = data.teamMembers.find((member) => (profileRecord(member.profile)?.id ?? member.id) === effectiveCurrentUserId) ?? null;
+  const persistedScenarioMessages = useMemo(() => {
+    if (!scenarioMode || typeof window === 'undefined') return [] as MessageItem[];
+    const rawMessages = window.localStorage.getItem(scenarioMessageStorageKey(scenarioMode));
+    return rawMessages ? JSON.parse(rawMessages) as MessageItem[] : [];
+  }, [scenarioMode]);
+  const persistedScenarioReadState = useMemo(() => {
+    if (!scenarioMode || typeof window === 'undefined') return {} as Record<string, string>;
+    const rawReads = window.localStorage.getItem(scenarioReadStorageKey(scenarioMode, effectiveCurrentUserId));
+    return rawReads ? JSON.parse(rawReads) as Record<string, string> : {};
+  }, [effectiveCurrentUserId, scenarioMode]);
+  const scenarioMessageItems = useMemo(() => {
+    if (!scenarioMode) return data.recentMessageItems;
+    const merged = [...scenarioDraftMessages, ...persistedScenarioMessages, ...data.recentMessageItems]
+      .filter((item, index, list) => list.findIndex((candidate) => candidate.id === item.id) === index);
+    merged.sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
+    return merged;
+  }, [data.recentMessageItems, persistedScenarioMessages, scenarioDraftMessages, scenarioMode]);
+  const scenarioReadState = useMemo(
+    () => ({ ...persistedScenarioReadState, ...scenarioReadStateOverrides }),
+    [persistedScenarioReadState, scenarioReadStateOverrides]
+  );
   const messageItems = scenarioMode ? scenarioMessageItems : data.recentMessageItems;
   const teamMemberNameByProfileId = useMemo(() => Object.fromEntries(data.teamMembers.map((member) => {
     const profile = profileRecord(member.profile);
     return [profile?.id ?? member.id, profile?.full_name ?? member.title ?? '구성원'];
   })), [data.teamMembers]);
   const scenarioConversationRooms = data.organizationConversations;
+  const selectedScenarioConversationId = scenarioConversationRooms.some((room) => room.id === selectedScenarioConversationIdState)
+    ? selectedScenarioConversationIdState
+    : scenarioConversationRooms[0]?.id ?? '';
   const activeScenarioConversation = scenarioConversationRooms.find((room) => room.id === selectedScenarioConversationId) ?? scenarioConversationRooms[0] ?? null;
-
-  useEffect(() => {
-    setScenarioMessageItems(data.recentMessageItems);
-  }, [data.recentMessageItems, scenarioMode]);
-
-  useEffect(() => {
-    if (!scenarioMode) return;
-
-    const rawMessages = window.localStorage.getItem(scenarioMessageStorageKey(scenarioMode));
-    const savedMessages = rawMessages ? JSON.parse(rawMessages) as MessageItem[] : [];
-    const merged = [...savedMessages, ...data.recentMessageItems].filter((item, index, list) => list.findIndex((candidate) => candidate.id === item.id) === index);
-    merged.sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
-    const rawReads = window.localStorage.getItem(scenarioReadStorageKey(scenarioMode, effectiveCurrentUserId));
-    const nextReadState = rawReads ? JSON.parse(rawReads) as Record<string, string> : {};
-
-    setScenarioMessageItems(merged);
-    setScenarioReadState(nextReadState);
-  }, [data.recentMessageItems, effectiveCurrentUserId, scenarioMode]);
 
   useEffect(() => {
     if (!scenarioMode) return;
@@ -537,42 +561,23 @@ function useDashboardCommunicationState({
     return `${room.label} ${room.roleLabel}`.toLowerCase().includes(normalizedSearch);
   }), [normalizedSearch, threadRooms]);
 
-  useEffect(() => {
-    if (!scenarioMode) {
-      setScenarioCurrentUserId(null);
-      setCommunicationView('organization');
-      return;
-    }
+  const updateScenarioReadState = useCallback((profileId: string | null | undefined) => {
+    if (!scenarioMode || !profileId) return;
+    setScenarioReadStateOverrides((current) => ({
+      ...current,
+      [profileId]: current[profileId] ?? new Date().toISOString()
+    }));
+  }, [scenarioMode]);
 
-    const raw = window.localStorage.getItem(PLATFORM_SCENARIO_MEMBER_STORAGE_KEY);
-    const savedSelections = raw ? JSON.parse(raw) as Record<string, string> : {};
-    const nextMemberId = savedSelections[scenarioMode];
-    const fallbackMemberId = data.teamMembers[0] ? profileRecord(data.teamMembers[0].profile)?.id ?? data.teamMembers[0].id : null;
-    const resolvedMemberId = data.teamMembers.some((member) => (profileRecord(member.profile)?.id ?? member.id) === nextMemberId)
-      ? nextMemberId
-      : fallbackMemberId;
-    setScenarioCurrentUserId(resolvedMemberId);
-  }, [data.teamMembers, scenarioMode]);
+  const setOrgRecipientMembershipId = useCallback((nextMembershipId: string) => {
+    setOrgRecipientMembershipIdState(nextMembershipId);
+    const nextRecipient = memberOptions.find((item) => item.membershipId === nextMembershipId);
+    updateScenarioReadState(nextRecipient?.profileId);
+  }, [memberOptions, updateScenarioReadState]);
 
-  useEffect(() => {
-    if (!scenarioMode) return;
-
-    if (!scenarioConversationRooms.some((room) => room.id === selectedScenarioConversationId)) {
-      setSelectedScenarioConversationId(scenarioConversationRooms[0]?.id ?? '');
-    }
-  }, [scenarioConversationRooms, scenarioMode, selectedScenarioConversationId]);
-
-  useEffect(() => {
-    if (orgRecipientMembershipId === ALL_RECIPIENT_MEMBERSHIP_ID) return;
-    if (!filteredOrgMembers.length || !filteredOrgMembers.some((member) => member.membershipId === orgRecipientMembershipId)) {
-      setOrgRecipientMembershipId(ALL_RECIPIENT_MEMBERSHIP_ID);
-    }
-  }, [filteredOrgMembers, orgRecipientMembershipId]);
-
-  useEffect(() => {
-    if (!scenarioMode || !activeOrgRecipient?.profileId) return;
-    setScenarioReadState((current) => ({ ...current, [activeOrgRecipient.profileId]: new Date().toISOString() }));
-  }, [activeOrgRecipient?.profileId, scenarioMode]);
+  const setSelectedScenarioConversationId = useCallback((nextConversationId: string) => {
+    setSelectedScenarioConversationIdState(nextConversationId);
+  }, []);
 
   const visibleMessages = useMemo(() => {
     if (scenarioMode) {
@@ -619,7 +624,7 @@ function useDashboardCommunicationState({
           sender: { full_name: profileRecord(currentMemberProfile?.profile)?.full_name ?? '나' }
         };
 
-        setScenarioMessageItems((current) => [newMessage, ...current]);
+        setScenarioDraftMessages((current) => [newMessage, ...current]);
         setMessageInput('');
       });
       return;
@@ -768,7 +773,7 @@ function useDashboardCommunicationState({
         sender: { full_name: profileRecord(currentMemberProfile?.profile)?.full_name ?? '나' }
       };
 
-      setScenarioMessageItems((current) => [memoMessage, ...current]);
+      setScenarioDraftMessages((current) => [memoMessage, ...current]);
       setCoordinationPreview(null);
       setSelectedChecklistIds([]);
       return;
