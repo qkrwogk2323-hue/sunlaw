@@ -64,6 +64,9 @@ export default async function ClientDetailPage({
           <p className="text-sm text-slate-700">관계/지위: <span className="font-medium text-slate-900">{detail.relationLabel ?? '-'}</span></p>
           <div className="md:col-span-2 flex flex-wrap gap-2">
             <Badge tone={detail.isPortalEnabled ? 'green' : 'amber'}>{detail.isPortalEnabled ? '포털 활성' : '포털 대기'}</Badge>
+            {detail.linkStatus === 'pending_unlink' ? <Badge tone="amber">연결 해제 대기</Badge> : null}
+            {detail.linkStatus === 'unlinked' ? <Badge tone="slate">연결 해제</Badge> : null}
+            {detail.linkStatus === 'orphan_review' ? <Badge tone="red">연결 검토 중</Badge> : null}
             {detail.tempLoginId ? <Badge tone="slate">임시아이디 {detail.tempLoginId}</Badge> : null}
             <Badge tone={detail.mustChangePassword ? 'amber' : 'green'}>{detail.mustChangePassword ? '초기 이행 필요' : '초기 이행 완료'}</Badge>
           </div>

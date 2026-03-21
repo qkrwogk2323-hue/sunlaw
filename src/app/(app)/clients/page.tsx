@@ -13,6 +13,14 @@ import { listClientRosterSummary } from '@/lib/queries/clients';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 
+function linkStatusTone(status: string): 'green' | 'amber' | 'red' | 'slate' {
+  if (status === '연결 완료') return 'green';
+  if (status === '연결 해제 대기') return 'amber';
+  if (status === '연결 검토 중') return 'red';
+  if (status === '연결 해제') return 'slate';
+  return 'slate';
+}
+
 function statusTone(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
   if (value.includes('대기') || value.includes('발송')) return 'amber' as const;
@@ -82,7 +90,7 @@ export default async function ClientsPage({
             <p className="mt-1 text-sm text-slate-600">연락처: <span className="font-medium text-slate-900">{item.contactPhone ?? '-'}</span></p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge tone={item.caseId ? 'blue' : 'slate'}>{item.caseId ? '사건 연결' : '사건 미연결'}</Badge>
+            <Badge tone={linkStatusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
             <Badge tone="slate">의뢰인 상세 관리</Badge>
           </div>
         </div>
