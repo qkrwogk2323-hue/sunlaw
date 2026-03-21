@@ -233,6 +233,9 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                   <Link href={`/cases/${hub.caseId}?tab=billing` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
                     비용 관리 열기
                   </Link>
+                  <Link href={`/contracts?caseId=${hub.caseId}` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                    계약 관리 열기
+                  </Link>
                   <Link href={`/cases/${hub.caseId}?tab=schedule` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
                     일정 확인
                   </Link>

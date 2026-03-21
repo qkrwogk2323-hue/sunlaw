@@ -181,7 +181,8 @@ function getOrganizationSections({
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
       { href: '/settings/team', label: '구성원 관리', icon: Building2 },
-      { href: '/billing', label: '계약 / 비용 관리', icon: Receipt }
+      { href: '/contracts', label: '계약 관리', icon: Receipt },
+      { href: '/billing', label: '비용 관리', icon: Receipt }
     );
   }
 

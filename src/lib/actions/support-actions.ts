@@ -164,9 +164,25 @@ export async function decideSupportRequestAction(formData: FormData) {
       title: `지원 접속 ${decision === 'approved' ? '승인' : '반려'} - ${requestRow.target_name_snapshot}`,
       body: `${auth.profile.full_name} 사용자가 ${requestRow.organization_name_snapshot} 조직의 지원 접속 요청을 ${decision === 'approved' ? '승인' : '반려'}했습니다.`,
       action_label: '지원 요청 보기',
-      action_href: '/admin/support'
+      action_href: '/admin/support',
+      destination_type: 'internal_route',
+      destination_url: '/admin/support'
     }
   ]);
+
+  void supabase.from('audit_logs').insert({
+    actor_id: auth.user.id,
+    action: decision === 'approved' ? 'support_request.approved' : 'support_request.rejected',
+    resource_type: 'support_access_request',
+    resource_id: requestId,
+    organization_id: requestRow.organization_id,
+    meta: {
+      requested_by: requestRow.requested_by,
+      organization_name: requestRow.organization_name_snapshot,
+      target_name: requestRow.target_name_snapshot,
+      approval_note: approvalNote || null
+    }
+  });
 
   revalidatePath('/admin/support');
 }

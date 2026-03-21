@@ -41,6 +41,32 @@ async function notifyProfiles(supabase: Awaited<ReturnType<typeof createSupabase
   }
 }
 
+async function logCaseAudit({
+  actorId,
+  organizationId,
+  resourceType,
+  resourceId,
+  action,
+  meta
+}: {
+  actorId: string;
+  organizationId: string;
+  resourceType: string;
+  resourceId: string;
+  action: string;
+  meta?: Record<string, unknown>;
+}) {
+  const supabase = await createSupabaseServerClient();
+  void supabase.from('audit_logs').insert({
+    actor_id: actorId,
+    action,
+    resource_type: resourceType,
+    resource_id: resourceId,
+    organization_id: organizationId,
+    meta: meta ?? {}
+  });
+}
+
 function asDueDateTime(value?: string | null) {
   if (!value) return null;
   const normalized = `${value}`.trim();
@@ -741,6 +767,15 @@ export async function requestDocumentReviewAction(documentId: string) {
     }))
   );
 
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: document.organization_id,
+    resourceType: 'case_document',
+    resourceId: documentId,
+    action: 'document.review_requested',
+    meta: { case_id: document.case_id, title: document.title }
+  });
+
   revalidatePath(`/cases/${document.case_id}`);
   revalidatePath('/dashboard');
   revalidatePath('/inbox');
@@ -828,10 +863,21 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
         title: `결재 ${parsed.decision === 'approved' ? '승인' : '반려'}: ${document.title}`,
         body: `${auth.profile.full_name} 사용자가 결재를 ${parsed.decision === 'approved' ? '승인' : '반려'}했습니다.`,
         action_label: '문서 확인하기',
-        action_href: `/cases/${document.case_id}?tab=documents`
+        action_href: `/cases/${document.case_id}?tab=documents`,
+        destination_type: 'internal_route',
+        destination_url: `/cases/${document.case_id}?tab=documents`
       }
     ]);
   }
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: document.organization_id,
+    resourceType: 'case_document',
+    resourceId: documentId,
+    action: parsed.decision === 'approved' ? 'document.approved' : 'document.rejected',
+    meta: { case_id: document.case_id, title: document.title, review_note: parsed.reviewNote || null }
+  });
 
   revalidatePath(`/cases/${document.case_id}`);
   revalidatePath('/dashboard');
