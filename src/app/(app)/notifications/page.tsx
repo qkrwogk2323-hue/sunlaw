@@ -8,6 +8,8 @@ import {
   restoreNotificationAction,
   updateNotificationChannelPreferenceAction
 } from '@/lib/actions/notification-actions';
+import Link from 'next/link';
+import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -70,6 +72,33 @@ function actionCopy(item: NotificationQueueItem) {
   return '조직 소통 화면에서 확인';
 }
 
+function queueMeaningCards(items: NotificationQueueItem[]) {
+  const urgent = items.filter((item) => item.status === 'active' && item.priority === 'urgent').length;
+  const pending = items.filter((item) => item.status === 'active' && item.priority !== 'urgent').length;
+  const reference = items.filter((item) => item.status === 'read' || item.status === 'resolved' || item.status === 'archived').length;
+
+  return [
+    {
+      label: '즉시 처리',
+      value: urgent,
+      tone: 'red' as const,
+      description: '오늘 바로 움직여야 하는 긴급 알림입니다.'
+    },
+    {
+      label: '검토 필요',
+      value: pending,
+      tone: 'blue' as const,
+      description: '읽고 판단해야 하는 일반 업무 알림입니다.'
+    },
+    {
+      label: '완료 / 참고',
+      value: reference,
+      tone: 'slate' as const,
+      description: '이미 확인했거나 이력으로 남겨둘 알림입니다.'
+    }
+  ];
+}
+
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
   const openHref = notificationOpenHref(item.notificationId, item.destinationUrl, item.organizationId);
 
@@ -97,12 +126,13 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
           <input type="checkbox" name="notificationIds" value={item.notificationId} form="bulk-queue-form" className="h-3.5 w-3.5" />
           선택
         </label>
-        <a
-          href={openHref}
+        <Link
+          href={openHref as Route}
+          prefetch
           className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
         >
           열기
-        </a>
+        </Link>
 
         {(item.status === 'active' || item.status === 'read') ? (
           <ClientActionForm action={markNotificationResolvedAction} successTitle="해결 처리되었습니다.">
@@ -221,6 +251,7 @@ export default async function NotificationsPage({
     priority,
     state
   });
+  const meaningCards = queueMeaningCards(queueView.items);
 
   return (
     <div className="space-y-5">
@@ -245,12 +276,28 @@ export default async function NotificationsPage({
         </div>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-3">
+        {meaningCards.map((card) => (
+          <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
+                <p className="mt-2 text-3xl font-semibold text-slate-950">{card.value}</p>
+              </div>
+              <Badge tone={card.tone}>{card.label}</Badge>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-slate-500">{card.description}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <UnifiedListSearch
           action="/notifications"
           defaultValue={keyword}
           placeholder="제목, 조직, 처리 안내 검색"
           ariaLabel="알림 센터 목록 검색"
+          sticky
           hiddenFields={{
             entity,
             section,
