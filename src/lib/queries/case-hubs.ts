@@ -73,6 +73,45 @@ export type CaseHubDetail = CaseHubSummary & {
   recentActivity: CaseHubActivityItem[];
 };
 
+async function listLegacyCaseHubIds(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  organizationId: string
+) {
+  const { data, error } = await admin
+    .from('case_hubs')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('lifecycle_status', 'active');
+
+  if (error) {
+    console.error('[case-hubs] legacy fallback error:', error.message);
+    return [];
+  }
+
+  return [...new Set(((data ?? []) as any[]).map((row) => row.id).filter(Boolean))];
+}
+
+async function listAccessibleCaseHubIds(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  organizationId: string
+) {
+  const { data, error } = await admin
+    .from('case_hub_organizations')
+    .select('hub_id')
+    .eq('organization_id', organizationId)
+    .eq('status', 'active');
+
+  if (error) {
+    console.error('[case-hubs] bridge error, falling back to legacy owner path:', error.message);
+    return listLegacyCaseHubIds(admin, organizationId);
+  }
+
+  const bridgeHubIds = [...new Set(((data ?? []) as any[]).map((row) => row.hub_id).filter(Boolean))];
+  if (bridgeHubIds.length > 0) return bridgeHubIds;
+
+  return listLegacyCaseHubIds(admin, organizationId);
+}
+
 // ────────────────────────────────────────────────────────────────────
 // getCaseHubsForCases: 사건목록용 – case_id → 허브 기본 정보 맵
 // ────────────────────────────────────────────────────────────────────
@@ -89,12 +128,14 @@ export async function getCaseHubsForCases(
   const currentProfileId = auth.profile.id;
 
   const admin = createSupabaseAdminClient();
+  const accessibleHubIds = await listAccessibleCaseHubIds(admin, organizationId);
+  if (!accessibleHubIds.length) return empty;
 
   const { data: hubs, error } = await admin
     .from('case_hubs')
     .select('id, organization_id, case_id, primary_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
-    .eq('organization_id', organizationId)
     .eq('lifecycle_status', 'active')
+    .in('id', accessibleHubIds)
     .in('case_id', caseIds);
 
   if (error) { console.error('[getCaseHubsForCases] query error:', error.message); return empty; }
@@ -197,12 +238,14 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
   const currentProfileId = auth.profile.id;
 
   const admin = createSupabaseAdminClient();
+  const accessibleHubIds = await listAccessibleCaseHubIds(admin, organizationId);
+  if (!accessibleHubIds.length) return [];
 
   const { data: hubs, error } = await admin
     .from('case_hubs')
     .select('id, organization_id, case_id, primary_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
-    .eq('organization_id', organizationId)
     .eq('lifecycle_status', 'active')
+    .in('id', accessibleHubIds)
     .order('updated_at', { ascending: false });
 
   if (error) { console.error('[getCaseHubList] query error:', error.message); return []; }
@@ -309,12 +352,13 @@ export async function getCaseHubDetail(
   const currentProfileId = auth.profile.id;
 
   const admin = createSupabaseAdminClient();
+  const accessibleHubIds = await listAccessibleCaseHubIds(admin, organizationId);
+  if (!accessibleHubIds.includes(hubId)) return null;
 
   const { data: hub, error: hubError } = await admin
     .from('case_hubs')
     .select('*')
     .eq('id', hubId)
-    .eq('organization_id', organizationId)
     .eq('lifecycle_status', 'active')
     .maybeSingle();
 
