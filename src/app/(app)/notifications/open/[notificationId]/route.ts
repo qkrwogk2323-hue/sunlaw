@@ -13,6 +13,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.redirect(new URL(targetHref, request.url));
   } catch {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/notifications', request.url));
   }
 }

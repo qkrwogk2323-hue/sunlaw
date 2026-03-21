@@ -118,8 +118,10 @@ export async function submitClientSignupAction(formData: FormData) {
       profile_id: auth.user.id,
       resident_number_masked: residentNumberMasked
     },
-    action_label: '알림 대기열 보기',
-    action_href: '/notifications'
+    action_label: '의뢰인 가입 검토',
+    action_href: '/client-access',
+    destination_type: 'internal_route',
+    destination_url: '/client-access'
   }));
 
   const { error: notificationError } = await admin.from('notifications').insert([selfNotification, ...adminNotifications]);
@@ -189,8 +191,10 @@ export async function createClientServiceRequestAction(formData: FormData) {
       profile_id: auth.user.id,
       request_kind: parsed.requestKind
     },
-    action_label: '알림 보기',
-    action_href: '/notifications'
+    action_label: '고객센터 문의 확인',
+    action_href: '/admin/support',
+    destination_type: 'internal_route',
+    destination_url: '/admin/support'
   }));
 
   if (notifications.length) {

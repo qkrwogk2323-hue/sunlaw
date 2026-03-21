@@ -93,14 +93,14 @@ export default async function OrganizationSettingsPage({
         <p className="mt-2 text-sm text-slate-600">회사소개, 회사정보, 환경설정을 클릭하면 각각 바로 수정할 수 있습니다.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-        <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-900">
-          <Link href="/settings/organization?section=intro" className={`block rounded-xl border px-3 py-2 text-xl font-semibold ${activeSection === 'intro' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-100'}`}>
+        <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
+          <Link href="/settings/organization?section=intro" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'intro' ? 'border-slate-900 bg-slate-900 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             회사소개
           </Link>
-          <Link href="/settings/organization?section=info" className={`block rounded-xl border px-3 py-2 text-xl font-semibold ${activeSection === 'info' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-100'}`}>
+          <Link href="/settings/organization?section=info" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'info' ? 'border-slate-900 bg-slate-900 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             회사정보
           </Link>
-          <Link href="/settings/organization?section=env" className={`block rounded-xl border px-3 py-2 text-xl font-semibold ${activeSection === 'env' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-100'}`}>
+          <Link href="/settings/organization?section=env" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'env' ? 'border-slate-900 bg-slate-900 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             환경설정
           </Link>
         </div>

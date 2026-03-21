@@ -280,7 +280,7 @@ function notificationActionLabel(item: NotificationItem) {
 
 function toNotificationOpenHref(item: NotificationItem) {
   const target = (item.destination_url ?? item.action_href ?? '').trim();
-  if (!target.startsWith('/')) return '/dashboard' as Route;
+  if (!target.startsWith('/')) return '/notifications' as Route;
   const params = new URLSearchParams();
   params.set('href', target);
   if (item.organization_id) {
@@ -969,6 +969,7 @@ export function DashboardHubClient({
       label: '중요 알림',
       value: todayCaseFocus.length,
       helper: '오늘 바로 확인할 사건 기준',
+      href: '/notifications?priority=urgent',
       className: 'border-rose-200 bg-rose-50/80',
       valueClassName: 'text-rose-950'
     },
@@ -976,6 +977,7 @@ export function DashboardHubClient({
       label: '승인 요청',
       value: pendingClientAccessCount,
       helper: '검토 대기 중인 신규 요청',
+      href: '/notifications?section=immediate',
       className: 'border-emerald-200 bg-emerald-50/80',
       valueClassName: 'text-emerald-950'
     },
@@ -983,6 +985,7 @@ export function DashboardHubClient({
       label: '후속 처리',
       value: approvedClientAccessCount,
       helper: '연결 이후 처리할 항목',
+      href: '/notifications?section=confirm',
       className: 'border-violet-200 bg-violet-50/80',
       valueClassName: 'text-violet-950'
     }
@@ -1106,11 +1109,11 @@ export function DashboardHubClient({
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
-              <div key={item.label} className={`flex min-h-32 min-w-28 flex-col rounded-2xl border px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)] ${item.className}`}>
-                <p className="text-[11px] font-medium tracking-[0.16em] text-slate-500">{item.label}</p>
-                <p className={`mt-2 text-2xl font-semibold leading-none ${item.valueClassName}`}>{item.value}</p>
+              <Link key={item.label} href={item.href as Route} className={`flex min-h-32 min-w-28 flex-col rounded-2xl border px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)] transition hover:brightness-95 ${item.className}`}>
+                <p className="text-[11px] font-medium tracking-[0.16em] text-slate-500 uppercase">{item.label}</p>
+                <p className={`mt-3 text-3xl font-bold leading-none tabular-nums ${item.valueClassName}`}>{item.value}</p>
                 <p className="mt-auto pt-3 text-xs text-slate-600">{item.helper}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

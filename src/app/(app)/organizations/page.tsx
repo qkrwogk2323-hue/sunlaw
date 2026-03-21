@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { listAccessibleOrganizations, listOrganizationMemberships } from '@/lib/queries/organizations';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
@@ -19,14 +20,26 @@ function requestStatusLabel(status: string) {
   return '검토 대기';
 }
 
-export default async function OrganizationsPage() {
+export default async function OrganizationsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
   const auth = await requireAuthenticatedUser();
   const currentOrganizationId = getEffectiveOrganizationId(auth);
+  const resolved = searchParams ? await searchParams : undefined;
+  const keyword = `${resolved?.q ?? ''}`.trim().toLowerCase();
   const [organizations, memberships, collaboration] = await Promise.all([
     listAccessibleOrganizations(),
     listOrganizationMemberships(),
     getCollaborationOverview(currentOrganizationId)
   ]);
+
+  const filteredOrganizations = keyword
+    ? organizations.filter((org: any) =>
+        `${org.name ?? ''} ${org.slug ?? ''} ${org.business_number ?? ''}`.toLowerCase().includes(keyword)
+      )
+    : organizations;
 
   return (
     <div className="space-y-6">
@@ -35,14 +48,16 @@ export default async function OrganizationsPage() {
         <p className="mt-2 text-sm text-slate-600">협업할 상대 조직을 찾고, 제안 현황과 승인된 업무 허브까지 한 번에 관리합니다.</p>
       </div>
 
+      <UnifiedListSearch action="/organizations" placeholder="조직명, 사업자번호, 슬러그 검색..." ariaLabel="조직 검색" defaultValue={keyword} />
+
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
-            <CardTitle>협업 가능한 조직</CardTitle>
+            <CardTitle>협업 가능한 조직 {filteredOrganizations.length !== organizations.length ? <span className="text-sm font-normal text-slate-500">({filteredOrganizations.length}/{organizations.length})</span> : null}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {organizations.length ? (
-              organizations.map((organization: any) => {
+            {filteredOrganizations.length ? (
+              filteredOrganizations.map((organization: any) => {
                 const role = memberships.find((membership: any) => membership.organization_id === organization.id)?.role ?? 'accessible';
                 const isCurrentOrganization = organization.id === currentOrganizationId;
                 return (

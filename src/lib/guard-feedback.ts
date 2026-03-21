@@ -75,6 +75,50 @@ export function normalizeGuardFeedback(
 ): GuardFeedback {
   const parsed = parseGuardFeedback(error);
   if (parsed) return parsed;
+
+  if (error instanceof Error && error.message.trim().startsWith('[')) {
+    try {
+      const parsedIssues = JSON.parse(error.message) as Array<{ path?: string[]; message?: string }>;
+      if (Array.isArray(parsedIssues) && parsedIssues.length > 0) {
+        const firstIssue = parsedIssues[0];
+        const fieldHint = Array.isArray(firstIssue?.path) && firstIssue.path.length > 0
+          ? `[${firstIssue.path.join(' › ')}] `
+          : '';
+        return {
+          ...fallback,
+          type: 'validation_failed',
+          code: 'VALIDATION_FAILED',
+          blocked: '입력값 오류로 작업이 차단되었습니다.',
+          cause: `${fieldHint}${firstIssue?.message ?? '입력값을 확인해 주세요.'}`,
+          resolution: '표시된 항목을 수정한 뒤 다시 제출해 주세요.'
+        };
+      }
+    } catch {
+      // ignore malformed message payload and continue with the standard fallback path
+    }
+  }
+
+  // ZodError duck-type: .issues 배열이 있으면 첫 번째 사람이 읽을 수 있는 메시지를 추출
+  if (
+    error instanceof Error
+    && Array.isArray((error as any).issues)
+    && (error as any).issues.length > 0
+  ) {
+    const firstIssue = (error as any).issues[0];
+    const fieldHint = Array.isArray(firstIssue?.path) && firstIssue.path.length > 0
+      ? `[${firstIssue.path.join(' › ')}] `
+      : '';
+    const message = `${fieldHint}${firstIssue?.message ?? '입력값을 확인해 주세요.'}`;
+    return {
+      ...fallback,
+      type: 'validation_failed',
+      code: 'VALIDATION_FAILED',
+      blocked: '입력값 오류로 작업이 차단되었습니다.',
+      cause: message,
+      resolution: '표시된 항목을 수정한 뒤 다시 제출해 주세요.'
+    };
+  }
+
   if (error instanceof Error && error.message.trim()) {
     return {
       ...fallback,

@@ -129,7 +129,7 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <Link
           href={openHref as Route}
           prefetch
-          className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+          className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-900 bg-slate-900 px-3 text-xs font-medium !text-white transition hover:bg-slate-800"
         >
           열기
         </Link>
@@ -168,20 +168,6 @@ function QueueSection({
 }) {
   const meta = sectionMeta(section);
   const totalCount = groups.reduce((sum, group) => sum + group.count, 0);
-  let remaining = 5;
-  const limitedGroups = groups
-    .map((group) => {
-      if (remaining <= 0) return null;
-      const items = group.items.slice(0, remaining);
-      remaining -= items.length;
-      if (!items.length) return null;
-      return {
-        ...group,
-        count: items.length,
-        items
-      };
-    })
-    .filter(Boolean) as typeof groups;
 
   return (
     <Card>
@@ -193,7 +179,7 @@ function QueueSection({
       </CardHeader>
       <CardContent className="space-y-3">
         {(['case', 'schedule', 'client', 'collaboration'] as QueueEntityType[]).map((entityType) => {
-          const entityGroups = limitedGroups.filter((group) => group.entityType === entityType);
+          const entityGroups = groups.filter((group) => group.entityType === entityType);
           if (!entityGroups.length) return null;
 
           return (

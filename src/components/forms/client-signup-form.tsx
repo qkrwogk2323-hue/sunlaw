@@ -19,27 +19,31 @@ export function ClientSignupForm() {
   const residentNumberInvalid = residentNumber.length > 0 && normalizedResidentNumber.length === 13 && !isValidResidentRegistrationNumber(normalizedResidentNumber);
 
   return (
-    <ClientActionForm action={submitClientSignupAction} successTitle="가입 신청이 접수되었습니다." className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+    <ClientActionForm action={submitClientSignupAction} successTitle="가입 신청이 접수되었습니다." errorTitle="가입 접수에 실패했습니다." className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        <span className="text-rose-500 font-medium">*</span> 표시 항목은 필수입니다. 주소는 선택 항목입니다.
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">이름</span>
+          <span className="font-medium text-slate-900">이름 <span className="text-rose-500">*</span></span>
           <Input name="legalName" placeholder="홍길동" required />
         </label>
         <label className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">연락처</span>
+          <span className="font-medium text-slate-900">연락처 <span className="text-rose-500">*</span></span>
           <Input name="phone" placeholder="01012345678" required />
+          <p className="text-xs text-slate-400">하이픈 없이 숫자만 입력</p>
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">주민등록번호</span>
+          <span className="font-medium text-slate-900">주민등록번호 <span className="text-rose-500">*</span></span>
           <Input name="residentNumber" placeholder="생년월일 6자리와 뒤 7자리를 입력해 주세요" required value={residentNumber} onChange={(event) => setResidentNumber(event.target.value)} />
           {residentNumberInvalid ? <p className="text-xs leading-6 text-rose-600">유효한 주민등록번호를 입력해 주세요.</p> : null}
           <p className="text-xs leading-6 text-slate-500">민감정보는 일반 프로필과 분리된 보호 저장소에 암호화 보관되며, 화면에는 마스킹 값만 사용합니다.</p>
         </label>
         <label className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">주민등록번호 확인</span>
+          <span className="font-medium text-slate-900">주민등록번호 확인 <span className="text-rose-500">*</span></span>
           <Input placeholder="주민등록번호를 한 번 더 입력해 주세요" required value={residentNumberConfirm} onChange={(event) => setResidentNumberConfirm(event.target.value)} />
           {residentNumberMismatch ? <p className="text-xs leading-6 text-rose-600">주민번호가 다릅니다.</p> : null}
         </label>

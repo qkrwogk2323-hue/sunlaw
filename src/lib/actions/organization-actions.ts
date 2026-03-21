@@ -23,6 +23,7 @@ import {
   normalizeResidentRegistrationNumber
 } from '@/lib/format';
 import { parseCsvFile, pickCsvValue } from '@/lib/csv';
+import { normalizeGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { encryptString } from '@/lib/pii';
@@ -72,6 +73,22 @@ function resolveRequesterEmail(auth: { user: { email?: string | null }; profile:
 }
 
 function getActionErrorMessage(error: unknown, fallback: string) {
+  const guardFeedback = parseGuardFeedback(error);
+  if (guardFeedback) {
+    return guardFeedback.cause;
+  }
+
+  if (error instanceof z.ZodError || (error instanceof Error && error.message.trim().startsWith('['))) {
+    const feedback = normalizeGuardFeedback(error, {
+      type: 'validation_failed',
+      code: 'VALIDATION_FAILED',
+      blocked: fallback,
+      cause: '입력값 또는 첨부한 파일 형식을 확인해 주세요.',
+      resolution: '필수 항목과 입력 형식을 수정한 뒤 다시 제출해 주세요.'
+    });
+    return feedback.cause;
+  }
+
   if (error instanceof Error && error.message.trim()) {
     return error.message;
   }
@@ -1090,8 +1107,10 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
           request_id: requestRow?.id ?? null,
           verification_status: verification.status
         },
-        action_label: '알림 보기',
-        action_href: '/notifications'
+        action_label: '신청 현황 확인',
+        action_href: '/notifications',
+        destination_type: 'internal_route',
+        destination_url: '/notifications'
       });
 
       if (notificationError) throw notificationError;

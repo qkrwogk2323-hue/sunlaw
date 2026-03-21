@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   MessageSquareText,
   Network,
+  Receipt,
   Search,
   Settings,
   ShieldAlert,
@@ -159,7 +160,8 @@ function getOrganizationSections({
 
     organizationItems.push(
       { href: '/cases', label: '사건 목록', icon: FileText },
-      { href: '/clients', label: '의뢰인 관리', icon: Users }
+      { href: '/clients', label: '의뢰인 관리', icon: Users },
+      { href: '/billing', label: '비용 관리', icon: Receipt }
     );
     }
   }
@@ -178,7 +180,8 @@ function getOrganizationSections({
   if (!isPlatformManagementOrganizationView && (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')) {
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
-      { href: '/settings/team', label: '구성원 관리', icon: Building2 }
+      { href: '/settings/team', label: '구성원 관리', icon: Building2 },
+      { href: '/billing', label: '계약 / 비용 관리', icon: Receipt }
     );
   }
 

@@ -203,12 +203,18 @@ export async function POST(request: Request) {
   }
 
   const notificationBody = `${summary}\n\n${selectedItems.map((item, index) => `${index + 1}. ${item.label}${item.dueAt ? ` · ${item.dueAt.slice(0, 10)}` : ''}`).join('\n')}`;
+  const destinationUrl = caseRow?.id ? `/cases/${caseRow.id}` : '/notifications';
   const { error: notificationError } = await admin.from('notifications').insert(
     recipientProfileIds.map((recipientProfileId) => ({
       organization_id: organizationId,
       case_id: caseRow?.id ?? null,
       recipient_profile_id: recipientProfileId,
       kind: 'generic',
+      entity_type: 'collaboration',
+      action_label: '소통 내용 확인',
+      action_href: destinationUrl,
+      destination_type: 'internal_route',
+      destination_url: destinationUrl,
       title,
       body: notificationBody,
       payload: {

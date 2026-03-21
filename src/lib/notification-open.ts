@@ -11,7 +11,7 @@ function revalidateNotificationViews() {
 }
 
 function normalizeRelativeHref(value: string) {
-  return value.startsWith('/') ? value : '/dashboard';
+  return value.startsWith('/') ? value : '/notifications';
 }
 
 async function getOwnedNotification(notificationId: string) {

@@ -147,41 +147,87 @@ export function OrganizationSignupForm({
     <ClientActionForm
       action={formAction}
       successTitle={isEditMode ? '조직 개설 신청 수정 완료' : '조직 개설 신청 완료'}
+      errorTitle="조직 개설 신청에 실패했습니다."
       errorCause={isEditMode ? '조직 개설 신청 수정 정보를 저장하지 못했습니다.' : '조직 개설 신청 정보를 접수하지 못했습니다.'}
       errorResolution="입력값과 첨부 파일 형식을 확인한 뒤 다시 제출해 주세요."
       className="grid gap-3 md:grid-cols-2"
     >
       {requestId ? <input type="hidden" name="requestId" value={requestId} /> : null}
-      <Input name="name" placeholder="조직명" defaultValue={defaultValues?.name ?? ''} required />
-      <select
-        name="kind"
-        value={organizationKind}
-        onChange={(event) => setOrganizationKind(event.target.value)}
-        className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
-      >
-        <option value="law_firm">법률사무소/법무법인</option>
-        <option value="collection_company">신용정보회사</option>
-        <option value="mixed_practice">혼합형 조직</option>
-        <option value="corporate_legal_team">기업 법무팀</option>
-        <option value="other">기타</option>
-      </select>
-      <Input
-        name="organizationIndustry"
-        placeholder="업종 상세 (예: 민사/형사 소송, 채권관리, 기타 업종)"
-        defaultValue={defaultValues?.organizationIndustry ?? ''}
-        required={showIndustryInput}
-      />
-      <Input name="businessNumber" placeholder="사업자등록번호 (예: 123-45-67890)" defaultValue={defaultValues?.businessNumber ?? ''} required />
-      <Input name="representativeName" placeholder="대표자명" defaultValue={defaultValues?.representativeName ?? ''} />
-      <Input name="representativeTitle" placeholder="대표자 직함" defaultValue={defaultValues?.representativeTitle ?? ''} />
-      <Input name="email" placeholder="대표 이메일" type="email" defaultValue={defaultValues?.email ?? ''} />
-      <Input name="phone" placeholder="대표 전화번호" defaultValue={defaultValues?.phone ?? ''} />
-      <Input name="websiteUrl" placeholder="웹사이트 URL" defaultValue={defaultValues?.websiteUrl ?? ''} />
-      <Input name="addressLine1" placeholder="주소" className="md:col-span-2" />
-      <Input name="addressLine2" placeholder="상세주소" className="md:col-span-2" />
-      <Input name="postalCode" placeholder="우편번호" />
+      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        <span className="text-rose-500 font-medium">*</span> 필수 항목입니다. 사업자등록번호는 숫자 10자리 체크섬 검증을 통과해야 하며, 사업자등록증 파일(PDF/PNG/JPG, 10MB 이하)은 반드시 첨부해야 합니다.
+      </div>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">조직명 <span className="text-rose-500">*</span></span>
+        <Input name="name" placeholder="법무법인 홍길동" defaultValue={defaultValues?.name ?? ''} required />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">조직 유형 <span className="text-rose-500">*</span></span>
+        <select
+          name="kind"
+          value={organizationKind}
+          onChange={(event) => setOrganizationKind(event.target.value)}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
+        >
+          <option value="law_firm">법률사무소/법무법인</option>
+          <option value="collection_company">신용정보회사</option>
+          <option value="mixed_practice">혼합형 조직</option>
+          <option value="corporate_legal_team">기업 법무팀</option>
+          <option value="other">기타</option>
+        </select>
+      </label>
+      {showIndustryInput ? (
+        <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+          <span className="font-medium text-slate-900">업종 상세 <span className="text-rose-500">*</span></span>
+          <Input
+            name="organizationIndustry"
+            placeholder="예: 민사/형사 소송, 채권관리, 기타 업종"
+            defaultValue={defaultValues?.organizationIndustry ?? ''}
+            required
+          />
+        </label>
+      ) : (
+        <input type="hidden" name="organizationIndustry" value={defaultValues?.organizationIndustry ?? ''} />
+      )}
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">사업자등록번호 <span className="text-rose-500">*</span></span>
+        <Input name="businessNumber" placeholder="123-45-67890 (숫자 10자리)" defaultValue={defaultValues?.businessNumber ?? ''} required />
+        <p className="text-xs text-slate-400">하이픈 포함 또는 제외 모두 입력 가능. 체크섬 자동 검증.</p>
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">대표자명</span>
+        <Input name="representativeName" placeholder="홍길동" defaultValue={defaultValues?.representativeName ?? ''} />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">대표자 직함</span>
+        <Input name="representativeTitle" placeholder="대표 변호사" defaultValue={defaultValues?.representativeTitle ?? ''} />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">대표 이메일</span>
+        <Input name="email" placeholder="contact@example.com" type="email" defaultValue={defaultValues?.email ?? ''} />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">대표 전화번호</span>
+        <Input name="phone" placeholder="02-1234-5678" defaultValue={defaultValues?.phone ?? ''} />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">웹사이트 URL</span>
+        <Input name="websiteUrl" placeholder="https://example.com" type="url" defaultValue={defaultValues?.websiteUrl ?? ''} />
+        <p className="text-xs text-slate-400">https:// 포함한 전체 주소 (입력 시 검증)</p>
+      </label>
+      <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+        <span className="font-medium text-slate-900">주소</span>
+        <Input name="addressLine1" placeholder="서울시 강남구 테헤란로 123" />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+        <span className="font-medium text-slate-900">상세주소</span>
+        <Input name="addressLine2" placeholder="10층 1001호" />
+      </label>
+      <label className="space-y-1 text-sm text-slate-700">
+        <span className="font-medium text-slate-900">우편번호</span>
+        <Input name="postalCode" placeholder="06234" />
+      </label>
       <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-        <p className="text-sm font-medium text-slate-900">사업자등록증 업로드</p>
+        <p className="text-sm font-medium text-slate-900">사업자등록증 업로드 {!isEditMode ? <span className="text-rose-500">*</span> : <span className="text-xs font-normal text-slate-500">(수정 시 생략 가능)</span>}</p>
         <input
           name="businessRegistrationDocument"
           type="file"
