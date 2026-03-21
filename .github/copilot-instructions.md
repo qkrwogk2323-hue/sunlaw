@@ -12,6 +12,8 @@
 - `label htmlFor` ↔ `input id` 반드시 연결
 - 폼 상단에 `<p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>` 추가
 - `placeholder`는 label 대체 불가
+- URL, 이메일, 사업자번호, 전화번호, 주민번호는 형식 힌트를 같이 표시
+- raw Zod/JSON/영문 검증 에러를 그대로 노출하지 않음
 
 ### 새 페이지/메뉴 신설 필수 체크리스트
 - `mode-aware-nav.tsx`에 메뉴 항목 등록 (누락 시 사이드바에 안 보임)
@@ -19,6 +21,9 @@
 - 빈 상태(empty state): 데이터 없을 때 안내 문구 + 아이콘
 - 페이지 헤더: `<h1>제목</h1>` + `<p className="text-sm text-slate-500">설명</p>`
 - 모바일 반응형: Tailwind `md:`, `lg:` 클래스
+- 메뉴에 보이는 핵심 기능은 실제 라우트와 1:1로 연결
+- KPI/요약 카드가 수치나 상태를 표시하면 클릭 가능해야 함
+- 숫자 카운트는 실제 항목 수와 같아야 함
 
 ### Soft Delete (UX #8 — 절대 금지: 즉시 hard delete)
 - `.delete()` 직접 호출 금지 → `lifecycle_status = 'soft_deleted'` 또는 `deleted_at` 업데이트로 대체
@@ -40,6 +45,8 @@
 - `useToast()` hook 사용: `success()`, `error()`, `warning()`, `undo()`
 - 에러 메시지에 **"에러가 발생했습니다"** 금지 → 원인 + 해결방법 명시
 - 삭제/변경 후 → `undo()` 토스트 (8초 복구 옵션)
+- 알림은 `destination_url` 없이 생성 금지
+- generic `/dashboard` fallback 금지, 이유와 대체 경로를 보여줄 것
 
 ### 버튼
 - 서버 컴포넌트: `Button` (`@/components/ui/button`)
@@ -99,6 +106,7 @@ import { InlineError } from '@/components/ui/inline-error';
 - 신규 Server Action은 성공·실패 테스트 각 1개 이상 (5-7)
 - 주요 변경은 추적 가능해야 함 (5-8)
 - N+1 쿼리·무제한 렌더링 금지 (5-9)
+- 기능 검토는 `생성 → 승인/연결 → 알림 → 목적지 이동 → 처리 → 보관/삭제/복구 → 로그` 순서로 본다
 
 ### 프리미엄 허브 추가 (3-10 ~ 3-12, 4-7, 5-10 ~ 5-12)
 - 허브 결합도가 높은 메뉴는 첫 화면에 허브 요약 블록 또는 허브 입장 CTA를 포함
