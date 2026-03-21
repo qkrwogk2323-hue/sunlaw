@@ -72,10 +72,10 @@ export async function sendDashboardNoticeAction(formData: FormData) {
       kind: 'generic',
       title,
       body,
-      action_label: '알림 센터 확인',
-      action_href: '/notifications',
+      action_label: '대시보드에서 확인',
+      action_href: '/dashboard',
       destination_type: 'internal_route',
-      destination_url: '/notifications',
+      destination_url: '/dashboard',
       payload: {
         source: 'dashboard_notice',
         sender_profile_id: auth.user.id,

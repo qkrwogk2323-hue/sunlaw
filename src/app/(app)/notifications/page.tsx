@@ -395,7 +395,7 @@ export default async function NotificationsPage({
         </div>
       ) : null}
 
-      <Card className="border-slate-100">
+      <Card id="channel-preferences" className="border-slate-100">
         <CardHeader><CardTitle>알림 수신 설정</CardTitle></CardHeader>
         <CardContent>
           <ClientActionForm

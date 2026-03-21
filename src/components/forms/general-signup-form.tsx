@@ -8,7 +8,10 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
-const consentPlaceholderNote = '동의 내용은 추후 기재될 예정입니다. 정식 문구와 버전 정보는 이후 반영됩니다.';
+const privacyConsentNote =
+  '입력한 이름, 연락처, 주민등록번호, 주소는 가입 심사, 본인 확인, 조직 연결, 사건 진행 알림 제공을 위해 수집·이용되며 승인 절차가 끝날 때까지 보호 저장소에 보관됩니다.';
+const serviceConsentNote =
+  '회원가입이 완료되면 승인 대기 상태로 접수되며, 승인 이후 포털 접근, 알림 수신, 사건 소통 기능이 열립니다. 허위 정보 또는 무단 가입 시 이용이 제한될 수 있습니다.';
 
 export function GeneralSignupForm() {
   const router = useRouter();
@@ -142,14 +145,14 @@ export function GeneralSignupForm() {
           <input type="checkbox" checked={privacyConsent} onChange={(event) => setPrivacyConsent(event.target.checked)} className="mt-1 size-4 rounded border-slate-300" />
           <span>
             <span className="block font-medium text-slate-900">개인정보 처리 동의</span>
-            <span className="block text-xs leading-6 text-slate-500">{consentPlaceholderNote}</span>
+            <span className="block text-xs leading-6 text-slate-500">{privacyConsentNote}</span>
           </span>
         </label>
         <label className="flex items-start gap-3">
           <input type="checkbox" checked={serviceConsent} onChange={(event) => setServiceConsent(event.target.checked)} className="mt-1 size-4 rounded border-slate-300" />
           <span>
             <span className="block font-medium text-slate-900">시스템 이용 동의</span>
-            <span className="block text-xs leading-6 text-slate-500">{consentPlaceholderNote}</span>
+            <span className="block text-xs leading-6 text-slate-500">{serviceConsentNote}</span>
           </span>
         </label>
       </div>

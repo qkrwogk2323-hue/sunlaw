@@ -108,7 +108,7 @@
 ### 2-3. 회원가입 동의 폼 — 현재 상태 및 해야 할 일
 
 **현재 상태 (코드):**  
-회원가입 폼(`general-signup-form.tsx`, `client-signup-form.tsx`)에 개인정보 동의 체크박스는 있으나, 동의 문구가 `"동의 내용은 추후 기재될 예정입니다"` 플레이스홀더 상태.
+회원가입 폼(`general-signup-form.tsx`, `client-signup-form.tsx`)에는 개인정보 처리 동의와 시스템 이용 동의 문구가 실제 안내 문장으로 반영되어 있습니다. 다만 법무팀 최종 확정본, 버전 번호, 전문 링크는 아직 운영 확정이 필요합니다.
 
 **법무팀이 작성해야 할 문구:**
 
@@ -130,7 +130,7 @@
 4. **마케팅 수신 동의 (선택)**
 
 **개발팀 적용 방법:**  
-법무팀이 문구 확정 후 → `general-signup-form.tsx`, `client-signup-form.tsx`의 `consentPlaceholderNote` 변수를 실제 문구 URL 또는 텍스트로 교체.
+법무팀이 최종 문구와 버전을 확정하면 → `general-signup-form.tsx`, `client-signup-form.tsx`의 현재 안내 문구를 확정본 텍스트 또는 전문 링크로 교체하고, 동의 버전 필드를 함께 노출.
 
 ---
 
