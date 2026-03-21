@@ -5,6 +5,32 @@ import { redirect } from 'next/navigation';
 import { requireOrganizationActionAccess } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
+async function getAccessibleHubRecord(admin: ReturnType<typeof createSupabaseAdminClient>, hubId: string, organizationId: string) {
+  const { data: bridgeRow, error: bridgeError } = await admin
+    .from('case_hub_organizations')
+    .select('hub_id')
+    .eq('hub_id', hubId)
+    .eq('organization_id', organizationId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (bridgeError || !bridgeRow) {
+    return null;
+  }
+
+  const { data: hubRow, error: hubError } = await admin
+    .from('case_hubs')
+    .select('id, case_id, organization_id, collaborator_limit, viewer_limit, lifecycle_status')
+    .eq('id', hubId)
+    .maybeSingle();
+
+  if (hubError || !hubRow) {
+    return null;
+  }
+
+  return hubRow;
+}
+
 // ────────────────────────────────────────────────────────────────────
 // createCaseHubAction: 사건허브 생성
 // 권한: case_edit
@@ -29,15 +55,22 @@ export async function createCaseHubAction(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
 
-  // 사건 존재 확인
-  const { data: caseRow } = await admin
-    .from('cases')
-    .select('id, organization_id')
-    .eq('id', caseId)
-    .eq('organization_id', organizationId)
-    .maybeSingle();
+  const [{ data: caseRow }, { data: caseOrganizationRow }] = await Promise.all([
+    admin
+      .from('cases')
+      .select('id, organization_id')
+      .eq('id', caseId)
+      .maybeSingle(),
+    admin
+      .from('case_organizations')
+      .select('id, organization_id, role, status')
+      .eq('case_id', caseId)
+      .eq('organization_id', organizationId)
+      .eq('status', 'active')
+      .maybeSingle()
+  ]);
 
-  if (!caseRow) {
+  if (!caseRow || (!caseOrganizationRow && caseRow.organization_id !== organizationId)) {
     throw new Error('해당 사건을 찾을 수 없습니다. 사건 정보를 확인해 주세요.');
   }
 
@@ -154,6 +187,10 @@ export async function updateCaseHubAction(formData: FormData) {
   const admin = createSupabaseAdminClient();
 
   const validStatuses = ['draft', 'setup_required', 'ready', 'active', 'review_pending', 'archived'];
+  const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+  if (!hubRecord || hubRecord.lifecycle_status !== 'active') {
+    throw new Error('현재 조직에서 접근 가능한 허브가 아닙니다. 허브 연결 상태를 확인해 주세요.');
+  }
   const { error } = await admin
     .from('case_hubs')
     .update({
@@ -164,7 +201,6 @@ export async function updateCaseHubAction(formData: FormData) {
       updated_at: new Date().toISOString()
     })
     .eq('id', hubId)
-    .eq('organization_id', organizationId)
     .eq('lifecycle_status', 'active');
 
   if (error) {
@@ -206,12 +242,7 @@ export async function inviteHubMemberAction(formData: FormData) {
   const admin = createSupabaseAdminClient();
 
   // 허브 및 좌석 한도 확인
-  const { data: hub } = await admin
-    .from('case_hubs')
-    .select('id, collaborator_limit, viewer_limit')
-    .eq('id', hubId)
-    .eq('organization_id', organizationId)
-    .maybeSingle();
+  const hub = await getAccessibleHubRecord(admin, hubId, organizationId);
 
   if (!hub) {
     throw new Error('허브를 찾을 수 없습니다. 페이지를 새로고침 해주세요.');
@@ -282,6 +313,10 @@ export async function updateHubMemberSeatAction(formData: FormData) {
   });
 
   const admin = createSupabaseAdminClient();
+  const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+  if (!hubRecord || hubRecord.lifecycle_status !== 'active') {
+    throw new Error('현재 조직에서 접근 가능한 허브가 아닙니다. 허브 연결 상태를 확인해 주세요.');
+  }
 
   const { error } = await admin
     .from('case_hub_members')
@@ -321,12 +356,16 @@ export async function archiveCaseHubAction(formData: FormData) {
   });
 
   const admin = createSupabaseAdminClient();
+  const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+  if (!hubRecord || hubRecord.lifecycle_status !== 'active') {
+    throw new Error('현재 조직에서 접근 가능한 허브가 아닙니다. 허브 연결 상태를 확인해 주세요.');
+  }
 
   const { error } = await admin
     .from('case_hubs')
     .update({ lifecycle_status: 'soft_deleted', status: 'archived', updated_at: new Date().toISOString() })
     .eq('id', hubId)
-    .eq('organization_id', organizationId);
+    .eq('lifecycle_status', 'active');
 
   if (error) {
     throw new Error(`허브 보관에 실패했습니다. (${error.message}) 잠시 후 다시 시도해 주세요.`);
@@ -363,12 +402,15 @@ export async function activateCaseHubAction(formData: FormData) {
   });
 
   const admin = createSupabaseAdminClient();
+  const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+  if (!hubRecord || hubRecord.lifecycle_status !== 'active') {
+    throw new Error('현재 조직에서 접근 가능한 허브가 아닙니다. 허브 연결 상태를 확인해 주세요.');
+  }
 
   const { error } = await admin
     .from('case_hubs')
     .update({ status: 'active', updated_at: new Date().toISOString() })
     .eq('id', hubId)
-    .eq('organization_id', organizationId)
     .eq('lifecycle_status', 'active');
 
   if (error) {
