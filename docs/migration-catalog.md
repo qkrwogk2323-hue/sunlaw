@@ -88,6 +88,7 @@
 | 0054 | `0054_canonicalize_collaboration_schema.sql` | active | 협업 스키마 canonicalization. `0040/0041` 기준으로 drift 수습 |
 | 0055 | `0055_case_hub_multi_org_bridge.sql` | active | 사건허브 multi-org bridge 및 허브 접근 조직 연결 테이블 도입 |
 | 0056 | `0056_client_link_lifecycle.sql` | active | 의뢰인 link lifecycle / orphan review / relink policy 및 `primary_case_client_id` canonicalization |
+| 0057 | `0057_platform_governance_registry_guards.sql` | hardening_followup | platform runtime registry와 organizations drift를 막는 guard/trigger 하드닝 |
 
 ## 운영 메모
 
@@ -97,3 +98,4 @@
 - `0049`는 활성 축이지만, `0009`의 multi-org 사건 모델과 정합하도록 bridge migration이 필요하다.
 - `0050`은 immutable history로 보존하되, 새 migration으로 supersede 대상이다.
 - `0056`은 기존 `primary_client_id(profiles.id)`를 제거하지 않고, `primary_case_client_id(case_clients.id)`와 의뢰인 lifecycle 규칙을 additive로 도입하는 전환 축이다.
+- `0057`은 `0053`의 control-plane registry를 운영 중 직접 수정으로부터 보호하는 guard migration이다.
