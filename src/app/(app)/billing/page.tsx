@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
+import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
 import { getOrganizationSubscriptionSnapshot } from '@/lib/subscription-lock';
+import { updateOrganizationSubscriptionStateAction } from '@/lib/actions/billing-actions';
 
 function badgeTone(status: string) {
   if (status === 'overdue') return 'red';
@@ -17,6 +20,7 @@ function badgeTone(status: string) {
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
+  const canAdjustSubscription = isPlatformOperator(auth);
   const [billing, subscriptionSnapshot] = await Promise.all([
     getBillingHubSnapshot(organizationId),
     getOrganizationSubscriptionSnapshot(organizationId)
@@ -72,6 +76,83 @@ export default async function BillingPage() {
           </div>
         </CardContent>
       </Card>
+
+      {canAdjustSubscription && organizationId ? (
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle>구독 상태 조정</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ClientActionForm
+              action={updateOrganizationSubscriptionStateAction}
+              successTitle="구독 상태를 반영했습니다."
+              errorTitle="구독 상태 변경에 실패했습니다."
+              errorCause="조직 구독 상태를 저장하는 중 서버 응답이 실패했습니다."
+              errorResolution="입력값을 확인한 뒤 다시 시도해 주세요."
+              className="space-y-4"
+            >
+              <input type="hidden" name="organizationId" value={organizationId} />
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">상태</span>
+                  <select name="state" defaultValue={subscriptionSnapshot?.state ?? 'active'} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                    <option value="trialing">trialing</option>
+                    <option value="active">active</option>
+                    <option value="past_due">past_due</option>
+                    <option value="locked_soft">locked_soft</option>
+                    <option value="locked_hard">locked_hard</option>
+                    <option value="cancelled">cancelled</option>
+                  </select>
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">플랜 코드</span>
+                  <input name="planCode" defaultValue={subscriptionSnapshot?.planCode ?? 'starter'} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">체험 종료</span>
+                  <input type="datetime-local" name="trialEndAt" defaultValue={subscriptionSnapshot?.trialEndAt ? subscriptionSnapshot.trialEndAt.slice(0, 16) : ''} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">다음 갱신</span>
+                  <input type="datetime-local" name="renewalDueAt" defaultValue={subscriptionSnapshot?.renewalDueAt ? subscriptionSnapshot.renewalDueAt.slice(0, 16) : ''} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">연체 시작</span>
+                  <input type="datetime-local" name="pastDueStartedAt" defaultValue={subscriptionSnapshot?.pastDueStartedAt ? subscriptionSnapshot.pastDueStartedAt.slice(0, 16) : ''} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">소프트 잠금</span>
+                  <input type="datetime-local" name="lockedSoftAt" defaultValue={subscriptionSnapshot?.lockedSoftAt ? subscriptionSnapshot.lockedSoftAt.slice(0, 16) : ''} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">하드 잠금</span>
+                  <input type="datetime-local" name="lockedHardAt" defaultValue={subscriptionSnapshot?.lockedHardAt ? subscriptionSnapshot.lockedHardAt.slice(0, 16) : ''} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+                <label className="space-y-2 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">취소 시각</span>
+                  <input type="datetime-local" name="cancelledAt" defaultValue={subscriptionSnapshot?.cancelledAt ? subscriptionSnapshot.cancelledAt.slice(0, 16) : ''} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                </label>
+              </div>
+
+              <label className="block space-y-2 text-sm text-slate-600">
+                <span className="font-medium text-slate-800">잠금 사유</span>
+                <textarea name="lockReason" defaultValue={subscriptionSnapshot?.lockReason ?? ''} rows={3} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" />
+              </label>
+
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="exportAllowedWhenCancelled" defaultChecked={subscriptionSnapshot?.exportAllowedWhenCancelled ?? false} className="h-4 w-4 rounded border-slate-300" />
+                cancelled 상태에서 내보내기 허용
+              </label>
+
+              <div className="flex justify-end">
+                <SubmitButton variant="secondary" pendingLabel="반영 중..." className="px-5">
+                  구독 상태 저장
+                </SubmitButton>
+              </div>
+            </ClientActionForm>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="vs-mesh-card">

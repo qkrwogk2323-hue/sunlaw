@@ -25,7 +25,7 @@ type SubscriptionSnapshot = {
   lockReason: string | null;
 };
 
-const LOCKED_SOFT_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login'];
+const LOCKED_SOFT_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login', '/collections', '/reports'];
 const LOCKED_HARD_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login'];
 const CANCELLED_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login'];
 
