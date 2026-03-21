@@ -83,4 +83,14 @@ describe('auth callback route', () => {
 
     expect(response.headers.get('location')).toBe('http://localhost/dashboard');
   });
+
+  it('redirects to login with error when Supabase client initialization fails', async () => {
+    mocks.createSupabaseServerClient.mockRejectedValueOnce(new Error('Supabase public environment variables are missing.'));
+
+    const { GET } = await import('@/app/auth/callback/route');
+
+    const response = await GET(createRequest('http://localhost/auth/callback?code=invalid-code'));
+
+    expect(response.headers.get('location')).toMatch(/\/login\?error=/);
+  });
 });

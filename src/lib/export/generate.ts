@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
@@ -12,11 +12,20 @@ function normalizeRows(rows: Record<string, unknown>[]) {
   );
 }
 
-export function buildXlsxBuffer(sheetName: string, rows: Record<string, unknown>[]) {
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.json_to_sheet(normalizeRows(rows));
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+export async function buildXlsxBuffer(sheetName: string, rows: Record<string, unknown>[]) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName.slice(0, 31));
+  const normalized = normalizeRows(rows);
+
+  if (normalized.length > 0) {
+    const headers = Object.keys(normalized[0]);
+    worksheet.addRow(headers);
+    normalized.forEach((row) => {
+      worksheet.addRow(headers.map((h) => row[h] ?? ''));
+    });
+  }
+
+  return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
 export async function buildDocxBuffer(title: string, rows: Record<string, unknown>[]) {
