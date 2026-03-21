@@ -135,7 +135,9 @@ export async function submitClientSignupAction(formData: FormData) {
       client_account_status: 'pending_initial_approval'
     },
     action_label: '대기 상태 보기',
-    action_href: '/start/pending'
+    action_href: '/start/pending',
+    destination_type: 'internal_route',
+    destination_url: '/start/pending'
   };
 
   const platformAdminIds = (await listActivePlatformAdminIds()).filter((profileId) => profileId !== auth.user.id);
@@ -315,7 +317,9 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
           organization_id: caseClient.organization_id
         },
         action_label: '대기 상태 보기',
-        action_href: '/start/pending'
+        action_href: '/start/pending',
+        destination_type: 'internal_route',
+        destination_url: '/start/pending'
       });
 
       if (notificationError) throw notificationError;

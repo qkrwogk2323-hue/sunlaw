@@ -162,7 +162,7 @@ export async function listMySignupRequests() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('organization_signup_requests')
-    .select('id, organization_name, organization_kind, organization_industry, requester_email, business_number, representative_name, representative_title, contact_phone, website_url, requested_modules, status, business_registration_verification_status, business_registration_verification_note, business_registration_document_name, reviewed_note, note, created_at')
+    .select('id, organization_name, organization_kind, organization_industry, requester_email, business_number, representative_name, representative_title, contact_phone, website_url, requested_modules, status, business_registration_verification_status, business_registration_verification_note, business_registration_document_name, reviewed_note, note, created_at, reviewed_at, approved_organization_id')
     .eq('requester_profile_id', auth.user.id)
     .order('created_at', { ascending: false });
 

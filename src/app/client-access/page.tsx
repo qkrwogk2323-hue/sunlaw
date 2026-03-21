@@ -96,6 +96,30 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
           />
         ) : null}
 
+        <div className="grid gap-4 lg:grid-cols-3">
+          {[
+            {
+              title: '1. 초대번호 또는 조직 검색',
+              body: '초대번호가 있으면 바로 입력하고, 없으면 조직명이나 조직 키로 검색해 조직가입신청을 보냅니다.'
+            },
+            {
+              title: '2. 승인 결과 확인',
+              body: '검토 대기, 승인 완료, 반려 상태를 이 화면과 알림에서 동시에 확인합니다. 상태별 다음 행동도 여기서 이어집니다.'
+            },
+            {
+              title: '3. 허브 또는 포털 진입',
+              body: '승인 후 담당자가 사건 연결을 완료하면 포털 또는 사건 허브에서 바로 다음 작업을 시작할 수 있습니다.'
+            }
+          ].map((step) => (
+            <Card key={step.title} className="rounded-[1.6rem] border-slate-200 bg-white/85">
+              <CardContent className="space-y-2 px-5 py-5">
+                <p className="font-medium text-slate-900">{step.title}</p>
+                <p className="text-sm leading-7 text-slate-600">{step.body}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
         <Card className="rounded-[1.8rem]">
           <CardHeader className="border-none pb-2">
             <CardTitle className="text-2xl">초대번호가 없으면 조직가입신청하기</CardTitle>
@@ -171,7 +195,35 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
                   </div>
                   <p className="mt-2 text-sm text-slate-600">{request.request_note ?? '남긴 메모가 없습니다.'}</p>
                   <p className="mt-2 text-xs text-slate-400">검토 메모: {request.review_note ?? '-'}</p>
-                  {request.status === 'approved' ? <p className="mt-2 text-xs font-medium text-emerald-700">조직 승인 완료. 이제 담당자가 사건 연결을 진행하면 포털에서 바로 확인할 수 있습니다.</p> : null}
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {request.status === 'approved' ? (
+                      <>
+                        <Link href={'/start/pending' as Route} className={buttonStyles({ className: 'min-h-10 rounded-[1rem] px-4' })}>
+                          승인 상태 다시 확인
+                        </Link>
+                        <Link href={'/notifications' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-[1rem] px-4' })}>
+                          관련 알림 보기
+                        </Link>
+                      </>
+                    ) : null}
+                    {request.status === 'pending' ? (
+                      <Link href={'/notifications' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-[1rem] px-4' })}>
+                        검토 대기 알림 보기
+                      </Link>
+                    ) : null}
+                    {request.status === 'rejected' ? (
+                      <Link href={'/client-access' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-[1rem] px-4' })}>
+                        다른 조직 다시 찾기
+                      </Link>
+                    ) : null}
+                  </div>
+                  <p className={`mt-3 text-xs leading-6 ${request.status === 'approved' ? 'font-medium text-emerald-700' : 'text-slate-500'}`}>
+                    {request.status === 'approved'
+                      ? '현재 단계: 승인 완료. 이제 담당자가 사건 연결을 진행하면 포털에서 바로 확인할 수 있습니다.'
+                      : request.status === 'pending'
+                        ? '현재 단계: 검토 대기. 승인 또는 반려 결과가 나오면 알림과 대기 상태 화면에 반영됩니다.'
+                        : '현재 단계: 반려됨. 검토 메모를 참고해 다른 조직에 다시 요청하거나 문의를 남길 수 있습니다.'}
+                  </p>
                 </div>
               )) : <p className="text-sm text-slate-500">아직 보낸 조직가입신청이 없습니다.</p>}
             </CardContent>

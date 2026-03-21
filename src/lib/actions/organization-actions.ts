@@ -1134,6 +1134,8 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
             requires_action: true,
             action_label: '조직 신청 검토',
             action_href: '/admin/organization-requests',
+            destination_type: 'internal_route',
+            destination_url: '/admin/organization-requests',
             action_entity_type: 'organization_signup_request',
             action_target_id: requestRow?.id ?? null
           }))
@@ -1581,6 +1583,8 @@ export async function submitOrganizationExitRequestAction(formData: FormData) {
         requires_action: true,
         action_label: '탈퇴 요청 검토',
         action_href: '/admin/organization-requests',
+        destination_type: 'internal_route',
+        destination_url: '/admin/organization-requests',
         action_entity_type: 'organization',
         action_target_id: parsed.organizationId
       }))

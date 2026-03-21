@@ -58,14 +58,22 @@ export default async function ClientPendingPage({
               <p className="mt-4 text-sm leading-8 text-slate-200/88">{clientAccountStatusDescription(status)}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
+              <Link
+                href={'/client-access' as Route}
+                className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm transition hover:bg-white/12"
+              >
                 <p className="text-xs uppercase tracking-[0.2em] text-sky-100/72">조직 연결 요청</p>
                 <p className="mt-2 text-2xl font-semibold text-white">{requests.length}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
+                <p className="mt-2 text-xs text-sky-100/80">요청 현황과 다음 단계를 확인합니다.</p>
+              </Link>
+              <a
+                href="#service-requests"
+                className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm transition hover:bg-white/12"
+              >
                 <p className="text-xs uppercase tracking-[0.2em] text-sky-100/72">고객센터 문의</p>
                 <p className="mt-2 text-2xl font-semibold text-white">{serviceRequests.length}</p>
-              </div>
+                <p className="mt-2 text-xs text-sky-100/80">아래 최근 문의 내역으로 바로 이동합니다.</p>
+              </a>
             </div>
           </div>
         </section>
@@ -159,7 +167,7 @@ export default async function ClientPendingPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="service-requests">
             <CardHeader>
               <CardTitle>최근 문의 내역</CardTitle>
             </CardHeader>
