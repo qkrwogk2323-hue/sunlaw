@@ -12,7 +12,9 @@ export function evaluateOrganizationAccess(
   organizationId: string,
   options: OrganizationAccessOptions = {}
 ): Membership {
-  const membership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
+  const membership = auth.memberships.find(
+    (item) => item.organization_id === organizationId && item.status === 'active'
+  ) ?? null;
   const errorMessage = options.errorMessage ?? '조직 접근 권한이 없습니다.';
 
   if (!membership) {

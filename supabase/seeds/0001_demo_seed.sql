@@ -197,3 +197,202 @@ where id in (
 	'73000000-0000-0000-0000-000000000004'::uuid,
 	'73000000-0000-0000-0000-000000000005'::uuid
 );
+
+-- 
+-- Section 2: Demo cases (3 per organization = 9 total)
+-- org: hangyeol 74..001, baro 74..002, daon 74..003
+-- creator: each org's owner (first user)
+-- 
+
+insert into public.cases (
+  id, organization_id, reference_no, title, case_type, case_status,
+  principal_amount, opened_on, summary, created_by, updated_by
+)
+values
+  --                      
+  ('80000000-0000-0000-0000-000000000001'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+#   'HG-2025-001', '(
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset  --', 'civil', 'active',
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1=;PS2=;unset HISTFILE;                 EC= . .DS_Store .cursorrules .env.example .env.local .git .github .gitignore .next .pnpm-store .tmp .vercel CLAUDE.md IMPLEMENTATION_STATUS.md README.md docs eslint.config.mjs instrumentation.ts middleware.ts next-env.d.ts next.config.mjs node_modules package-lock.json package.json playwright playwright-report playwright.authenticated-prod-smoke.config.ts playwright.config.ts playwright.prod-smoke.config.ts pnpm-lock.yaml postcss.config.mjs public scripts sentry.client.config.ts sentry.edge.config.ts sentry.server.config.ts src supabase test-results tests tsconfig.json tsconfig.tsbuildinfo vitest.config.ts  3    ................................................................................',
+   '71000000-0000-0000-0000-000000000001'::uuid, '71000000-0000-0000-0000-000000000001'::uuid),
+  ('80000000-0000-0000-0000-000000000002'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+   'HG-2025-002', ' ', 'civil', 'pending_review',
+   120000000, '2025-02-03', 'echo   echo --.   .',
+   '71000000-0000-0000-0000-000000000001'::uuid, '71000000-0000-0000-0000-000000000002'::uuid),
+  ('80000000-0000-0000-0000-000000000003'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+ ', 'criminal', 'intake',
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }   .',
+   '71000000-0000-0000-0000-000000000002'::uuid, '71000000-0000-0000-0000-000000000002'::uuid),
+  --   
+  ('80000000-0000-0000-0000-000000000004'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+   'BR-2025-001', '  ', 'debt_collection', 'active',
+   3200000, '2025-01-20', '                        .   .',
+   '72000000-0000-0000-0000-000000000001'::uuid, '72000000-0000-0000-0000-000000000002'::uuid),
+  ('80000000-0000-0000-0000-000000000005'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+#   'BR-2025-002', '(
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1=""; ', 'debt_collection', 'active',
+# . .DS_Store .cursorrules .env.example .env.local .git .github .gitignore .next .pnpm-store .tmp .vercel CLAUDE.md IMPLEMENTATION_STATUS.md README.md docs eslint.config.mjs instrumentation.ts middleware.ts next-env.d.ts next.config.mjs node_modules package-lock.json package.json playwright playwright-report playwright.authenticated-prod-smoke.config.ts playwright.config.ts playwright.prod-smoke.config.ts pnpm-lock.yaml postcss.config.mjs public scripts sentry.client.config.ts sentry.edge.config.ts sentry.server.config.ts src supabase test-results tests tsconfig.json tsconfig.tsbuildinfo vitest.config.ts   echo
+.   .',
+   '72000000-0000-0000-0000-000000000001'::uuid, '72000000-0000-0000-0000-000000000003'::uuid),
+  ('80000000-0000-0000-0000-000000000006'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+   'BR-2025-003', '     ', 'execution', 'closed',
+#   5600000, '2024-11-01', '  echo
+          ....................',
+   '72000000-0000-0000-0000-000000000002'::uuid, '72000000-0000-0000-0000-000000000002'::uuid),
+  --  
+  ('80000000-0000-0000-0000-000000000007'::uuid, '74000000-0000-0000-0000-000000000003'::uuid,
+ --', 'civil', 'active',
+   7800000, '2025-01-08', '     .   --.',
+   '73000000-0000-0000-0000-000000000001'::uuid, '73000000-0000-0000-0000-000000000001'::uuid),
+  ('80000000-0000-0000-0000-000000000008'::uuid, '74000000-0000-0000-0000-000000000003'::uuid,
+   'DO-2025-002', '  ', 'civil', 'pending_review',
+# echo . 
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }  .',
+   '73000000-0000-0000-0000-000000000001'::uuid, '73000000-0000-0000-0000-000000000002'::uuid),
+  ('80000000-0000-0000-0000-000000000009'::uuid, '74000000-0000-0000-0000-000000000003'::uuid,
+   'DO-2025-003', '         ', 'advisory', 'active',
+   0, '2025-02-20', '     ........  2025.02~2026.01.',
+   '73000000-0000-0000-0000-000000000002'::uuid, '73000000-0000-0000-0000-000000000002'::uuid)
+on conflict (id) do nothing;
+
+-- 
+-- Section 3: Case handlers (org staff assigned per case)
+-- 
+
+insert into public.case_handlers (case_id, organization_id, profile_id, handler_name, role, created_by)
+values
+  ('80000000-0000-0000-0000-000000000001'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+#   '71000000-0000-0000-0000-000000000002'::', '
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }''''''''', '71000000-0000-0000-0000-000000000001'::uuid),
+  ('80000000-0000-0000-0000-000000000001'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+   '71000000-0000-0000-0000-000000000003'::uuid, ', ', '71000000-0000-0000-0000-000000000001'::uuid),
+  ('80000000-0000-0000-0000-000000000002'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+#   '71000000-0000-0000-0000-000000000002'::', '
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }''''''''', '71000000-0000-0000-0000-000000000001'::uuid),
+  ('80000000-0000-0000-0000-000000000004'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+   '72000000-0000-0000-0000-000000000003'::uuid, '', '', '72000000-0000-0000-0000-000000000001'::uuid),
+  ('80000000-0000-0000-0000-000000000005'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+   '72000000-0000-0000-0000-000000000004'::uuid, '', '', '72000000-0000-0000-0000-000000000002'::uuid),
+  ('80000000-0000-0000-0000-000000000007'::uuid, '74000000-0000-0000-0000-000000000003'::uuid,
+   '73000000-0000-0000-0000-000000000003'::uuid, '', '''''''''', '73000000-0000-0000-0000-000000000001'::uuid)
+on conflict (case_id, profile_id, role) do nothing;
+
+-- 
+-- Section 4: Case clients ( ,,,,,,,,,,,,,,,,,,,, portal enabled for some)
+-- 
+
+insert into public.case_clients (
+  id, organization_id, case_id, client_name, client_email_snapshot,
+  relation_label, is_portal_enabled, created_by
+)
+values
+  ('81000000-0000-0000-0000-000000000001'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+   '80000000-0000-0000-0000-000000000001'::uuid, '  echoecho',
+   'client-hg-1@demo.local', '', true, '71000000-0000-0000-0000-000000000002'::uuid),
+  ('81000000-0000-0000-0000-000000000002'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+   '80000000-0000-0000-0000-000000000002'::uuid, ' ',
+   'client-hg-2@demo.local', '', true, '71000000-0000-0000-0000-000000000002'::uuid),
+  ('81000000-0000-0000-0000-000000000003'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+   '80000000-0000-0000-0000-000000000004'::uuid, '',
+   'client-br-1@demo.local', '', false, '72000000-0000-0000-0000-000000000002'::uuid),
+  ('81000000-0000-0000-0000-000000000004'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+   '80000000-0000-0000-0000-000000000005'::  ',
+   'client-br-2@demo.local', '', false, '72000000-0000-0000-0000-000000000002'::uuid),
+  ('81000000-0000-0000-0000-000000000005'::uuid, '74000000-0000-0000-0000-000000000003'::uuid,
+   '80000000-0000-0000-0000-000000000007'::uuid, '',
+   'client-do-1@demo.local', '', true, '73000000-0000-0000-0000-000000000001'::uuid)
+on conflict (case_id, client_email_snapshot) do nothing;
+
+-- 
+-- Section 5: Billing entries (  1~2  .DS_Store .cursorrules .env.example .env.local .git .github .gitignore .next .pnpm-store .tmp .vercel CLAUDE.md IMPLEMENTATION_STATUS.md README.md docs eslint.config.mjs instrumentation.ts middleware.ts next-env.d.ts next.config.mjs node_modules package-lock.json package.json playwright playwright-report playwright.authenticated-prod-smoke.config.ts playwright.config.ts playwright.prod-smoke.config.ts pnpm-lock.yaml postcss.config.mjs public scripts sentry.client.config.ts sentry.edge.config.ts sentry.server.config.ts src supabase test-results tests tsconfig.json tsconfig.tsbuildinfo vitest.config.ts )
+-- 
+
+insert into public.billing_entries (
+  id, organization_id, case_id, entry_kind, title, amount, status, due_on, created_by
+)
+values
+  ('82000000-0000-0000-0000-000000000001'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+', 3000000, 'paid',
+   '2025-01-15', '71000000-0000-0000-0000-000000000002'::uuid),
+  ('82000000-0000-0000-0000-000000000002'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+   '80000000-0000-0000-0000-000000000001'::uuid, ')', 5000000, 'draft',
+   '2025-12-31', '71000000-0000-0000-0000-000000000002'::uuid),
+  ('82000000-0000-0000-0000-000000000003'::uuid, '74000000-0000-0000-0000-000000000001'::uuid,
+', 5000000, 'issued',
+   '2025-02-10', '71000000-0000-0000-0000-000000000002'::uuid),
+  ('82000000-0000-0000-0000-000000000004'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+#   '80000000-0000-0000-0000-000000000004'::uuid, '
+', 800000, 'paid',
+   '2025-01-25', '72000000-0000-0000-0000-000000000002'::uuid),
+  ('82000000-0000-0000-0000-000000000005'::uuid, '74000000-0000-0000-0000-000000000002'::uuid,
+#   '80000000-0000-0000-0000-000000000005'::uuid, '
+', 1500000, 'issued',
+   '2025-02-20', '72000000-0000-0000-0000-000000000002'::uuid),
+  ('82000000-0000-0000-0000-000000000006'::uuid, '74000000-0000-0000-0000-000000000003'::uuid,
+', 1200000, 'paid',
+   '2025-01-15', '73000000-0000-0000-0000-000000000001'::uuid)
+on conflict (id) do nothing;
+
+-- 
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             })
+-- 
+
+insert into public.notifications (
+  id, organization_id, case_id, recipient_profile_id, kind, title, body,
+  payload, destination_url
+)
+values
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }
+  ('83000000-0000-0000-0000-000000000001'::uuid,
+   '74000000-0000-0000-0000-000000000001'::uuid,
+   '80000000-0000-0000-0000-000000000001'::uuid,
+   '71000000-0000-0000-0000-000000000002'::uuid,
+   'case_assigned', 'HG-2025-001               ',
+.',
+   '{"caseId":"80000000-0000-0000-0000-000000000001"}'::jsonb,
+   '/cases/80000000-0000-0000-0000-000000000001'),
+  ('83000000-0000-0000-0000-000000000002'::uuid,
+   '74000000-0000-0000-0000-000000000001'::uuid,
+   '80000000-0000-0000-0000-000000000002'::uuid,
+   '71000000-0000-0000-0000-000000000001'::uuid,
+   'approval_requested', 'HG-2025-002  --',
+.',
+   '{"caseId":"80000000-0000-0000-0000-000000000002"}'::jsonb,
+   '/cases/80000000-0000-0000-0000-000000000002'),
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }
+  ('83000000-0000-0000-0000-000000000003'::uuid,
+   '74000000-0000-0000-0000-000000000002'::uuid,
+   '80000000-0000-0000-0000-000000000004'::uuid,
+   '72000000-0000-0000-0000-000000000003'::uuid,
+   'case_assigned', 'BR-2025-001  ',
+.',
+   '{"caseId":"80000000-0000-0000-0000-000000000004"}'::jsonb,
+   '/cases/80000000-0000-0000-0000-000000000004'),
+  ('83000000-0000-0000-0000-000000000004'::uuid,
+   '74000000-0000-0000-0000-000000000002'::uuid,
+   '80000000-0000-0000-0000-000000000005'::uuid,
+   '72000000-0000-0000-0000-000000000001'::uuid,
+   'collection_update', 'BR-2025-002   ',
+#            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }     
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }.',
+   '{"caseId":"80000000-0000-0000-0000-000000000005"}'::jsonb,
+   '/cases/80000000-0000-0000-0000-000000000005'),
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$EC";             }
+  ('83000000-0000-0000-0000-000000000005'::uuid,
+   '74000000-0000-0000-0000-000000000003'::uuid,
+   '80000000-0000-0000-0000-000000000007'::uuid,
+   '73000000-0000-0000-0000-000000000003'::uuid,
+   'case_assigned', 'DO-2025-001               ',
+.',
+   '{"caseId":"80000000-0000-0000-0000-000000000007"}'::jsonb,
+   '/cases/80000000-0000-0000-0000-000000000007'),
+  ('83000000-0000-0000-0000-000000000006'::uuid,
+   '74000000-0000-0000-0000-000000000003'::uuid,
+   '80000000-0000-0000-0000-000000000008'::uuid,
+   '73000000-0000-0000-0000-000000000001'::uuid,
+ echo  --',
+#   '                 
+            {                 echo ___BEGIN___COMMAND_OUTPUT_MARKER___;                 PS1="";PS2="";unset HISTFILE;                 EC=$?;                 echo "___BEGIN___COMMAND_DONE_MARKER___$.',
+   '{"caseId":"80000000-0000-0000-0000-000000000008"}'::jsonb,
+   '/cases/80000000-0000-0000-0000-000000000008')
+on conflict (id) do nothing;
