@@ -13,7 +13,6 @@ import {
   FileText,
   LayoutDashboard,
   MessageSquareText,
-  Menu,
   Network,
   Search,
   Settings,
@@ -24,6 +23,7 @@ import {
 import { getDefaultMode, type ModeKey } from '@/components/mode-switcher';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
+import { MobileOrganizationSwitcher } from '@/components/mobile-organization-switcher';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useToast } from '@/components/ui/toast-provider';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
@@ -250,14 +250,16 @@ function MobileSectionBar({
   pathname,
   currentOrgMembership,
   baseRoleLabel,
-  currentOrganizationName,
+  currentOrganization,
+  organizationOptions,
   hasUnreadNotifications
 }: {
   sections: NavSection[];
   pathname: string;
   currentOrgMembership: Membership | null;
   baseRoleLabel: string;
-  currentOrganizationName: string;
+  currentOrganization: OrganizationOption | Membership['organization'] | null;
+  organizationOptions: Array<{ id: string; name: string }>;
   hasUnreadNotifications: boolean;
 }) {
   const derivedSectionId = useMemo(
@@ -275,22 +277,13 @@ function MobileSectionBar({
 
   return (
     <div className="space-y-3 lg:hidden">
-      <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold tracking-tight text-slate-950">{currentOrganizationName || currentOrgMembership?.organization?.name || '협업 조직'}</p>
-            <p className="mt-0.5 text-xs text-slate-600">{baseRoleLabel}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
-            aria-label="메뉴 열기"
-          >
-            <Menu className="size-5" />
-          </button>
-        </div>
-      </div>
+      <MobileOrganizationSwitcher
+        currentOrganizationId={currentOrganization?.id ?? currentOrgMembership?.organization_id ?? null}
+        currentOrganizationName={currentOrganization?.name ?? currentOrgMembership?.organization?.name ?? '협업 조직'}
+        roleLabel={baseRoleLabel}
+        organizationOptions={organizationOptions}
+        onOpenMenu={() => setDrawerOpen(true)}
+      />
 
       <div className={`fixed inset-0 z-50 transition ${drawerOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <button
@@ -548,7 +541,8 @@ export function ModeAwareNav({
         pathname={pathname}
         currentOrgMembership={currentOrgMembership}
         baseRoleLabel={baseRoleLabel}
-        currentOrganizationName={currentOrganization?.name ?? ''}
+        currentOrganization={currentOrganization}
+        organizationOptions={orgOptions}
         hasUnreadNotifications={hasUnreadNotifications}
       />
 
