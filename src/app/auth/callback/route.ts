@@ -34,10 +34,16 @@ export async function GET(request: NextRequest) {
   const next = resolveSafeNextPath(request);
 
   if (code) {
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent(error.message)}`, url.origin));
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent(error.message)}`, url.origin));
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '인증 처리 중 오류가 발생했습니다.';
+      console.error('[auth/callback] code exchange failed:', message);
+      return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent('로그인 처리에 실패했습니다. 다시 시도하거나 일반 로그인을 이용해 주세요.')}`, url.origin));
     }
   }
 

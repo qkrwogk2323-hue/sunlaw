@@ -99,7 +99,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
   }
 
   let buffer: Buffer;
-  if (format === 'xlsx') buffer = buildXlsxBuffer(title, rows);
+  if (format === 'xlsx') buffer = await buildXlsxBuffer(title, rows);
   else if (format === 'docx') buffer = await buildDocxBuffer(title, rows);
   else buffer = await buildPdfBuffer(title, rows);
 
