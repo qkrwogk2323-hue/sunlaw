@@ -84,6 +84,10 @@
 | 0050 | `0050_finalize_single_platform_root_to_vein_bn_1.sql` | regression_history | immutable history로 보존하되 `0042` 기준 새 migration으로 supersede 대상인 회귀 migration |
 | 0051 | `0051_enable_rls_for_exit_requests_and_kakao_outbox.sql` | hardening_followup | RLS 미적용 테이블 하드닝 |
 | 0052 | `0052_harden_function_search_paths_and_extensions.sql` | hardening_followup | 함수 search_path 및 extension schema 하드닝 |
+| 0053 | `0053_canonicalize_platform_governance.sql` | active | control-plane registry 기반 플랫폼 거버넌스 canonicalization |
+| 0054 | `0054_canonicalize_collaboration_schema.sql` | active | 협업 스키마 canonicalization. `0040/0041` 기준으로 drift 수습 |
+| 0055 | `0055_case_hub_multi_org_bridge.sql` | active | 사건허브 multi-org bridge 및 허브 접근 조직 연결 테이블 도입 |
+| 0056 | `0056_client_link_lifecycle.sql` | active | 의뢰인 link lifecycle / orphan review / relink policy 및 `primary_case_client_id` canonicalization |
 
 ## 운영 메모
 
@@ -92,3 +96,4 @@
 - `0044`, `0045`는 fresh bootstrap을 깨뜨리는 주범이라기보다 canonical source 해석을 흐리는 history-sync 재선언이다.
 - `0049`는 활성 축이지만, `0009`의 multi-org 사건 모델과 정합하도록 bridge migration이 필요하다.
 - `0050`은 immutable history로 보존하되, 새 migration으로 supersede 대상이다.
+- `0056`은 기존 `primary_client_id(profiles.id)`를 제거하지 않고, `primary_case_client_id(case_clients.id)`와 의뢰인 lifecycle 규칙을 additive로 도입하는 전환 축이다.
