@@ -5,7 +5,7 @@ export async function listClients(organizationId?: string | null) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from('case_clients')
-    .select('id, organization_id, case_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, created_at, cases(title)')
+    .select('id, organization_id, case_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, link_status, created_at, cases(title)')
     .order('created_at', { ascending: false });
 
   if (organizationId) query = query.eq('organization_id', organizationId);
@@ -25,7 +25,7 @@ export async function listClientRosterSummary(organizationId?: string | null) {
 
   let caseClientsQuery = supabase
     .from('case_clients')
-    .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, created_at, cases(title, stage_key, updated_at)')
+    .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, link_status, created_at, cases(title, stage_key, updated_at)')
     .order('created_at', { ascending: false })
     .limit(120);
 
@@ -91,7 +91,11 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     contactPhone: row.profile_id ? (phoneByProfile.get(row.profile_id) ?? null) : null,
     signupStatus: row.is_portal_enabled ? '가입 완료' : '가입 전',
     inviteStatus: row.is_portal_enabled ? '완료' : '미발송',
-    caseLinkStatus: row.case_id ? '연결 완료' : '미연결',
+    caseLinkStatus: row.link_status === 'linked' ? '연결 완료'
+      : row.link_status === 'pending_unlink' ? '연결 해제 대기'
+      : row.link_status === 'orphan_review' ? '연결 검토 중'
+      : row.link_status === 'unlinked' ? '연결 해제'
+      : (row.case_id ? '연결 완료' : '미연결'),
     nextAction: row.is_portal_enabled ? '상세 확인' : '초대 발송',
     raw: row
   }));
@@ -163,7 +167,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
   if (parsed.kind === 'caseclient') {
     const { data } = await supabase
       .from('case_clients')
-      .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, created_at, updated_at, cases(id, title, reference_no, stage_key)')
+      .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, link_status, created_at, updated_at, cases(id, title, reference_no, stage_key)')
       .eq('organization_id', organizationId)
       .eq('id', parsed.id)
       .maybeSingle();
@@ -189,7 +193,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
 
     const { data: client } = await supabase
       .from('case_clients')
-      .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, created_at, updated_at, cases(id, title, reference_no, stage_key)')
+      .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, link_status, created_at, updated_at, cases(id, title, reference_no, stage_key)')
       .eq('organization_id', organizationId)
       .eq('profile_id', parsed.id)
       .order('updated_at', { ascending: false })
@@ -345,6 +349,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
     residentNumberMasked: privateRowRes.data?.resident_number_masked ?? null,
     addressSummary,
     isPortalEnabled: caseClient?.is_portal_enabled ?? false,
+    linkStatus: (caseClient?.link_status ?? 'linked') as 'linked' | 'pending_unlink' | 'unlinked' | 'orphan_review',
     tempLoginId: tempCredential?.login_id ?? null,
     mustChangePassword: tempCredential?.must_change_password ?? false,
     contactPhone: profileRowRes.data?.phone_e164 ?? tempCredential?.contact_phone ?? null,

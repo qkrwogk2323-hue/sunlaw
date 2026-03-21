@@ -486,8 +486,9 @@ export async function getCaseClientsForHub(
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('case_clients')
-    .select('id, client_name, profile_id')
+    .select('id, client_name, profile_id, link_status')
     .eq('case_id', caseId)
+    .in('link_status', ['linked', 'pending_unlink'])
     .order('created_at', { ascending: true });
 
   if (error) {

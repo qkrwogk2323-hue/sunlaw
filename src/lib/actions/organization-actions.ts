@@ -3075,6 +3075,7 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
       client_email_snapshot: requestRow.requester_email,
       relation_label: relationLabel,
       is_portal_enabled: portalEnabled,
+      link_status: 'linked' as const,
       created_by: auth.user.id,
       updated_by: auth.user.id
     };
@@ -3225,6 +3226,7 @@ export async function importClientsCsvAction(formData: FormData) {
       client_email_snapshot: email,
       relation_label: combinedRelation,
       is_portal_enabled: false,
+      link_status: 'linked' as const,
       created_by: auth.user.id,
       updated_by: auth.user.id
     });
