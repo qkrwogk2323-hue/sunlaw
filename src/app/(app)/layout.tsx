@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { getNavUnreadCounts } from '@/lib/queries/notifications';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
@@ -17,6 +17,7 @@ import { FloatingExportWidget } from '@/components/floating-export-widget';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ToastProvider } from '@/components/ui/toast-provider';
+import { enforceSubscriptionRouteAccess, getOrganizationSubscriptionSnapshot, getSubscriptionLockMessage } from '@/lib/subscription-lock';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,14 +43,21 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect('/portal' as Route);
   }
 
-  const [supportSession, navCounts] = await Promise.all([
+  const effectiveOrganizationId = getEffectiveOrganizationId(auth);
+
+  const [supportSession, navCounts, subscriptionSnapshot] = await Promise.all([
     readSupportSessionCookie(),
     getNavUnreadCounts().catch(() => ({ unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 })),
+    getOrganizationSubscriptionSnapshot(effectiveOrganizationId)
   ]);
+
+  await enforceSubscriptionRouteAccess(subscriptionSnapshot);
 
   if (!auth.memberships.length && !isPlatformOperator(auth)) {
     redirect('/start/signup' as Route);
   }
+
+  const lockMessage = getSubscriptionLockMessage(subscriptionSnapshot);
 
   return (
     <ToastProvider>
@@ -90,6 +98,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 </div>
                 <EndSupportSessionForm />
               </div>
+            </div>
+          ) : null}
+          {lockMessage ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">{lockMessage.title}</p>
+              <p className="mt-1 text-sm text-red-700">{lockMessage.description}</p>
             </div>
           ) : null}
           {children}

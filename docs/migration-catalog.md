@@ -89,6 +89,7 @@
 | 0055 | `0055_case_hub_multi_org_bridge.sql` | active | 사건허브 multi-org bridge 및 허브 접근 조직 연결 테이블 도입 |
 | 0056 | `0056_client_link_lifecycle.sql` | active | 의뢰인 link lifecycle / orphan review / relink policy 및 `primary_case_client_id` canonicalization |
 | 0057 | `0057_platform_governance_registry_guards.sql` | hardening_followup | platform runtime registry와 organizations drift를 막는 guard/trigger 하드닝 |
+| 0058 | `0058_billing_subscription_lock_state_machine.sql` | active | 조직 구독 상태, 잠금 상태머신, 결제 상태 이벤트 로그 도입 |
 
 ## 운영 메모
 
