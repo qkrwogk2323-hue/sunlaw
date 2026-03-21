@@ -48,6 +48,26 @@ export function StaffBulkInviteForm({ organizationId }: { organizationId: string
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-3">
+        {[
+          { index: 1, label: '입력', active: step === 1 },
+          { index: 2, label: '권한 설정', active: step === 2 },
+          { index: 3, label: '완료 카드', active: false }
+        ].map((item) => (
+          <div
+            key={item.index}
+            className={`rounded-xl border px-3 py-2 text-sm ${
+              item.active
+                ? 'border-sky-300 bg-sky-50 text-sky-950'
+                : 'border-slate-200 bg-slate-50 text-slate-500'
+            }`}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">Step {item.index}</p>
+            <p className="mt-1 font-medium">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">목록 → 입력 → 완료</p>
         <p className="mt-2 text-sm text-slate-700">구성원 목록은 페이지에서 유지하고, 여기서는 3행 기본 입력 후 권한 설정 단계로 넘어갑니다.</p>
@@ -161,7 +181,7 @@ export function StaffBulkInviteForm({ organizationId }: { organizationId: string
           </div>
 
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-            완료 화면에서 생성 여부, 안내 링크, 실패 사유를 한 번에 확인합니다. 비밀번호는 이 기본 초대 플로우에서 노출하지 않습니다.
+            완료 카드에서 생성 여부, 안내 링크, 실패 사유를 한 번에 확인합니다. 비밀번호는 이 기본 초대 플로우에서 노출하지 않습니다.
           </div>
 
           <div className="flex flex-wrap justify-between gap-3">
