@@ -319,7 +319,7 @@ body::-webkit-scrollbar-track {
   }
 }
 
- */ Toast slide-in animation /* 
+/* Toast slide-in animation */
 @keyframes vs-toast-in {
   from {
     opacity: 0;

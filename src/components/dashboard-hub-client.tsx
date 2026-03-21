@@ -969,6 +969,7 @@ export function DashboardHubClient({
       label: '중요 알림',
       value: todayCaseFocus.length,
       helper: '오늘 바로 확인할 사건 기준',
+      detail: '알림센터에서 즉시 처리 항목을 먼저 엽니다.',
       href: '/notifications?priority=urgent',
       className: 'border-rose-200 bg-rose-50/80',
       valueClassName: 'text-rose-950'
@@ -977,6 +978,7 @@ export function DashboardHubClient({
       label: '승인 요청',
       value: pendingClientAccessCount,
       helper: '검토 대기 중인 신규 요청',
+      detail: '승인 또는 반려 후 연결 상태를 바로 갱신합니다.',
       href: '/notifications?section=immediate',
       className: 'border-emerald-200 bg-emerald-50/80',
       valueClassName: 'text-emerald-950'
@@ -985,6 +987,7 @@ export function DashboardHubClient({
       label: '후속 처리',
       value: approvedClientAccessCount,
       helper: '연결 이후 처리할 항목',
+      detail: '허브, 사건, 비용 흐름으로 다음 작업을 이어갑니다.',
       href: '/notifications?section=confirm',
       className: 'border-violet-200 bg-violet-50/80',
       valueClassName: 'text-violet-950'
@@ -1109,10 +1112,18 @@ export function DashboardHubClient({
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
-              <Link key={item.label} href={item.href as Route} className={`flex min-h-32 min-w-28 flex-col rounded-2xl border px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)] transition hover:brightness-95 ${item.className}`}>
-                <p className="text-[11px] font-medium tracking-[0.16em] text-slate-500 uppercase">{item.label}</p>
-                <p className={`mt-3 text-3xl font-bold leading-none tabular-nums ${item.valueClassName}`}>{item.value}</p>
-                <p className="mt-auto pt-3 text-xs text-slate-600">{item.helper}</p>
+              <Link
+                key={item.label}
+                href={item.href as Route}
+                className={`flex min-h-36 min-w-32 flex-col rounded-[1.35rem] border px-4 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.10)] ${item.className}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">{item.label}</p>
+                  <ChevronRight className="size-4 shrink-0 text-slate-400" />
+                </div>
+                <p className={`mt-4 text-3xl font-bold leading-none tabular-nums ${item.valueClassName}`}>{item.value}</p>
+                <p className="mt-3 text-xs font-medium text-slate-700">{item.helper}</p>
+                <p className="mt-auto pt-3 text-xs leading-5 text-slate-500">{item.detail}</p>
               </Link>
             ))}
           </div>
@@ -1141,12 +1152,13 @@ export function DashboardHubClient({
                     <Link
                       key={item.id}
                       href={toNotificationOpenHref(item)}
-                      className="block rounded-2xl border border-rose-200 bg-white px-3 py-3 text-sm transition hover:border-rose-300 hover:bg-rose-50/40"
+                      className="block rounded-2xl border border-rose-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50/40"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-medium text-slate-900">{item.title}</p>
                           <p className="mt-1 line-clamp-2 text-xs leading-6 text-slate-600">{item.body}</p>
+                          <p className="mt-2 text-[11px] font-medium text-rose-700">열면 관련 화면에서 바로 처리할 수 있습니다.</p>
                         </div>
                         <ChevronRight className="mt-0.5 size-4 shrink-0 text-slate-400" />
                       </div>
@@ -1174,7 +1186,7 @@ export function DashboardHubClient({
                       <Link
                         key={item.id}
                         href={'/clients' as Route}
-                        className="block rounded-2xl border border-amber-200 bg-white px-3 py-3 text-sm transition hover:border-amber-300 hover:bg-amber-50/40"
+                        className="block rounded-2xl border border-amber-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/40"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <p className="font-medium text-slate-900">{item.requester_name}</p>
@@ -1182,6 +1194,7 @@ export function DashboardHubClient({
                         </div>
                         <p className="mt-1 text-xs text-slate-500">{organization?.name ?? '현재 조직'} · {formatDateTime(item.created_at)}</p>
                         {item.request_note ? <p className="mt-2 line-clamp-2 text-xs leading-6 text-slate-600">{item.request_note}</p> : null}
+                        <p className="mt-2 text-[11px] font-medium text-amber-700">열면 승인 또는 연결 후속 작업으로 이어집니다.</p>
                       </Link>
                     );
                   })

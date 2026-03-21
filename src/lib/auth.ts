@@ -278,3 +278,14 @@ export async function requireOrganizationActionAccess(
   const membership = evaluateOrganizationAccess(auth, organizationId, options);
   return { auth, membership };
 }
+
+export async function requireOrganizationUserManagementAccess(
+  organizationId: string,
+  errorMessage = '구성원 관리 권한이 없습니다.'
+) {
+  return requireOrganizationActionAccess(organizationId, {
+    permission: 'user_manage',
+    requireManager: true,
+    errorMessage
+  });
+}
