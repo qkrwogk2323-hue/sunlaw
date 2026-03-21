@@ -73,7 +73,28 @@ export type CaseHubDetail = CaseHubSummary & {
   recentActivity: CaseHubActivityItem[];
 };
 
-async function listAccessibleCaseHubIds(admin: ReturnType<typeof createSupabaseAdminClient>, organizationId: string) {
+async function listLegacyCaseHubIds(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  organizationId: string
+) {
+  const { data, error } = await admin
+    .from('case_hubs')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('lifecycle_status', 'active');
+
+  if (error) {
+    console.error('[case-hubs] legacy fallback error:', error.message);
+    return [];
+  }
+
+  return [...new Set(((data ?? []) as any[]).map((row) => row.id).filter(Boolean))];
+}
+
+async function listAccessibleCaseHubIds(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  organizationId: string
+) {
   const { data, error } = await admin
     .from('case_hub_organizations')
     .select('hub_id')
@@ -81,11 +102,14 @@ async function listAccessibleCaseHubIds(admin: ReturnType<typeof createSupabaseA
     .eq('status', 'active');
 
   if (error) {
-    console.error('[case-hubs] bridge error:', error.message);
-    return [];
+    console.error('[case-hubs] bridge error, falling back to legacy owner path:', error.message);
+    return listLegacyCaseHubIds(admin, organizationId);
   }
 
-  return [...new Set(((data ?? []) as any[]).map((row) => row.hub_id).filter(Boolean))];
+  const bridgeHubIds = [...new Set(((data ?? []) as any[]).map((row) => row.hub_id).filter(Boolean))];
+  if (bridgeHubIds.length > 0) return bridgeHubIds;
+
+  return listLegacyCaseHubIds(admin, organizationId);
 }
 
 // ────────────────────────────────────────────────────────────────────
