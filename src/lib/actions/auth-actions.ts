@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { requireAuthenticatedUser, requireOrganizationUserManagementAccess } from '@/lib/auth';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function signOutAction() {
@@ -10,6 +11,38 @@ export async function signOutAction() {
   await supabase.auth.signOut();
   revalidatePath('/');
   redirect('/login');
+}
+
+/**
+ * 관리자가 특정 구성원의 모든 세션을 강제 무효화합니다.
+ * 퇴사 처리, 계정 탈취 의심 시 즉시 세션 차단에 사용합니다.
+ */
+export async function revokeUserSessionsAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`;
+  const targetProfileId = `${formData.get('targetProfileId') ?? ''}`;
+
+  if (!organizationId || !targetProfileId) {
+    throw new Error('필수 파라미터가 누락되었습니다.');
+  }
+
+  const { auth } = await requireOrganizationUserManagementAccess(
+    organizationId,
+    '구성원 세션 무효화는 관리자만 할 수 있습니다.'
+  );
+
+  if (targetProfileId === auth.user.id) {
+    throw new Error('자신의 세션은 이 기능으로 무효화할 수 없습니다. 직접 로그아웃하세요.');
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  // Supabase Auth Admin API — 해당 사용자의 모든 활성 세션 즉시 만료
+  const { error } = await admin.auth.admin.signOut(targetProfileId, 'global');
+  if (error) {
+    throw new Error(`세션 무효화에 실패했습니다. Supabase Auth 오류: ${error.message}`);
+  }
+
+  revalidatePath('/settings/team');
 }
 
 export async function completeTemporaryCredentialPasswordResetAction() {

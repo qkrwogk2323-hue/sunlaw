@@ -13,6 +13,7 @@ import { StaffBulkInviteForm } from '@/components/forms/staff-bulk-invite-form';
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
+import { revokeUserSessionsAction } from '@/lib/actions/auth-actions';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -300,6 +301,26 @@ export default async function TeamSettingsPage({
                       >
                         삭제
                       </DangerActionButton>
+                      {row.raw.profile?.id ? (
+                        <DangerActionButton
+                          action={revokeUserSessionsAction}
+                          fields={{ organizationId, targetProfileId: row.raw.profile.id }}
+                          confirmTitle="세션을 강제 종료할까요?"
+                          confirmDescription="해당 구성원이 현재 로그인된 모든 기기에서 즉시 로그아웃됩니다. 퇴사 처리나 계정 탈취 의심 시 사용하세요."
+                          highlightedInfo={`${row.raw.profile?.full_name ?? '-'} (${row.raw.profile?.email ?? '-'})`}
+                          confirmLabel="세션 강제 종료"
+                          variant="warning"
+                          successTitle="세션이 강제 종료되었습니다."
+                          successMessage="해당 구성원의 모든 활성 세션이 무효화되었습니다."
+                          errorTitle="세션 종료에 실패했습니다."
+                          errorCause="Supabase Auth 연결 오류가 발생했습니다."
+                          errorResolution="잠시 후 다시 시도하거나 Supabase 대시보드에서 직접 처리해 주세요."
+                          buttonVariant="ghost"
+                          className="h-8 px-3 text-xs text-amber-700 hover:bg-amber-50"
+                        >
+                          세션 종료
+                        </DangerActionButton>
+                      ) : null}
                     </>
                   ) : null}
                 </div>

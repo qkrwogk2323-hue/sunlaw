@@ -1,16 +1,42 @@
 'use server';
 
 import type { Route } from 'next';
+import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
 import { clientAccountStatusLabel } from '@/lib/client-account';
 import { formatResidentRegistrationNumberMasked } from '@/lib/format';
+import { normalizeGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { clientServiceRequestSchema, clientSignupSchema } from '@/lib/validators';
+
+function getActionErrorMessage(error: unknown, fallback: string) {
+  const guardFeedback = parseGuardFeedback(error);
+  if (guardFeedback) {
+    return guardFeedback.cause;
+  }
+
+  if (error instanceof z.ZodError || (error instanceof Error && error.message.trim().startsWith('['))) {
+    const feedback = normalizeGuardFeedback(error, {
+      type: 'validation_failed',
+      code: 'VALIDATION_FAILED',
+      blocked: fallback,
+      cause: '입력값 형식을 확인해 주세요.',
+      resolution: '필수 항목과 입력 형식을 수정한 뒤 다시 제출해 주세요.'
+    });
+    return feedback.cause;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
 
 async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
@@ -31,16 +57,22 @@ export async function submitClientSignupAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const parsed = clientSignupSchema.parse({
-    legalName: formData.get('legalName'),
-    residentNumber: formData.get('residentNumber'),
-    phone: formData.get('phone'),
-    addressLine1: formData.get('addressLine1'),
-    addressLine2: formData.get('addressLine2'),
-    postalCode: formData.get('postalCode'),
-    privacyConsent: formData.get('privacyConsent') === 'on',
-    serviceConsent: formData.get('serviceConsent') === 'on'
-  });
+
+  let parsed: z.infer<typeof clientSignupSchema>;
+  try {
+    parsed = clientSignupSchema.parse({
+      legalName: formData.get('legalName'),
+      residentNumber: formData.get('residentNumber'),
+      phone: formData.get('phone'),
+      addressLine1: formData.get('addressLine1'),
+      addressLine2: formData.get('addressLine2'),
+      postalCode: formData.get('postalCode'),
+      privacyConsent: formData.get('privacyConsent') === 'on',
+      serviceConsent: formData.get('serviceConsent') === 'on'
+    });
+  } catch (error) {
+    throw new Error(getActionErrorMessage(error, '입력 정보를 확인해 주세요. 필수 항목이 누락되었거나 형식이 올바르지 않습니다.'));
+  }
 
   const now = new Date().toISOString();
   const residentNumberMasked = formatResidentRegistrationNumberMasked(parsed.residentNumber);
@@ -138,12 +170,18 @@ export async function createClientServiceRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const parsed = clientServiceRequestSchema.parse({
-    organizationId: formData.get('organizationId'),
-    requestKind: formData.get('requestKind') || 'status_help',
-    title: formData.get('title'),
-    body: formData.get('body')
-  });
+
+  let parsed: z.infer<typeof clientServiceRequestSchema>;
+  try {
+    parsed = clientServiceRequestSchema.parse({
+      organizationId: formData.get('organizationId'),
+      requestKind: formData.get('requestKind') || 'status_help',
+      title: formData.get('title'),
+      body: formData.get('body')
+    });
+  } catch (error) {
+    throw new Error(getActionErrorMessage(error, '문의 내용을 확인해 주세요. 필수 항목이 누락되었거나 형식이 올바르지 않습니다.'));
+  }
 
   const { data: created, error: insertError } = await supabase
     .from('client_service_requests')
