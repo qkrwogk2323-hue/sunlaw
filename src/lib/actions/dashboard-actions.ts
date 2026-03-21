@@ -72,6 +72,10 @@ export async function sendDashboardNoticeAction(formData: FormData) {
       kind: 'generic',
       title,
       body,
+      action_label: '알림 센터 확인',
+      action_href: '/notifications',
+      destination_type: 'internal_route',
+      destination_url: '/notifications',
       payload: {
         source: 'dashboard_notice',
         sender_profile_id: auth.user.id,

@@ -82,6 +82,8 @@ export async function POST() {
     requires_action: true,
     action_label: '구성원 정보 확인',
     action_href: destinationUrl,
+    destination_type: 'internal_route',
+    destination_url: destinationUrl,
     action_entity_type: 'client',
     action_target_id: auth.user.id
   }));

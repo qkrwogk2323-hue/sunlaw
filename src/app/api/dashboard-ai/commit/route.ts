@@ -156,6 +156,7 @@ export async function POST(request: Request) {
   const uniqueRecipientIds = [...new Set(recipientIds)];
 
   if (uniqueRecipientIds.length) {
+    const targetHref = dueAt ? `/cases/${caseId}?tab=schedules` : `/cases/${caseId}`;
     const { error: notificationError } = await admin.from('notifications').insert(
       uniqueRecipientIds.map((recipientId) => ({
         organization_id: organizationId,
@@ -166,6 +167,10 @@ export async function POST(request: Request) {
         body: dueAt
           ? `${caseRow.title} 사건에 작업과 일정이 등록되었습니다. 완료 전까지 대시보드와 일정 확인 메뉴에서 추적하세요.`
           : `${caseRow.title} 사건에 작업이 등록되었습니다. 일정은 수동 확인이 필요합니다.`,
+        action_label: dueAt ? '일정 확인' : '사건 보기',
+        action_href: targetHref,
+        destination_type: 'internal_route',
+        destination_url: targetHref,
         payload: {
           source: 'dashboard_ai',
           request_id: requestRow.id,

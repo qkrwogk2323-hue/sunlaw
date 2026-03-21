@@ -103,8 +103,10 @@ export async function POST(request: Request) {
         kind: 'generic',
         title: `조직간 업무소통: ${caseRow.title}`,
         body: content.slice(0, 160),
-        action_label: '대시보드 열기',
-        action_href: '/dashboard',
+        action_label: '사건 보기',
+        action_href: `/cases/${caseId}`,
+        destination_type: 'internal_route',
+        destination_url: `/cases/${caseId}`,
         payload: {
           source: 'dashboard_message',
           sender_profile_id: auth.user.id,

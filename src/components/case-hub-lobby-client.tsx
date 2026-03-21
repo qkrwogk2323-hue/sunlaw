@@ -209,7 +209,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                   </div>
                 </div>
 
-              <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   {canActivate ? (
                     <ClientActionForm
                       action={activateCaseHubAction}
@@ -229,6 +229,15 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                   ) : null}
                   <Link href={'/cases' as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
                     사건목록으로 이동
+                  </Link>
+                  <Link href={`/cases/${hub.caseId}?tab=billing` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                    비용 관리 열기
+                  </Link>
+                  <Link href={`/cases/${hub.caseId}?tab=schedule` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                    일정 확인
+                  </Link>
+                  <Link href={`/cases/${hub.caseId}?tab=documents` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                    문서 보기
                   </Link>
                 </div>
               </div>

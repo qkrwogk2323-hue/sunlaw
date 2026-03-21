@@ -1108,9 +1108,9 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
           verification_status: verification.status
         },
         action_label: '신청 현황 확인',
-        action_href: '/notifications',
+        action_href: '/organization-request',
         destination_type: 'internal_route',
-        destination_url: '/notifications'
+        destination_url: '/organization-request'
       });
 
       if (notificationError) throw notificationError;
@@ -1423,7 +1423,9 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
         decision
       },
       action_label: actionHref ? '신청 현황 보기' : null,
-      action_href: actionHref
+      action_href: actionHref,
+      destination_type: actionHref ? 'internal_route' : null,
+      destination_url: actionHref
     });
 
     if (requesterNotificationError) throw requesterNotificationError;

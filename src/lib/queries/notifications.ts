@@ -159,6 +159,8 @@ async function ensureKakaoSignupNotice(userId: string, organizationId: string | 
     status: 'active',
     title: '카카오톡 중요 알림 안내',
     body: '카카오톡 가입자는 알림센터에서 알림 유형을 선택해 중요 알림을 카카오톡으로 받을 수 있습니다.',
+    action_label: '알림 설정 확인',
+    action_href: '/notifications',
     destination_type: 'internal_route',
     destination_url: '/notifications'
   });

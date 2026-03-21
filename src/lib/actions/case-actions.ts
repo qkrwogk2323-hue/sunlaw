@@ -90,6 +90,7 @@ async function notifyBillingStakeholders({
   if (!recipientProfileIds.length) return;
 
   const admin = createSupabaseAdminClient();
+  const targetHref = `/cases/${caseId}?tab=billing`;
   const { error: notificationError } = await admin.from('notifications').insert(
     recipientProfileIds.map((recipientProfileId) => ({
       organization_id: organizationId,
@@ -98,6 +99,10 @@ async function notifyBillingStakeholders({
       kind: 'generic',
       title,
       body,
+      action_label: '비용 관리 보기',
+      action_href: targetHref,
+      destination_type: 'internal_route',
+      destination_url: targetHref,
       payload
     }))
   );
@@ -537,7 +542,9 @@ export async function linkClientAction(caseId: string, formData: FormData) {
         title: `새 사건이 연결되었습니다: ${caseRecord.title}`,
         body: '고객 포털에서 사건 진행상황을 확인할 수 있습니다.',
         action_label: '사건 보기',
-        action_href: `/portal/cases/${caseRecord.id}`
+        action_href: `/portal/cases/${caseRecord.id}`,
+        destination_type: 'internal_route',
+        destination_url: `/portal/cases/${caseRecord.id}`
       }
     ]);
   }
@@ -1005,7 +1012,9 @@ export async function addMessageAction(caseId: string, formData: FormData) {
           title: `새 메시지: ${caseRecord.title}`,
           body: parsed.body.slice(0, 120),
           action_label: '소통 보기',
-          action_href: `/portal/cases/${caseRecord.id}`
+          action_href: `/portal/cases/${caseRecord.id}`,
+          destination_type: 'internal_route',
+          destination_url: `/portal/cases/${caseRecord.id}`
         }))
     );
   }
