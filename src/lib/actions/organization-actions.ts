@@ -530,6 +530,35 @@ const clientPreRegisterInvitationSchema = z.object({
   expiresHours: z.coerce.number().int().min(1).max(336).default(72)
 });
 
+const staffBulkInviteEntrySchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
+  secondaryEmail: z.string().trim().email().optional().or(z.literal('')),
+  membershipTitle: z.string().trim().max(80).optional().or(z.literal(''))
+});
+
+const staffBulkInviteSchema = z.object({
+  organizationId: z.string().uuid(),
+  actorCategory: z.enum(['admin', 'staff']).default('staff'),
+  expiresHours: z.coerce.number().int().min(1).max(336).default(72),
+  entries: z.array(staffBulkInviteEntrySchema).min(1).max(5)
+});
+
+const clientBulkInviteEntrySchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
+  phone: z.string().trim().max(30).optional().or(z.literal('')),
+  relationLabel: z.string().trim().max(80).optional().or(z.literal('')),
+  secondaryContact: z.string().trim().max(120).optional().or(z.literal(''))
+});
+
+const clientStructuredBulkInviteSchema = z.object({
+  organizationId: z.string().uuid(),
+  caseId: z.string().uuid(),
+  expiresHours: z.coerce.number().int().min(1).max(336).default(72),
+  entries: z.array(clientBulkInviteEntrySchema).min(1).max(5)
+});
+
 const resendInvitationSchema = z.object({
   invitationId: z.string().uuid(),
   expiresHours: z.coerce.number().int().min(1).max(336).default(72)
@@ -634,6 +663,16 @@ function parseStaffInvitationInput(formData: FormData) {
   });
 }
 
+function parseJsonEntries<T>(formData: FormData, fieldName: string) {
+  const raw = `${formData.get(fieldName) ?? '[]'}`.trim();
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed as T[] : [];
+  } catch {
+    throw new Error('입력 대상을 다시 확인해 주세요.');
+  }
+}
+
 function buildStaffInvitationRecord(parsed: ReturnType<typeof parseStaffInvitationInput>, actorId: string) {
   const token = createInvitationToken();
   const requestedRole = parsed.actorCategory === 'admin' ? 'org_manager' : 'org_staff';
@@ -655,6 +694,49 @@ function buildStaffInvitationRecord(parsed: ReturnType<typeof parseStaffInvitati
       note: encodeInvitationNote(parsed.note, parsed.membershipTitle),
       created_by: actorId,
       expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+    }
+  };
+}
+
+function buildStaffInvitationRecordFromEntry({
+  organizationId,
+  actorCategory,
+  expiresHours,
+  entry,
+  actorId
+}: {
+  organizationId: string;
+  actorCategory: 'admin' | 'staff';
+  expiresHours: number;
+  entry: z.infer<typeof staffBulkInviteEntrySchema>;
+  actorId: string;
+}) {
+  const token = createInvitationToken();
+  const requestedRole = actorCategory === 'admin' ? 'org_manager' : 'org_staff';
+  const roleTemplateKey = actorCategory === 'admin' ? 'admin_general' : 'org_staff';
+  const caseScopePolicy = actorCategory === 'admin' ? 'all_org_cases' : 'assigned_cases_only';
+  const publicNote = entry.secondaryEmail?.trim()
+    ? `보조 이메일: ${entry.secondaryEmail.trim()}`
+    : null;
+
+  return {
+    token,
+    record: {
+      organization_id: organizationId,
+      kind: 'staff_invite',
+      email: entry.email,
+      invited_name: entry.name,
+      requested_role: requestedRole,
+      actor_category: actorCategory,
+      role_template_key: roleTemplateKey,
+      case_scope_policy: caseScopePolicy,
+      permissions_override: {},
+      token_hash: hashInvitationToken(token),
+      share_token: null,
+      token_hint: token.slice(-6),
+      note: encodeInvitationNote(publicNote, entry.membershipTitle),
+      created_by: actorId,
+      expires_at: new Date(Date.now() + expiresHours * 60 * 60 * 1000).toISOString()
     }
   };
 }
@@ -1525,6 +1607,72 @@ export async function createStaffInvitationAction(formData: FormData) {
   redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
 }
 
+export async function createStaffBulkInvitationAction(formData: FormData) {
+  const parsed = staffBulkInviteSchema.parse({
+    organizationId: formData.get('organizationId'),
+    actorCategory: formData.get('actorCategory') || 'staff',
+    expiresHours: formData.get('expiresHours') || 72,
+    entries: parseJsonEntries<z.infer<typeof staffBulkInviteEntrySchema>>(formData, 'entries')
+  });
+
+  const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 직원을 초대할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+  const created: Array<{ name: string; email: string; url: string; membershipTitle: string | null }> = [];
+  const failed: Array<{ name: string; email: string; reason: string }> = [];
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+
+  for (const entry of parsed.entries) {
+    const { token, record } = buildStaffInvitationRecordFromEntry({
+      organizationId: parsed.organizationId,
+      actorCategory: parsed.actorCategory,
+      expiresHours: parsed.expiresHours,
+      entry,
+      actorId: auth.user.id
+    });
+
+    const { error } = await supabase.from('invitations').insert(record);
+    if (error) {
+      failed.push({
+        name: entry.name,
+        email: entry.email,
+        reason: getActionErrorMessage(error, '초대 링크를 생성하지 못했습니다.')
+      });
+      continue;
+    }
+
+    created.push({
+      name: entry.name,
+      email: entry.email,
+      url: `${appUrl}/invite/${token}`,
+      membershipTitle: entry.membershipTitle?.trim() || null
+    });
+  }
+
+  if (!created.length) {
+    throw new Error(failed[0]?.reason || '직원 초대 링크를 생성하지 못했습니다.');
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(
+    '_vs_staff_invite_summary',
+    encodeURIComponent(JSON.stringify({
+      created,
+      failed,
+      actorCategory: parsed.actorCategory,
+      expiresHours: parsed.expiresHours
+    })),
+    {
+      maxAge: 300,
+      path: '/settings/team',
+      sameSite: 'strict',
+      httpOnly: false
+    }
+  );
+
+  revalidatePath('/settings/team');
+  redirect(`/settings/team?staffInviteBatch=${created.length}&staffInviteFailed=${failed.length}`);
+}
+
 export async function createStaffPreRegisteredInvitationAction(formData: FormData) {
   const actorCategory = `${formData.get('actorCategory') || 'staff'}`;
   const normalizedRoleTemplateKey = actorCategory === 'admin' ? 'admin_general' : 'org_staff';
@@ -1665,6 +1813,152 @@ export async function createClientDirectInvitationAction(formData: FormData) {
   }
 
   redirect(`/clients?invite=${encodeURIComponent(token)}`);
+}
+
+export async function createClientBulkInvitationAction(formData: FormData) {
+  const parsed = clientStructuredBulkInviteSchema.parse({
+    organizationId: formData.get('organizationId'),
+    caseId: formData.get('caseId'),
+    expiresHours: formData.get('expiresHours') || 72,
+    entries: parseJsonEntries<z.infer<typeof clientBulkInviteEntrySchema>>(formData, 'entries')
+  });
+
+  const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 초대할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+  const created: Array<{ name: string; email: string; relationLabel: string | null; caseClientId: string; url: string }> = [];
+  const failed: Array<{ name: string; email: string; reason: string }> = [];
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+  const { data: caseRow, error: caseError } = await supabase
+    .from('cases')
+    .select('id, title')
+    .eq('organization_id', parsed.organizationId)
+    .eq('id', parsed.caseId)
+    .maybeSingle();
+
+  if (caseError || !caseRow) {
+    throw caseError ?? new Error('연결할 사건을 찾을 수 없습니다.');
+  }
+
+  for (const entry of parsed.entries) {
+    const normalizedEmail = entry.email.trim().toLowerCase();
+    const relationLabel = entry.relationLabel?.trim() || '의뢰인';
+    let caseClientId: string | null = null;
+
+    const { data: existingCaseClient } = await supabase
+      .from('case_clients')
+      .select('id')
+      .eq('organization_id', parsed.organizationId)
+      .eq('case_id', parsed.caseId)
+      .eq('client_email_snapshot', normalizedEmail)
+      .maybeSingle();
+
+    if (existingCaseClient?.id) {
+      caseClientId = existingCaseClient.id;
+    } else {
+      const { data: insertedCaseClient, error: caseClientError } = await supabase
+        .from('case_clients')
+        .insert({
+          organization_id: parsed.organizationId,
+          case_id: parsed.caseId,
+          profile_id: null,
+          client_name: entry.name,
+          client_email_snapshot: normalizedEmail,
+          relation_label: relationLabel,
+          is_portal_enabled: false,
+          created_by: auth.user.id,
+          updated_by: auth.user.id
+        })
+        .select('id')
+        .single();
+
+      if (caseClientError || !insertedCaseClient?.id) {
+        failed.push({
+          name: entry.name,
+          email: normalizedEmail,
+          reason: getActionErrorMessage(caseClientError, '의뢰인 연결 정보를 생성하지 못했습니다.')
+        });
+        continue;
+      }
+
+      caseClientId = insertedCaseClient.id;
+    }
+
+    const { data: existingInvite } = await supabase
+      .from('invitations')
+      .select('id')
+      .eq('organization_id', parsed.organizationId)
+      .eq('case_client_id', caseClientId)
+      .eq('status', 'pending')
+      .eq('kind', 'client_invite')
+      .maybeSingle();
+
+    if (existingInvite?.id) {
+      failed.push({
+        name: entry.name,
+        email: normalizedEmail,
+        reason: '이미 대기 중인 초대가 있습니다.'
+      });
+      continue;
+    }
+
+    const token = createInvitationToken();
+    const { error: inviteError } = await supabase.from('invitations').insert({
+      organization_id: parsed.organizationId,
+      case_id: parsed.caseId,
+      case_client_id: caseClientId,
+      kind: 'client_invite',
+      email: normalizedEmail,
+      invited_name: entry.name,
+      token_hash: hashInvitationToken(token),
+      share_token: null,
+      token_hint: token.slice(-6),
+      note: buildClientInvitationNote(entry.secondaryContact, relationLabel, entry.phone),
+      created_by: auth.user.id,
+      expires_at: new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString()
+    });
+
+    if (inviteError) {
+      failed.push({
+        name: entry.name,
+        email: normalizedEmail,
+        reason: getActionErrorMessage(inviteError, '의뢰인 초대 링크를 생성하지 못했습니다.')
+      });
+      continue;
+    }
+
+    created.push({
+      name: entry.name,
+      email: normalizedEmail,
+      relationLabel,
+      caseClientId: caseClientId!,
+      url: `${appUrl}/invite/${token}`
+    });
+  }
+
+  if (!created.length) {
+    throw new Error(failed[0]?.reason || '의뢰인 초대 링크를 생성하지 못했습니다.');
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(
+    '_vs_client_invite_summary',
+    encodeURIComponent(JSON.stringify({
+      caseId: parsed.caseId,
+      caseTitle: caseRow.title ?? '연결 사건',
+      created,
+      failed,
+      expiresHours: parsed.expiresHours
+    })),
+    {
+      maxAge: 300,
+      path: '/clients',
+      sameSite: 'strict',
+      httpOnly: false
+    }
+  );
+
+  revalidatePath('/clients');
+  redirect(`/clients?clientInviteBatch=${created.length}&clientInviteFailed=${failed.length}`);
 }
 
 export async function createClientPreRegisteredInvitationAction(formData: FormData) {
