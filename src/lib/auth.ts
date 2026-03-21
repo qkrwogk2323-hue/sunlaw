@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { assertPlatformAdminAccess, evaluateOrganizationAccess } from '@/lib/access-control';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
@@ -197,8 +198,7 @@ export async function getActiveViewMode() {
 
 export function getPlatformOrganizationContextId(auth: AuthContext) {
   const membership = auth.memberships.find((item) => (
-    item.organization?.slug === PLATFORM_ORGANIZATION_SLUG
-    && item.organization?.is_platform_root === true
+    isPlatformManagementOrganization(item.organization)
     && isManagementRole(item.role)
   ));
   return membership?.organization_id ?? null;
@@ -211,8 +211,7 @@ export async function hasActivePlatformAdminView(auth: AuthContext, organization
   if (!membership) return false;
 
   return Boolean(
-    membership.organization?.slug === PLATFORM_ORGANIZATION_SLUG
-    && membership.organization?.is_platform_root === true
+    isPlatformManagementOrganization(membership.organization)
     && isManagementRole(membership.role)
     && hasPlatformAdminSecurityClearance(auth)
   );
@@ -254,8 +253,7 @@ export function isManagementRole(role?: string | null) {
 
 export function hasPlatformManagementMembership(auth: AuthContext) {
   return auth.memberships.some((membership) => (
-    membership.organization?.slug === PLATFORM_ORGANIZATION_SLUG
-    && membership.organization?.is_platform_root === true
+    isPlatformManagementOrganization(membership.organization)
     && isManagementRole(membership.role)
   ));
 }
