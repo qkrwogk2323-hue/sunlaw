@@ -21,8 +21,28 @@ function revalidateNotificationViews() {
   revalidatePath('/dashboard');
 }
 
-function normalizeRelativeHref(value: string) {
-  return value.startsWith('/') ? value : '/dashboard';
+async function logNotificationAudit({
+  actorId,
+  organizationId,
+  notificationId,
+  action,
+  meta
+}: {
+  actorId: string;
+  organizationId?: string | null;
+  notificationId: string;
+  action: string;
+  meta?: Record<string, unknown>;
+}) {
+  const supabase = await createSupabaseServerClient();
+  void supabase.from('audit_logs').insert({
+    actor_id: actorId,
+    action,
+    resource_type: 'notification',
+    resource_id: notificationId,
+    organization_id: organizationId ?? null,
+    meta: meta ?? {}
+  });
 }
 
 async function getOwnedNotification(notificationId: string) {
@@ -48,17 +68,24 @@ export async function markNotificationReadAction(formData: FormData) {
     throw new Error('알림 식별자가 누락되었습니다.');
   }
 
-  const supabase = await createSupabaseServerClient();
+  const { auth, supabase, notification } = await getOwnedNotification(id);
   const { error } = await supabase
     .from('notifications')
     .update({ read_at: new Date().toISOString(), status: 'read' })
     .eq('id', id)
+    .eq('recipient_profile_id', auth.user.id)
     .eq('status', 'active');
 
   if (error) {
     throw error;
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: notification.organization_id,
+    notificationId: id,
+    action: 'notification.read'
+  });
   revalidateNotificationViews();
 }
 
@@ -88,6 +115,13 @@ export async function markAllNotificationsReadAction() {
     }
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: auth.profile.default_organization_id,
+    notificationId: auth.user.id,
+    action: 'notification.read_all',
+    meta: { scope: 'notifications_inbox' }
+  });
   revalidateNotificationViews();
 }
 
@@ -115,6 +149,13 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
       .eq('status', 'active');
 
     if (error) throw error;
+    await logNotificationAudit({
+      actorId: auth.user.id,
+      organizationId: auth.profile.default_organization_id,
+      notificationId: ids[0]!,
+      action: 'notification.bulk_read',
+      meta: { count: ids.length, notification_ids: ids }
+    });
     revalidateNotificationViews();
     return;
   }
@@ -128,6 +169,13 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
       .in('status', ['active', 'read']);
 
     if (error) throw error;
+    await logNotificationAudit({
+      actorId: auth.user.id,
+      organizationId: auth.profile.default_organization_id,
+      notificationId: ids[0]!,
+      action: 'notification.bulk_resolve',
+      meta: { count: ids.length, notification_ids: ids }
+    });
     revalidateNotificationViews();
     return;
   }
@@ -141,6 +189,13 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
       .eq('status', 'resolved');
 
     if (error) throw error;
+    await logNotificationAudit({
+      actorId: auth.user.id,
+      organizationId: auth.profile.default_organization_id,
+      notificationId: ids[0]!,
+      action: 'notification.bulk_archive',
+      meta: { count: ids.length, notification_ids: ids }
+    });
     revalidateNotificationViews();
     return;
   }
@@ -153,6 +208,13 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
       .in('id', ids)
       .eq('status', 'archived');
     if (error) throw error;
+    await logNotificationAudit({
+      actorId: auth.user.id,
+      organizationId: auth.profile.default_organization_id,
+      notificationId: ids[0]!,
+      action: 'notification.bulk_delete',
+      meta: { count: ids.length, notification_ids: ids }
+    });
     revalidateNotificationViews();
   }
 }
@@ -163,8 +225,7 @@ export async function markNotificationResolvedAction(formData: FormData) {
     throw new Error('알림 식별자가 누락되었습니다.');
   }
 
-  const auth = await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
+  const { auth, supabase, notification } = await getOwnedNotification(id);
   const now = new Date().toISOString();
   const { error } = await supabase
     .from('notifications')
@@ -181,6 +242,12 @@ export async function markNotificationResolvedAction(formData: FormData) {
     throw error;
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: notification.organization_id,
+    notificationId: id,
+    action: 'notification.resolved'
+  });
   revalidateNotificationViews();
 }
 
@@ -212,6 +279,12 @@ export async function moveNotificationToTrashAction(formData: FormData) {
     throw error;
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: notification.organization_id,
+    notificationId: id,
+    action: 'notification.archived'
+  });
   revalidateNotificationViews();
 }
 
@@ -234,6 +307,12 @@ export async function restoreNotificationAction(formData: FormData) {
     throw error;
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: auth.profile.default_organization_id,
+    notificationId: id,
+    action: 'notification.restored'
+  });
   revalidateNotificationViews();
 }
 
@@ -251,6 +330,12 @@ export async function emptyNotificationTrashAction() {
     throw error;
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: auth.profile.default_organization_id,
+    notificationId: auth.user.id,
+    action: 'notification.trash_emptied'
+  });
   revalidateNotificationViews();
 }
 
@@ -260,8 +345,7 @@ export async function permanentlyDeleteNotificationAction(formData: FormData) {
     throw new Error('알림 식별자가 누락되었습니다.');
   }
 
-  const auth = await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
+  const { auth, supabase, notification } = await getOwnedNotification(id);
   const now = new Date().toISOString();
   const { error } = await supabase
     .from('notifications')
@@ -274,6 +358,12 @@ export async function permanentlyDeleteNotificationAction(formData: FormData) {
     throw error;
   }
 
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: notification.organization_id,
+    notificationId: id,
+    action: 'notification.deleted'
+  });
   revalidateNotificationViews();
 }
 
@@ -300,10 +390,26 @@ export async function updateNotificationChannelPreferenceAction(formData: FormDa
 }
 
 export async function openNotificationTargetAction(formData: FormData) {
+  const notificationId = `${formData.get('notificationId') ?? ''}`;
+  const nextOrganizationId = `${formData.get('organizationId') ?? ''}`;
+  const submittedHref = `${formData.get('href') ?? ''}`.trim();
+  const { auth, notification } = await getOwnedNotification(notificationId);
   const targetHref = await resolveNotificationOpenTarget({
-    notificationId: `${formData.get('notificationId') ?? ''}`,
-    nextOrganizationId: `${formData.get('organizationId') ?? ''}`,
-    submittedHref: `${formData.get('href') ?? ''}`.trim()
+    notificationId,
+    nextOrganizationId,
+    submittedHref
+  });
+
+  await logNotificationAudit({
+    actorId: auth.user.id,
+    organizationId: notification.organization_id,
+    notificationId,
+    action: 'notification.opened',
+    meta: {
+      target_href: targetHref,
+      submitted_href: submittedHref || null,
+      switched_organization_id: nextOrganizationId || null
+    }
   });
 
   redirect(targetHref as Route);

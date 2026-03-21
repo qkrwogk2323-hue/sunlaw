@@ -101,6 +101,7 @@ function queueMeaningCards(items: NotificationQueueItem[]) {
 
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
   const openHref = notificationOpenHref(item.notificationId, item.destinationUrl, item.organizationId);
+  const usesGenericInbox = item.destinationUrl === '/notifications';
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -120,6 +121,12 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <span>·</span>
         <span>{formatNotificationDate(item.createdAt)}</span>
       </div>
+
+      {usesGenericInbox ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+          이 알림은 아직 전용 처리 화면 연결이 완전하지 않습니다. 알림센터에서 내용을 확인한 뒤 관련 메뉴로 이동해 처리해 주세요.
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600">
@@ -351,8 +358,8 @@ export default async function NotificationsPage({
           action={bulkNotificationTransitionAction}
           successTitle="선택한 알림을 정리했습니다."
           errorTitle="일괄 처리에 실패했습니다."
-          errorCause="선택한 알림을 처리하는 중 서버 응답이 실패했습니다."
-          errorResolution="선택 항목을 다시 확인한 뒤 다시 시도해 주세요."
+          errorCause="선택한 알림 중 현재 상태에서 처리할 수 없는 항목이 포함되어 있습니다."
+          errorResolution="신규, 해결, 보관 상태를 구분해 다시 선택한 뒤 처리해 주세요."
           className="flex flex-wrap items-center gap-2"
         >
           <SubmitButton name="operation" value="read" variant="secondary" pendingLabel="반영 중..." className="px-3">
@@ -450,8 +457,8 @@ export default async function NotificationsPage({
                   successTitle="보관함을 비웠습니다."
                   successMessage="보관된 알림이 모두 영구 삭제되었습니다."
                   errorTitle="보관함 비우기에 실패했습니다."
-                  errorCause="알림 보관함을 비우는 중 서버 응답이 실패했습니다."
-                  errorResolution="잠시 후 다시 시도해 주세요."
+                  errorCause="보관함 안의 일부 알림이 이미 삭제되었거나 삭제 권한을 다시 확인해야 합니다."
+                  errorResolution="보관함 목록을 새로고침한 뒤 다시 시도해 주세요."
                   buttonVariant="destructive"
                   className="rounded-full px-5"
                 >
