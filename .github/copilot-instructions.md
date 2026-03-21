@@ -133,3 +133,4 @@ import { InlineError } from '@/components/ui/inline-error';
 - 이미 생성된 테이블을 후속 migration에서 `create table if not exists`로 다시 선언하지 않는다.
 - canonical / retired / history-sync migration 해석은 `docs/migration-catalog.md`를 기준으로 한다.
 - 메뉴 검색, 결제 잠금, 로그 싱크, 복구 순서는 package matrix를 단일 원본으로 사용한다.
+- schema-affecting change는 `main` 직푸시가 아니라 PR로 분리한다.

@@ -1,12 +1,12 @@
 # Supabase Migration Catalog (0001~0052)
 
-이 문서는 `supabase/migrations`의 번호를 0001부터 0052까지 누락 없이 정렬한 기준 카탈로그다.
+이 문서는 `supabase/migrations`의 번호를 0001부터 0052까지 누락 없이 정렬한 기준 카탈로그다. 아래 분류는 현재 runtime 상태를 단정하는 표가 아니라, forward-only 정리를 위한 문서적 해석 기준이다.
 
 ## 상태 요약
 
 - 번호 연속성: `0001` ~ `0052` 연속
 - 원칙: 이미 적용된 migration은 수정하지 않고, 정리는 forward-only migration으로 수행한다
-- canonical semantic origin:
+- canonical semantic baseline:
   - 협업 허브: `0040`, `0041`
   - 플랫폼 관리자 의미: `0042`
 - history-sync only:
@@ -21,7 +21,7 @@
 | 분류 | 의미 |
 |---|---|
 | active | 현재도 직접적인 의미를 가지는 활성 migration |
-| canonical_origin | 현재 모델의 정식 의미 출발점 |
+| canonical_origin | forward-only superseding migration이 따라야 할 정식 의미 기준점 |
 | transitional | 과도기 이력. 역사 보존은 필요하지만 현재 canonical meaning은 아님 |
 | retired | 과거 실험축/제거 완료 축. 현재 활성 모델로 해석하지 않음 |
 | history_sync_only | 원격 히스토리 정합용 재선언. canonical source로 사용하지 않음 |
@@ -73,7 +73,7 @@
 | 0039 | `0039_client_temp_credentials_global_login.sql` | active | 의뢰인 임시계정/전역 로그인 보강 |
 | 0040 | `0040_organization_collaboration_hubs.sql` | canonical_origin | 조직 협업 허브의 canonical origin |
 | 0041 | `0041_collaboration_hub_reads_and_case_shares.sql` | canonical_origin | 협업 허브 읽음/사건 공유 canonical origin |
-| 0042 | `0042_platform_admin_by_platform_management_org.sql` | canonical_origin | 플랫폼 관리자 의미의 정상적인 canonical origin |
+| 0042 | `0042_platform_admin_by_platform_management_org.sql` | canonical_origin | 플랫폼 관리자 의미의 forward-only canonical semantic baseline |
 | 0043 | `0043_client_special_notes.sql` | active | 의뢰인 특이사항 도메인 |
 | 0044 | `0044_organization_collaboration_hubs.sql` | history_sync_only | 원격 히스토리 정합용 협업허브 재선언 |
 | 0045 | `0045_collaboration_hub_reads_and_case_shares.sql` | history_sync_only | 원격 히스토리 정합용 읽음/공유 재선언 |
@@ -81,14 +81,14 @@
 | 0047 | `0047_add_organization_industry_fields.sql` | active | 조직 산업 필드 추가 |
 | 0048 | `0048_case_cover_fields.sql` | active | 사건 커버 필드 보강 |
 | 0049 | `0049_case_hubs.sql` | active | 사건허브 활성 축. multi-org / client bridge canonicalization 필요 |
-| 0050 | `0050_finalize_single_platform_root_to_vein_bn_1.sql` | regression_history | `0042` 이후 의미를 다시 slug에 묶은 회귀 migration |
+| 0050 | `0050_finalize_single_platform_root_to_vein_bn_1.sql` | regression_history | immutable history로 보존하되 `0042` 기준 새 migration으로 supersede 대상인 회귀 migration |
 | 0051 | `0051_enable_rls_for_exit_requests_and_kakao_outbox.sql` | hardening_followup | RLS 미적용 테이블 하드닝 |
 | 0052 | `0052_harden_function_search_paths_and_extensions.sql` | hardening_followup | 함수 search_path 및 extension schema 하드닝 |
 
 ## 운영 메모
 
 - 과거 migration은 ledger로 보존하고 수정하지 않는다.
-- 플랫폼 관리자 판별의 구현 상세는 forward-only canonicalization migration에서 진화할 수 있으나, 현재 문서 기준 canonical meaning origin은 `0042`다.
+- 플랫폼 관리자 판별의 구현 상세는 forward-only canonicalization migration에서 진화할 수 있으나, 현재 문서 기준 semantic baseline은 `0042`다.
 - `0044`, `0045`는 fresh bootstrap을 깨뜨리는 주범이라기보다 canonical source 해석을 흐리는 history-sync 재선언이다.
 - `0049`는 활성 축이지만, `0009`의 multi-org 사건 모델과 정합하도록 bridge migration이 필요하다.
 - `0050`은 immutable history로 보존하되, 새 migration으로 supersede 대상이다.
