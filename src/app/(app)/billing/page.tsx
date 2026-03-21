@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
+import { getOrganizationSubscriptionSnapshot } from '@/lib/subscription-lock';
 
 function badgeTone(status: string) {
   if (status === 'overdue') return 'red';
@@ -16,7 +17,10 @@ function badgeTone(status: string) {
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  const billing = await getBillingHubSnapshot(organizationId);
+  const [billing, subscriptionSnapshot] = await Promise.all([
+    getBillingHubSnapshot(organizationId),
+    getOrganizationSubscriptionSnapshot(organizationId)
+  ]);
 
   return (
     <div className="space-y-6">
@@ -29,6 +33,45 @@ export default async function BillingPage() {
           사건 Billing 탭에서 항목이나 약정을 등록하면 대시보드, 알림, 일정 확인에 자동 반영됩니다.
         </div>
       </div>
+
+      <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+        <CardHeader>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>구독 상태</CardTitle>
+              <p className="mt-1 text-sm text-slate-500">7일 무료, 연체, 소프트 잠금, 하드 잠금 전환을 이 카드에서 확인합니다.</p>
+            </div>
+            <Badge tone={
+              subscriptionSnapshot?.state === 'locked_hard' ? 'red'
+                : subscriptionSnapshot?.state === 'locked_soft' ? 'red'
+                : subscriptionSnapshot?.state === 'past_due' ? 'amber'
+                : subscriptionSnapshot?.state === 'cancelled' ? 'slate'
+                : subscriptionSnapshot?.state === 'trialing' ? 'blue'
+                : 'green'
+            }>
+              {subscriptionSnapshot?.state ?? 'active'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">플랜</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{subscriptionSnapshot?.planCode ?? 'starter'}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">체험 종료</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{formatDate(subscriptionSnapshot?.trialEndAt ?? null)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">다음 갱신</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{formatDate(subscriptionSnapshot?.renewalDueAt ?? null)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">잠금 사유</p>
+            <p className="mt-2 text-sm font-medium text-slate-700">{subscriptionSnapshot?.lockReason ?? '정상 이용 중'}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="vs-mesh-card">

@@ -57,6 +57,9 @@ function shouldBypassMaintenance(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+
   if (isMaintenanceMode() && !shouldBypassMaintenance(request.nextUrl.pathname)) {
     const maintenanceUrl = request.nextUrl.clone();
     maintenanceUrl.pathname = '/maintenance';
@@ -69,11 +72,19 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!shouldRunSessionUpdate(request.nextUrl.pathname)) {
-    return NextResponse.next({ request });
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders
+      }
+    });
   }
 
   // NOTE: 미들웨어 타임아웃 방지를 위해 세션 갱신은 앱 라우트 내부에서 처리합니다.
-  return NextResponse.next({ request });
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders
+    }
+  });
 }
 
 export const config = {
