@@ -11,7 +11,7 @@ begin
   ) then
     alter table public.organization_collaboration_requests
       add constraint organization_collaboration_requests_source_target_check
-      check (source_organization_id <> target_organization_id);
+      check (source_organization_id <> target_organization_id) not valid;
   end if;
 end
 $$;
@@ -26,7 +26,7 @@ begin
   ) then
     alter table public.organization_collaboration_hubs
       add constraint organization_collaboration_hubs_org_pair_check
-      check (primary_organization_id <> partner_organization_id);
+      check (primary_organization_id <> partner_organization_id) not valid;
   end if;
 end
 $$;
@@ -41,7 +41,7 @@ begin
   ) then
     alter table public.organization_collaboration_hubs
       add constraint organization_collaboration_hubs_status_check
-      check (status in ('active', 'archived'));
+      check (status in ('active', 'archived')) not valid;
   end if;
 end
 $$;
@@ -56,7 +56,7 @@ begin
   ) then
     alter table public.organization_collaboration_messages
       add constraint organization_collaboration_messages_body_check
-      check (char_length(trim(body)) > 0);
+      check (char_length(trim(body)) > 0) not valid;
   end if;
 end
 $$;
@@ -71,7 +71,7 @@ begin
   ) then
     alter table public.organization_collaboration_case_shares
       add constraint organization_collaboration_case_shares_permission_scope_check
-      check (permission_scope in ('view', 'reference', 'collaborate'));
+      check (permission_scope in ('view', 'reference', 'collaborate')) not valid;
   end if;
 end
 $$;
@@ -81,7 +81,7 @@ alter table public.organization_collaboration_requests
 
 alter table public.organization_collaboration_requests
   add constraint organization_collaboration_requests_approved_hub_id_fkey
-  foreign key (approved_hub_id) references public.organization_collaboration_hubs(id) on delete set null;
+  foreign key (approved_hub_id) references public.organization_collaboration_hubs(id) on delete set null not valid;
 
 create unique index if not exists uq_org_collaboration_requests_pending_pair
   on public.organization_collaboration_requests (source_organization_id, target_organization_id)
