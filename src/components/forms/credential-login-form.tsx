@@ -83,7 +83,7 @@ export function CredentialLoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">이메일 또는 임시 아이디</span>
-        <Input required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="이메일 또는 임시 아이디" />
+        <Input name="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="이메일 또는 임시 아이디" />
       </label>
       <label className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">조직 식별값(임시 아이디 로그인 시 필수)</span>
@@ -91,7 +91,7 @@ export function CredentialLoginForm() {
       </label>
       <label className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">비밀번호</span>
-        <Input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호를 입력해 주세요" />
+        <Input name="password" type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호를 입력해 주세요" />
       </label>
       {error ? <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
       <SubmitButton pendingLabel="로그인 중..." disabled={loading} className="w-full justify-center rounded-[1.2rem]">일반 로그인</SubmitButton>

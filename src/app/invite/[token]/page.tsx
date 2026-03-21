@@ -4,7 +4,6 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { acceptInvitationAction } from '@/lib/actions/organization-actions';
 import { getCurrentAuth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import type { Route } from 'next';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +12,7 @@ export default async function InvitationAcceptPage({ params }: { params: Promise
   const auth = await getCurrentAuth();
 
   if (!auth) {
-    redirect(`/login?returnUrl=${encodeURIComponent(`/invite/${token}`)}` as Route);
+    redirect('/login');
   }
 
   return (

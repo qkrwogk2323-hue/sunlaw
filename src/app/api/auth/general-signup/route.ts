@@ -4,8 +4,35 @@ import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { generalSignupSchema } from '@/lib/validators';
 
+const SIGNUP_RATE_LIMIT_WINDOW_MS = 60_000;
+const SIGNUP_RATE_LIMIT_MAX = 5;
+const signupAttempts = new Map<string, number[]>();
+
+function getSignupRateLimitKey(request: Request) {
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const realIp = request.headers.get('x-real-ip')?.trim();
+  return forwarded || realIp || 'unknown';
+}
+
+function isRateLimited(request: Request) {
+  const key = getSignupRateLimitKey(request);
+  const now = Date.now();
+  const windowStart = now - SIGNUP_RATE_LIMIT_WINDOW_MS;
+  const attempts = (signupAttempts.get(key) ?? []).filter((timestamp) => timestamp > windowStart);
+  attempts.push(now);
+  signupAttempts.set(key, attempts);
+  return attempts.length > SIGNUP_RATE_LIMIT_MAX;
+}
+
 export async function POST(request: Request) {
   try {
+    if (isRateLimited(request)) {
+      return NextResponse.json(
+        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' },
+        { status: 429 }
+      );
+    }
+
     const payload = await request.json();
     const parsed = generalSignupSchema.parse(payload);
     const admin = createSupabaseAdminClient();
