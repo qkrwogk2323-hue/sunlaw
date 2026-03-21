@@ -1,0 +1,14 @@
+restore_order,file_name,primary_key,depends_on,required,description,idempotent_key,row_hash_required
+000,000_manifest.csv,export_batch_id,,yes,export metadata and checksums,export_batch_id,yes
+010,010_organizations.csv,organization_id,000_manifest.csv,yes,organization base row,organization_id,yes
+020,020_profiles.csv,profile_id,000_manifest.csv,yes,profiles referenced by org and cases,profile_id,yes
+030,030_organization_memberships.csv,membership_id,010_organizations.csv;020_profiles.csv,yes,org memberships,membership_id,yes
+040,040_cases.csv,case_id,010_organizations.csv,yes,case rows,case_id,yes
+050,050_case_clients.csv,case_client_id,040_cases.csv;020_profiles.csv,yes,case-client link rows,case_client_id,yes
+060,060_case_parties.csv,case_party_id,040_cases.csv,yes,case parties,case_party_id,yes
+070,070_case_documents.csv,case_document_id,040_cases.csv,yes,document metadata only,case_document_id,yes
+080,080_case_hubs.csv,hub_id,040_cases.csv;010_organizations.csv,yes,hub metadata,hub_id,yes
+090,090_case_hub_members.csv,hub_member_id,080_case_hubs.csv;020_profiles.csv,yes,hub seats,hub_id+profile_id,yes
+100,100_notifications.csv,notification_id,010_organizations.csv;040_cases.csv,no,notifications,notification_id,yes
+110,110_billing_subscription_state.csv,subscription_event_id,010_organizations.csv,no,subscription and lock state,subscription_event_id,yes
+900,900_audit_hash_chain.csv,audit_row_id,000_manifest.csv,yes,tamper detection chain,audit_row_id,yes

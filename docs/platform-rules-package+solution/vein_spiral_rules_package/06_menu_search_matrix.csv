@@ -1,0 +1,11 @@
+menu,search_scope,fields,debounce_ms,p95_target_ms,min_chars,index_or_strategy,empty_state_next_action
+cases,server,title|reference_no|case_number|client_name|handler_name|status,250,400,1,btree + trigram/fts,사건 생성 또는 필터 초기화
+clients,server,client_name|email|phone_token|organization_key|status,250,400,1,btree + token hash,의뢰인 생성 또는 연결 요청
+case_hubs,server,title|case_title|primary_client_name|status|activity_actor,250,400,1,btree + trigram,허브 생성 또는 필터 초기화
+documents,server,title|document_kind|case_number|client_visibility|approval_status,250,400,1,btree + trigram,문서 업로드 또는 필터 초기화
+schedules,server,title|court_name|case_number|schedule_kind|handler_name,250,400,1,btree + date index,일정 생성 또는 날짜 범위 확장
+notifications,server,title|body_token|organization_name|case_title|priority,250,400,1,tokenized search only,읽지 않음 필터 해제
+organizations,server,name|slug|business_number_hash|kind|status,250,400,1,btree + deterministic hash,조직 생성 신청 또는 필터 초기화
+support,server,ticket_no|requester_name|organization_name|status|priority,250,400,1,btree + trigram,새 문의 없음 안내
+billing,server,organization_name|invoice_no|subscription_state|payment_ref_hash,250,400,1,btree + deterministic hash,결제 등록 또는 필터 초기화
+global_palette,mixed,organization|case|client|document|schedule,150,350,1,prefetch + server fallback,검색어 변경

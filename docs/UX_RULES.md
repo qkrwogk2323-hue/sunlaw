@@ -500,3 +500,17 @@ Undo: "[동작]됨 — [시간]초 내 취소 가능"  예) "삭제됨 — 8초 
 20. 용어를 `PROJECT_RULES.md` 6-1 정의와 일치하게 사용했는가.
 21. 로그와 사용자 메시지에 민감정보가 노출되지 않는가.
 22. 권한, RLS, soft delete 변경이면 회귀 테스트를 추가했는가.
+
+---
+
+## 🧩 플랫폼 운영 부속서 채택 메모 (v2.1)
+
+- 아래 파일들은 UX 구현이 따라야 하는 운영 기준 부속서다.
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/02_FORMULAS_AND_THRESHOLDS.md`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/04_platform_log_sink_matrix.csv`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/05_organization_restore_package_matrix.csv`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/06_menu_search_matrix.csv`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/07_subscription_lock_matrix.csv`
+- UX 문서는 구현 세부를 강제하지 않고, canonical matrix와 formula를 화면/상태/메시지에 일관되게 반영하는 것을 목표로 한다.
+- 플랫폼 관리자 조직의 구현 방식은 DB canonicalization 결과를 따르며, UX 문서에서는 `app.is_platform_admin()`과 canonical permission path만 전제한다.
+- 결제 잠금, 메뉴 검색, 의뢰인 케어감, 프리미엄 홈, AI 보조는 개별 화면 취향이 아니라 운영 공식과 임계치를 따른다.

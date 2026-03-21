@@ -1,0 +1,7 @@
+state,entry_condition,allowed_routes,blocked_routes,ui_requirement,audit_required,auto_transition
+trialing,trial_start_at exists and payment not yet required,all,none,trial_end_at visible,yes,to active or locked_soft
+active,payment confirmed and not cancelled,all,none,renewal date visible,yes,to past_due or cancelled
+past_due,renewal failed but grace not expired,billing|support|core_readonly_optional,new destructive writes optional,payment CTA fixed header,yes,to active or locked_soft
+locked_soft,trial expired or past_due > 72h,login|billing|support|export,case_write|doc_write|hub_write|admin_operate,lock reason + pay now CTA + support CTA,yes,to active or locked_hard
+locked_hard,locked_soft > 72h and unpaid,login|billing|support,all business routes except allowed,full-screen lock page,yes,to active
+cancelled,subscription terminated,login|billing|support|export_if_policy_allows,new business writes,cancellation summary,yes,manual or active if repaid

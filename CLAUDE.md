@@ -192,3 +192,17 @@ src/components/ui/
 20. 용어를 6-1 정의와 일치하게 사용
 21. 로그·메시지에 민감정보 노출 없음
 22. 권한·RLS·soft delete 변경 시 회귀 테스트 추가
+
+---
+
+## v2.1 플랫폼 운영 규칙 메모
+
+- 기준 부속서:
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/01_PROJECT_RULES_PLATFORM_EXPANSION_ADDENDUM.md`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/02_FORMULAS_AND_THRESHOLDS.md`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/03_ROLLOUT_AND_LEGACY_TRANSITION.md`
+  - `docs/platform-rules-package+solution/vein_spiral_rules_package/*.csv`
+- 플랫폼 관리자 판별은 `slug`, `name`, `label`이 아니라 canonical DB 모델과 `app.is_platform_admin()`을 사용한다.
+- 이미 생성된 테이블을 후속 migration에서 `create table if not exists`로 재선언하지 않는다.
+- migration canonical source, retired 축, history-sync 축은 `docs/migration-catalog.md`를 기준으로 해석한다.
+- 메뉴 검색, 결제 잠금, 로그 싱크, 조직 복구 순서는 package matrix를 단일 원본으로 사용한다.

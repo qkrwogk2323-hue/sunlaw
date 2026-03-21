@@ -1,0 +1,9 @@
+event_family,capture_trigger,primary_sink,secondary_sink,csv_export_file,retention_rule,pii_policy,restore_use,p95_delivery_target_ms
+row_change,INSERT/UPDATE/DELETE on core tables,audit.change_log,object_storage_daily_export,audit_change_log.csv,permanent,no P3 plaintext,forensic only,500
+platform_decision,organization approve/expel/delete/restore,audit.platform_action_log,object_storage_daily_export,platform_action_log.csv,permanent,no P3 plaintext,restore decision chain,500
+security_event,"auth failure, permission denial, RLS violation",audit.security_event_log,object_storage_daily_export,security_event_log.csv,permanent,mask identifiers,forensic only,500
+support_event,support ticket state/message/internal note,support_ticket_events,object_storage_daily_export,support_ticket_events.csv,commercial_10y,mask P2 and P3,partial restore,800
+billing_event,"trial start, override, invoice, payment, lock/unlock",billing_subscription_events,object_storage_daily_export,billing_subscription_events.csv,commercial_10y,mask payment refs,restore billing state,800
+notification_delivery,notification enqueue/send/fail,notification_delivery_log,object_storage_daily_export,notification_delivery_log.csv,document_5y,mask destination tokens,diagnostic only,800
+ai_action,"prompt class, output class, accept/execute",ai_action_log,object_storage_daily_export,ai_action_log.csv,document_5y,no raw P3 prompt/output,diagnostic only,1000
+performance_rum,page load/menu open/search latency,ops.performance_rum_daily,warehouse or csv export,performance_rum_daily.csv,document_5y,aggregate only,capacity planning,2000
