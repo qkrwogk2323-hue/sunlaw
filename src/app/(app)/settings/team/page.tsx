@@ -9,7 +9,7 @@ import { MembershipPermissionForm } from '@/components/forms/membership-permissi
 import { MemberAdminSummaryForm } from '@/components/forms/member-admin-summary-form';
 import { MemberSelfProfileForm } from '@/components/forms/member-self-profile-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
-import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-form';
+import { StaffBulkInviteForm } from '@/components/forms/staff-bulk-invite-form';
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
@@ -17,6 +17,7 @@ import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 function toneByStatus(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -28,7 +29,7 @@ function toneByStatus(value: string) {
 export default async function TeamSettingsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string }>;
+  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; staffInviteBatch?: string; staffInviteFailed?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -36,7 +37,7 @@ export default async function TeamSettingsPage({
 
   const workspace = await getOrganizationWorkspace(organizationId);
   if (!workspace) notFound();
-  const supabase = await createSupabaseServerClient();
+  const [supabase, cookieStore] = await Promise.all([createSupabaseServerClient(), cookies()]);
   const { data: privateProfile } = await supabase
     .from('member_private_profiles')
     .select('resident_number_masked, address_line1_ciphertext')
@@ -48,7 +49,20 @@ export default async function TeamSettingsPage({
   const canManage = isWorkspaceAdmin(currentMembership) && Boolean(currentMembership?.permissions?.user_manage);
   const inviteToken = resolvedSearchParams?.invite;
   const issuedLoginId = resolvedSearchParams?.issuedLoginId;
+  const staffInviteSummaryRaw = cookieStore.get('_vs_staff_invite_summary')?.value ?? null;
   const selectedMemberId = resolvedSearchParams?.member ?? null;
+  const staffInviteSummary = (() => {
+    if (!staffInviteSummaryRaw) return null;
+    try {
+      return JSON.parse(decodeURIComponent(staffInviteSummaryRaw)) as {
+        created: Array<{ name: string; email: string; url: string; membershipTitle: string | null }>;
+        failed: Array<{ name: string; email: string; reason: string }>;
+        actorCategory: 'admin' | 'staff';
+      };
+    } catch {
+      return null;
+    }
+  })();
 
   const staffInvitations = workspace.invitations
     .filter((invite: any) => invite.kind === 'staff_invite')
@@ -132,6 +146,40 @@ export default async function TeamSettingsPage({
         </div>
       ) : null}
 
+      {staffInviteSummary?.created?.length ? (
+        <Card className="border-emerald-200 bg-emerald-50/70">
+          <CardHeader>
+            <CardTitle>구성원 초대 완료</CardTitle>
+            <p className="text-sm text-emerald-900">
+              생성 {staffInviteSummary.created.length}건 · 안내 준비 {staffInviteSummary.created.length}건 · 실패 {staffInviteSummary.failed.length}건
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {staffInviteSummary.created.map((item) => (
+              <div key={`${item.email}:${item.url}`} className="rounded-xl border border-emerald-200 bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-sm text-slate-500">{item.email}</p>
+                  </div>
+                  <Badge tone="green">{item.membershipTitle ?? (staffInviteSummary.actorCategory === 'admin' ? '조직관리자' : '조직원')}</Badge>
+                </div>
+                <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <code className="select-all text-xs text-slate-800">{item.url}</code>
+                </div>
+              </div>
+            ))}
+            {staffInviteSummary.failed.length ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {staffInviteSummary.failed.map((item) => (
+                  <p key={`${item.email}:${item.reason}`}>{item.name} · {item.email} · {item.reason}</p>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {issuedLoginId ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedLoginId}</code>
@@ -148,15 +196,19 @@ export default async function TeamSettingsPage({
                 <summary className="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
                   구성원 등록하기
                 </summary>
-                <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                <div className="mt-3 space-y-4">
                   <div className="rounded-xl border border-slate-200 p-3">
-                    <p className="mb-2 text-sm font-semibold text-slate-900">초대링크 발송하기</p>
-                    <StaffDirectInviteForm organizationId={organizationId} />
+                    <p className="mb-2 text-sm font-semibold text-slate-900">기본 초대 플로우</p>
+                    <StaffBulkInviteForm organizationId={organizationId} />
                   </div>
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    <p className="mb-2 text-sm font-semibold text-slate-900">직원 계정 등록하기</p>
-                    <StaffPreRegisterForm organizationId={organizationId} />
-                  </div>
+                  <details className="rounded-xl border border-slate-200 p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-900">고급/예외 경로</summary>
+                    <div className="mt-3 rounded-xl border border-slate-200 p-3">
+                      <p className="mb-2 text-sm font-semibold text-slate-900">직원 임시 계정 발급</p>
+                      <p className="mb-3 text-xs text-slate-500">비밀번호 직접 전달이 필요한 예외 상황에서만 사용합니다. 기본 초대 플로우는 위의 링크 초대를 사용합니다.</p>
+                      <StaffPreRegisterForm organizationId={organizationId} />
+                    </div>
+                  </details>
                 </div>
               </details>
             ) : null}

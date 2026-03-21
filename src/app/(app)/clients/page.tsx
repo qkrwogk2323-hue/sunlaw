@@ -3,6 +3,7 @@ import type { Route } from 'next';
 import { cookies } from 'next/headers';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClientStructuredInviteForm } from '@/components/forms/client-structured-invite-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
@@ -22,7 +23,7 @@ function statusTone(value: string) {
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedOrgName?: string; q?: string }>;
+  searchParams?: Promise<{ invite?: string; issuedClientLoginId?: string; issuedOrgName?: string; q?: string; clientInviteBatch?: string; clientInviteFailed?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -44,7 +45,21 @@ export default async function ClientsPage({
   const queryFilter = `${resolvedSearchParams?.q ?? ''}`.trim().toLowerCase();
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
   const issuedClientTempPassword = cookieStore.get('_vs_issued_pw')?.value ?? null;
+  const clientInviteSummaryRaw = cookieStore.get('_vs_client_invite_summary')?.value ?? null;
   const issuedOrgName = resolvedSearchParams?.issuedOrgName ?? (organizationId ? (auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? '현재 조직') : '현재 조직');
+  const clientInviteSummary = (() => {
+    if (!clientInviteSummaryRaw) return null;
+    try {
+      return JSON.parse(decodeURIComponent(clientInviteSummaryRaw)) as {
+        caseId: string;
+        caseTitle: string;
+        created: Array<{ name: string; email: string; relationLabel: string | null; caseClientId: string; url: string }>;
+        failed: Array<{ name: string; email: string; reason: string }>;
+      };
+    } catch {
+      return null;
+    }
+  })();
   const filteredRoster = roster.filter((item: any) => {
     if (!queryFilter) return true;
     const haystack = `${item.name ?? ''} ${item.email ?? ''} ${item.contactPhone ?? ''} ${item.addressSummary ?? ''}`.toLowerCase();
@@ -106,6 +121,44 @@ export default async function ClientsPage({
         </div>
       ) : null}
 
+      {clientInviteSummary?.created?.length ? (
+        <Card className="border-emerald-200 bg-emerald-50/70">
+          <CardHeader>
+            <CardTitle>의뢰인 초대 완료</CardTitle>
+            <p className="text-sm text-emerald-900">
+              생성 {clientInviteSummary.created.length}건 · 사건 연결 {clientInviteSummary.created.length}건 · 발송 준비 {clientInviteSummary.created.length}건 · 실패 {clientInviteSummary.failed.length}건
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="rounded-xl border border-emerald-200 bg-white p-3 text-sm">
+              <p className="font-medium text-slate-900">연결 사건</p>
+              <p className="mt-1 text-slate-600">{clientInviteSummary.caseTitle}</p>
+            </div>
+            {clientInviteSummary.created.map((item) => (
+              <div key={`${item.email}:${item.url}`} className="rounded-xl border border-emerald-200 bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-sm text-slate-500">{item.email}</p>
+                  </div>
+                  <Badge tone="blue">{item.relationLabel ?? '의뢰인'}</Badge>
+                </div>
+                <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <code className="select-all text-xs text-slate-800">{item.url}</code>
+                </div>
+              </div>
+            ))}
+            {clientInviteSummary.failed.length ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {clientInviteSummary.failed.map((item) => (
+                  <p key={`${item.email}:${item.reason}`}>{item.name} · {item.email} · {item.reason}</p>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {canManage ? (
         <div className="space-y-4">
           <details id="client-pre-register" className="group rounded-xl border border-slate-200 bg-white px-2 py-2">
@@ -116,8 +169,27 @@ export default async function ClientsPage({
             </summary>
             <div className="mt-3">
               <Card className="vs-mesh-card">
-                <CardHeader><CardTitle>의뢰인 선등록</CardTitle></CardHeader>
+                <CardHeader><CardTitle>기본 의뢰인 초대</CardTitle></CardHeader>
                 <CardContent>
+                  <ClientStructuredInviteForm
+                    organizationId={organizationId!}
+                    cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </details>
+          <details className="rounded-xl border border-slate-200 bg-white px-2 py-2">
+            <summary className="list-none">
+              <span className="ml-auto inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 md:w-[22rem]">
+                고급/예외 경로
+              </span>
+            </summary>
+            <div className="mt-3">
+              <Card>
+                <CardHeader><CardTitle>임시 계정 직접 발급</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-slate-500">비밀번호를 직접 안내해야 하는 예외 상황에서만 사용합니다. 기본 의뢰인 초대는 위의 매직링크 플로우를 사용합니다.</p>
                   <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
                 </CardContent>
               </Card>
