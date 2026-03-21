@@ -99,6 +99,7 @@ export async function createCaseHubAction(formData: FormData) {
 
   // primary_client_id는 profiles.id여야 함 – case_clients의 profile_id를 사용
   let resolvedPrimaryClientId: string | null = null;
+  let resolvedPrimaryClientCaseClientId: string | null = null;
   if (primaryClientProfileId) {
     const { data: clientRow } = await admin
       .from('case_clients')
@@ -107,10 +108,12 @@ export async function createCaseHubAction(formData: FormData) {
       .eq('profile_id', primaryClientProfileId)
       .maybeSingle();
     resolvedPrimaryClientId = clientRow?.profile_id ?? null;
+    resolvedPrimaryClientCaseClientId = clientRow?.id ?? null;
   }
   if (!resolvedPrimaryClientId && clients[0]?.profile_id) {
     // 의뢰인 1명이면 자동 설정
     resolvedPrimaryClientId = clients[0].profile_id ?? null;
+    resolvedPrimaryClientCaseClientId = clients[0].id ?? null;
   }
 
   const { data: hub, error: insertError } = await admin
@@ -119,6 +122,7 @@ export async function createCaseHubAction(formData: FormData) {
       organization_id: organizationId,
       case_id: caseId,
       primary_client_id: resolvedPrimaryClientId,
+      primary_case_client_id: resolvedPrimaryClientCaseClientId,
       title,
       status: 'setup_required',
       collaborator_limit: collaboratorLimit,

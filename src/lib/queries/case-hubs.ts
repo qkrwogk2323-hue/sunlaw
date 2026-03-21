@@ -133,7 +133,7 @@ export async function getCaseHubsForCases(
 
   const { data: hubs, error } = await admin
     .from('case_hubs')
-    .select('id, organization_id, case_id, primary_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
+    .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
     .eq('lifecycle_status', 'active')
     .in('id', accessibleHubIds)
     .in('case_id', caseIds);
@@ -142,18 +142,18 @@ export async function getCaseHubsForCases(
   if (!hubs?.length) return empty;
 
   const hubIds = hubs.map((h: any) => h.id as string);
-  const clientIds = [...new Set(hubs.map((h: any) => h.primary_client_id).filter(Boolean))] as string[];
+  const caseClientIds = [...new Set(hubs.map((h: any) => h.primary_case_client_id).filter(Boolean))] as string[];
 
   const [membersResult, clientsResult, activityResult] = await Promise.all([
     admin
       .from('case_hub_members')
       .select('hub_id, profile_id, seat_kind, is_ready, last_read_at')
       .in('hub_id', hubIds),
-    clientIds.length
+    caseClientIds.length
       ? admin
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', clientIds)
+          .from('case_clients')
+          .select('id, client_name')
+          .in('id', caseClientIds)
       : Promise.resolve({ data: [], error: null }),
     admin
       .from('case_hub_activity')
@@ -174,7 +174,7 @@ export async function getCaseHubsForCases(
     }, {});
 
   const clientNameMap = ((clientsResult.data ?? []) as any[]).reduce<Record<string, string>>((acc, row) => {
-    acc[row.id] = row.full_name ?? null;
+    acc[row.id] = row.client_name ?? null;
     return acc;
   }, {});
 
@@ -194,7 +194,7 @@ export async function getCaseHubsForCases(
   for (const hub of hubs as any[]) {
     const counts = membersByHub[hub.id] ?? { collaborator: 0, viewer: 0, ready: 0, lastReadAt: null };
     const readiness = calculateHubReadiness({
-      primaryClientId: hub.primary_client_id ?? null,
+      primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
       visibilityScope: hub.visibility_scope ?? null,
       memberCount: counts.collaborator + counts.viewer,
       collaboratorCount: counts.collaborator,
@@ -207,8 +207,8 @@ export async function getCaseHubsForCases(
       caseId: hub.case_id,
       caseTitle: null,
       caseReferenceNo: null,
-      primaryClientId: hub.primary_client_id ?? null,
-      primaryClientName: hub.primary_client_id ? (clientNameMap[hub.primary_client_id] ?? null) : null,
+      primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
+      primaryClientName: hub.primary_case_client_id ? (clientNameMap[hub.primary_case_client_id] ?? null) : null,
       title: hub.title ?? null,
       status: hub.status as CaseHubStatus,
       collaboratorLimit: hub.collaborator_limit,
@@ -243,7 +243,7 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
 
   const { data: hubs, error } = await admin
     .from('case_hubs')
-    .select('id, organization_id, case_id, primary_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
+    .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
     .eq('lifecycle_status', 'active')
     .in('id', accessibleHubIds)
     .order('updated_at', { ascending: false });
@@ -253,13 +253,13 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
 
   const hubIds = (hubs as any[]).map((h) => h.id as string);
   const caseIds = (hubs as any[]).map((h) => h.case_id as string);
-  const clientIds = [...new Set((hubs as any[]).map((h) => h.primary_client_id).filter(Boolean))] as string[];
+  const caseClientIds = [...new Set((hubs as any[]).map((h) => h.primary_case_client_id).filter(Boolean))] as string[];
 
   const [casesResult, membersResult, clientsResult, activityResult] = await Promise.all([
     admin.from('cases').select('id, title, reference_no').in('id', caseIds),
     admin.from('case_hub_members').select('hub_id, profile_id, seat_kind, is_ready, last_read_at').in('hub_id', hubIds),
-    clientIds.length
-      ? admin.from('profiles').select('id, full_name').in('id', clientIds)
+    caseClientIds.length
+      ? admin.from('case_clients').select('id, client_name').in('id', caseClientIds)
       : Promise.resolve({ data: [], error: null }),
     admin
       .from('case_hub_activity')
@@ -286,7 +286,7 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
   }, {});
 
   const clientNameMap = ((clientsResult.data ?? []) as any[]).reduce<Record<string, string>>((acc, row) => {
-    acc[row.id] = row.full_name ?? null;
+    acc[row.id] = row.client_name ?? null;
     return acc;
   }, {});
 
@@ -306,7 +306,7 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
     const caseInfo = caseMap[hub.case_id] ?? { title: null, reference_no: null };
     const counts = membersByHub[hub.id] ?? { collaborator: 0, viewer: 0, ready: 0, lastReadAt: null };
     const readiness = calculateHubReadiness({
-      primaryClientId: hub.primary_client_id ?? null,
+      primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
       visibilityScope: hub.visibility_scope ?? null,
       memberCount: counts.collaborator + counts.viewer,
       collaboratorCount: counts.collaborator,
@@ -319,8 +319,8 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
       caseId: hub.case_id,
       caseTitle: caseInfo.title ?? null,
       caseReferenceNo: caseInfo.reference_no ?? null,
-      primaryClientId: hub.primary_client_id ?? null,
-      primaryClientName: hub.primary_client_id ? (clientNameMap[hub.primary_client_id] ?? null) : null,
+      primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
+      primaryClientName: hub.primary_case_client_id ? (clientNameMap[hub.primary_case_client_id] ?? null) : null,
       title: hub.title ?? null,
       status: hub.status as CaseHubStatus,
       collaboratorLimit: hub.collaborator_limit,
@@ -378,8 +378,8 @@ export async function getCaseHubDetail(
       .eq('hub_id', hubId)
       .order('created_at', { ascending: false })
       .limit(20),
-    hub.primary_client_id
-      ? admin.from('profiles').select('id, full_name').eq('id', hub.primary_client_id).maybeSingle()
+    hub.primary_case_client_id
+      ? admin.from('case_clients').select('id, client_name').eq('id', hub.primary_case_client_id).maybeSingle()
       : Promise.resolve({ data: null, error: null })
   ]);
 
@@ -441,7 +441,7 @@ export async function getCaseHubDetail(
     return new Date(activity.createdAt).getTime() > new Date(currentMember.lastReadAt).getTime();
   }).length;
   const readiness = calculateHubReadiness({
-    primaryClientId: hub.primary_client_id ?? null,
+    primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
     visibilityScope: hub.visibility_scope ?? null,
     memberCount: members.length,
     collaboratorCount,
@@ -455,8 +455,8 @@ export async function getCaseHubDetail(
     caseId: hub.case_id,
     caseTitle: caseInfo?.title ?? null,
     caseReferenceNo: caseInfo?.reference_no ?? null,
-    primaryClientId: hub.primary_client_id ?? null,
-    primaryClientName: (clientResult.data as any)?.full_name ?? null,
+    primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
+    primaryClientName: (clientResult.data as any)?.client_name ?? null,
     title: hub.title ?? null,
     status: hub.status as CaseHubStatus,
     collaboratorLimit: hub.collaborator_limit,
@@ -486,8 +486,9 @@ export async function getCaseClientsForHub(
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('case_clients')
-    .select('id, client_name, profile_id')
+    .select('id, client_name, profile_id, link_status')
     .eq('case_id', caseId)
+    .in('link_status', ['linked', 'pending_unlink'])
     .order('created_at', { ascending: true });
 
   if (error) {
