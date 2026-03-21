@@ -133,9 +133,24 @@ export default async function ClientsPage({
         <Card className="border-emerald-200 bg-emerald-50/70">
           <CardHeader>
             <CardTitle>의뢰인 초대 완료</CardTitle>
-            <p className="text-sm text-emerald-900">
-              생성 {clientInviteSummary.created.length}건 · 사건 연결 {clientInviteSummary.created.length}건 · 발송 준비 {clientInviteSummary.created.length}건 · 실패 {clientInviteSummary.failed.length}건
-            </p>
+            <div className="grid gap-2 text-sm text-emerald-900 md:grid-cols-4">
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">생성 여부</p>
+                <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건 완료</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">연결 여부</p>
+                <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건 사건 연결</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">발송 여부</p>
+                <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건 안내 준비</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">실패 사유</p>
+                <p className="mt-1 font-semibold">{clientInviteSummary.failed.length}건</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="rounded-xl border border-emerald-200 bg-white p-3 text-sm">
@@ -158,6 +173,7 @@ export default async function ClientsPage({
             ))}
             {clientInviteSummary.failed.length ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="mb-2 font-semibold">실패 사유</p>
                 {clientInviteSummary.failed.map((item) => (
                   <p key={`${item.email}:${item.reason}`}>{item.name} · {item.email} · {item.reason}</p>
                 ))}
@@ -169,13 +185,12 @@ export default async function ClientsPage({
 
       {canManage ? (
         <div className="space-y-4">
-          <details id="client-pre-register" className="group rounded-xl border border-slate-200 bg-white px-2 py-2">
-            <summary className="list-none">
-              <span className="ml-auto inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-sky-200 bg-sky-50 px-4 text-sm font-semibold text-sky-800 group-open:bg-sky-100 md:w-[22rem]">
-                의뢰인 등록하기
-              </span>
-            </summary>
-            <div className="mt-3">
+          <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">문맥 → 입력 → 연결 → 완료</p>
+                <p className="mt-2 text-sm text-slate-700">의뢰인 초대는 사건 문맥을 먼저 고정하고, 연결 검토를 거친 뒤 완료 카드에서 결과를 확인합니다.</p>
+              </div>
               <Card className="vs-mesh-card">
                 <CardHeader><CardTitle>기본 의뢰인 초대</CardTitle></CardHeader>
                 <CardContent>
@@ -186,23 +201,19 @@ export default async function ClientsPage({
                 </CardContent>
               </Card>
             </div>
-          </details>
-          <details className="rounded-xl border border-slate-200 bg-white px-2 py-2">
-            <summary className="list-none">
-              <span className="ml-auto inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 md:w-[22rem]">
-                고급/예외 경로
-              </span>
-            </summary>
-            <div className="mt-3">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">고급/예외 경로</p>
+                <p className="mt-1 text-sm text-slate-500">비밀번호 직접 전달이 필요한 예외 상황에서만 임시 계정 직접 발급을 사용합니다.</p>
+              </div>
               <Card>
                 <CardHeader><CardTitle>임시 계정 직접 발급</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-sm text-slate-500">비밀번호를 직접 안내해야 하는 예외 상황에서만 사용합니다. 기본 의뢰인 초대는 위의 매직링크 플로우를 사용합니다.</p>
                   <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
                 </CardContent>
               </Card>
             </div>
-          </details>
+          </div>
           <Card>
             <CardHeader><CardTitle>초대 링크 재발송</CardTitle></CardHeader>
             <CardContent className="space-y-2">

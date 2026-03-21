@@ -59,6 +59,27 @@ export function ClientStructuredInviteForm({
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-4">
+        {[
+          { index: 1, label: '문맥 고정', active: step === 1 },
+          { index: 2, label: '대상 입력', active: step === 2 },
+          { index: 3, label: '연결 검토', active: step === 3 },
+          { index: 4, label: '완료 카드', active: false }
+        ].map((item) => (
+          <div
+            key={item.index}
+            className={`rounded-xl border px-3 py-2 text-sm ${
+              item.active
+                ? 'border-sky-300 bg-sky-50 text-sky-950'
+                : 'border-slate-200 bg-slate-50 text-slate-500'
+            }`}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">Step {item.index}</p>
+            <p className="mt-1 font-medium">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
       {step === 1 ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -238,7 +259,7 @@ export function ClientStructuredInviteForm({
           </div>
 
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-            표준 플로우에서는 사건에 연결되지 않은 의뢰인을 남기지 않습니다. 비밀번호는 노출하지 않고 매직링크만 생성합니다.
+            완료 카드에서 생성 여부, 사건 연결, 발송 준비, 실패 사유를 함께 확인합니다. 비밀번호는 노출하지 않고 매직링크만 생성합니다.
           </div>
 
           <div className="flex flex-wrap justify-between gap-3">

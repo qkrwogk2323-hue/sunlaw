@@ -150,9 +150,24 @@ export default async function TeamSettingsPage({
         <Card className="border-emerald-200 bg-emerald-50/70">
           <CardHeader>
             <CardTitle>구성원 초대 완료</CardTitle>
-            <p className="text-sm text-emerald-900">
-              생성 {staffInviteSummary.created.length}건 · 안내 준비 {staffInviteSummary.created.length}건 · 실패 {staffInviteSummary.failed.length}건
-            </p>
+            <div className="grid gap-2 text-sm text-emerald-900 md:grid-cols-4">
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">생성 여부</p>
+                <p className="mt-1 font-semibold">{staffInviteSummary.created.length}건 완료</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">연결 여부</p>
+                <p className="mt-1 font-semibold">조직 초대 준비</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">발송 여부</p>
+                <p className="mt-1 font-semibold">{staffInviteSummary.created.length}건 안내 준비</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                <p className="text-xs text-emerald-700">실패 사유</p>
+                <p className="mt-1 font-semibold">{staffInviteSummary.failed.length}건</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {staffInviteSummary.created.map((item) => (
@@ -171,6 +186,7 @@ export default async function TeamSettingsPage({
             ))}
             {staffInviteSummary.failed.length ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="mb-2 font-semibold">실패 사유</p>
                 {staffInviteSummary.failed.map((item) => (
                   <p key={`${item.email}:${item.reason}`}>{item.name} · {item.email} · {item.reason}</p>
                 ))}
@@ -192,29 +208,35 @@ export default async function TeamSettingsPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>구성원 목록</CardTitle>
             {canManage ? (
-              <details className="rounded-xl border border-slate-200 bg-white p-2">
-                <summary className="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
-                  구성원 등록하기
-                </summary>
-                <div className="mt-3 space-y-4">
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    <p className="mb-2 text-sm font-semibold text-slate-900">기본 초대 플로우</p>
-                    <StaffBulkInviteForm organizationId={organizationId} />
-                  </div>
-                  <details className="rounded-xl border border-slate-200 p-3">
-                    <summary className="cursor-pointer text-sm font-semibold text-slate-900">고급/예외 경로</summary>
-                    <div className="mt-3 rounded-xl border border-slate-200 p-3">
-                      <p className="mb-2 text-sm font-semibold text-slate-900">직원 임시 계정 발급</p>
-                      <p className="mb-3 text-xs text-slate-500">비밀번호 직접 전달이 필요한 예외 상황에서만 사용합니다. 기본 초대 플로우는 위의 링크 초대를 사용합니다.</p>
-                      <StaffPreRegisterForm organizationId={organizationId} />
-                    </div>
-                  </details>
-                </div>
-              </details>
+              <span className="inline-flex min-h-11 items-center rounded-lg border border-sky-200 bg-sky-50 px-4 text-sm font-semibold text-sky-800">
+                목록 → 입력 → 완료
+              </span>
             ) : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {canManage ? (
+            <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">표준 초대 플로우</p>
+                  <p className="mt-2 text-sm text-slate-700">구성원 초대는 목록 확인 후 기본 3행 입력, 권한 설정, 완료 카드 확인 순서로 운영합니다.</p>
+                </div>
+                <StaffBulkInviteForm organizationId={organizationId} />
+              </div>
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">고급/예외 경로</p>
+                  <p className="mt-1 text-sm text-slate-500">비밀번호를 직접 전달해야 하는 예외 상황에서만 임시 계정 발급을 사용합니다.</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="mb-2 text-sm font-semibold text-slate-900">직원 임시 계정 발급</p>
+                  <StaffPreRegisterForm organizationId={organizationId} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {roster.length ? roster.map((row: any) => (
             <div key={row.id} className="rounded-xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-center gap-2">
