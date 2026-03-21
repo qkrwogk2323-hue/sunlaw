@@ -45,6 +45,8 @@ import {
   organizationSignupSchema
 } from '@/lib/validators';
 
+import { captureNotificationFailure } from '@/lib/notification-failure';
+
 const organizationSignupDocumentBucket = 'organization-signup-documents';
 const maxOrganizationSignupDocumentSize = 10 * 1024 * 1024;
 const allowedOrganizationSignupDocumentMimeTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
@@ -1140,7 +1142,9 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
         if (adminNotificationError) throw adminNotificationError;
       }
     } catch (notificationError) {
-      console.warn('organization signup notification delivery failed', notificationError);
+      captureNotificationFailure(notificationError, 'organization_signup', {
+        hasRequestRow: Boolean(requestRow?.id)
+      });
     }
   } catch (error) {
     if (!requestPersisted && storagePath) {

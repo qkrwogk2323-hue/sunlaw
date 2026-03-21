@@ -22,6 +22,7 @@
     "supabase:db:push": "./scripts/run-with-env.sh supabase db push"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.45.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "@vercel/speed-insights": "^2.0.0",

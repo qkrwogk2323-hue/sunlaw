@@ -18,6 +18,37 @@ const AUTH_REQUIRED_PREFIXES = [
   '/start'
 ];
 
+// Rate limiting: 슬라이딩 윈도우 (per-edge-isolate)
+// 멀티 인스턴스 환경에서는 Upstash Redis(@upstash/ratelimit) 도입 필요
+const rateLimitStore = new Map<string, number[]>();
+
+const RATE_LIMIT_RULES: Record<string, { windowMs: number; max: number }> = {
+  '/api/auth/general-signup':          { windowMs: 60_000, max: 5 },
+  '/api/auth/temp-login/resolve':      { windowMs: 60_000, max: 10 },
+  '/api/auth/temp-login/resolve-client': { windowMs: 60_000, max: 10 },
+  '/api/dashboard-ai/commit':          { windowMs: 60_000, max: 20 },
+  '/api/dashboard-ai/coordination-commit': { windowMs: 60_000, max: 20 },
+  '/api/cases/intake-parse':           { windowMs: 60_000, max: 20 },
+  '/api/dashboard/messages':           { windowMs: 60_000, max: 30 },
+};
+
+function checkRateLimit(ip: string, pathname: string): boolean {
+  const rule = RATE_LIMIT_RULES[pathname];
+  if (!rule) return true;
+
+  const key = `${ip}:${pathname}`;
+  const now = Date.now();
+  const timestamps = (rateLimitStore.get(key) ?? []).filter((t) => now - t < rule.windowMs);
+
+  if (timestamps.length >= rule.max) {
+    return false;
+  }
+
+  timestamps.push(now);
+  rateLimitStore.set(key, timestamps);
+  return true;
+}
+
 function shouldRunSessionUpdate(pathname: string) {
   return AUTH_REQUIRED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
@@ -59,6 +90,20 @@ function shouldBypassMaintenance(pathname: string) {
 export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
+
+  // Rate limiting: POST 요청만 체크 (GET은 멱등성 보장)
+  if (request.method === 'POST') {
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown';
+    if (!checkRateLimit(ip, request.nextUrl.pathname)) {
+      return NextResponse.json(
+        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      );
+    }
+  }
 
   if (isMaintenanceMode() && !shouldBypassMaintenance(request.nextUrl.pathname)) {
     const maintenanceUrl = request.nextUrl.clone();
