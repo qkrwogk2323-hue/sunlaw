@@ -38,6 +38,41 @@ export default async function BillingPage() {
         </div>
       </div>
 
+      <section className="grid gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">1단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">사건에서 등록</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">사건 Billing 탭이나 허브에서 비용 항목과 약정을 등록하면 여기에 자동 반영됩니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">2단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">기한과 연체 확인</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">열린 비용 항목과 연체 상태를 보고 다음 확인 대상부터 우선순위를 잡습니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">3단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">계약과 분리 확인</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">비용 약정은 계약 관리에서, 청구 상태와 입금은 비용 관리에서 각각 검토합니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">4단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">일정·알림으로 이어짐</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">기한이 있거나 확인이 필요한 항목은 일정과 알림센터에서 같은 사건 흐름으로 다시 확인합니다.</p>
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-2">
+        <Link href="/contracts" className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
+          계약 관리 보기
+        </Link>
+        <Link href="/calendar" className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
+          일정 확인
+        </Link>
+        <Link href="/notifications" className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
+          알림센터 보기
+        </Link>
+      </div>
+
       <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
         <CardHeader>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

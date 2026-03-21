@@ -43,10 +43,33 @@ export default async function OrganizationsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
-        <p className="mt-2 text-sm text-slate-600">협업할 상대 조직을 찾고, 제안 현황과 승인된 업무 허브까지 한 번에 관리합니다.</p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
+          <p className="mt-2 text-sm text-slate-600">협업할 상대 조직을 찾고, 제안 현황과 승인된 업무 허브까지 한 번에 관리합니다.</p>
+        </div>
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          조직을 찾았다면 제안을 보내고, 승인되면 열린 업무 허브로 바로 넘어가 실제 협업을 시작합니다.
+        </div>
       </div>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">1단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">상대 조직 찾기</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">조직명, 사업자번호, 슬러그로 찾고 상세 화면에서 제안 대상을 확인합니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">2단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">협업 제안/승인</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">승인 대기와 내가 보낸 제안을 나눠 보고, 누가 무엇을 기다리는지 상태로 판단합니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">3단계</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">열린 허브로 이동</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">승인된 협업은 열린 업무 허브에서 바로 이어집니다. 허브에서 사건과 일정, 메시지를 처리합니다.</p>
+        </div>
+      </section>
 
       <UnifiedListSearch action="/organizations" placeholder="조직명, 사업자번호, 슬러그 검색..." ariaLabel="조직 검색" defaultValue={keyword} />
 

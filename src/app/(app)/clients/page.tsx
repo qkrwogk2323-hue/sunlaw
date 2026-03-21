@@ -110,6 +110,29 @@ export default async function ClientsPage({
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
       </div>
 
+      <section className="grid gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">문맥</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">사건 먼저</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">의뢰인 초대는 사건 문맥을 먼저 고정하고 시작합니다. 연결 없는 초대는 표준 흐름에서 허용하지 않습니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">입력</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">신원과 연락처</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">이름, 연락 이메일 또는 휴대폰, 보조 연락처를 입력하고 관계를 명시합니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">연결</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">상태로 확인</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">연결 완료, 해제 대기, 검토 중, 해제 상태를 배지로 확인하고 다음 조치를 판단합니다.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">완료</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">결과 카드</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">생성 여부, 사건 연결, 안내 준비, 실패 사유를 완료 카드에서 즉시 확인합니다.</p>
+        </div>
+      </section>
+
       {inviteToken ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
           <p className="font-semibold">✅ 초대 링크가 생성되었습니다</p>
@@ -156,6 +179,14 @@ export default async function ClientsPage({
             <div className="rounded-xl border border-emerald-200 bg-white p-3 text-sm">
               <p className="font-medium text-slate-900">연결 사건</p>
               <p className="mt-1 text-slate-600">{clientInviteSummary.caseTitle}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href={`/cases/${clientInviteSummary.caseId}`} className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700">
+                  사건으로 이동
+                </Link>
+                <Link href={`/case-hubs?caseId=${clientInviteSummary.caseId}` as Route} className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700">
+                  허브 확인
+                </Link>
+              </div>
             </div>
             {clientInviteSummary.created.map((item) => (
               <div key={`${item.email}:${item.url}`} className="rounded-xl border border-emerald-200 bg-white p-3">
@@ -255,7 +286,12 @@ export default async function ClientsPage({
               visibleContent={filteredRoster.slice(0, 7).map(renderRosterCard)}
               hiddenContent={filteredRoster.slice(7).map(renderRosterCard)}
             />
-          ) : <p className="text-sm text-slate-500">의뢰인 데이터가 없습니다.</p>}
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+              <p className="text-sm font-medium text-slate-700">의뢰인 데이터가 없습니다.</p>
+              <p className="mt-2 text-sm text-slate-500">기본 의뢰인 초대 또는 임시 계정 직접 발급으로 첫 의뢰인을 등록한 뒤, 사건 연결 상태를 확인해 주세요.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
