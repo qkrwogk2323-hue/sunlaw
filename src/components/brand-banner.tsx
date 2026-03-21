@@ -1,43 +1,17 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { usePathname, useRouter } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { BrandMark } from '@/components/brand-mark';
 import { cn } from '@/lib/cn';
 
 export function BrandBanner({ href, className, theme = 'dark' }: { href?: Route; className?: string; theme?: 'dark' | 'light' }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [isPressed, setIsPressed] = useState(false);
-
   const themeClasses =
     theme === 'light'
       ? 'border-slate-300/55 bg-[linear-gradient(145deg,rgba(44,55,78,0.92),rgba(37,47,67,0.94))] text-sky-100 shadow-[0_24px_54px_rgba(15,23,42,0.18)]'
       : 'border-sky-400/30 bg-[linear-gradient(145deg,rgba(28,35,56,0.96),rgba(31,41,55,0.94))] text-sky-100 shadow-[0_24px_54px_rgba(8,47,73,0.28)]';
 
-  useEffect(() => {
-    if (!isPressed) return;
-
-    const timeoutId = window.setTimeout(() => setIsPressed(false), 720);
-    return () => window.clearTimeout(timeoutId);
-  }, [isPressed]);
-
-  function triggerReaction() {
-    setIsPressed(false);
-    window.requestAnimationFrame(() => setIsPressed(true));
-  }
-
-  function replayHomepageDemoIfNeeded(targetHref?: Route) {
-    if (targetHref !== ('/' as Route)) return;
-    window.dispatchEvent(new CustomEvent('vs:homepage-demo-replay'));
-  }
-
   const content = (
     <div
-      data-pressed={isPressed ? 'true' : 'false'}
       className={cn(
         'vs-brand-banner flex min-h-[6.25rem] w-full items-center justify-center gap-3 rounded-[1.5rem] border px-4 py-3 text-sm backdrop-blur-sm sm:gap-4 sm:px-6',
         themeClasses,
@@ -66,14 +40,6 @@ export function BrandBanner({ href, className, theme = 'dark' }: { href?: Route;
   return (
     <Link
       href={href}
-      onClick={(event) => {
-        triggerReaction();
-        if (pathname === href) {
-          event.preventDefault();
-          replayHomepageDemoIfNeeded(href);
-          router.refresh();
-        }
-      }}
       className="block w-full"
     >
       {content}
