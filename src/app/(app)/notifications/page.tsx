@@ -12,6 +12,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -136,7 +137,7 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <Link
           href={openHref as Route}
           prefetch
-          className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-900 bg-slate-900 px-3 text-xs font-medium !text-white transition hover:bg-slate-800"
+          className={buttonStyles({ size: 'sm', className: 'h-8 rounded-lg px-3 text-xs !text-white' })}
         >
           열기
         </Link>
@@ -177,7 +178,7 @@ function QueueSection({
   const totalCount = groups.reduce((sum, group) => sum + group.count, 0);
 
   return (
-    <Card>
+      <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{meta.label}</CardTitle>
@@ -196,7 +197,7 @@ function QueueSection({
               </summary>
               <div className="mt-3 space-y-3">
                 {entityGroups.map((group) => (
-                  <details key={group.groupKey} open={meta.openByDefault} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <details key={group.groupKey} open={meta.openByDefault} className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
                     <summary className="cursor-pointer list-none text-sm font-medium text-slate-900">
                       {group.title} ({group.count})
                     </summary>

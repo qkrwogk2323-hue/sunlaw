@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { cookies } from 'next/headers';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientStructuredInviteForm } from '@/components/forms/client-structured-invite-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
@@ -111,26 +112,34 @@ export default async function ClientsPage({
       </div>
 
       <section className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">문맥</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">사건 먼저</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">의뢰인 초대는 사건 문맥을 먼저 고정하고 시작합니다. 연결 없는 초대는 표준 흐름에서 허용하지 않습니다.</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          </CardContent>
+        </Card>
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">입력</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">신원과 연락처</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">이름, 연락 이메일 또는 휴대폰, 보조 연락처를 입력하고 관계를 명시합니다.</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          </CardContent>
+        </Card>
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">연결</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">상태로 확인</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">연결 완료, 해제 대기, 검토 중, 해제 상태를 배지로 확인하고 다음 조치를 판단합니다.</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          </CardContent>
+        </Card>
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">완료</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">결과 카드</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">생성 여부, 사건 연결, 안내 준비, 실패 사유를 완료 카드에서 즉시 확인합니다.</p>
-        </div>
+          </CardContent>
+        </Card>
       </section>
 
       {inviteToken ? (
@@ -180,10 +189,10 @@ export default async function ClientsPage({
               <p className="font-medium text-slate-900">연결 사건</p>
               <p className="mt-1 text-slate-600">{clientInviteSummary.caseTitle}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={`/cases/${clientInviteSummary.caseId}`} className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700">
+                <Link href={`/cases/${clientInviteSummary.caseId}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-lg px-3 text-xs' })}>
                   사건으로 이동
                 </Link>
-                <Link href={`/case-hubs?caseId=${clientInviteSummary.caseId}` as Route} className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700">
+                <Link href={`/case-hubs?caseId=${clientInviteSummary.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-lg px-3 text-xs' })}>
                   허브 확인
                 </Link>
               </div>

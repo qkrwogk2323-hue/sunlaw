@@ -3,6 +3,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { ChevronLeft, Globe, Network, Shield, Users, Zap } from 'lucide-react';
+import { buttonStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
@@ -77,7 +78,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
       <div className="flex items-center justify-between gap-3">
         <Link
           href={'/case-hubs' as Route}
-          className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
+          className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4 text-sm' })}
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
           허브 목록
@@ -227,19 +228,19 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                       </SubmitButton>
                     </ClientActionForm>
                   ) : null}
-                  <Link href={'/cases' as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                  <Link href={'/cases' as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     사건목록으로 이동
                   </Link>
-                  <Link href={`/cases/${hub.caseId}?tab=billing` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                  <Link href={`/cases/${hub.caseId}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     비용 관리 열기
                   </Link>
-                  <Link href={`/contracts?caseId=${hub.caseId}` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                  <Link href={`/contracts?caseId=${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     계약 관리 열기
                   </Link>
-                  <Link href={`/cases/${hub.caseId}?tab=schedule` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                  <Link href={`/cases/${hub.caseId}?tab=schedule` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     일정 확인
                   </Link>
-                  <Link href={`/cases/${hub.caseId}?tab=documents` as Route} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700">
+                  <Link href={`/cases/${hub.caseId}?tab=documents` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     문서 보기
                   </Link>
                 </div>

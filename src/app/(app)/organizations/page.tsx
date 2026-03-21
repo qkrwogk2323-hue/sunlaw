@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
@@ -54,21 +55,27 @@ export default async function OrganizationsPage({
       </div>
 
       <section className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">1단계</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">상대 조직 찾기</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">조직명, 사업자번호, 슬러그로 찾고 상세 화면에서 제안 대상을 확인합니다.</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          </CardContent>
+        </Card>
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">2단계</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">협업 제안/승인</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">승인 대기와 내가 보낸 제안을 나눠 보고, 누가 무엇을 기다리는지 상태로 판단합니다.</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          </CardContent>
+        </Card>
+        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+          <CardContent className="px-4 py-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">3단계</p>
           <p className="mt-2 text-lg font-semibold text-slate-900">열린 허브로 이동</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">승인된 협업은 열린 업무 허브에서 바로 이어집니다. 허브에서 사건과 일정, 메시지를 처리합니다.</p>
-        </div>
+          </CardContent>
+        </Card>
       </section>
 
       <UnifiedListSearch action="/organizations" placeholder="조직명, 사업자번호, 슬러그 검색..." ariaLabel="조직 검색" defaultValue={keyword} />
@@ -121,7 +128,7 @@ export default async function OrganizationsPage({
                     {request.proposalNote ? <p className="mt-2 text-sm text-slate-600 line-clamp-3">{request.proposalNote}</p> : null}
                     <p className="mt-2 text-xs text-slate-400">{new Date(request.createdAt).toLocaleString('ko-KR')}</p>
                     {request.sourceOrganizationId ? (
-                      <Link href={`/organizations/${request.sourceOrganizationId}` as Route} className="mt-2 inline-flex text-xs font-medium text-sky-700">
+                      <Link href={`/organizations/${request.sourceOrganizationId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'mt-3 h-8 rounded-lg px-3 text-xs' })}>
                         상세 확인
                       </Link>
                     ) : null}

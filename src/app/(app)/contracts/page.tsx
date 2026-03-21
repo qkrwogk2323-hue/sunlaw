@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate } from '@/lib/format';
@@ -50,6 +51,15 @@ export default async function ContractsPage({
           </CardContent>
         </Card>
       </section>
+
+      <div className="flex flex-wrap gap-2">
+        <Link href="/billing" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
+          비용 관리 보기
+        </Link>
+        <Link href="/notifications" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
+          관련 알림 보기
+        </Link>
+      </div>
 
       <Card className="vs-mesh-card">
         <CardHeader>
