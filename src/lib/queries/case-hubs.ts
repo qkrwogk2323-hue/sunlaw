@@ -69,6 +69,9 @@ export type CaseHubActivityItem = {
 
 export type CaseHubDetail = CaseHubSummary & {
   createdBy: string | null;
+  primaryClientLinkStatus: 'linked' | 'pending_unlink' | 'unlinked' | 'orphan_review' | null;
+  primaryClientOrphanReason: string | null;
+  primaryClientReviewDeadline: string | null;
   members: CaseHubMember[];
   recentActivity: CaseHubActivityItem[];
 };
@@ -379,7 +382,7 @@ export async function getCaseHubDetail(
       .order('created_at', { ascending: false })
       .limit(20),
     hub.primary_case_client_id
-      ? admin.from('case_clients').select('id, client_name').eq('id', hub.primary_case_client_id).maybeSingle()
+      ? admin.from('case_clients').select('id, client_name, link_status, orphan_reason, review_deadline').eq('id', hub.primary_case_client_id).maybeSingle()
       : Promise.resolve({ data: null, error: null })
   ]);
 
@@ -457,6 +460,9 @@ export async function getCaseHubDetail(
     caseReferenceNo: caseInfo?.reference_no ?? null,
     primaryClientId: hub.primary_case_client_id ?? hub.primary_client_id ?? null,
     primaryClientName: (clientResult.data as any)?.client_name ?? null,
+    primaryClientLinkStatus: (clientResult.data as any)?.link_status ?? null,
+    primaryClientOrphanReason: (clientResult.data as any)?.orphan_reason ?? null,
+    primaryClientReviewDeadline: (clientResult.data as any)?.review_deadline ?? null,
     title: hub.title ?? null,
     status: hub.status as CaseHubStatus,
     collaboratorLimit: hub.collaborator_limit,

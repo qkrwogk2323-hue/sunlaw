@@ -6,6 +6,7 @@ import { ChevronLeft, Globe, Network, Shield, Users, Zap } from 'lucide-react';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
+import { Badge } from '@/components/ui/badge';
 import { ActivityFeedPanel } from '@/components/activity-feed-panel';
 import { HubMetricBadge } from '@/components/hub-metric-badge';
 import { HubReadinessRing } from '@/components/hub-readiness-ring';
@@ -42,6 +43,21 @@ function visibilityLabel(scope: string | null) {
   if (scope === 'private') return '초대 전용';
   if (scope === 'custom') return '사용자 지정';
   return '미설정';
+}
+
+function clientLinkTone(status: CaseHubDetail['primaryClientLinkStatus']) {
+  if (status === 'pending_unlink') return 'amber';
+  if (status === 'orphan_review') return 'red';
+  if (status === 'unlinked') return 'slate';
+  return 'green';
+}
+
+function clientLinkLabel(status: CaseHubDetail['primaryClientLinkStatus']) {
+  if (status === 'pending_unlink') return '연결 해제 대기';
+  if (status === 'orphan_review') return '복구 검토 중';
+  if (status === 'unlinked') return '연결 해제';
+  if (status === 'linked') return '연결 완료';
+  return '상태 미지정';
 }
 
 interface Props {
@@ -193,7 +209,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                   {canActivate ? (
                     <ClientActionForm
                       action={activateCaseHubAction}
@@ -234,8 +250,24 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
             <dl className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-slate-500">대표 의뢰인</dt>
-                <dd className="font-medium text-slate-900">{hub.primaryClientName ?? '미지정'}</dd>
+                <dd className="flex items-center gap-2 font-medium text-slate-900">
+                  <span>{hub.primaryClientName ?? '미지정'}</span>
+                  {hub.primaryClientLinkStatus ? (
+                    <Badge tone={clientLinkTone(hub.primaryClientLinkStatus)}>
+                      {clientLinkLabel(hub.primaryClientLinkStatus)}
+                    </Badge>
+                  ) : null}
+                </dd>
               </div>
+              {hub.primaryClientOrphanReason ? (
+                <div className="space-y-1 rounded-2xl border border-red-200 bg-red-50 px-3 py-3">
+                  <dt className="text-slate-500">복구 사유</dt>
+                  <dd className="font-medium text-red-800">{hub.primaryClientOrphanReason}</dd>
+                  {hub.primaryClientReviewDeadline ? (
+                    <dd className="text-xs text-red-700">검토 기한 {hub.primaryClientReviewDeadline}</dd>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-slate-500">준비된 참여자</dt>
                 <dd className="font-medium text-slate-900 tabular-nums">{hub.readyMemberCount}명</dd>

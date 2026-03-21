@@ -140,7 +140,7 @@ export async function createCaseHubAction(formData: FormData) {
     if (insertError.code === '23505') {
       throw new Error('이 사건에는 이미 허브가 존재합니다. 허브 입장을 이용해 주세요.');
     }
-    throw new Error(`허브 생성 중 오류가 발생했습니다. (${insertError.message}) 잠시 후 다시 시도해 주세요.`);
+    throw new Error(`허브 생성 검증에 실패했습니다. (${insertError.message}) 입력 조건을 확인한 뒤 다시 시도해 주세요.`);
   }
 
   // 생성자를 owner로 자동 추가
