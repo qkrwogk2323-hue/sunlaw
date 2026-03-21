@@ -41,10 +41,13 @@ export function UnifiedListSearch({
       <input
         id="unified-list-search-input"
         name="q"
+        type="search"
         defaultValue={defaultValue}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className="h-10 min-w-[14rem] flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
+        autoComplete="off"
+        enterKeyHint="search"
+        className="h-10 min-w-[14rem] flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500/20"
       />
       {children}
       <Button type="submit" variant="secondary" size="sm" className="h-10 px-4">
