@@ -819,7 +819,13 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
   if (targetCaseClientId) {
     const { error: updateClientError } = await adminClient
       .from('case_clients')
-      .update({ profile_id: userId, is_portal_enabled: true })
+      .update({
+        profile_id: userId,
+        is_portal_enabled: true,
+        link_status: 'linked',
+        orphan_reason: null,
+        updated_by: userId
+      })
       .eq('id', targetCaseClientId);
     if (updateClientError) throw updateClientError;
 
@@ -848,7 +854,13 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
   if (existingClient?.id) {
     const { error: updateClientError } = await adminClient
       .from('case_clients')
-      .update({ profile_id: userId, is_portal_enabled: true })
+      .update({
+        profile_id: userId,
+        is_portal_enabled: true,
+        link_status: 'linked',
+        orphan_reason: null,
+        updated_by: userId
+      })
       .eq('id', existingClient.id);
     if (updateClientError) throw updateClientError;
 
@@ -887,6 +899,8 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
       client_email_snapshot: profileEmail,
       relation_label: '의뢰인',
       is_portal_enabled: true,
+      link_status: 'linked',
+      relink_policy: 'auto_when_profile_returns',
       created_by: invitation.created_by,
       updated_by: invitation.created_by
     });
@@ -1865,6 +1879,8 @@ export async function createClientBulkInvitationAction(formData: FormData) {
           client_email_snapshot: normalizedEmail,
           relation_label: relationLabel,
           is_portal_enabled: false,
+          link_status: 'linked',
+          relink_policy: 'auto_when_profile_returns',
           created_by: auth.user.id,
           updated_by: auth.user.id
         })

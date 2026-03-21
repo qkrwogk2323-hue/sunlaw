@@ -211,7 +211,7 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
   const admin = createSupabaseAdminClient();
   const { data: caseClient, error: caseClientError } = await admin
     .from('case_clients')
-    .select('id, organization_id, case_id, profile_id, client_name, is_portal_enabled')
+    .select('id, organization_id, case_id, profile_id, client_name, is_portal_enabled, link_status')
     .eq('id', caseClientId)
     .maybeSingle();
 
@@ -226,7 +226,12 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
 
   const { error: updateError } = await admin
     .from('case_clients')
-    .update({ is_portal_enabled: false, updated_by: auth.user.id })
+    .update({
+      is_portal_enabled: false,
+      link_status: caseClient.link_status === 'unlinked' ? 'unlinked' : 'pending_unlink',
+      relink_policy: 'admin_override_only',
+      updated_by: auth.user.id
+    })
     .eq('id', caseClientId);
 
   if (updateError) throw updateError;
