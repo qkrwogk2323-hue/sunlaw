@@ -8,7 +8,6 @@ import { redirect } from 'next/navigation';
 import {
   getEffectiveOrganizationId,
   hasActivePlatformAdminView,
-  PLATFORM_ORGANIZATION_SLUG,
   requireAuthenticatedUser,
   requireOrganizationActionAccess,
   requirePlatformAdminAction
@@ -27,6 +26,7 @@ import { parseCsvFile, pickCsvValue } from '@/lib/csv';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { encryptString } from '@/lib/pii';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { getDefaultTemplatePermissions, hasPermission, PERMISSION_KEYS } from '@/lib/permissions';
 import {
   collaborationHubCaseShareSchema,
@@ -83,13 +83,13 @@ async function listActivePlatformAdminIds() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('organization_memberships')
-    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, slug, is_platform_root)')
+    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, kind, is_platform_root)')
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
   return (data ?? [])
-    .filter((row: any) => row.organization?.slug === PLATFORM_ORGANIZATION_SLUG && row.organization?.is_platform_root === true && row.profile?.is_active !== false)
+    .filter((row: any) => isPlatformManagementOrganization(row.organization) && row.profile?.is_active !== false)
     .map((row: any) => row.profile_id)
     .filter(Boolean);
 }

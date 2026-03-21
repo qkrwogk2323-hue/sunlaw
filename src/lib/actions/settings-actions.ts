@@ -3,7 +3,8 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
+import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -498,13 +499,13 @@ export async function updateOrganizationProfileAction(formData: FormData) {
   }
 
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, parsed.organizationId);
-  const isPlatformRootOrganization = existingOrganization.slug === PLATFORM_ORGANIZATION_SLUG || existingOrganization.is_platform_root === true;
+  const isPlatformRootOrganization = existingOrganization.is_platform_root === true;
 
-  if (parsed.kind === 'platform_management' && existingOrganization.slug !== PLATFORM_ORGANIZATION_SLUG) {
-    throw new Error('플랫폼 관리조직은 vein-bn-1 하나만 지정할 수 있습니다.');
+  if (parsed.kind === 'platform_management' && !isPlatformRootOrganization) {
+    throw new Error('플랫폼 관리조직 유형은 control plane registry가 지정한 플랫폼 조직에만 허용됩니다.');
   }
 
-  if (isPlatformRootOrganization && parsed.kind !== 'platform_management') {
+  if ((isPlatformRootOrganization || isPlatformManagementOrganization(existingOrganization)) && parsed.kind !== 'platform_management') {
     throw new Error('플랫폼 관리조직의 유형은 platform_management로 고정됩니다.');
   }
 

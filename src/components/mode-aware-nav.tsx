@@ -27,6 +27,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useToast } from '@/components/ui/toast-provider';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE } from '@/lib/view-mode';
 
@@ -113,13 +114,9 @@ function getOrganizationSections({
         : null;
   const conversationBadge: NavBadge | null = unreadConversationCount > 0 ? { count: unreadConversationCount, variant: 'default' } : null;
   const organization = membership?.organization;
-  const isPlatformManagementOrganization = Boolean(
-    organization?.slug === 'vein-bn-1'
-      || organization?.is_platform_root === true
-      || organization?.kind === 'platform_management'
-  );
+  const isPlatformManagementOrganizationView = isPlatformManagementOrganization(organization);
 
-  const commonItems = isPlatformManagementOrganization
+  const commonItems = isPlatformManagementOrganizationView
     ? []
     : mode === 'client_communication'
     ? uniqueItems([
@@ -135,7 +132,7 @@ function getOrganizationSections({
   const collaborationItems: NavItem[] = [];
   const companyManagementItems: NavItem[] = [];
 
-  if (isPlatformManagementOrganization) {
+  if (isPlatformManagementOrganizationView) {
     organizationItems.push(
       { href: '/admin/organization-requests', label: '조직 신청 관리', icon: FileText },
       { href: '/admin/organizations', label: '조직 관리', icon: Building2 },
@@ -167,18 +164,18 @@ function getOrganizationSections({
     }
   }
 
-  if (!isPlatformManagementOrganization) {
+  if (!isPlatformManagementOrganizationView) {
     collaborationItems.push(
       { href: '/case-hubs', label: '사건허브', icon: Network },
       { href: '/inbox', label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
     );
   }
-  if (!isPlatformManagementOrganization && mode !== 'client_communication') {
+  if (!isPlatformManagementOrganizationView && mode !== 'client_communication') {
     collaborationItems.push({ href: '/organizations', label: '조직 찾기', icon: Building2 });
   }
 
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
-  if (!isPlatformManagementOrganization && (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')) {
+  if (!isPlatformManagementOrganizationView && (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')) {
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
       { href: '/settings/team', label: '구성원 관리', icon: Building2 }
@@ -187,7 +184,7 @@ function getOrganizationSections({
 
   const sections: NavSection[] = [];
   if (commonItems.length) sections.push({ id: 'common-menu', label: '공통 메뉴', items: commonItems });
-  if (organizationItems.length) sections.push({ id: 'organization-menu', label: isPlatformManagementOrganization ? '플랫폼 운영' : '조직 메뉴', items: uniqueItems(organizationItems) });
+  if (organizationItems.length) sections.push({ id: 'organization-menu', label: isPlatformManagementOrganizationView ? '플랫폼 운영' : '조직 메뉴', items: uniqueItems(organizationItems) });
   if (collaborationItems.length) sections.push({ id: 'collaboration-menu', label: '협업 메뉴', items: uniqueItems(collaborationItems) });
   if (companyManagementItems.length) sections.push({ id: 'company-management-menu', label: '회사 관리', items: uniqueItems(companyManagementItems) });
 

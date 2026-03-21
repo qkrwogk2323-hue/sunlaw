@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, PLATFORM_ORGANIZATION_SLUG, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
@@ -79,9 +80,7 @@ export default async function OrganizationSettingsPage({
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
   const platformContextId = getPlatformOrganizationContextId(auth);
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
-  const isPlatformManagementOrganization = workspace.organization?.slug === PLATFORM_ORGANIZATION_SLUG
-    || workspace.organization?.is_platform_root === true
-    || workspace.organization?.kind === 'platform_management';
+  const isPlatformManagementOrganizationView = isPlatformManagementOrganization(workspace.organization);
   const resolved = searchParams ? await searchParams : undefined;
   const section = `${resolved?.section ?? 'intro'}`.trim();
   const activeSection = section === 'info' || section === 'env' ? section : 'intro';
@@ -154,7 +153,7 @@ export default async function OrganizationSettingsPage({
                     <input id="organization-name" name="name" defaultValue={workspace.organization.name ?? ''} required aria-required="true" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label htmlFor="organization-kind" className="text-sm text-slate-600">조직유형
-                    {isPlatformAdmin && !isPlatformManagementOrganization ? (
+                    {isPlatformAdmin && !isPlatformManagementOrganizationView ? (
                       <select id="organization-kind" name="kind" defaultValue={workspace.organization.kind ?? 'law_firm'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
                         <option value="law_firm">{kindLabel.law_firm}</option>
                         <option value="collection_company">{kindLabel.collection_company}</option>
@@ -164,9 +163,9 @@ export default async function OrganizationSettingsPage({
                       </select>
                     ) : (
                       <>
-                        <input type="hidden" name="kind" value={isPlatformManagementOrganization ? 'platform_management' : (workspace.organization.kind ?? 'law_firm')} />
+                        <input type="hidden" name="kind" value={isPlatformManagementOrganizationView ? 'platform_management' : (workspace.organization.kind ?? 'law_firm')} />
                         <div className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
-                          {isPlatformManagementOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
+                          {isPlatformManagementOrganizationView ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
                         </div>
                       </>
                     )}
@@ -197,9 +196,9 @@ export default async function OrganizationSettingsPage({
                   </label>
                   <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                     <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>
-                    <span>현재 유형: {isPlatformManagementOrganization ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
+                    <span>현재 유형: {isPlatformManagementOrganizationView ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
                   </div>
-                  {isPlatformAdmin && isPlatformManagementOrganization ? (
+                  {isPlatformAdmin && isPlatformManagementOrganizationView ? (
                     <div className="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-950">
                       <p className="font-semibold">플랫폼 관리조직 전용 기능</p>
                       <p className="mt-1 text-sky-800">직접 조직 생성은 플랫폼 관리조직의 관리자만 사용할 수 있습니다.</p>

@@ -87,7 +87,7 @@ export function CredentialLoginForm() {
       </label>
       <label className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">조직 식별값(임시 아이디 로그인 시 필수)</span>
-        <Input value={organizationKey} onChange={(event) => setOrganizationKey(event.target.value)} placeholder="예: vein-bn-1" />
+        <Input value={organizationKey} onChange={(event) => setOrganizationKey(event.target.value)} placeholder="예: sunlaw-seoul" />
       </label>
       <label className="space-y-2 text-sm text-slate-700">
         <span className="font-medium text-slate-900">비밀번호</span>
