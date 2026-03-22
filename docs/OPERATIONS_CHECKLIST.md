@@ -269,6 +269,20 @@
 - [ ] Execute: 누락 발견 시 코드 + 문서 + 체크리스트를 같은 PR에서 보완
 - [ ] Execute: 누락 상태에서는 배포 승인 금지
 
+실행 명령:
+
+```bash
+pnpm check:audit-traceability
+pnpm check:all
+pnpm 검사돌아
+```
+
+빠른 단독 실행:
+
+```bash
+node scripts/check-audit-traceability.mjs
+```
+
 ---
 
 ## 📞 연락처 및 에스컬레이션

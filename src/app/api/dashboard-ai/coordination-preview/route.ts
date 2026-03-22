@@ -62,6 +62,7 @@ export async function POST(request: Request) {
 
   const preview = await buildCoordinationPlan(sanitizeAiText(content), (cases ?? []) as Array<{ id: string; title: string }>);
   const source = buildAiSourceMeta({
+    feature: 'home_ai_assistant',
     dataType: 'case_messages + cases',
     scope: { organizationId, caseCount: (cases ?? []).length },
     filters: { lifecycleStatus: '!=soft_deleted', orderBy: 'updated_at desc', limit: 20 }
