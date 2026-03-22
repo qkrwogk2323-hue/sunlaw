@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+// ai-guardrail-exempt: shared utility module without direct AI response payloads
 export const AI_FEATURE_IDS = [
   // 그룹 A: 조직 내부 운영 AI
   'home_ai_assistant',          // 홈 업무 도우미

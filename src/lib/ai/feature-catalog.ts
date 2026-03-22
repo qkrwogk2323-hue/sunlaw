@@ -7,7 +7,8 @@ export const AI_AREA_IDS = [
   'schedule_ai',
   'document_ai',
   'portal_ai',
-  'platform_ai'
+  'platform_ai',
+  'client_mgmt_ai'
 ] as const;
 
 export type AiAreaId = (typeof AI_AREA_IDS)[number];
@@ -56,6 +57,19 @@ export type AiFeaturePolicy = {
   allowedRoutes: string[];
   blocked: boolean;
   blockedReason?: string;
+  // ─── 이 서비스 핵심 정책 필드 ──────────────────────────────────────────────────
+  /** AI 결과의 공개 범위 */
+  visibility: 'organization_internal' | 'client_visible' | 'platform_internal';
+  /** AI 실행 경로 */
+  executionPath: 'rules_only' | 'hybrid' | 'trusted_llm' | 'blocked';
+  /** 원문 입력 허용 여부 */
+  allowRawInput: boolean;
+  /** 주민등록번호 제거 여부 */
+  redactNationalId: boolean;
+  /** 계좌/카드번호 제거 여부 */
+  redactFinancial: boolean;
+  /** 의뢰인에게 직접 노출 가능 여부 */
+  allowClientExposure: boolean;
 };
 
 export const AI_AREA_CATALOG: Record<AiAreaId, AiAreaSpec> = {
@@ -100,7 +114,40 @@ export const AI_AREA_CATALOG: Record<AiAreaId, AiAreaSpec> = {
     label: '플랫폼 운영 AI',
     organizationScope: 'platform',
     description: '현재는 답변을 제공하지 않으며 운영 메뉴 직접 확인만 안내합니다.'
+  },
+  client_mgmt_ai: {
+    id: 'client_mgmt_ai',
+    label: '의뢰인 관리 AI',
+    organizationScope: 'organization',
+    description: '의뢰인 관리와 특이사항 정리처럼 조직 내부 참고 작업만 담당합니다.'
   }
+};
+
+const INTERNAL_SANITIZED_POLICY = {
+  visibility: 'organization_internal' as const,
+  executionPath: 'rules_only' as const,
+  allowRawInput: false,
+  redactNationalId: true,
+  redactFinancial: true,
+  allowClientExposure: false
+};
+
+const PORTAL_VISIBLE_SANITIZED_POLICY = {
+  visibility: 'client_visible' as const,
+  executionPath: 'rules_only' as const,
+  allowRawInput: false,
+  redactNationalId: true,
+  redactFinancial: true,
+  allowClientExposure: true
+};
+
+const PLATFORM_BLOCKED_POLICY = {
+  visibility: 'platform_internal' as const,
+  executionPath: 'blocked' as const,
+  allowRawInput: false,
+  redactNationalId: true,
+  redactFinancial: true,
+  allowClientExposure: false
 };
 
 export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
@@ -110,7 +157,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '홈 업무 도우미',
     allowedAnswerTypes: ['menu_link', 'status_summary', 'next_action'],
     allowedRoutes: ['/dashboard', '/notifications', '/calendar', '/cases', '/clients', '/billing', '/contracts', '/case-hubs', '/inbox'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   ai_summary_card: {
     feature: 'ai_summary_card',
@@ -118,7 +166,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '오늘의 요약 카드',
     allowedAnswerTypes: ['status_summary', 'menu_link'],
     allowedRoutes: ['/dashboard', '/notifications', '/calendar', '/billing'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   next_action_recommendation: {
     feature: 'next_action_recommendation',
@@ -126,7 +175,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '다음 액션 추천',
     allowedAnswerTypes: ['next_action', 'menu_link'],
     allowedRoutes: ['/dashboard', '/notifications', '/calendar', '/clients', '/billing', '/cases'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   draft_assist: {
     feature: 'draft_assist',
@@ -134,7 +184,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '작성 보조',
     allowedAnswerTypes: ['draft_text'],
     allowedRoutes: ['/clients', '/inbox', '/case-hubs'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   anomaly_alert: {
     feature: 'anomaly_alert',
@@ -142,7 +193,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '변동 안내',
     allowedAnswerTypes: ['status_summary', 'menu_link'],
     allowedRoutes: ['/dashboard', '/notifications', '/billing', '/calendar'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   admin_copilot: {
     feature: 'admin_copilot',
@@ -151,7 +203,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: [],
     allowedRoutes: ['/admin/organization-requests', '/admin/organizations', '/admin/support', '/settings/subscription'],
     blocked: true,
-    blockedReason: '플랫폼 운영 판단과 조정은 AI가 답하지 않습니다.'
+    blockedReason: '플랫폼 운영 판단과 조정은 AI가 답하지 않습니다.',
+    ...PLATFORM_BLOCKED_POLICY
   },
   client_profile_comment: {
     feature: 'client_profile_comment',
@@ -159,7 +212,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '의뢰인 성향 코멘트',
     allowedAnswerTypes: ['status_summary', 'next_action'],
     allowedRoutes: ['/clients', '/cases'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   note_destination_recommender: {
     feature: 'note_destination_recommender',
@@ -167,7 +221,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '특이사항 저장 위치 추천',
     allowedAnswerTypes: ['menu_link', 'next_action'],
     allowedRoutes: ['/clients', '/cases', '/case-hubs', '/inbox'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   case_hub_conversation: {
     feature: 'case_hub_conversation',
@@ -175,7 +230,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '사건허브 대화 분석',
     allowedAnswerTypes: ['status_summary', 'next_action', 'menu_link'],
     allowedRoutes: ['/case-hubs', '/inbox'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   schedule_briefing: {
     feature: 'schedule_briefing',
@@ -183,7 +239,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '일정 브리핑',
     allowedAnswerTypes: ['status_summary', 'checklist', 'menu_link'],
     allowedRoutes: ['/calendar', '/calendar/worklog'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   document_checklist: {
     feature: 'document_checklist',
@@ -191,7 +248,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '문서 체크리스트',
     allowedAnswerTypes: ['checklist', 'status_summary'],
     allowedRoutes: ['/documents', '/cases'],
-    blocked: false
+    blocked: false,
+    ...INTERNAL_SANITIZED_POLICY
   },
   overdue_notice: {
     feature: 'overdue_notice',
@@ -199,7 +257,8 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     label: '연체 안내 초안',
     allowedAnswerTypes: ['draft_text', 'status_summary', 'menu_link'],
     allowedRoutes: ['/billing', '/contracts', '/cases'],
-    blocked: false
+    blocked: false,
+    ...PORTAL_VISIBLE_SANITIZED_POLICY
   }
 };
 

@@ -32,6 +32,22 @@ vi.mock('@/lib/supabase/admin', () => ({
   createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
 
+vi.mock('@/lib/ai/task-planner', () => ({
+  buildTaskPlan: vi.fn(async (content: string) => ({
+    provider: 'rules',
+    title: '테스트',
+    summary: content,
+    checklist: [],
+  })),
+  buildCoordinationPlan: vi.fn(async (content: string) => ({
+    provider: 'rules',
+    title: '테스트',
+    summary: content,
+    checklist: [],
+    reason: '테스트'
+  }))
+}));
+
 const authContext = {
   user: {
     id: '11111111-1111-4111-8111-111111111111',
@@ -136,5 +152,106 @@ describe('dashboard ai routes', () => {
       }
     });
     expect(mocks.createSupabaseServerClient).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes sensitive content instead of blocking dashboard preview', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          neq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(async () => ({ data: [{ id: 'case-1', title: '사건' }], error: null }))
+            }))
+          }))
+        }))
+      }))
+    }));
+    mocks.createSupabaseServerClient.mockResolvedValue({ from });
+
+    const { POST } = await import('@/app/api/dashboard-ai/preview/route');
+    const response = await POST(new Request('http://localhost/api/dashboard-ai/preview', {
+      method: 'POST',
+      body: JSON.stringify({
+        organizationId: '22222222-2222-4222-8222-222222222222',
+        content: '주민번호 900101-1234567 문서 확인'
+      }),
+      headers: { 'content-type': 'application/json' }
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      inputSanitized: true
+    });
+  });
+
+  it('sanitizes sensitive task content instead of blocking dashboard commit', async () => {
+    mocks.getCurrentAuth.mockResolvedValue({
+      ...authContext,
+      memberships: [
+        {
+          ...authContext.memberships[0],
+          permissions: { ...authContext.memberships[0].permissions, request_create: true }
+        }
+      ]
+    });
+
+    const from = vi.fn((table: string) => {
+      if (table === 'cases') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn(async () => ({ data: { id: 'case-1', organization_id: '22222222-2222-4222-8222-222222222222', title: '사건' }, error: null }))
+              }))
+            }))
+          }))
+        };
+      }
+
+      if (table === 'case_requests') {
+        return {
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn(async () => ({ data: { id: 'request-1' }, error: null }))
+            }))
+          }))
+        };
+      }
+
+      if (table === 'case_messages') {
+        return {
+          insert: vi.fn(async () => ({ error: null }))
+        };
+      }
+
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    const adminFrom = vi.fn(() => ({
+      insert: vi.fn(async () => ({ error: null }))
+    }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({ from });
+    mocks.createSupabaseAdminClient.mockReturnValue({ from: adminFrom });
+
+    const { POST } = await import('@/app/api/dashboard-ai/commit/route');
+    const response = await POST(new Request('http://localhost/api/dashboard-ai/commit', {
+      method: 'POST',
+      body: JSON.stringify({
+        organizationId: '22222222-2222-4222-8222-222222222222',
+        caseId: 'case-1',
+        content: '연락처 010-1234-5678',
+        title: '작업 생성',
+        summary: '요약'
+      }),
+      headers: { 'content-type': 'application/json' }
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      inputSanitized: true
+    });
   });
 });

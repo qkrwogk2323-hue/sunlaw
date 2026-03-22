@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
-import { containsSensitiveData, sanitizeAiText } from '@/lib/ai/guardrails';
+import { sanitizeAiText } from '@/lib/ai/guardrails';
+import { prepareAiTextListForFeature } from '@/lib/ai/policy';
 import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -72,13 +73,8 @@ export async function POST(request: Request) {
     });
   }
 
-  if (containsSensitiveData(content) || containsSensitiveData(title) || containsSensitiveData(summary)) {
-    return guardValidationFailedResponse(400, {
-      blocked: 'AI 실행 요청이 차단되었습니다.',
-      cause: '민감정보 패턴이 탐지되어 저장이 차단되었습니다.',
-      resolution: '민감정보를 제거한 뒤 다시 시도해 주세요.'
-    });
-  }
+  const preparedInput = prepareAiTextListForFeature('home_ai_assistant', [title, summary, content]);
+  const [preparedTitle, preparedSummary, preparedContent] = preparedInput.values;
 
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -103,8 +99,8 @@ export async function POST(request: Request) {
     case_id: caseId,
     created_by: auth.user.id,
     request_kind: 'other',
-    title: sanitizeAiText(title),
-    body: `${sanitizeAiText(summary)}\n\n[대시보드 AI 초안]\n${sanitizeAiText(content)}`,
+    title: sanitizeAiText(preparedTitle),
+    body: `${sanitizeAiText(preparedSummary)}\n\n[대시보드 AI 초안]\n${sanitizeAiText(preparedContent)}`,
     due_at: dueAt,
     client_visible: false
   }).select('id').single();
@@ -117,12 +113,12 @@ export async function POST(request: Request) {
     const { error: scheduleError } = await supabase.from('case_schedules').insert({
       organization_id: organizationId,
       case_id: caseId,
-      title: sanitizeAiText(title),
+      title: sanitizeAiText(preparedTitle),
       schedule_kind: scheduleKind,
       scheduled_start: dueAt,
       scheduled_end: null,
       location: null,
-      notes: `[대시보드 AI 초안]\n${sanitizeAiText(summary)}`,
+      notes: `[대시보드 AI 초안]\n${sanitizeAiText(preparedSummary)}`,
       client_visibility: 'internal_only',
       is_important: isImportant,
       created_by: auth.user.id,
@@ -140,7 +136,7 @@ export async function POST(request: Request) {
     case_id: caseId,
     sender_profile_id: auth.user.id,
     sender_role: membership?.role === 'org_owner' || membership?.role === 'org_manager' ? 'admin' : 'staff',
-    body: `[대시보드 AI 기록]\n${sanitizeAiText(summary)}`,
+    body: `[대시보드 AI 기록]\n${sanitizeAiText(preparedSummary)}`,
     is_internal: true
   });
 
@@ -172,7 +168,7 @@ export async function POST(request: Request) {
         case_id: caseId,
         recipient_profile_id: recipientId,
         kind: 'generic',
-        title: `AI 작업 등록: ${sanitizeAiText(title)}`,
+        title: `AI 작업 등록: ${sanitizeAiText(preparedTitle)}`,
         body: dueAt
           ? `${caseRow.title} 사건에 작업과 일정이 등록되었습니다. 완료 전까지 대시보드와 일정 확인 메뉴에서 추적하세요.`
           : `${caseRow.title} 사건에 작업이 등록되었습니다. 일정은 수동 확인이 필요합니다.`,
@@ -193,5 +189,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, inputSanitized: preparedInput.hadSensitiveData });
 }

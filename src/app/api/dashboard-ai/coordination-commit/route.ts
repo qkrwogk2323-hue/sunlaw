@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
-import { containsSensitiveData, sanitizeAiChecklist, sanitizeAiText } from '@/lib/ai/guardrails';
+import { sanitizeAiChecklist, sanitizeAiText } from '@/lib/ai/guardrails';
+import { prepareAiTextForFeature, prepareAiTextListForFeature } from '@/lib/ai/policy';
 import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -77,20 +78,20 @@ export async function POST(request: Request) {
     });
   }
 
-  if (containsSensitiveData(title) || containsSensitiveData(summary) || selectedItems.some((item) => containsSensitiveData(item.label) || containsSensitiveData(item.detail))) {
-    return guardValidationFailedResponse(400, {
-      blocked: '조직 소통 AI 반영 요청이 차단되었습니다.',
-      cause: '민감정보 패턴이 탐지되어 저장이 차단되었습니다.',
-      resolution: '민감정보를 제거한 뒤 다시 시도해 주세요.'
-    });
-  }
-
-  const sanitizedSummary = sanitizeAiText(summary);
-  const sanitizedItems = sanitizeAiChecklist(selectedItems.map((item) => ({
+  const preparedHeader = prepareAiTextListForFeature('case_hub_conversation', [title, summary]);
+  const [preparedTitle, preparedSummary] = preparedHeader.values;
+  let itemSanitized = false;
+  const sanitizedItems = sanitizeAiChecklist(selectedItems.map((item) => {
+    const preparedLabel = prepareAiTextForFeature('case_hub_conversation', item.label);
+    const preparedDetail = prepareAiTextForFeature('case_hub_conversation', item.detail);
+    itemSanitized = itemSanitized || preparedLabel.hadSensitiveData || preparedDetail.hadSensitiveData;
+    return ({
     ...item,
-    label: sanitizeAiText(item.label),
-    detail: sanitizeAiText(item.detail)
-  })));
+    label: sanitizeAiText(preparedLabel.value),
+    detail: sanitizeAiText(preparedDetail.value)
+  });
+  }));
+  const sanitizedSummary = sanitizeAiText(preparedSummary);
 
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -231,7 +232,7 @@ export async function POST(request: Request) {
       action_href: destinationUrl,
       destination_type: 'internal_route',
       destination_url: destinationUrl,
-      title: sanitizeAiText(title),
+      title: sanitizeAiText(preparedTitle),
       body: notificationBody,
       payload: {
         source: 'dashboard_coordination_ai',
@@ -247,5 +248,5 @@ export async function POST(request: Request) {
     return guardServerErrorResponse(500, '알림 생성에 실패해 AI 반영이 차단되었습니다.');
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, inputSanitized: preparedHeader.hadSensitiveData || itemSanitized });
 }
