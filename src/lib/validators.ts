@@ -397,6 +397,13 @@ export const paymentRecordSchema = z.object({
   note: z.string().trim().max(1000).optional().or(z.literal(''))
 });
 
+export const installmentFollowUpSchema = z.object({
+  agreementId: z.string().uuid(),
+  caseId: z.string().uuid(),
+  additionalRounds: z.coerce.number().int().min(1).max(60).default(1),
+  nextDueOn: z.string().min(1)
+});
+
 export const membershipSetupSchema = z.object({
   actorCategory: z.enum(['admin', 'staff']),
   roleTemplateKey: z.enum(['admin_general', 'lawyer', 'office_manager', 'org_staff', 'collection_agent', 'intern_readonly']),

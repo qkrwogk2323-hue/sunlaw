@@ -22,6 +22,7 @@ import {
   caseRequestSchema,
   documentReviewSchema,
   feeAgreementSchema,
+  installmentFollowUpSchema,
   contractRegistrationSchema,
   paymentRecordSchema,
   recoveryActivitySchema,
@@ -1964,13 +1965,14 @@ export async function issueInstallmentShortageBillingAction(formData: FormData) 
 
 // 분납 부족분을 회차 연장으로 기록한다.
 export async function extendInstallmentPlanAction(formData: FormData) {
-  const agreementId = `${formData.get('agreementId') ?? ''}`.trim();
-  const caseId = `${formData.get('caseId') ?? ''}`.trim();
-  if (!agreementId || !caseId) {
-    throw new Error('회차 연장 정보가 올바르지 않습니다.');
-  }
+  const parsed = installmentFollowUpSchema.parse({
+    agreementId: formData.get('agreementId'),
+    caseId: formData.get('caseId'),
+    additionalRounds: formData.get('additionalRounds') || 1,
+    nextDueOn: formData.get('nextDueOn')
+  });
 
-  const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
+  const { supabase, caseRecord } = await loadCaseOrThrow(parsed.caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
     permission: 'billing_manage',
     errorMessage: '비용 조정 권한이 없습니다.'
@@ -1979,8 +1981,8 @@ export async function extendInstallmentPlanAction(formData: FormData) {
   const { data: agreement, error: agreementError } = await supabase
     .from('fee_agreements')
     .select('id, title, fixed_amount, bill_to_party_kind, bill_to_case_client_id, bill_to_case_organization_id, terms_json')
-    .eq('id', agreementId)
-    .eq('case_id', caseId)
+    .eq('id', parsed.agreementId)
+    .eq('case_id', parsed.caseId)
     .maybeSingle();
 
   if (agreementError || !agreement) throw agreementError ?? new Error('분납 계약 정보를 찾지 못했습니다.');
@@ -1988,7 +1990,7 @@ export async function extendInstallmentPlanAction(formData: FormData) {
   const { data: payments, error: paymentError } = await supabase
     .from('payments')
     .select('id, amount, payment_status')
-    .eq('case_id', caseId)
+    .eq('case_id', parsed.caseId)
     .eq('payer_party_kind', agreement.bill_to_party_kind)
     .eq('payer_case_client_id', agreement.bill_to_case_client_id ?? null)
     .eq('payer_case_organization_id', agreement.bill_to_case_organization_id ?? null);
@@ -2006,6 +2008,8 @@ export async function extendInstallmentPlanAction(formData: FormData) {
     installment_follow_up: {
       mode: 'extend_rounds',
       shortage_amount: shortageAmount,
+      additional_rounds: parsed.additionalRounds,
+      next_due_on: parsed.nextDueOn,
       decided_at: new Date().toISOString(),
       decided_by: auth.user.id
     }
@@ -2020,7 +2024,7 @@ export async function extendInstallmentPlanAction(formData: FormData) {
 
   revalidatePath('/billing');
   revalidatePath('/contracts');
-  revalidatePath(`/cases/${caseId}`);
+  revalidatePath(`/cases/${parsed.caseId}`);
 }
 
 // 사건을 삭제함으로 이동한다.

@@ -1,5 +1,6 @@
 'use client';
 
+import { Input } from '@/components/ui/input';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { extendInstallmentPlanAction, issueInstallmentShortageBillingAction } from '@/lib/actions/case-actions';
@@ -11,6 +12,8 @@ export function InstallmentFollowUpActions({
   agreementId: string;
   caseId: string;
 }) {
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="grid gap-2 md:grid-cols-2">
       <ClientActionForm
@@ -27,9 +30,20 @@ export function InstallmentFollowUpActions({
         action={extendInstallmentPlanAction}
         successTitle="회차 연장 결정이 기록되었습니다."
         successMessage="계약 관리와 비용 관리에서 같은 기준으로 이어집니다."
+        className="space-y-2"
       >
         <input type="hidden" name="agreementId" value={agreementId} />
         <input type="hidden" name="caseId" value={caseId} />
+        <div className="grid gap-2 md:grid-cols-2">
+          <label className="space-y-1 text-sm text-slate-700">
+            <span className="font-medium">추가 회차 수</span>
+            <Input name="additionalRounds" type="number" min="1" max="60" defaultValue="1" />
+          </label>
+          <label className="space-y-1 text-sm text-slate-700">
+            <span className="font-medium">다음 기준일</span>
+            <Input name="nextDueOn" type="date" defaultValue={today} />
+          </label>
+        </div>
         <SubmitButton className="w-full" variant="secondary">회차 늘리기</SubmitButton>
       </ClientActionForm>
     </div>

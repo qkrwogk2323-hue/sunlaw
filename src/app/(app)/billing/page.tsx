@@ -463,6 +463,11 @@ export default async function BillingPage({
                       후속 결정 · {agreement.terms_json.installment_follow_up.mode === 'merged_charge' ? '부족분 합산 청구' : '회차 늘리기'}
                     </p>
                   ) : null}
+                  {agreement.terms_json?.installment_follow_up?.mode === 'extend_rounds' ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      추가 회차 {agreement.terms_json.installment_follow_up.additional_rounds ?? '-'}회 · 다음 기준일 {formatDate(agreement.terms_json.installment_follow_up.next_due_on)}
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-xs text-slate-400">적용 {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
                 </Link>
               )) : <p className="text-sm text-slate-500">활성 계약이 없습니다.</p>}
