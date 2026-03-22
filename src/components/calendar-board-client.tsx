@@ -373,6 +373,7 @@ export function CalendarBoardClient({
   const [createCaseId, setCreateCaseId] = useState(caseOptions[0]?.id ?? '');
   const [createFormOpen, setCreateFormOpen] = useState(false);
   const [createScheduledStart, setCreateScheduledStart] = useState(() => toDateInput(snapshot.schedules[0]?.scheduled_start) || toDateTimeInputFromDateKey(toLocalDateKey(new Date())));
+  const [monthJump, setMonthJump] = useState(snapshot.focusMonth);
   const [currentMoment] = useState(() => new Date());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(toLocalDateKey(new Date()).startsWith(snapshot.focusMonth) ? toLocalDateKey(new Date()) : null);
   const [recentEntryCutoff] = useState(() => Date.now() - 1000 * 60 * 60 * 48);
@@ -546,7 +547,18 @@ export function CalendarBoardClient({
             <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
               <ChevronLeft className="size-4" />이전 달
             </Link>
-            <div className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900">{snapshot.focusMonth}</div>
+            <label className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700">
+              <span className="sr-only">기준 월 선택</span>
+              <Input
+                type="month"
+                value={monthJump}
+                onChange={(event) => setMonthJump(event.target.value)}
+                className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-semibold shadow-none focus:border-0"
+              />
+            </label>
+            <Link href={`/calendar?month=${monthJump}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
+              <CalendarDays className="size-4" />해당 달 보기
+            </Link>
             <Link href={`/calendar?month=${nextMonth}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
               다음 달<ChevronRight className="size-4" />
             </Link>
@@ -687,7 +699,7 @@ export function CalendarBoardClient({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>월간 일정</CardTitle>
+            <div />
             {selectedDateKey ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedDateKey(null)}>
                 날짜 선택 해제
