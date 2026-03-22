@@ -287,9 +287,11 @@ function buildRouteSuggestion(question: string, snapshot: DashboardSnapshot, isP
   if (!actions.length) {
     actions.push(
       {
-        label: '대시보드 유지',
-        href: '/dashboard',
-        reason: '현재 질문은 홈 요약과 추천 카드에서 먼저 확인하는 편이 빠릅니다.'
+        label: isPlatformAdmin ? '조직 신청 관리 열기' : '대시보드 유지',
+        href: isPlatformAdmin ? '/admin/organization-requests' : '/dashboard',
+        reason: isPlatformAdmin
+          ? '플랫폼 조직은 조직 신청 관리에서 운영 큐를 먼저 확인하는 편이 빠릅니다.'
+          : '현재 질문은 홈 요약과 추천 카드에서 먼저 확인하는 편이 빠릅니다.'
       },
       {
         label: '사건 목록 열기',

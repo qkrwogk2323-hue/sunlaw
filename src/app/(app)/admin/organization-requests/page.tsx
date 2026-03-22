@@ -6,6 +6,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listOrganizationExitRequests, listOrganizationSignupRequests } from '@/lib/queries/organization-requests';
+import { listAuditChangeLog } from '@/lib/queries/audit';
 import { reviewOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
 import { reviewOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
 import { formatBusinessNumber, formatDateTime } from '@/lib/format';
@@ -70,6 +71,10 @@ export default async function OrganizationRequestsPage() {
   const [requests, exitRequests] = await Promise.all([
     listOrganizationSignupRequests(),
     listOrganizationExitRequests()
+  ]);
+  const [signupLogs, exitLogs] = await Promise.all([
+    listAuditChangeLog({ limit: 8, tableName: 'organization_signup_requests' }),
+    listAuditChangeLog({ limit: 8, tableName: 'organization_exit_requests' })
   ]);
   const signupRequests = requests.sort((left: any, right: any) => {
     const priority = { mismatch: 0, unreadable: 1, matched: 2, pending_review: 3 } as Record<string, number>;
@@ -180,6 +185,50 @@ export default async function OrganizationRequestsPage() {
           )) : <p className="text-sm text-slate-500">신청 내역이 없습니다.</p>}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>최근 조직 신청 기록</CardTitle>
+            <p className="text-sm text-slate-600">신규 조직 개설 신청과 검토 상태 변경 기록을 바로 확인합니다.</p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {signupLogs.length ? signupLogs.map((row: any) => (
+              <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="blue">{row.action}</Badge>
+                  <span className="text-sm font-medium text-slate-900">{row.table_name}</span>
+                  <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
+              </div>
+            )) : (
+              <p className="text-sm text-slate-500">아직 조직 신청 관련 감사로그가 없습니다.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>최근 조직 탈퇴 기록</CardTitle>
+            <p className="text-sm text-slate-600">조직 탈퇴 신청 접수와 검토 이력을 이 화면에서 함께 확인합니다.</p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {exitLogs.length ? exitLogs.map((row: any) => (
+              <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="blue">{row.action}</Badge>
+                  <span className="text-sm font-medium text-slate-900">{row.table_name}</span>
+                  <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
+              </div>
+            )) : (
+              <p className="text-sm text-slate-500">아직 조직 탈퇴 관련 감사로그가 없습니다.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader><CardTitle>조직 탈퇴 신청</CardTitle></CardHeader>

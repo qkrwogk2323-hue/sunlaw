@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import type { Route } from 'next';
 import { assertPlatformAdminAccess, evaluateOrganizationAccess } from '@/lib/access-control';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -273,7 +274,7 @@ export async function requirePlatformAdmin(organizationId?: string | null) {
   const auth = await requireAuthenticatedUser();
   const platformOrganizationId = organizationId ?? getPlatformOrganizationContextId(auth);
   if (!(await hasActivePlatformAdminView(auth, platformOrganizationId))) {
-    redirect('/dashboard');
+    redirect(getDefaultAppRoute(auth));
   }
   return auth;
 }
@@ -306,6 +307,18 @@ export function hasPlatformManagementMembership(auth: AuthContext) {
 
 export function isPlatformOperator(auth: AuthContext) {
   return hasPlatformManagementMembership(auth);
+}
+
+export function getDefaultAppRoute(auth: AuthContext) {
+  return isPlatformOperator(auth) ? '/admin/organization-requests' : '/dashboard';
+}
+
+export function getTopLevelAppRoutes(auth: AuthContext): Route[] {
+  if (isPlatformOperator(auth)) {
+    return ['/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
+  }
+
+  return ['/dashboard', '/inbox', '/cases', '/clients', '/organizations', '/collections', '/documents', '/notifications', '/calendar', '/reports', '/settings'];
 }
 
 export function hasStaffMembership(auth: AuthContext, organizationId: string) {

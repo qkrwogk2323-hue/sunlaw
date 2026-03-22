@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { getDefaultAppRoute, getEffectiveOrganizationId, getTopLevelAppRoutes, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { getNavUnreadCounts } from '@/lib/queries/notifications';
 import { ModeAwareNav } from '@/components/mode-aware-nav';
@@ -43,6 +43,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const effectiveOrganizationId = getEffectiveOrganizationId(auth);
+  const defaultAppRoute = getDefaultAppRoute(auth) as Route;
 
   const [supportSession, navCounts, subscriptionSnapshot] = await Promise.all([
     readSupportSessionCookie(),
@@ -79,12 +80,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
         <main className="space-y-6">
           <div className="flex justify-center">
-            <BrandBanner href="/dashboard" className="mx-auto max-w-5xl" theme="light" />
+            <BrandBanner href={defaultAppRoute} className="mx-auto max-w-5xl" theme="light" />
           </div>
-          <PageBackButton
-            fallbackHref="/dashboard"
-            topLevelRoutes={['/dashboard', '/inbox', '/cases', '/clients', '/organizations', '/collections', '/documents', '/notifications', '/calendar', '/reports', '/settings']}
-          />
+          <PageBackButton fallbackHref={defaultAppRoute} topLevelRoutes={getTopLevelAppRoutes(auth)} />
           {supportSession ? (
             <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

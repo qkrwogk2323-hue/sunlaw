@@ -1,6 +1,7 @@
 import type { Route } from 'next';
 import type { AuthContext, Profile } from '@/lib/types';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
+import { getDefaultAppRoute } from '@/lib/auth';
 
 export const CLIENT_ACCOUNT_STATUSES = [
   'active',
@@ -81,5 +82,5 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
     return '/start/signup' as Route;
   }
 
-  return '/dashboard' as Route;
+  return getDefaultAppRoute(auth);
 }

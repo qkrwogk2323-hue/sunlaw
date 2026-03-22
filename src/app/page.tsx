@@ -5,7 +5,7 @@ import { ArrowRight, BellRing, Building2, ClipboardList, FolderKanban, Landmark,
 import { BrandBanner } from '@/components/brand-banner';
 import { HomepageDemoVideo } from '@/components/homepage-demo-video';
 import { buttonStyles } from '@/components/ui/button';
-import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
+import { getCurrentAuth, getDefaultAppRoute, getEffectiveOrganizationId, isPlatformOperator } from '@/lib/auth';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -95,11 +95,12 @@ export default async function MarketingPage({
   }
 
   const auth = await getCurrentAuth();
-  const startHref = (auth ? '/dashboard' : '/start') as Route;
+  const startHref = (auth ? getDefaultAppRoute(auth) : '/start') as Route;
   const organizationId = auth ? getEffectiveOrganizationId(auth) : null;
-  let dashboard = auth ? emptyDashboardSnapshot : null;
+  const isPlatformView = auth ? isPlatformOperator(auth) : false;
+  let dashboard = auth && !isPlatformView ? emptyDashboardSnapshot : null;
 
-  if (auth) {
+  if (auth && !isPlatformView) {
     try {
       dashboard = await getDashboardSnapshot(organizationId);
     } catch (error) {
@@ -146,6 +147,43 @@ export default async function MarketingPage({
               </div>
             ) : null}
           </div>
+
+          {auth && isPlatformView ? (
+            <div className="flex w-full max-w-5xl flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-stretch">
+              <Link
+                href={'/admin/organization-requests' as Route}
+                className="vs-pop-card flex min-h-20 w-full max-w-2xl flex-1 items-center justify-between gap-4 rounded-[1.7rem] border border-sky-300/18 bg-[linear-gradient(135deg,rgba(16,52,88,0.88),rgba(9,24,49,0.94))] px-6 py-5 text-left shadow-[0_20px_52px_rgba(14,116,144,0.24)]"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-sky-300/14 text-sky-100">
+                    <ClipboardList className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-sky-100/76">플랫폼 운영</p>
+                    <p className="mt-1 text-2xl font-semibold text-white">조직 신청 관리로 이동</p>
+                    <p className="mt-1 text-sm text-slate-300">새 조직 신청 검토, 승인, 반려를 먼저 확인합니다.</p>
+                  </div>
+                </div>
+                <ArrowRight className="hidden size-5 text-sky-100/72 lg:block" />
+              </Link>
+
+              <Link
+                href={'/admin/audit' as Route}
+                className="vs-pop-card flex min-h-20 w-full max-w-md items-center justify-between gap-4 rounded-[1.7rem] border border-white/12 bg-white/10 px-5 py-5 text-left backdrop-blur-sm"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-white/10 text-amber-100">
+                    <ShieldCheck className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-200/78">감사 로그</p>
+                    <p className="mt-1 text-2xl font-semibold text-white">운영 기록 확인</p>
+                    <p className="mt-1 text-sm text-slate-300">조직 신청, 상태 변경, 운영 기록을 바로 추적합니다.</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ) : null}
 
           {auth && dashboard ? (
             <div className="flex w-full max-w-5xl flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-stretch">
