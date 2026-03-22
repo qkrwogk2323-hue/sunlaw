@@ -219,12 +219,49 @@ export default async function BillingPage({
     }
   ];
 
+  const activeAgreements = billing.agreements.filter((item: any) => item.is_active);
+  const caseLinkedEntries = billing.entries.filter((entry: any) => Boolean(entry.case_id));
+  const contractLinkedCosts = activeAgreements.filter((agreement: any) => Boolean(agreement.case_id));
+  const paymentRecords = billing.payments;
+  const topCards = [
+    {
+      label: '사건 연결 청구',
+      value: caseLinkedEntries.length,
+      href: '/cases' as Route,
+      helper: '사건 비용 탭으로 이동'
+    },
+    {
+      label: '계약 연결 비용',
+      value: contractLinkedCosts.length,
+      href: '/contracts' as Route,
+      helper: '계약 관리로 이동'
+    },
+    {
+      label: '의뢰인 확인 필요',
+      value: clientAttentionEntries.length,
+      href: '/portal/billing' as Route,
+      helper: '포털 청구 확인'
+    },
+    {
+      label: '분납 후속 처리',
+      value: installmentPendingAgreements.length + missedInstallmentEntries.length,
+      href: '/billing#installment-follow-up' as Route,
+      helper: '분납 조정 보기'
+    },
+    {
+      label: '입금 기록',
+      value: paymentRecords.length,
+      href: '/billing#recent-payments' as Route,
+      helper: '최근 입금 보기'
+    }
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">비용 관리</h1>
-          <p className="mt-2 text-sm text-slate-600">의뢰인과의 계약, 청구, 분납 약속, 입금 현황을 사건 기준으로 묶어 봅니다. 회사 구독료는 회사 관리의 구독 관리에서 별도로 다룹니다.</p>
+          <p className="mt-2 text-sm text-slate-600">사건, 계약, 의뢰인 확인, 분납 흐름만 묶어서 봅니다.</p>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
             <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               청구 기록 보기
@@ -241,14 +278,10 @@ export default async function BillingPage({
           <Link href="/contracts" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
             계약 관리
           </Link>
-          <Link href={'/settings/subscription' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
-            구독 관리
+          <Link href={'/notifications' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
+            비용 알림 보기
           </Link>
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        여기서 보는 청구와 입금 상태는 사건 화면, 허브, 의뢰인 화면에도 같은 내용으로 이어집니다. 그래서 밀린 분납이나 다가오는 납부 기한을 한 번에 함께 확인할 수 있습니다.
       </div>
 
       <section className="flex flex-wrap gap-2">
@@ -269,83 +302,30 @@ export default async function BillingPage({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">이번 {PERIOD_OPTIONS.find((item) => item.key === period)?.label} 청구 금액</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-2xl font-semibold text-slate-900">{formatCurrency(currentBilledAmount)}</p>
-            <p className="text-sm text-slate-500">직전 대비 {changeLabel(currentBilledAmount, previousBilledAmount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">이번 {PERIOD_OPTIONS.find((item) => item.key === period)?.label} 입금액</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-2xl font-semibold text-slate-900">{formatCurrency(currentReceivedAmount)}</p>
-            <p className="text-sm text-slate-500">직전 대비 {changeLabel(currentReceivedAmount, previousReceivedAmount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">활성 분납 약정</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-2xl font-semibold text-slate-900">{installmentAgreements.length}건</p>
-            <p className="text-sm text-slate-500">이행 중 {installmentComplianceCount}건 · 미이행 {missedInstallmentAgreementKeys.size}건 · 미입금 확인 {installmentPendingAgreements.length}건</p>
-          </CardContent>
-        </Card>
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">의뢰인 확인 필요</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-2xl font-semibold text-red-600">{clientAttentionEntries.length}건</p>
-            <p className="text-sm text-slate-500">포털/허브에서 납부가 필요한 청구 항목 기준</p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>기간 비교표</CardTitle></CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="px-2 py-3 font-medium">지표</th>
-                    <th className="px-2 py-3 font-medium">현재</th>
-                    <th className="px-2 py-3 font-medium">직전</th>
-                    <th className="px-2 py-3 font-medium">변화율</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row) => (
-                    <tr key={row.label} className="border-b border-slate-100 text-slate-700 last:border-b-0">
-                      <td className="px-2 py-3 font-medium text-slate-900">{row.label}</td>
-                      <td className="px-2 py-3">{row.current}</td>
-                      <td className="px-2 py-3">{row.previous}</td>
-                      <td className="px-2 py-3">{row.change}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>확인 기준</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm text-slate-700">
-            <p>1. 조직 메뉴의 비용 관리는 의뢰인과 약속한 금액, 분납, 입금 추적입니다.</p>
-            <p>2. 회사 관리의 구독 관리는 우리 조직이 플랫폼에 내는 구독료입니다.</p>
-            <p>3. 분납 미이행이 보이면 사건 비용 탭에서 바로 조정하고, 의뢰인 포털의 청구 카드와 같은 항목인지 함께 확인합니다.</p>
-            <p>4. 계약 원본은 계약 관리에 두고, 청구/입금 현황은 이 화면에서 기간 기준으로 비교합니다.</p>
-          </CardContent>
-        </Card>
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {topCards.map((card) => (
+          <Link
+            key={card.label}
+            href={card.href}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-slate-300"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{card.label}</p>
+            <p className="mt-4 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
+            <p className="mt-4 text-center text-xs text-slate-500">{card.helper}</p>
+          </Link>
+        ))}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>비용입금 미확인 분납 계약</CardTitle></CardHeader>
+        <Card id="installment-follow-up">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>분납 후속 처리</CardTitle>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-3">
             {installmentPendingAgreements.length ? installmentPendingAgreements.map((agreement: any) => (
-              <div key={`pending-${agreement.id}`} className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+              <div key={`pending-${agreement.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-slate-900">{agreement.title}</p>
@@ -360,13 +340,10 @@ export default async function BillingPage({
                   <p>{agreement.fixed_amount != null ? `약정금액 ${formatCurrency(agreement.fixed_amount)}` : '약정금액 미지정'}</p>
                   <p>{`현재 입금 ${formatCurrency(agreement.paidAmount ?? 0)} · 부족 ${formatCurrency(agreement.shortageAmount ?? 0)}`}</p>
                   <p>기준 {agreement.terms_json?.installment_start_mode === 'first_due' ? '첫 납부일 기준' : '오늘부터 확인'}</p>
-                  <Link href={`/cases/${agreement.case_id}?tab=billing`} className="font-medium text-sky-700 hover:text-sky-900">사건 비용 탭 열기</Link>
+                  <Link href={`/cases/${agreement.case_id}?tab=billing`} className="font-medium text-slate-900 underline underline-offset-4">사건 비용 탭 열기</Link>
                 </div>
                 {(agreement.shortageAmount ?? 0) > 0 ? (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-white/80 p-3">
-                    <p className="mb-3 text-sm text-slate-700">
-                      현재 부족 금액 {formatCurrency(agreement.shortageAmount ?? 0)}을 다음 청구에 합칠지, 우선 회차를 늘릴지 여기서 바로 정할 수 있습니다.
-                    </p>
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
                     <InstallmentFollowUpActions agreementId={agreement.id} caseId={agreement.case_id} />
                   </div>
                 ) : null}
@@ -379,11 +356,18 @@ export default async function BillingPage({
           </CardContent>
         </Card>
 
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>분납 미이행 및 연체 확인</CardTitle></CardHeader>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>즉시 처리할 비용</CardTitle>
+              <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                청구 기록 보기
+              </Link>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-3">
             {missedInstallmentEntries.length ? missedInstallmentEntries.map((entry: any) => (
-              <Link key={entry.id} href={`/cases/${entry.case_id}?tab=billing`} className="block rounded-2xl border border-red-200 bg-red-50/70 p-4 transition hover:border-red-300">
+              <Link key={entry.id} href={`/cases/${entry.case_id}?tab=billing`} className="block rounded-2xl border border-red-200 bg-red-50/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-slate-900">{entry.title}</p>
@@ -408,7 +392,7 @@ export default async function BillingPage({
 
             {overdueEntries.length ? (
               <div className="space-y-3 pt-3">
-                <h3 className="text-sm font-semibold text-slate-900">전체 연체 청구</h3>
+                <h3 className="text-sm font-semibold text-slate-900">연체 청구</h3>
                 {overdueEntries.slice(0, 8).map((entry: any) => {
                   const dueDate = entry.due_on ? new Date(`${entry.due_on}T00:00:00`) : null;
                   const dueDaysAgo = dueDate ? Math.max(0, Math.floor((nowMs - dueDate.getTime()) / 86400000)) : 0;
@@ -442,11 +426,18 @@ export default async function BillingPage({
         </Card>
 
         <div className="space-y-6">
-          <Card className="vs-mesh-card">
-            <CardHeader><CardTitle>활성 계약/분납 약정</CardTitle></CardHeader>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>계약 연결 비용</CardTitle>
+                <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                  계약 변경 기록 보기
+                </Link>
+              </div>
+            </CardHeader>
             <CardContent className="space-y-3">
-              {billing.agreements.filter((item: any) => item.is_active).length ? billing.agreements.filter((item: any) => item.is_active).slice(0, 10).map((agreement: any) => (
-                <Link key={agreement.id} href={`/cases/${agreement.case_id}?tab=billing`} className="block rounded-2xl border border-slate-200 bg-white/90 p-4 transition hover:border-slate-900">
+              {activeAgreements.length ? activeAgreements.slice(0, 10).map((agreement: any) => (
+                <Link key={agreement.id} href={`/cases/${agreement.case_id}?tab=billing`} className="block rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{agreement.title}</p>
                     <Badge tone={agreement.agreement_type === 'installment_plan' ? 'blue' : 'green'}>{agreementLabel(agreement.agreement_type)}</Badge>
@@ -474,11 +465,15 @@ export default async function BillingPage({
             </CardContent>
           </Card>
 
-          <Card className="vs-mesh-card">
-            <CardHeader><CardTitle>최근 입금 기록</CardTitle></CardHeader>
+          <Card id="recent-payments">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>최근 입금 기록</CardTitle>
+            </div>
+          </CardHeader>
             <CardContent className="space-y-3">
-              {billing.payments.length ? billing.payments.slice(0, 10).map((payment: any) => (
-                <Link key={payment.id} href={`/cases/${payment.case_id}?tab=billing`} className="block rounded-2xl border border-slate-200 bg-white/90 p-4 transition hover:border-slate-900">
+              {paymentRecords.length ? paymentRecords.slice(0, 10).map((payment: any) => (
+                <Link key={payment.id} href={`/cases/${payment.case_id}?tab=billing`} className="block rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{formatCurrency(payment.amount)}</p>
                     <Badge tone="green">{payment.payment_status}</Badge>
@@ -492,11 +487,18 @@ export default async function BillingPage({
         </div>
       </section>
 
-      <Card className="vs-mesh-card">
-        <CardHeader><CardTitle>의뢰인에게 공유되는 청구 항목</CardTitle></CardHeader>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>의뢰인 확인 필요</CardTitle>
+            <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+              포털 청구 보기
+            </Link>
+          </div>
+        </CardHeader>
         <CardContent className="space-y-3">
           {clientAttentionEntries.length ? clientAttentionEntries.map((entry: any) => (
-            <div key={`client-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+            <div key={`client-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-900">{entry.title}</p>
@@ -510,8 +512,8 @@ export default async function BillingPage({
               <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-4">
                 <p>금액 {formatCurrency(entry.totalAmount)}</p>
                 <p>기한 {formatDate(entry.due_on)}</p>
-                <p>의뢰인 포털 청구 카드 노출 대상</p>
-                <Link href={`/cases/${entry.case_id}?tab=billing`} className="font-medium text-sky-700 hover:text-sky-900">사건에서 보기</Link>
+                <p>포털에서 확인 중</p>
+                <Link href={`/cases/${entry.case_id}?tab=billing`} className="font-medium text-slate-900 underline underline-offset-4">사건에서 보기</Link>
               </div>
             </div>
           )) : (
