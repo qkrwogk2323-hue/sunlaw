@@ -1,17 +1,21 @@
 import { createHash } from 'node:crypto';
 
 export const AI_FEATURE_IDS = [
-  // 기존 대쉬보드/허브 기능
-  'home_ai_assistant',
-  'ai_summary_card',
-  'next_action_recommendation',
-  'draft_assist',
-  'anomaly_alert',
-  'admin_copilot',
-  // 새로 추가된 기능 (Phase 2~5)
-  'schedule_briefing',      // summary_assist — 캘린더 AI 주간 브리핑
-  'document_checklist',     // triage_assist  — 사건별 AI 서류 체크리스트
-  'overdue_notice',         // draft_assist   — 연체 납부 안내 초안 생성
+  // 그룹 A: 조직 내부 운영 AI
+  'home_ai_assistant',          // 홈 업무 도우미
+  'ai_summary_card',            // 오늘의 요약 카드
+  'next_action_recommendation', // 다음 액션 추천
+  'anomaly_alert',              // 주의할 변화 알림
+  'admin_copilot',              // 관리자 운영 코파일럿 (차단)
+  'client_profile_comment',     // 의뢰인 성향/전략 코멘트 (내부 전용)
+  'note_destination_recommender', // 특이사항 저장 위치 추천 (rules-first)
+  'case_hub_conversation',      // 사건허브 대화 분석
+  // 그룹 B: 사건 실행 AI
+  'schedule_briefing',          // 캘린더 AI 주간 브리핑
+  'document_checklist',         // 사건별 AI 서류 체크리스트
+  // 그룹 C: 작성/초안 AI
+  'draft_assist',               // 작성 보조
+  'overdue_notice',             // 연체 납부 안내 초안 생성
 ] as const;
 
 export type AiFeatureId = (typeof AI_FEATURE_IDS)[number];
@@ -31,20 +35,71 @@ export type AiResponseSourceMeta = {
   estimated: boolean;
 };
 
-const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
-const PHONE_RE = /\b(?:\+?82[-\s]?)?(?:01[0-9]|0[2-6][0-9]?)[-\s]?\d{3,4}[-\s]?\d{4}\b/g;
-const CARD_RE = /\b(?:\d[ -]?){13,19}\b/g;
-const ACCOUNT_RE = /\b\d{2,4}[-\s]?\d{2,6}[-\s]?\d{4,8}\b/g;
-const RESIDENT_RE = /\b\d{6}[-\s]?[1-4]\d{6}\b/g;
-const TOKEN_RE = /\b(?:sk|pk|ghp|xoxb|xoxp|AIza|AKIA)[A-Za-z0-9_\-]{8,}\b/g;
-const API_KEY_RE = /\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token)\s*[:=]\s*[A-Za-z0-9\-_.=]{8,}\b/gi;
-const SESSION_RE = /\b(?:session|sess|sid|token|bearer|authorization)\s*[:=]\s*[A-Za-z0-9\-_.=]{8,}\b/gi;
-const ADDRESS_RE = /\b(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)[^\n,]{4,}(?:로|길|동)\s*\d+(?:-\d+)?\b/g;
+// 정규식을 export해서 policy.ts prepareAiContext에서 재사용
+export const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+export const PHONE_RE = /\b(?:\+?82[-\s]?)?(?:01[0-9]|0[2-6][0-9]?)[-\s]?\d{3,4}[-\s]?\d{4}\b/g;
+export const CARD_RE = /\b(?:\d[ -]?){13,19}\b/g;
+export const ACCOUNT_RE = /\b\d{2,4}[-\s]?\d{2,6}[-\s]?\d{4,8}\b/g;
+export const RESIDENT_RE = /\b\d{6}[-\s]?[1-4]\d{6}\b/g;
+export const TOKEN_RE = /\b(?:sk|pk|ghp|xoxb|xoxp|AIza|AKIA)[A-Za-z0-9_\-]{8,}\b/g;
+export const API_KEY_RE = /\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token)\s*[:=]\s*[A-Za-z0-9\-_.=]{8,}\b/gi;
+export const SESSION_RE = /\b(?:session|sess|sid|token|bearer|authorization)\s*[:=]\s*[A-Za-z0-9\-_.=]{8,}\b/gi;
+export const ADDRESS_RE = /\b(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)[^\n,]{4,}(?:로|길|동)\s*\d+(?:-\d+)?\b/g;
 
 function maskWithPrefix(value: string, visiblePrefix = 3) {
   const compact = value.replace(/\s+/g, '');
   if (compact.length <= visiblePrefix) return '*'.repeat(Math.max(compact.length, 3));
   return `${compact.slice(0, visiblePrefix)}${'*'.repeat(Math.max(4, compact.length - visiblePrefix))}`;
+}
+
+/** AI 결과에 부여하는 공개 범위 메타 */
+export type AiOutputMeta = {
+  featureId: AiFeatureId;
+  visibility: 'organization_internal' | 'client_visible' | 'platform_internal';
+  clientVisible: boolean;
+  internalOnly: boolean;
+};
+
+/**
+ * 텍스트에 포함된 민감정보 종류를 구조화해서 반환합니다.
+ * 기존 containsSensitiveData는 true/false만 반환했지만,
+ * 이 함수는 어떤 종류인지 파악해 기능별 정책 결정에 활용합니다.
+ */
+export function inspectSensitiveData(text: string): {
+  hasNationalId: boolean;
+  hasFinancial: boolean;
+  hasEmail: boolean;
+  hasPhone: boolean;
+  hasToken: boolean;
+  hasAddress: boolean;
+  hasSensitive: boolean;
+} {
+  RESIDENT_RE.lastIndex = 0;
+  CARD_RE.lastIndex = 0;
+  ACCOUNT_RE.lastIndex = 0;
+  EMAIL_RE.lastIndex = 0;
+  PHONE_RE.lastIndex = 0;
+  TOKEN_RE.lastIndex = 0;
+  API_KEY_RE.lastIndex = 0;
+  SESSION_RE.lastIndex = 0;
+  ADDRESS_RE.lastIndex = 0;
+
+  const hasNationalId = RESIDENT_RE.test(text);
+  const hasFinancial = CARD_RE.test(text) || ACCOUNT_RE.test(text);
+  const hasEmail = EMAIL_RE.test(text);
+  const hasPhone = PHONE_RE.test(text);
+  const hasToken = TOKEN_RE.test(text) || API_KEY_RE.test(text) || SESSION_RE.test(text);
+  const hasAddress = ADDRESS_RE.test(text);
+
+  return {
+    hasNationalId,
+    hasFinancial,
+    hasEmail,
+    hasPhone,
+    hasToken,
+    hasAddress,
+    hasSensitive: hasNationalId || hasFinancial || hasEmail || hasPhone || hasToken || hasAddress
+  };
 }
 
 export function containsSensitiveData(text: string) {

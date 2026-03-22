@@ -153,6 +153,30 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     blocked: true,
     blockedReason: '플랫폼 운영 판단과 조정은 AI가 답하지 않습니다.'
   },
+  client_profile_comment: {
+    feature: 'client_profile_comment',
+    areaId: 'home_ai',
+    label: '의뢰인 성향 코멘트',
+    allowedAnswerTypes: ['status_summary', 'next_action'],
+    allowedRoutes: ['/clients', '/cases'],
+    blocked: false
+  },
+  note_destination_recommender: {
+    feature: 'note_destination_recommender',
+    areaId: 'home_ai',
+    label: '특이사항 저장 위치 추천',
+    allowedAnswerTypes: ['menu_link', 'next_action'],
+    allowedRoutes: ['/clients', '/cases', '/case-hubs', '/inbox'],
+    blocked: false
+  },
+  case_hub_conversation: {
+    feature: 'case_hub_conversation',
+    areaId: 'home_ai',
+    label: '사건허브 대화 분석',
+    allowedAnswerTypes: ['status_summary', 'next_action', 'menu_link'],
+    allowedRoutes: ['/case-hubs', '/inbox'],
+    blocked: false
+  },
   schedule_briefing: {
     feature: 'schedule_briefing',
     areaId: 'schedule_ai',
