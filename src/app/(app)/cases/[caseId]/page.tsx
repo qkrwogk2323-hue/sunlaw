@@ -401,6 +401,14 @@ export default async function CaseDetailPage({
         <TabLink caseId={caseId} tab="timeline" current={currentTab}>{getTabLabel('timeline', collectionFocused)}</TabLink>
         <TabLink caseId={caseId} tab="cover" current={currentTab}>{getTabLabel('cover', collectionFocused)}</TabLink>
         {showCollectionModule ? <TabLink caseId={caseId} tab="collection" current={currentTab}>{getTabLabel('collection', collectionFocused)}</TabLink> : null}
+        {(caseDetail.case_type === 'insolvency' || caseDetail.module_flags?.insolvency) ? (
+          <Link
+            href={`/cases/${caseId}/bankruptcy` as never}
+            className="rounded-full px-4 py-2 text-sm font-medium bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+          >
+            🏛 도산 모듈
+          </Link>
+        ) : null}
       </div>
 
       {currentTab === 'overview' ? (
@@ -681,7 +689,17 @@ export default async function CaseDetailPage({
       {currentTab === 'timeline' ? (
         <section className="grid gap-4">
           <Card>
-            <CardHeader><CardTitle>진행이력</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>진행이력</CardTitle>
+                <Link
+                  href={`/admin/audit?tab=general&table=cases&actor=${encodeURIComponent(auth.user.id)}` as import('next').Route}
+                  className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  감사로그 보기
+                </Link>
+              </div>
+            </CardHeader>
             <CardContent className="space-y-3 text-sm text-slate-700">
               {caseDetail.documents.slice(0, 5).map((document: any) => (
                 <div key={`doc-${document.id}`} className="rounded-xl border border-slate-200 p-4">문서 · {document.title} · {formatDateTime(document.updated_at)}</div>

@@ -180,6 +180,13 @@ type PlannerTask = {
   setupHint: string | null;
 };
 
+type AiSourceMeta = {
+  dataType: string;
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  filters: Record<string, unknown>;
+};
+
 type CoordinationChecklistItem = {
   id: string;
   label: string;
@@ -342,6 +349,8 @@ function useDashboardPlannerState({
   const [plannerInput, setPlannerInput] = useState('');
   const [plannerPreview, setPlannerPreview] = useState<PlannerTask | null>(null);
   const [plannerCaseId, setPlannerCaseId] = useState(caseOptions[0]?.id ?? '');
+  const [plannerSource, setPlannerSource] = useState<AiSourceMeta | null>(null);
+  const [plannerEstimate, setPlannerEstimate] = useState(false);
   const [plannerRecipientMembershipId, setPlannerRecipientMembershipId] = useState('');
   const [plannerPending, startPlannerTransition] = useTransition();
   const effectivePlannerRecipientMembershipId = memberOptions.some((item) => item.membershipId === plannerRecipientMembershipId)
@@ -374,6 +383,8 @@ function useDashboardPlannerState({
         if (response.ok) {
           setPlannerInput('');
           setPlannerPreview(null);
+          setPlannerSource(null);
+          setPlannerEstimate(false);
           router.refresh();
           onSuccess('AI 플래너 일정이 등록되었습니다.', { message: `"${plannerPreview.title}" 일정이 사건에 추가되었습니다.` });
         } else {
@@ -398,6 +409,8 @@ function useDashboardPlannerState({
       if (!response.ok) return;
       const payload = await response.json();
       setPlannerPreview(payload.preview ?? null);
+      setPlannerSource((payload.source ?? null) as AiSourceMeta | null);
+      setPlannerEstimate(Boolean(payload.estimate));
     });
   };
 
@@ -410,6 +423,8 @@ function useDashboardPlannerState({
     setPlannerPreview,
     plannerCaseId,
     setPlannerCaseId,
+    plannerSource,
+    plannerEstimate,
     plannerRecipientMembershipId: effectivePlannerRecipientMembershipId,
     setPlannerRecipientMembershipId,
     plannerPending,
@@ -442,6 +457,8 @@ function useDashboardCommunicationState({
   const [targetSearch, setTargetSearch] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [coordinationPreview, setCoordinationPreview] = useState<CoordinationPlan | null>(null);
+  const [coordinationSource, setCoordinationSource] = useState<AiSourceMeta | null>(null);
+  const [coordinationEstimate, setCoordinationEstimate] = useState(false);
   const [selectedChecklistIds, setSelectedChecklistIds] = useState<string[]>([]);
   const [communicationView, setCommunicationView] = useState<'organization' | 'direct'>('organization');
   const [scenarioDraftMessages, setScenarioDraftMessages] = useState<MessageItem[]>([]);
@@ -694,6 +711,8 @@ function useDashboardCommunicationState({
         ]
       };
       setCoordinationPreview(preview);
+      setCoordinationSource(null);
+      setCoordinationEstimate(true);
       setSelectedChecklistIds(preview.checklist.map((item) => item.id));
       return;
     }
@@ -750,6 +769,8 @@ function useDashboardCommunicationState({
       const payload = await response.json();
       const preview = payload.preview as CoordinationPlan | null;
       setCoordinationPreview(preview);
+      setCoordinationSource((payload.source ?? null) as AiSourceMeta | null);
+      setCoordinationEstimate(Boolean(payload.estimate));
       setSelectedChecklistIds(preview?.checklist.map((item) => item.id) ?? []);
     });
   };
@@ -775,6 +796,8 @@ function useDashboardCommunicationState({
 
       setScenarioDraftMessages((current) => [memoMessage, ...current]);
       setCoordinationPreview(null);
+      setCoordinationSource(null);
+      setCoordinationEstimate(false);
       setSelectedChecklistIds([]);
       return;
     }
@@ -799,6 +822,8 @@ function useDashboardCommunicationState({
 
         if (response.ok) {
           setCoordinationPreview(null);
+          setCoordinationSource(null);
+          setCoordinationEstimate(false);
           setSelectedChecklistIds([]);
           router.refresh();
           onSuccess('AI 조율 항목이 등록되었습니다.', { message: `${selectedItems.length}개 체크리스트가 사건 기록에 추가되었습니다.` });
@@ -822,6 +847,8 @@ function useDashboardCommunicationState({
     setMessageInput,
     coordinationPreview,
     setCoordinationPreview,
+    coordinationSource,
+    coordinationEstimate,
     selectedChecklistIds,
     setSelectedChecklistIds,
     communicationView,
@@ -891,6 +918,8 @@ export function DashboardHubClient({
     setPlannerPreview,
     plannerCaseId,
     setPlannerCaseId,
+    plannerSource,
+    plannerEstimate,
     plannerRecipientMembershipId,
     setPlannerRecipientMembershipId,
     plannerPending,
@@ -909,6 +938,8 @@ export function DashboardHubClient({
     setMessageInput,
     coordinationPreview,
     setCoordinationPreview,
+    coordinationSource,
+    coordinationEstimate,
     selectedChecklistIds,
     setSelectedChecklistIds,
     communicationView,
@@ -993,6 +1024,48 @@ export function DashboardHubClient({
       valueClassName: 'text-violet-950'
     }
   ];
+  const plannerSourceLabel = plannerSource?.dataType ?? '-';
+  const plannerSourceTimeLabel = plannerSource?.generatedAt ? formatDateTime(plannerSource.generatedAt) : '-';
+  const coordinationSourceLabel = coordinationSource?.dataType ?? '-';
+  const coordinationSourceTimeLabel = coordinationSource?.generatedAt ? formatDateTime(coordinationSource.generatedAt) : '-';
+
+  const reportAiIssue = useCallback(async (payload: {
+    aiFeature: 'home_ai_assistant' | 'ai_summary_card' | 'next_action_recommendation' | 'draft_assist' | 'anomaly_alert' | 'admin_copilot';
+    question: string;
+    answer: string;
+    rationale?: string;
+    modelVersion?: string;
+    requestId?: string;
+  }) => {
+    if (!organizationId) return;
+    const reason = window.prompt('오답 신고 사유를 입력해 주세요.');
+    if (!reason?.trim()) return;
+    try {
+      const response = await fetch('/api/ai/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          aiFeature: payload.aiFeature,
+          screen: '/dashboard',
+          question: payload.question,
+          answer: payload.answer,
+          rationale: payload.rationale ?? '',
+          modelVersion: payload.modelVersion ?? 'unknown',
+          requestId: payload.requestId ?? '',
+          reason: reason.trim(),
+          status: '접수'
+        })
+      });
+      if (!response.ok) {
+        toastError('오답 신고 저장 실패', { message: '잠시 후 다시 시도해 주세요.' });
+        return;
+      }
+      toastSuccess('오답 신고가 접수되었습니다.', { message: '운영 큐에서 분석 상태를 추적할 수 있습니다.' });
+    } catch {
+      toastError('오답 신고 저장 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
+    }
+  }, [organizationId, toastError, toastSuccess]);
   const [workspaceSearch, setWorkspaceSearch] = useState('');
   const [workspaceSearchBusy, setWorkspaceSearchBusy] = useState(false);
   const [workspaceSearchHint, setWorkspaceSearchHint] = useState<string | null>(null);
@@ -1334,10 +1407,28 @@ export function DashboardHubClient({
                       <p><span className="font-medium text-slate-900">설명</span> · {plannerPreview!.summary}</p>
                       <p><span className="font-medium text-slate-900">예정 시각</span> · {plannerPreview!.dueAt ? formatDateTime(plannerPreview!.dueAt) : '직접 확인 필요'}</p>
                       <p><span className="font-medium text-slate-900">판단 근거</span> · {plannerPreview!.reason}</p>
+                      {plannerSource ? <p><span className="font-medium text-slate-900">출처</span> · {plannerSourceLabel} · {plannerSourceTimeLabel}</p> : null}
+                      {plannerEstimate ? <p className="text-amber-700"><span className="font-medium">표기</span> · 추정 (자동 실행 금지)</p> : null}
                     </div>
                     {plannerPreview!.setupHint ? <p className="mt-3 text-xs text-amber-700">{plannerPreview!.setupHint}</p> : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button onClick={commitPlanner} disabled={plannerPending || !plannerCaseId || !organizationId}>초안 등록</Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (!plannerPreview) return;
+                          reportAiIssue({
+                            aiFeature: 'home_ai_assistant',
+                            question: plannerInput,
+                            answer: `${plannerPreview.title}\n${plannerPreview.summary}`,
+                            rationale: plannerPreview.reason,
+                            modelVersion: plannerPreview.provider,
+                            requestId: `planner:${plannerSource?.generatedAt ?? Date.now()}`
+                          });
+                        }}
+                      >
+                        오답 신고
+                      </Button>
                       <Button variant="secondary" onClick={() => setPlannerPreview(null)}>다시 작성</Button>
                     </div>
                   </div>
@@ -1543,6 +1634,8 @@ export function DashboardHubClient({
                       <div>
                         <p className="font-semibold text-slate-900">AI 요약 · 오늘 대화 실행 항목</p>
                         <p className="mt-1 text-sm text-slate-600">{coordinationPreview.summary}</p>
+                        {coordinationSource ? <p className="mt-1 text-xs text-slate-500">출처: {coordinationSourceLabel} · {coordinationSourceTimeLabel}</p> : null}
+                        {coordinationEstimate ? <p className="mt-1 text-xs text-amber-700">표기: 추정 (자동 실행 금지)</p> : null}
                       </div>
                       <Badge tone={providerTone(coordinationPreview.provider)}>{coordinationPreview.provider}</Badge>
                     </div>
@@ -1574,6 +1667,22 @@ export function DashboardHubClient({
                     {coordinationPreview.setupHint ? <p className="mt-3 text-xs text-amber-700">{coordinationPreview.setupHint}</p> : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button onClick={commitCoordination} disabled={coordinationPending || !selectedChecklistIds.length}>정리 내용 반영</Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (!coordinationPreview) return;
+                          reportAiIssue({
+                            aiFeature: 'ai_summary_card',
+                            question: visibleMessages.slice(-8).map((item) => `${senderName(item)}: ${item.body}`).join('\n'),
+                            answer: `${coordinationPreview.summary}\n${coordinationPreview.checklist.map((item) => `- ${item.label}`).join('\n')}`,
+                            rationale: coordinationPreview.reason,
+                            modelVersion: coordinationPreview.provider,
+                            requestId: `coordination:${coordinationSource?.generatedAt ?? Date.now()}`
+                          });
+                        }}
+                      >
+                        오답 신고
+                      </Button>
                       <Button variant="secondary" onClick={() => setCoordinationPreview(null)}>닫기</Button>
                     </div>
                   </div>

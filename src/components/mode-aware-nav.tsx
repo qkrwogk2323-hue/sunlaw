@@ -15,6 +15,7 @@ import {
   MessageSquareText,
   Network,
   Receipt,
+  Scale,
   Search,
   Settings,
   ShieldAlert,
@@ -160,6 +161,7 @@ function getOrganizationSections({
 
     organizationItems.push(
       { href: '/cases', label: '사건 목록', icon: FileText },
+      { href: '/insolvency', label: '도산 현황판', icon: Scale },
       { href: '/clients', label: '의뢰인 관리', icon: Users },
       { href: '/billing', label: '비용 관리', icon: Receipt }
     );

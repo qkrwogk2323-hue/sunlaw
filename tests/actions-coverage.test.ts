@@ -212,6 +212,56 @@ describe('dashboard-actions', () => {
   });
 });
 
+// ─── insolvency-actions ───────────────────────────────────────────────────────
+describe('insolvency-actions', () => {
+  it('권한 없는 사용자는 차단됨 (error path)', async () => {
+    mocks.requireOrganizationActionAccess.mockRejectedValue(new Error('권한 없음'));
+    const { saveCreditorsFromExtraction } = await import('@/lib/actions/insolvency-actions');
+    await expect(
+      saveCreditorsFromExtraction({
+        organizationId: ORG_ID,
+        caseId: 'case-1',
+        jobId: 'job-1',
+        creditors: []
+      })
+    ).rejects.toThrow('권한 없음');
+  });
+
+  it('성공 경로 — 채권자 저장 후 경로 무효화 (happy path)', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const supabase = { from: vi.fn(() => ({ insert })) };
+    mocks.createSupabaseServerClient.mockResolvedValue(supabase);
+
+    const { saveCreditorsFromExtraction } = await import('@/lib/actions/insolvency-actions');
+    const result = await saveCreditorsFromExtraction({
+      organizationId: ORG_ID,
+      caseId: 'case-1',
+      jobId: 'job-1',
+      creditors: [
+        {
+          creditorName: '테스트 채권자',
+          claimClass: 'general',
+          principalAmount: 1000000,
+          interestAmount: 10000,
+          penaltyAmount: 0,
+          interestRatePct: 4.5,
+          hasGuarantor: false,
+          guarantorName: null,
+          collateralDescription: null,
+          prioritySubtype: null,
+          sourcePageReference: '1p',
+          aiConfidenceScore: 0.91
+        }
+      ]
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(mocks.requireOrganizationActionAccess).toHaveBeenCalledWith(ORG_ID, { permission: 'case_edit' });
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/cases/case-1/bankruptcy');
+  });
+});
+
 // ─── notification-actions ─────────────────────────────────────────────────────
 describe('notification-actions', () => {
   it('미인증 사용자는 차단됨 (error path)', async () => {

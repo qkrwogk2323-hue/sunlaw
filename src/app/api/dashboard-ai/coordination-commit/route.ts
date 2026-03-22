@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
+import { containsSensitiveData, sanitizeAiChecklist, sanitizeAiText } from '@/lib/ai/guardrails';
 import { hasPermission } from '@/lib/permissions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     return guardAccessDeniedResponse(403, {
       blocked: '조직 소통 AI 반영이 차단되었습니다.',
       cause: '현재 조직 멤버십 또는 플랫폼 관리자 권한이 확인되지 않았습니다.',
-      resolution: '조직을 다시 선택하거나 권한 승인을 요청해 주세요.'
+      resolution: '권한 없음'
     });
   }
 
@@ -76,6 +77,21 @@ export async function POST(request: Request) {
     });
   }
 
+  if (containsSensitiveData(title) || containsSensitiveData(summary) || selectedItems.some((item) => containsSensitiveData(item.label) || containsSensitiveData(item.detail))) {
+    return guardValidationFailedResponse(400, {
+      blocked: '조직 소통 AI 반영 요청이 차단되었습니다.',
+      cause: '민감정보 패턴이 탐지되어 저장이 차단되었습니다.',
+      resolution: '민감정보를 제거한 뒤 다시 시도해 주세요.'
+    });
+  }
+
+  const sanitizedSummary = sanitizeAiText(summary);
+  const sanitizedItems = sanitizeAiChecklist(selectedItems.map((item) => ({
+    ...item,
+    label: sanitizeAiText(item.label),
+    detail: sanitizeAiText(item.detail)
+  })));
+
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   let caseRow: { id: string; title: string } | null = null;
@@ -99,7 +115,7 @@ export async function POST(request: Request) {
     caseRow = data;
   }
 
-  const messageBody = `[조직간 업무소통 AI 정리]\n${summary}\n\n${selectedItems.map((item, index) => `${index + 1}. ${item.label}${item.dueAt ? ` · ${item.dueAt.slice(0, 10)}` : ''}\n${item.detail}`).join('\n\n')}`;
+  const messageBody = `[조직간 업무소통 AI 정리]\n${sanitizedSummary}\n\n${sanitizedItems.map((item, index) => `${index + 1}. ${item.label}${item.dueAt ? ` · ${item.dueAt.slice(0, 10)}` : ''}\n${item.detail}`).join('\n\n')}`;
 
   if (caseRow) {
     const { error: messageError } = await supabase.from('case_messages').insert({
@@ -115,7 +131,7 @@ export async function POST(request: Request) {
       return guardServerErrorResponse(500, '메시지 기록에 실패해 AI 반영이 차단되었습니다.');
     }
 
-    for (const item of selectedItems) {
+    for (const item of sanitizedItems) {
       const { error: requestError } = await supabase.from('case_requests').insert({
         organization_id: organizationId,
         case_id: caseRow.id,
@@ -202,7 +218,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const notificationBody = `${summary}\n\n${selectedItems.map((item, index) => `${index + 1}. ${item.label}${item.dueAt ? ` · ${item.dueAt.slice(0, 10)}` : ''}`).join('\n')}`;
+  const notificationBody = `${sanitizedSummary}\n\n${sanitizedItems.map((item, index) => `${index + 1}. ${item.label}${item.dueAt ? ` · ${item.dueAt.slice(0, 10)}` : ''}`).join('\n')}`;
   const destinationUrl = caseRow?.id ? `/cases/${caseRow.id}` : '/notifications';
   const { error: notificationError } = await admin.from('notifications').insert(
     recipientProfileIds.map((recipientProfileId) => ({
@@ -215,14 +231,14 @@ export async function POST(request: Request) {
       action_href: destinationUrl,
       destination_type: 'internal_route',
       destination_url: destinationUrl,
-      title,
+      title: sanitizeAiText(title),
       body: notificationBody,
       payload: {
         source: 'dashboard_coordination_ai',
         sender_profile_id: auth.user.id,
         sender_name: auth.profile.full_name,
         case_id: caseRow?.id ?? null,
-        checklist_count: selectedItems.length
+        checklist_count: sanitizedItems.length
       }
     }))
   );
