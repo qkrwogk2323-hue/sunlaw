@@ -7,7 +7,13 @@ import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
 import { clientAccountStatusLabel } from '@/lib/client-account';
 import { formatResidentRegistrationNumberMasked } from '@/lib/format';
-import { normalizeGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
+import {
+  createConditionFailedFeedback,
+  createValidationFailedFeedback,
+  normalizeGuardFeedback,
+  parseGuardFeedback,
+  throwGuardFeedback
+} from '@/lib/guard-feedback';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -72,7 +78,12 @@ export async function submitClientSignupAction(formData: FormData) {
       serviceConsent: formData.get('serviceConsent') === 'on'
     });
   } catch (error) {
-    throw new Error(getActionErrorMessage(error, '입력 정보를 확인해 주세요. 필수 항목이 누락되었거나 형식이 올바르지 않습니다.'));
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_SIGNUP_INPUT_INVALID',
+      blocked: '의뢰인 가입 입력값을 다시 확인해 주세요.',
+      cause: getActionErrorMessage(error, '필수 항목이 누락되었거나 형식이 올바르지 않습니다.'),
+      resolution: '이름, 주민등록번호, 연락처와 필수 동의를 확인한 뒤 다시 제출해 주세요.'
+    }));
   }
 
   const now = new Date().toISOString();
@@ -91,7 +102,14 @@ export async function submitClientSignupAction(formData: FormData) {
     })
     .eq('id', auth.user.id);
 
-  if (profileError) throw profileError;
+  if (profileError) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_PROFILE_UPDATE_FAILED',
+      blocked: '의뢰인 기본 상태를 저장하지 못했습니다.',
+      cause: profileError.message,
+      resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    }));
+  }
 
   const { error: privateProfileError } = await supabase
     .from('client_private_profiles')
@@ -108,7 +126,14 @@ export async function submitClientSignupAction(formData: FormData) {
       updated_by: auth.user.id
     }, { onConflict: 'profile_id' });
 
-  if (privateProfileError) throw privateProfileError;
+  if (privateProfileError) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_PRIVATE_PROFILE_SAVE_FAILED',
+      blocked: '민감정보 저장을 완료하지 못했습니다.',
+      cause: privateProfileError.message,
+      resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    }));
+  }
 
   const { data: authUser } = await admin.auth.admin.getUserById(auth.user.id);
   const existingMetadata = (authUser.user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -160,7 +185,14 @@ export async function submitClientSignupAction(formData: FormData) {
   }));
 
   const { error: notificationError } = await admin.from('notifications').insert([selfNotification, ...adminNotifications]);
-  if (notificationError) throw notificationError;
+  if (notificationError) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_SIGNUP_NOTIFICATION_FAILED',
+      blocked: '가입 알림 생성에 실패했습니다.',
+      cause: notificationError.message,
+      resolution: '가입 정보는 저장되었을 수 있으니 대기 상태 화면을 새로고침해 확인해 주세요.'
+    }));
+  }
 
   revalidatePath('/start/signup');
   revalidatePath('/start/pending');

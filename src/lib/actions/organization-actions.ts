@@ -795,11 +795,21 @@ async function loadPendingInvitationByToken(token: string) {
 
 function validateInvitationAcceptance(invitation: any, signedInEmail: string | null | undefined) {
   if (new Date(invitation.expires_at).getTime() < Date.now()) {
-    throw new Error('만료된 초대 링크입니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'INVITATION_EXPIRED',
+      blocked: '만료된 초대 링크입니다.',
+      cause: '초대 유효 시간이 지나 더 이상 사용할 수 없습니다.',
+      resolution: '초대한 담당자에게 새 초대 링크를 요청해 주세요.'
+    }));
   }
 
   if ((signedInEmail ?? '').toLowerCase() !== String(invitation.email).toLowerCase()) {
-    throw new Error('초대받은 이메일과 로그인 계정이 일치하지 않습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'INVITATION_EMAIL_MISMATCH',
+      blocked: '초대받은 이메일과 현재 로그인 계정이 다릅니다.',
+      cause: `초대 대상 이메일은 ${String(invitation.email)}인데 현재 다른 계정으로 로그인되어 있습니다.`,
+      resolution: '초대받은 이메일 계정으로 다시 로그인한 뒤 초대를 수락해 주세요.'
+    }));
   }
 }
 
@@ -916,7 +926,12 @@ async function applyClientInvitation({ adminClient, invitation, userId, profileN
     .single();
 
   if (!caseRow) {
-    throw new Error('사건 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'INVITATION_CASE_NOT_FOUND',
+      blocked: '연결할 사건 정보를 찾을 수 없습니다.',
+      cause: '초대 링크가 가리키는 사건이 삭제되었거나 접근할 수 없는 상태입니다.',
+      resolution: '초대한 담당자에게 사건 상태를 확인하거나 새 초대 링크를 요청해 주세요.'
+    }));
   }
 
   const { error: insertClientError } = await adminClient
