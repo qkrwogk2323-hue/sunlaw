@@ -899,6 +899,38 @@ function useDashboardCommunicationState({
   };
 }
 
+// ─── 문서 AI 분류 하드코딩 테이블 ───────────────────────────────────────────
+// 향후 정부24, 홈텍스, 법원 전자소송 서류 추가 예정
+type DocClassification = {
+  kind: string;
+  description: string;
+  guidance: string;
+  clientVisible: boolean;
+};
+
+function classifyDocumentByName(name: string): DocClassification {
+  // 법원 문서
+  if (name.includes('소장')) return { kind: '소장', description: '이 문서는 소장입니다. 법원에 제출된 소제기 서면으로, 청구 내용과 당사자 정보가 포함되어 있습니다.', guidance: '의뢰인에게 서류안내 시: 소장 사본을 의뢰인에게 전달하고 청구 취지와 원인을 설명해주세요.', clientVisible: true };
+  if (name.includes('답변서')) return { kind: '답변서', description: '이 문서는 답변서입니다. 소장에 대한 피고 측의 방어 서면입니다.', guidance: '의뢰인에게 서류안내 시: 답변 기한 내 제출 여부를 확인하고 주요 반박 내용을 안내해주세요.', clientVisible: true };
+  if (name.includes('준비서면')) return { kind: '준비서면', description: '이 문서는 준비서면입니다. 변론기일 전에 주장과 증거를 정리한 서면입니다.', guidance: '의뢰인에게 서류안내 시: 변론기일과 함께 준비서면 요지를 설명해주세요.', clientVisible: false };
+  if (name.includes('판결문') || name.includes('판결')) return { kind: '판결문', description: '이 문서는 판결문입니다. 법원의 최종 판단이 담긴 문서입니다.', guidance: '의뢰인에게 서류안내 시: 주문과 이유를 요약해서 설명하고, 항소 기한(2주)을 반드시 안내해주세요.', clientVisible: true };
+  if (name.includes('결정문') || name.includes('결정')) return { kind: '결정문', description: '이 문서는 결정문입니다. 본안 외 법원의 중간 판단입니다.', guidance: '의뢰인에게 서류안내 시: 결정의 효력과 불복 방법을 안내해주세요.', clientVisible: true };
+  if (name.includes('가압류') || name.includes('가처분')) return { kind: '가압류/가처분', description: '이 문서는 가압류 또는 가처분 관련 서류입니다. 임시 보전조치 문서입니다.', guidance: '의뢰인에게 서류안내 시: 보전 대상 재산과 효력 범위를 설명해주세요.', clientVisible: false };
+  if (name.includes('항소장')) return { kind: '항소장', description: '이 문서는 항소장입니다. 1심 판결에 불복하여 2심을 구하는 서면입니다.', guidance: '의뢰인에게 서류안내 시: 항소 이유서 제출 기한(항소 후 20일)을 반드시 안내해주세요.', clientVisible: true };
+  if (name.includes('상고장')) return { kind: '상고장', description: '이 문서는 상고장입니다. 2심 판결에 불복하여 대법원에 제출하는 서면입니다.', guidance: '의뢰인에게 서류안내 시: 상고 이유서 제출 기한을 안내해주세요.', clientVisible: true };
+  if (name.includes('조정') || name.includes('화해')) return { kind: '조정/화해조서', description: '이 문서는 조정 또는 화해 관련 서류입니다. 합의 내용을 정리한 문서입니다.', guidance: '의뢰인에게 서류안내 시: 합의 내용과 이행 기한을 설명해주세요.', clientVisible: true };
+  // 파산/회생
+  if (name.includes('파산') || name.includes('회생')) return { kind: '파산·회생 관련 서류', description: '이 문서는 파산 또는 개인회생 관련 서류입니다.', guidance: '의뢰인에게 서류안내 시: 신청 요건, 면책 기간, 채권자 목록 제출 방법을 안내해주세요.', clientVisible: false };
+  // 의뢰인 제출 서류
+  if (name.includes('주민등록') || name.includes('주민')) return { kind: '주민등록 서류', description: '이 문서는 주민등록 관련 서류입니다. (주민등록등본/초본)', guidance: '서류 발급 방법: 정부24(www.gov.kr) > 민원서비스 > 주민등록등본(초본) 발급. 인터넷 발급 또는 주민센터 방문 가능.', clientVisible: false };
+  if (name.includes('가족관계') || name.includes('가족')) return { kind: '가족관계증명서', description: '이 문서는 가족관계증명서입니다.', guidance: '서류 발급 방법: 정부24(www.gov.kr) > 가족관계등록부 발급. 본인 또는 직계가족만 발급 가능.', clientVisible: false };
+  if (name.includes('등기') || name.includes('부동산')) return { kind: '부동산 등기 서류', description: '이 문서는 부동산 등기 관련 서류입니다.', guidance: '서류 발급 방법: 대법원 인터넷등기소(www.iros.go.kr)에서 등기사항전부증명서 발급 가능.', clientVisible: false };
+  if (name.includes('사업자') || name.includes('법인')) return { kind: '사업자/법인 서류', description: '이 문서는 사업자 또는 법인 관련 서류입니다.', guidance: '서류 발급 방법: 홈택스(www.hometax.go.kr) > 사업자등록증명 발급 또는 법원 법인등기 확인.', clientVisible: false };
+  // 기본 분류
+  if (name.endsWith('.pdf')) return { kind: 'PDF 문서', description: '이 문서는 PDF 파일입니다. 내용을 확인한 후 사건에 연결해 주세요.', guidance: '사건 페이지에서 서류 업로드 후 종류를 지정해주세요.', clientVisible: false };
+  return { kind: '미분류 문서', description: '이 문서의 종류를 자동으로 파악하지 못했습니다. 직접 종류를 지정해주세요.', guidance: '사건 페이지에서 서류를 업로드하고 종류를 수동으로 지정해주세요.', clientVisible: false };
+}
+
 export function DashboardHubClient({
   organizationId,
   currentUserId,
@@ -1064,6 +1096,9 @@ export function DashboardHubClient({
   const [assistantPending, setAssistantPending] = useState(false);
   const [assistantResult, setAssistantResult] = useState<DashboardAiAssistantResponse | null>(null);
   const [assistantRequestId, setAssistantRequestId] = useState<string | null>(null);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docAnalyzing, setDocAnalyzing] = useState(false);
+  const [docResult, setDocResult] = useState<{ kind: string; description: string; guidance: string; clientVisible: boolean } | null>(null);
   const [draftKind, setDraftKind] = useState<'organization_message' | 'hub_message' | 'client_invite' | 'staff_invite'>('client_invite');
   const [draftPrompt, setDraftPrompt] = useState('');
   const [draftContextTitle, setDraftContextTitle] = useState(data.recentCases[0]?.title ?? '');
@@ -1193,6 +1228,21 @@ export function DashboardHubClient({
       toastError('AI 업무 도우미 응답 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
     } finally {
       setAssistantPending(false);
+    }
+  };
+
+  // 문서 업로드 AI 분류 — 하드코딩 분류표 기반
+  const analyzeDocument = async (file: File) => {
+    setDocAnalyzing(true);
+    setDocResult(null);
+    try {
+      const name = file.name.toLowerCase();
+      // 하드코딩 분류표 (향후 정부24/홈텍스 확장 예정)
+      const classified = classifyDocumentByName(name);
+      await new Promise((resolve) => setTimeout(resolve, 600)); // UX 딜레이
+      setDocResult(classified);
+    } finally {
+      setDocAnalyzing(false);
     }
   };
 
