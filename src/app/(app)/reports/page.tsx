@@ -3,22 +3,22 @@ import type { Route } from 'next';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { getDashboardStats } from '@/lib/queries/dashboard';
 import { getCollectionsWorkspace } from '@/lib/queries/collections';
 import { ExportLinks } from '@/components/export-links';
 
 export default async function ReportsPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  const [dashboard, collections] = await Promise.all([
-    getDashboardSnapshot(organizationId),
+  const [stats, collections] = await Promise.all([
+    getDashboardStats(organizationId),
     getCollectionsWorkspace(organizationId)
   ]);
 
-  const stats = [
-    ['진행 중 사건', dashboard.activeCases],
-    ['결재 대기 문서', dashboard.pendingDocuments],
-    ['미처리 요청', dashboard.pendingRequests],
+  const statRows = [
+    ['진행 중 사건', stats.activeCases],
+    ['결재 대기 문서', stats.pendingDocuments],
+    ['미처리 요청', stats.pendingRequests],
     ['추심 사건', collections.collectionCases.length]
   ];
 
@@ -47,7 +47,7 @@ export default async function ReportsPage() {
         <ExportLinks resource="reports" />
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map(([label, value]) => (
+        {statRows.map(([label, value]) => (
           <Card key={String(label)} className="vs-interactive bg-gradient-to-br from-slate-50 to-white">
             <CardHeader><CardTitle className="text-sm font-medium text-slate-500">{label}</CardTitle></CardHeader>
             <CardContent><p className="text-3xl font-semibold text-slate-900">{value}</p></CardContent>

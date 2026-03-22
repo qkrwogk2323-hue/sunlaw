@@ -253,7 +253,7 @@ export default async function NotificationsPage({
   const [notificationCenter, channelPreferences, hubs] = await Promise.all([
     getNotificationCenter(pageSize),
     getNotificationChannelPreferences(),
-    getCaseHubList(organizationId)
+    getCaseHubList(organizationId, 4)
   ]);
 
   const queueView = await getNotificationQueueView({

@@ -415,3 +415,45 @@ export async function getCaseOptionsForCalendar(organizationId?: string | null):
     .limit(20);
   return data ?? [];
 }
+
+/** 리포트 페이지용 경량 통계: 4개 count 쿼리만 실행 (getDashboardSnapshot 전체 16 쿼리 대체) */
+export async function getDashboardStats(organizationId?: string | null): Promise<{
+  activeCases: number;
+  pendingDocuments: number;
+  pendingRequests: number;
+  pendingBillingCount: number;
+}> {
+  const supabase = await createSupabaseServerClient();
+  const [casesResult, documentsResult, requestsResult, billingResult] = await Promise.all([
+    supabase
+      .from('cases')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .neq('lifecycle_status', 'soft_deleted')
+      .in('case_status', ['active', 'pending']),
+    supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .neq('lifecycle_status', 'soft_deleted')
+      .in('approval_status', ['pending', 'draft']),
+    supabase
+      .from('requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .neq('lifecycle_status', 'soft_deleted')
+      .in('status', ['pending', 'open']),
+    supabase
+      .from('billing_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .neq('lifecycle_status', 'soft_deleted')
+      .in('status', ['pending', 'overdue']),
+  ]);
+  return {
+    activeCases: casesResult.count ?? 0,
+    pendingDocuments: documentsResult.count ?? 0,
+    pendingRequests: requestsResult.count ?? 0,
+    pendingBillingCount: billingResult.count ?? 0,
+  };
+}

@@ -1464,6 +1464,75 @@ ActivityFeedPanel
 7. `Execute`: 누락 시 코드/문서/체크리스트를 같은 PR에서 보완한다.
 8. 플랫폼 관리자 전용 감사로그만 존재하는 경우, 조직 운영자용 로그 화면이 필요한 도메인은 별도 로그 뷰를 함께 구현해야 한다.
 
+### 5-20. 페이지별 데이터 최소 책임 원칙 (Page-Scoped Data Responsibility)
+
+**강제 규칙:** 페이지는 자기 도메인 외 snapshot을 blocking으로 가져오지 않는다.
+
+**3가지 필수 질문 (페이지 추가/수정 시 매번 확인):**
+
+1. **이 페이지의 1차 렌더에 꼭 필요한 데이터는 무엇인가?**
+   - 핵심 데이터: `blocking` (auth 직후 바로 대기)
+   - 부가 데이터(허브 strip, briefing, secondary panel): `Suspense/deferred`로 분리
+
+2. **이 데이터는 "이 페이지의 핵심 정보"인가, 아니면 "옆 화면의 편의 데이터"인가?**
+   - `calendar/page.tsx` → calendar core만 blocking, hub strip은 streaming
+   - `reports/page.tsx` → 통계 4개만 필요한데 `getDashboardSnapshot()` 전체 금지
+
+3. **함수 이름과 실제 읽는 범위가 일치하는가?**
+   - `getCalendarBoardSnapshot(month)` → 실제 연 범위를 읽으면 이름 위반
+   - 함수명은 읽는 범위를 숨기면 안 됨
+
+**금지 패턴:**
+```ts
+// ❌ 금지 — caseOptions 20개 때문에 16-query snapshot 전체 실행
+const dashboard = await getDashboardSnapshot(organizationId);
+const caseOptions = dashboard.caseOptions;
+
+// ❌ 금지 — month 파라미터인데 연 단위 읽기
+.gte('scheduled_start', yearStart.toISOString())
+.lte('scheduled_start', yearEnd.toISOString())
+.limit(500)
+
+// ❌ 금지 — strip 4개만 쓰는데 전체 hub 목록 조회
+const hubs = await getCaseHubList(organizationId);
+return <HubContextStrip hubs={hubs.slice(0, 4)} />;
+```
+
+**올바른 패턴:**
+```ts
+// ✅ 필요한 것만
+const caseOptions = await getCaseOptionsForCalendar(organizationId);
+
+// ✅ 실제 범위를 읽는 쿼리
+.gte('scheduled_start', windowStart.toISOString()) // 3개월 윈도우
+.limit(150)
+
+// ✅ DB에서부터 limit
+const hubs = await getCaseHubList(organizationId, 4);
+
+// ✅ 부가 데이터는 Suspense로 분리
+<Suspense fallback={<HubStripSkeleton />}>
+  <HubContextStripAsync organizationId={organizationId} currentLabel="..." />
+</Suspense>
+```
+
+### 5-21. Promise.all 품질 기준 (Promise.all Composition Quality)
+
+**강제 규칙:** `Promise.all`을 쓸 때는 묶인 대상이 "작은 독립 쿼리들"인지 "큰 덩어리들"인지 반드시 구분한다.
+
+- **좋음**: 각각 row 10~50개 이하의 독립 쿼리를 병렬화
+- **나쁨**: 16-query snapshot + 전체 hub list + 연간 500-row query를 한 번에 묶음
+
+**PR 체크리스트 추가 항목 (성능):**
+1. 이 페이지는 자기 도메인 외 snapshot을 가져오지 않는가?
+2. month 파라미터를 받는 함수가 실제로 year 범위를 읽고 있지 않은가?
+3. loading.tsx 추가가 실제 데이터 축소 없이 "해결처럼 보이게" 만들고 있지 않은가?
+4. Promise.all의 대상이 "작은 독립 쿼리들"인가, 아니면 "큰 덩어리들"인가?
+5. `count: 'exact'`가 사용자에게 지금 꼭 필요한가? (approximate로 대체 가능한가?)
+6. first paint를 막지 않아도 되는 섹션은 Suspense/deferred로 밀 수 있는가?
+
+**성능 판단 ≠ correctness 판단**: `build/lint/test 통과 = 정합성 통과`이지, 성능 해결 완료가 아니다.
+
 ---
 
 ## 🚫 카테고리 6: 절대 금지 목록
