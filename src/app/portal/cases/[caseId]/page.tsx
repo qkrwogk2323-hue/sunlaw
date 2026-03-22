@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { notFound, redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -149,6 +150,11 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
                         <p>동의 방법 · {signatureMethodLabel(terms.signature_method)}</p>
                         <p>적용 기간 · {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
                         {terms.contract_summary ? <p>계약 요약 · {terms.contract_summary}</p> : null}
+                        {Array.isArray(terms.signature_logs) && terms.signature_logs.length ? <p>동의 기록 · {terms.signature_logs.length}회 저장됨</p> : null}
+                        {terms.sender_snapshot?.organization_name ? <p>갑 · {terms.sender_snapshot.organization_name}</p> : null}
+                        {terms.sender_snapshot?.representative_name ? <p>대표자 · {terms.sender_snapshot.representative_name}</p> : null}
+                        {terms.sender_snapshot?.address ? <p>주소 · {terms.sender_snapshot.address}</p> : null}
+                        {terms.sender_snapshot?.registration_number ? <p>등록번호 · {terms.sender_snapshot.registration_number}</p> : null}
                         {terms.signature_completed_at ? <p>완료 시각 · {formatDateTime(terms.signature_completed_at)}</p> : null}
                       </div>
                     </div>
@@ -166,6 +172,11 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
 
                   {!isCompleted ? (
                     <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                      {terms.sender_snapshot?.seal_data_url ? (
+                        <div className="mb-3 flex items-center justify-end">
+                          <Image src={terms.sender_snapshot.seal_data_url} alt="조직 전자날인" width={64} height={64} className="h-16 w-16 rounded-full border border-amber-200 bg-white p-1" unoptimized />
+                        </div>
+                      ) : null}
                       <p className="text-sm text-amber-900">계약서를 확인한 뒤 아래 버튼으로 동의 완료를 남겨 주세요.</p>
                       <div className="mt-3">
                         <PortalContractSignatureForm

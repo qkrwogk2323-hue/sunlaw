@@ -20,6 +20,13 @@ type CaseOption = {
   clients: CaseClientOption[];
 };
 
+type OrganizationContractProfile = {
+  name: string;
+  representativeName: string;
+  address: string;
+  registrationNumber: string;
+};
+
 type ScanResult = {
   title: string;
   documentTitle: string;
@@ -45,9 +52,11 @@ const EMPTY_SCAN: ScanResult = {
 };
 
 export function ContractUpdatePanel({
-  cases
+  cases,
+  organizationProfile
 }: {
   cases: CaseOption[];
+  organizationProfile: OrganizationContractProfile;
 }) {
   const { success, error: toastError } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -57,6 +66,9 @@ export function ContractUpdatePanel({
   const [selectedCaseId, setSelectedCaseId] = useState(cases[0]?.id ?? '');
   const [sendToClient, setSendToClient] = useState(true);
   const [requestClientSignature, setRequestClientSignature] = useState(true);
+  const [senderRegistrationNumber, setSenderRegistrationNumber] = useState(organizationProfile.registrationNumber);
+  const [billingIntent, setBillingIntent] = useState<'none' | 'receivable' | 'received' | 'installment_pending'>('none');
+  const [installmentStartMode, setInstallmentStartMode] = useState<'today' | 'first_due'>('today');
   const [scanResult, setScanResult] = useState<ScanResult>(EMPTY_SCAN);
 
   const selectedCase = useMemo(
@@ -102,7 +114,17 @@ export function ContractUpdatePanel({
     setScanResult(EMPTY_SCAN);
     setSendToClient(true);
     setRequestClientSignature(true);
+    setBillingIntent('none');
+    setInstallmentStartMode('today');
+    setSenderRegistrationNumber(organizationProfile.registrationNumber);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function applyBillingSuggestion(nextIntent: 'receivable' | 'received' | 'installment_pending') {
+    setBillingIntent(nextIntent);
+    if (nextIntent !== 'installment_pending') {
+      setInstallmentStartMode('today');
+    }
   }
 
   return (
@@ -300,6 +322,28 @@ export function ContractUpdatePanel({
           <input type="hidden" name="billToCaseOrganizationId" value="" />
           <input type="hidden" name="scanProvider" value={scanProvider} />
           <input type="hidden" name="clientVisibility" value={sendToClient ? 'client_visible' : 'internal_only'} />
+          <input type="hidden" name="billingIntent" value={billingIntent} />
+          <input type="hidden" name="installmentStartMode" value={installmentStartMode} />
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-slate-900">계약서에 들어갈 갑 정보</p>
+            <div className="mt-3 space-y-1 text-sm text-slate-600">
+              <p>조직명 · {organizationProfile.name}</p>
+              <p>대표자 · {organizationProfile.representativeName || '미입력'}</p>
+              <p>주소 · {organizationProfile.address || '미입력'}</p>
+            </div>
+            <label className="mt-3 block text-sm text-slate-700">
+              <span className="font-medium">사업자등록번호 또는 법인등록번호</span>
+              <Input
+                name="senderRegistrationNumber"
+                value={senderRegistrationNumber}
+                onChange={(event) => setSenderRegistrationNumber(event.target.value)}
+                className="mt-1 bg-white"
+                placeholder="등록번호를 입력해 주세요."
+              />
+            </label>
+            <p className="mt-2 text-xs text-slate-500">전자날인은 조직명을 기준으로 자동 만들어 계약 체결 기록에 함께 남깁니다.</p>
+          </div>
 
           <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
@@ -331,6 +375,48 @@ export function ContractUpdatePanel({
               <option value="kakao_confirmation">카카오 확인</option>
               <option value="signed_document_upload">서명본 업로드</option>
             </select>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">금액 처리 도우미</p>
+                <p className="mt-1 text-xs text-slate-500">계약 금액을 비용 관리에서 어떻게 볼지 바로 정합니다.</p>
+              </div>
+              <Button type="button" variant="secondary" size="sm" onClick={() => {
+                if (scanResult.agreementType === 'installment_plan') {
+                  applyBillingSuggestion('installment_pending');
+                } else {
+                  applyBillingSuggestion('receivable');
+                }
+              }}>
+                금액 AI 제안
+              </Button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" variant={billingIntent === 'receivable' ? 'primary' : 'secondary'} size="sm" onClick={() => applyBillingSuggestion('receivable')}>
+                받아야 할 금액으로 보기
+              </Button>
+              <Button type="button" variant={billingIntent === 'received' ? 'primary' : 'secondary'} size="sm" onClick={() => applyBillingSuggestion('received')}>
+                이미 받은 금액으로 보기
+              </Button>
+              <Button type="button" variant={billingIntent === 'installment_pending' ? 'primary' : 'secondary'} size="sm" onClick={() => applyBillingSuggestion('installment_pending')}>
+                분납 미확인 계약으로 보기
+              </Button>
+            </div>
+            {billingIntent === 'installment_pending' ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-medium text-slate-700">분납 기산 시점</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant={installmentStartMode === 'today' ? 'primary' : 'secondary'} size="sm" onClick={() => setInstallmentStartMode('today')}>
+                    오늘부터 확인
+                  </Button>
+                  <Button type="button" variant={installmentStartMode === 'first_due' ? 'primary' : 'secondary'} size="sm" onClick={() => setInstallmentStartMode('first_due')}>
+                    첫 납부일 기준
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950">

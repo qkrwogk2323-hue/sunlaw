@@ -47,6 +47,19 @@ function signatureMethodLabel(method: string) {
   }
 }
 
+function buildOrganizationSealDataUrl(organizationName: string) {
+  const seed = organizationName.trim() || '조직';
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="53" fill="none" stroke="#b45309" stroke-width="6"/>
+      <circle cx="60" cy="60" r="41" fill="none" stroke="#f59e0b" stroke-width="2"/>
+      <text x="60" y="50" text-anchor="middle" font-size="13" font-family="sans-serif" fill="#92400e">전자날인</text>
+      <text x="60" y="73" text-anchor="middle" font-size="16" font-family="sans-serif" font-weight="700" fill="#92400e">${seed.slice(0, 10)}</text>
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 async function notifyProfiles(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, rows: Array<Record<string, unknown>>) {
   if (!rows.length) return;
   const { error } = await supabase.from('notifications').insert(rows);
@@ -1586,7 +1599,10 @@ export async function registerContractPacketAction(formData: FormData) {
     requestClientSignature: formData.get('requestClientSignature') === 'on',
     signatureMethod: formData.get('signatureMethod'),
     clientVisibility: formData.get('clientVisibility'),
-    scanProvider: formData.get('scanProvider')
+    scanProvider: formData.get('scanProvider'),
+    senderRegistrationNumber: formData.get('senderRegistrationNumber'),
+    billingIntent: formData.get('billingIntent'),
+    installmentStartMode: formData.get('installmentStartMode')
   });
 
   const upload = formData.get('file');
@@ -1618,6 +1634,12 @@ export async function registerContractPacketAction(formData: FormData) {
     .eq('case_id', caseRecord.id)
     .eq('organization_id', caseRecord.organization_id)
     .eq('role', 'managing_org')
+    .maybeSingle();
+
+  const { data: organizationSnapshot } = await supabase
+    .from('organizations')
+    .select('name, representative_name, address_line1, address_line2, business_number')
+    .eq('id', caseRecord.organization_id)
     .maybeSingle();
 
   let storagePath: string | null = null;
@@ -1666,7 +1688,18 @@ export async function registerContractPacketAction(formData: FormData) {
       sent_to_client_at: parsed.sendToClient ? now : null,
       signature_request: parsed.requestClientSignature,
       signature_method: parsed.signatureMethod,
-      delivery_status: parsed.requestClientSignature ? 'sent_for_signature' : parsed.sendToClient ? 'shared_with_client' : 'internal_registered'
+      delivery_status: parsed.requestClientSignature ? 'sent_for_signature' : parsed.sendToClient ? 'shared_with_client' : 'internal_registered',
+      signature_status: parsed.requestClientSignature ? 'pending' : null,
+      sender_snapshot: {
+        organization_name: organizationSnapshot?.name ?? null,
+        representative_name: organizationSnapshot?.representative_name ?? auth.profile.full_name,
+        address: [organizationSnapshot?.address_line1, organizationSnapshot?.address_line2].filter(Boolean).join(' ').trim() || null,
+        registration_number: parsed.senderRegistrationNumber || organizationSnapshot?.business_number || null,
+        seal_data_url: buildOrganizationSealDataUrl(organizationSnapshot?.name ?? '조직')
+      },
+      billing_intent: parsed.billingIntent,
+      installment_start_mode: parsed.installmentStartMode,
+      signature_logs: [] as Array<Record<string, unknown>>
     };
 
     const { data: agreementRow, error: agreementError } = await supabase
@@ -1713,6 +1746,73 @@ export async function registerContractPacketAction(formData: FormData) {
       });
 
       if (requestError) throw requestError;
+    }
+
+    const entryTitle = `[계약] ${parsed.title}`;
+    const contractNote = `${parsed.documentTitle}${parsed.summary ? `\n계약 요약: ${parsed.summary}` : ''}`;
+
+    if (parsed.fixedAmount != null && parsed.billingIntent === 'receivable') {
+      const { error: billingEntryError } = await supabase.from('billing_entries').insert({
+        organization_id: caseRecord.organization_id,
+        case_id: caseRecord.id,
+        billing_owner_case_organization_id: billingOwner?.id ?? null,
+        bill_to_party_kind: parsed.billToPartyKind,
+        bill_to_case_client_id: parsed.billToCaseClientId || null,
+        bill_to_case_organization_id: parsed.billToCaseOrganizationId || null,
+        entry_kind: parsed.agreementType === 'success_fee' ? 'success_fee' : parsed.agreementType === 'expense_reimbursement' ? 'expense' : 'service_fee',
+        title: entryTitle,
+        amount: parsed.fixedAmount,
+        tax_amount: 0,
+        status: 'issued',
+        due_on: parsed.effectiveFrom || now.slice(0, 10),
+        notes: contractNote,
+        created_by: auth.user.id,
+        updated_by: auth.user.id
+      });
+      if (billingEntryError) throw billingEntryError;
+    }
+
+    if (parsed.fixedAmount != null && parsed.billingIntent === 'received') {
+      const { error: paymentError } = await supabase.from('payments').insert({
+        case_id: caseRecord.id,
+        billing_owner_case_organization_id: billingOwner?.id ?? null,
+        payer_party_kind: parsed.billToPartyKind,
+        payer_case_client_id: parsed.billToCaseClientId || null,
+        payer_case_organization_id: parsed.billToCaseOrganizationId || null,
+        payment_method: 'other',
+        amount: parsed.fixedAmount,
+        payment_status: 'confirmed',
+        received_at: now,
+        reference_text: entryTitle,
+        note: '계약 등록 시 이미 받은 금액으로 표시됨',
+        created_by: auth.user.id,
+        updated_by: auth.user.id
+      });
+      if (paymentError) throw paymentError;
+    }
+
+    if (parsed.fixedAmount != null && parsed.billingIntent === 'installment_pending') {
+      const dueOn = parsed.installmentStartMode === 'first_due'
+        ? (parsed.effectiveTo || parsed.effectiveFrom || now.slice(0, 10))
+        : (parsed.effectiveFrom || now.slice(0, 10));
+      const { error: installmentEntryError } = await supabase.from('billing_entries').insert({
+        organization_id: caseRecord.organization_id,
+        case_id: caseRecord.id,
+        billing_owner_case_organization_id: billingOwner?.id ?? null,
+        bill_to_party_kind: parsed.billToPartyKind,
+        bill_to_case_client_id: parsed.billToCaseClientId || null,
+        bill_to_case_organization_id: parsed.billToCaseOrganizationId || null,
+        entry_kind: 'service_fee',
+        title: `${entryTitle} · 분납`,
+        amount: parsed.fixedAmount,
+        tax_amount: 0,
+        status: 'issued',
+        due_on: dueOn,
+        notes: `분납 약정 미입금 확인 대상\n${contractNote}`,
+        created_by: auth.user.id,
+        updated_by: auth.user.id
+      });
+      if (installmentEntryError) throw installmentEntryError;
     }
 
     revalidatePath(`/cases/${caseRecord.id}`);

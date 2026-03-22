@@ -38,7 +38,7 @@ export default async function ContractsPage({
   const privacyConsentVersion = typeof metadata.privacy_consent_version === 'string' ? metadata.privacy_consent_version : PLATFORM_PRIVACY_POLICY_VERSION;
   const serviceConsentVersion = typeof metadata.service_consent_version === 'string' ? metadata.service_consent_version : PLATFORM_TERMS_VERSION;
   const agreementCaseIds = [...new Set(agreements.map((item: any) => item.case_id).filter(Boolean))];
-  const [{ data: caseRows }, { data: caseClientRows }, { data: contractDocumentRows }] = await Promise.all([
+  const [{ data: caseRows }, { data: caseClientRows }, { data: contractDocumentRows }, { data: organizationRow }] = await Promise.all([
     supabase
       .from('cases')
       .select('id, title')
@@ -58,7 +58,12 @@ export default async function ContractsPage({
           .in('case_id', agreementCaseIds)
           .eq('document_kind', 'contract')
           .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [] as any[] })
+      : Promise.resolve({ data: [] as any[] }),
+    supabase
+      .from('organizations')
+      .select('name, representative_name, address_line1, address_line2, business_number')
+      .eq('id', organizationId)
+      .maybeSingle()
   ]);
 
   const contractDocumentMap = new Map<string, any>();
@@ -80,6 +85,12 @@ export default async function ContractsPage({
         name: client.client_name
       }))
   }));
+  const organizationProfile = {
+    name: organizationRow?.name ?? '현재 조직',
+    representativeName: organizationRow?.representative_name ?? '',
+    address: [organizationRow?.address_line1, organizationRow?.address_line2].filter(Boolean).join(' ').trim(),
+    registrationNumber: organizationRow?.business_number ?? ''
+  };
 
   const contractExecutionItems = agreements.filter((item: any) => {
     const terms = item.terms_json ?? {};
@@ -245,6 +256,11 @@ export default async function ContractsPage({
                       <p>서명 요청 · {terms.signature_request ? '보냄' : '없음'}</p>
                       {terms.signature_request ? <p>현재 상태 · {signatureStatusLabel(terms.signature_status)}</p> : null}
                       {terms.signature_completed_at ? <p>동의 시각 · {formatDateTime(terms.signature_completed_at)}</p> : null}
+                      {Array.isArray(terms.signature_logs) && terms.signature_logs.length ? <p>동의 기록 · {terms.signature_logs.length}회</p> : null}
+                      {terms.billing_intent ? <p>금액 분류 · {terms.billing_intent === 'receivable' ? '받아야 할 금액' : terms.billing_intent === 'received' ? '이미 받은 금액' : terms.billing_intent === 'installment_pending' ? '비용입금 미확인 분납계약' : '별도 분류 없음'}</p> : null}
+                      {terms.sender_snapshot?.organization_name ? <p>갑 · {terms.sender_snapshot.organization_name}</p> : null}
+                      {terms.sender_snapshot?.representative_name ? <p>대표자 · {terms.sender_snapshot.representative_name}</p> : null}
+                      {terms.sender_snapshot?.registration_number ? <p>등록번호 · {terms.sender_snapshot.registration_number}</p> : null}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -275,7 +291,7 @@ export default async function ContractsPage({
         title="계약서 업데이트하기"
         description="새 계약서를 올리고 AI 스캔으로 내용을 채운 뒤 계약 목록과 계약 체결 현황에 함께 등록합니다."
       >
-        <ContractUpdatePanel cases={caseOptions} />
+        <ContractUpdatePanel cases={caseOptions} organizationProfile={organizationProfile} />
       </CollapsibleSettingsSection>
     </div>
   );

@@ -83,6 +83,66 @@ export type AdminCopilotResponse = {
 
 const PLATFORM_AI_BLOCK_PATTERN = /(플랫폼|구독|조직\s*(승인|신청|삭제|비활성화|정지|해지)|운영\s*(권한|승인|삭제|정지)|감사\s*로그|고객센터|지원\s*접속)/;
 
+function buildBillingAssistantAnswer(question: string): { answer: string; actions: DashboardAiAction[] } | null {
+  const normalized = question.toLowerCase();
+
+  if (/비용입금.*되었|입금.*되었|입금.*확인/.test(normalized) && /분납|나머지/.test(normalized)) {
+    return {
+      answer: '입금이 확인되면 비용 관리에서 받은 금액으로 먼저 기록하고, 남은 금액은 분납 계획으로 이어서 볼 수 있습니다. 아래 화면에서 받은 금액 처리와 남은 회차 계획을 함께 확인하세요.',
+      actions: [
+        {
+          label: '비용 관리 열기',
+          href: '/billing',
+          reason: '입금 기록과 남은 분납 계획을 같은 화면에서 이어서 확인할 수 있습니다.'
+        },
+        {
+          label: '계약 관리 열기',
+          href: '/contracts',
+          reason: '해당 의뢰인의 비용 약정 원문과 분납 기준을 다시 확인할 수 있습니다.'
+        }
+      ]
+    };
+  }
+
+  if (/분납.*부족|약정.*부족|분납.*어긋|부족합니다|회차.*늘릴/.test(normalized)) {
+    return {
+      answer: '분납 약정보다 적게 들어온 경우에는 비용 관리에서 부족 금액을 다음 청구에 합칠지, 회차를 늘릴지 먼저 정해야 합니다. 아래 화면에서 미입금 분납 계약과 연체 항목을 같이 보면서 조정하세요.',
+      actions: [
+        {
+          label: '비용 관리 열기',
+          href: '/billing',
+          reason: '비용입금 미확인 분납 계약, 연체 청구, 최근 입금 기록을 한 번에 볼 수 있습니다.'
+        },
+        {
+          label: '사건 목록 열기',
+          href: '/cases',
+          reason: '특정 사건의 비용 탭으로 바로 들어가 분납 회차와 청구 일정을 조정할 수 있습니다.'
+        }
+      ]
+    };
+  }
+
+  if (/분납.*계획|플랜.*세울|청구할까요/.test(normalized)) {
+    return {
+      answer: '분납 계획을 새로 세우거나 조정할 때는 계약 금액, 이미 받은 금액, 남은 회차를 먼저 확인해야 합니다. 아래 화면에서 계약 약정과 비용 현황을 같이 열어 두고 결정하는 편이 안전합니다.',
+      actions: [
+        {
+          label: '계약 관리 열기',
+          href: '/contracts',
+          reason: '계약 원문과 약정 금액, 동의 이력을 다시 확인할 수 있습니다.'
+        },
+        {
+          label: '비용 관리 열기',
+          href: '/billing',
+          reason: '실제 청구, 입금, 분납 미이행 여부를 바로 이어서 점검할 수 있습니다.'
+        }
+      ]
+    };
+  }
+
+  return null;
+}
+
 function pushRecommendation(
   rows: DashboardAiRecommendation[],
   recommendation: DashboardAiRecommendation
@@ -352,6 +412,20 @@ export function answerDashboardAssistant(input: {
       source: buildAiSourceMeta({
         feature: 'home_ai_assistant',
         dataType: 'platform_ai_block',
+        scope: { organizationId: input.organizationId },
+        filters: { question }
+      })
+    };
+  }
+  const billingAnswer = buildBillingAssistantAnswer(question);
+  if (billingAnswer) {
+    return {
+      answer: billingAnswer.answer,
+      actions: billingAnswer.actions,
+      provider: 'rules',
+      source: buildAiSourceMeta({
+        feature: 'home_ai_assistant',
+        dataType: 'billing_follow_up',
         scope: { organizationId: input.organizationId },
         filters: { question }
       })

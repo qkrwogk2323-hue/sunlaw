@@ -353,15 +353,24 @@ export const contractRegistrationSchema = z.object({
   requestClientSignature: z.boolean().default(false),
   signatureMethod: z.enum(['platform_checkbox', 'electronic_signature', 'kakao_confirmation', 'signed_document_upload']).default('platform_checkbox'),
   clientVisibility: z.enum(['internal_only', 'client_visible']).default('internal_only'),
-  scanProvider: z.string().trim().max(80).optional().or(z.literal(''))
+  scanProvider: z.string().trim().max(80).optional().or(z.literal('')),
+  senderRegistrationNumber: z.string().trim().max(40).optional().or(z.literal('')),
+  billingIntent: z.enum(['none', 'receivable', 'received', 'installment_pending']).default('none'),
+  installmentStartMode: z.enum(['today', 'first_due']).default('today')
 });
 
 export const portalContractConsentSchema = z.object({
   caseId: z.string().uuid(),
   agreementId: z.string().uuid(),
   requestId: z.string().uuid().optional().or(z.literal('')),
-  agreed: z.boolean().refine((value) => value, {
-    message: '계약 내용을 확인하고 동의해야 완료할 수 있습니다.'
+  checkedPageOne: z.boolean().refine((value) => value, {
+    message: '계약서 첫 페이지 확인 여부를 체크해 주세요.'
+  }),
+  checkedContractBody: z.boolean().refine((value) => value, {
+    message: '계약 내용 확인 여부를 체크해 주세요.'
+  }),
+  checkedFinalConsent: z.boolean().refine((value) => value, {
+    message: '최종 동의 여부를 체크해 주세요.'
   })
 });
 

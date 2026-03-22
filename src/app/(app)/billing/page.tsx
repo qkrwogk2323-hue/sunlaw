@@ -136,6 +136,13 @@ function agreementLabel(type: string) {
   return type;
 }
 
+function billingIntentLabel(intent?: string | null) {
+  if (intent === 'receivable') return '받아야 할 금액';
+  if (intent === 'received') return '이미 받은 금액';
+  if (intent === 'installment_pending') return '비용입금 미확인 분납계약';
+  return '별도 분류 없음';
+}
+
 export default async function BillingPage({
   searchParams
 }: {
@@ -172,6 +179,9 @@ export default async function BillingPage({
   const clientVisibleEntries = billing.entries.filter((entry: any) => Boolean(entry.bill_to_case_client_id));
   const clientAttentionEntries = clientVisibleEntries.filter((entry: any) => openStatuses.has(entry.status)).slice(0, 8);
   const installmentAgreements = billing.agreements.filter((agreement: any) => agreement.agreement_type === 'installment_plan' && agreement.is_active);
+  const installmentPendingAgreements = billing.agreements.filter((agreement: any) => (
+    agreement.is_active && agreement.terms_json?.billing_intent === 'installment_pending'
+  ));
   const missedInstallmentEntries = overdueEntries.filter((entry: any) => installmentAgreements.some((agreement: any) => (
     agreement.case_id === entry.case_id
     && agreement.bill_to_case_client_id === entry.bill_to_case_client_id
@@ -277,7 +287,7 @@ export default async function BillingPage({
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">활성 분납 약정</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <p className="text-2xl font-semibold text-slate-900">{installmentAgreements.length}건</p>
-            <p className="text-sm text-slate-500">이행 중 {installmentComplianceCount}건 · 미이행 {missedInstallmentAgreementKeys.size}건</p>
+            <p className="text-sm text-slate-500">이행 중 {installmentComplianceCount}건 · 미이행 {missedInstallmentAgreementKeys.size}건 · 미입금 확인 {installmentPendingAgreements.length}건</p>
           </CardContent>
         </Card>
         <Card className="vs-mesh-card">
@@ -319,7 +329,7 @@ export default async function BillingPage({
         </Card>
 
         <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>운영 메모</CardTitle></CardHeader>
+          <CardHeader><CardTitle>확인 기준</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-700">
             <p>1. 조직 메뉴의 비용 관리는 의뢰인과 약속한 금액, 분납, 입금 추적입니다.</p>
             <p>2. 회사 관리의 구독 관리는 우리 조직이 플랫폼에 내는 구독료입니다.</p>
@@ -330,6 +340,35 @@ export default async function BillingPage({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card className="vs-mesh-card">
+          <CardHeader><CardTitle>비용입금 미확인 분납 계약</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {installmentPendingAgreements.length ? installmentPendingAgreements.map((agreement: any) => (
+              <Link key={`pending-${agreement.id}`} href={`/cases/${agreement.case_id}?tab=billing`} className="block rounded-2xl border border-amber-200 bg-amber-50/70 p-4 transition hover:border-amber-300">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">{agreement.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{agreement.cases?.title ?? '사건'} · {agreement.targetLabel}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge tone="amber">미입금 확인 필요</Badge>
+                    <Badge tone="blue">{agreementLabel(agreement.agreement_type)}</Badge>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                  <p>{agreement.fixed_amount != null ? `약정금액 ${formatCurrency(agreement.fixed_amount)}` : '약정금액 미지정'}</p>
+                  <p>기준 {agreement.terms_json?.installment_start_mode === 'first_due' ? '첫 납부일 기준' : '오늘부터 확인'}</p>
+                  <p>사건 비용 탭에서 분납 계획 조정</p>
+                </div>
+              </Link>
+            )) : (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                현재 따로 확인해야 할 분납 계약은 없습니다.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="vs-mesh-card">
           <CardHeader><CardTitle>분납 미이행 및 연체 확인</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -407,6 +446,7 @@ export default async function BillingPage({
                     {agreement.fixed_amount != null ? `약정금액 ${formatCurrency(agreement.fixed_amount)}` : '약정금액 미지정'}
                     {agreement.rate != null ? ` · 비율 ${agreement.rate}%` : ''}
                   </p>
+                  <p className="mt-2 text-xs text-slate-500">금액 분류 · {billingIntentLabel(agreement.terms_json?.billing_intent)}</p>
                   <p className="mt-2 text-xs text-slate-400">적용 {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
                 </Link>
               )) : <p className="text-sm text-slate-500">활성 계약이 없습니다.</p>}

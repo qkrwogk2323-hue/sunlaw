@@ -16,7 +16,10 @@ export function PortalContractSignatureForm({
   requestId?: string | null;
   buttonLabel?: string;
 }) {
-  const [agreed, setAgreed] = useState(false);
+  const [checkedPageOne, setCheckedPageOne] = useState(false);
+  const [checkedContractBody, setCheckedContractBody] = useState(false);
+  const [checkedFinalConsent, setCheckedFinalConsent] = useState(false);
+  const canSubmit = checkedPageOne && checkedContractBody && checkedFinalConsent;
 
   return (
     <ClientActionForm
@@ -32,15 +35,37 @@ export function PortalContractSignatureForm({
       <label className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
         <input
           type="checkbox"
-          name="agreed"
-          checked={agreed}
-          onChange={(event) => setAgreed(event.target.checked)}
+          name="checkedPageOne"
+          checked={checkedPageOne}
+          onChange={(event) => setCheckedPageOne(event.target.checked)}
           className="mt-0.5 size-4 rounded border-slate-300"
         />
-        <span>계약서를 확인했고, 안내된 방식에 따라 계약 체결에 동의합니다.</span>
+        <span>계약서 1쪽부터 확인했습니다.</span>
       </label>
 
-      <SubmitButton disabled={!agreed} pendingLabel="동의 기록 저장 중...">
+      <label className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          name="checkedContractBody"
+          checked={checkedContractBody}
+          onChange={(event) => setCheckedContractBody(event.target.checked)}
+          className="mt-0.5 size-4 rounded border-slate-300"
+        />
+        <span>계약 내용과 금액, 적용 기간을 확인했습니다.</span>
+      </label>
+
+      <label className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          name="checkedFinalConsent"
+          checked={checkedFinalConsent}
+          onChange={(event) => setCheckedFinalConsent(event.target.checked)}
+          className="mt-0.5 size-4 rounded border-slate-300"
+        />
+        <span>안내된 방식에 따라 계약 체결에 동의합니다.</span>
+      </label>
+
+      <SubmitButton disabled={!canSubmit} pendingLabel="동의 기록 저장 중...">
         {buttonLabel}
       </SubmitButton>
     </ClientActionForm>

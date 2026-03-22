@@ -314,7 +314,9 @@ export async function confirmPortalContractSignatureAction(formData: FormData) {
       caseId: formData.get('caseId'),
       agreementId: formData.get('agreementId'),
       requestId: formData.get('requestId'),
-      agreed: formData.get('agreed') === 'on'
+      checkedPageOne: formData.get('checkedPageOne') === 'on',
+      checkedContractBody: formData.get('checkedContractBody') === 'on',
+      checkedFinalConsent: formData.get('checkedFinalConsent') === 'on'
     });
   } catch (error) {
     throwGuardFeedback(createValidationFailedFeedback({
@@ -385,7 +387,20 @@ export async function confirmPortalContractSignatureAction(formData: FormData) {
     signature_completed_at: now,
     signature_completed_by_profile_id: auth.user.id,
     signature_completed_by_name: auth.profile.full_name,
-    signature_confirmed_via: 'portal'
+    signature_confirmed_via: 'portal',
+    signature_logs: [
+      ...((Array.isArray(terms.signature_logs) ? terms.signature_logs : []) as Array<Record<string, unknown>>),
+      {
+        actor_profile_id: auth.user.id,
+        actor_name: auth.profile.full_name,
+        confirmed_at: now,
+        checked_page_one: parsed.checkedPageOne,
+        checked_contract_body: parsed.checkedContractBody,
+        checked_final_consent: parsed.checkedFinalConsent,
+        method: terms.signature_method ?? 'platform_checkbox',
+        via: 'portal'
+      }
+    ]
   };
 
   const { error: agreementUpdateError } = await supabase
