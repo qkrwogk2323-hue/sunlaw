@@ -3,9 +3,17 @@ import type { Route } from 'next';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  PLATFORM_CONTRACT_SUMMARY,
+  PLATFORM_CONTRACT_VERSION,
+  PLATFORM_PRIVACY_CONSENT_LABEL,
+  PLATFORM_PRIVACY_POLICY_VERSION,
+  PLATFORM_TERMS_VERSION
+} from '@/lib/legal-documents';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export default async function ContractsPage({
   searchParams
@@ -14,11 +22,19 @@ export default async function ContractsPage({
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
+  const supabase = await createSupabaseServerClient();
   const resolved = searchParams ? await searchParams : undefined;
   const caseId = `${resolved?.caseId ?? ''}`.trim() || null;
   const billing = await getBillingHubSnapshot(organizationId);
   const agreements = caseId ? billing.agreements.filter((item: any) => item.case_id === caseId) : billing.agreements;
   const activeAgreements = agreements.filter((item: any) => item.is_active);
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const privacyConsentRecordedAt = typeof metadata.privacy_consent_recorded_at === 'string' ? metadata.privacy_consent_recorded_at : null;
+  const privacyConsentVersion = typeof metadata.privacy_consent_version === 'string' ? metadata.privacy_consent_version : PLATFORM_PRIVACY_POLICY_VERSION;
+  const serviceConsentVersion = typeof metadata.service_consent_version === 'string' ? metadata.service_consent_version : PLATFORM_TERMS_VERSION;
 
   return (
     <div className="space-y-6">
@@ -43,6 +59,53 @@ export default async function ContractsPage({
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
+        <Card className="rounded-[1.6rem] border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#f0fbf6)] md:col-span-3">
+          <CardHeader className="pb-2">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <CardTitle className="text-xl text-slate-900">서비스 문서와 동의 이력</CardTitle>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  플랫폼 문서 버전과 가입 시 기록된 동의 이력을 이 화면에서 함께 확인합니다. 사건 비용 계약은 아래 목록에서 계속 관리합니다.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-sm text-emerald-900">
+                {privacyConsentRecordedAt ? `최근 동의 기록 ${formatDate(privacyConsentRecordedAt)}` : '아직 기록된 동의 이력이 없습니다.'}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Privacy</p>
+              <p className="mt-2 font-semibold text-slate-900">{PLATFORM_PRIVACY_CONSENT_LABEL}</p>
+              <p className="mt-2 text-sm text-slate-600">현재 버전 {privacyConsentVersion}</p>
+              <div className="mt-4">
+                <Link href={'/privacy-policy' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
+                  자세히 보기
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">Terms</p>
+              <p className="mt-2 font-semibold text-slate-900">서비스 이용약관</p>
+              <p className="mt-2 text-sm text-slate-600">현재 버전 {serviceConsentVersion}</p>
+              <div className="mt-4">
+                <Link href={'/terms' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
+                  자세히 보기
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-700">Contract</p>
+              <p className="mt-2 font-semibold text-slate-900">플랫폼-조직 계약 기준</p>
+              <p className="mt-2 text-sm text-slate-600">현재 버전 {PLATFORM_CONTRACT_VERSION}</p>
+              <div className="mt-4 space-y-2 text-sm leading-7 text-slate-600">
+                {PLATFORM_CONTRACT_SUMMARY.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <Card className="vs-mesh-card">
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">활성 계약</CardTitle></CardHeader>
           <CardContent><p className="text-3xl font-semibold text-slate-900">{activeAgreements.length}</p></CardContent>

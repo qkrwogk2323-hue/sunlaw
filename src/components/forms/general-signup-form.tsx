@@ -2,16 +2,17 @@
 
 import type { FormEvent } from 'react';
 import { useState } from 'react';
+import Link from 'next/link';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { isValidResidentRegistrationNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
+import { PLATFORM_PRIVACY_CONSENT_LABEL } from '@/lib/legal-documents';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 const privacyConsentNote =
-  '입력한 이름, 연락처, 주민등록번호, 주소는 가입 심사, 본인 확인, 조직 연결, 사건 진행 알림 제공을 위해 수집·이용되며 승인 절차가 끝날 때까지 보호 저장소에 보관됩니다.';
-const serviceConsentNote =
-  '회원가입이 완료되면 승인 대기 상태로 접수되며, 승인 이후 포털 접근, 알림 수신, 사건 소통 기능이 열립니다. 허위 정보 또는 무단 가입 시 이용이 제한될 수 있습니다.';
+  '가입을 진행하면 플랫폼의 개인정보 이용 및 처리방법과 서비스 이용약관에 동의한 것으로 기록됩니다. 자세한 내용은 자세히 보기에서 확인할 수 있습니다.';
 
 export function GeneralSignupForm() {
   const router = useRouter();
@@ -25,7 +26,6 @@ export function GeneralSignupForm() {
   const [addressLine2, setAddressLine2] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [privacyConsent, setPrivacyConsent] = useState(false);
-  const [serviceConsent, setServiceConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export function GeneralSignupForm() {
   const normalizedResidentNumberConfirm = normalizeResidentRegistrationNumber(residentNumberConfirm);
   const residentNumberMismatch = residentNumberConfirm.length > 0 && normalizedResidentNumber !== normalizedResidentNumberConfirm;
   const residentNumberInvalid = residentNumber.length > 0 && normalizedResidentNumber.length === 13 && !isValidResidentRegistrationNumber(normalizedResidentNumber);
-  const isInvalid = residentNumberMismatch || residentNumberInvalid || !privacyConsent || !serviceConsent;
+  const isInvalid = residentNumberMismatch || residentNumberInvalid || !privacyConsent;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,7 +58,7 @@ export function GeneralSignupForm() {
           addressLine2,
           postalCode,
           privacyConsent,
-          serviceConsent
+          serviceConsent: privacyConsent
         })
       });
 
@@ -144,15 +144,16 @@ export function GeneralSignupForm() {
         <label className="flex items-start gap-3">
           <input type="checkbox" checked={privacyConsent} onChange={(event) => setPrivacyConsent(event.target.checked)} className="mt-1 size-4 rounded border-slate-300" />
           <span>
-            <span className="block font-medium text-slate-900">개인정보 처리 동의</span>
+            <span className="block font-medium text-slate-900">{PLATFORM_PRIVACY_CONSENT_LABEL} <span className="text-rose-500">*</span></span>
             <span className="block text-xs leading-6 text-slate-500">{privacyConsentNote}</span>
-          </span>
-        </label>
-        <label className="flex items-start gap-3">
-          <input type="checkbox" checked={serviceConsent} onChange={(event) => setServiceConsent(event.target.checked)} className="mt-1 size-4 rounded border-slate-300" />
-          <span>
-            <span className="block font-medium text-slate-900">시스템 이용 동의</span>
-            <span className="block text-xs leading-6 text-slate-500">{serviceConsentNote}</span>
+            <span className="mt-2 flex flex-wrap gap-3 text-xs font-medium">
+              <Link href={'/privacy-policy' as Route} className="text-sky-700 underline underline-offset-4">
+                자세히 보기
+              </Link>
+              <Link href={'/terms' as Route} className="text-slate-600 underline underline-offset-4">
+                이용약관 보기
+              </Link>
+            </span>
           </span>
         </label>
       </div>

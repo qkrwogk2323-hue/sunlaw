@@ -7,6 +7,7 @@ import { getCollectionsWorkspace } from '@/lib/queries/collections';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { ExportLinks } from '@/components/export-links';
 import { CompensationPlanForm } from '@/components/forms/compensation-plan-form';
+import { OverdueDraftButton } from '@/components/overdue-draft-button';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { hasPermission } from '@/lib/permissions';
 
@@ -36,6 +37,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
     ? await supabase.from('organization_memberships').select('id, title, profile:profiles(full_name)').eq('organization_id', organizationId).eq('status', 'active')
     : { data: [] as any[] };
   const memberOptions = (orgMembers ?? []).map((item: any) => ({ id: item.id, label: `${item.profile?.full_name ?? '직원'}${item.title ? ` · ${item.title}` : ''}` }));
+  const orgName = auth.memberships.find((m) => m.organization_id === organizationId)?.organization?.name ?? '우리 사무소';
 
   return (
     <div className="space-y-6">
@@ -121,13 +123,25 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
           <CardHeader><CardTitle>추심 사건</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {data.collectionCases.length ? data.collectionCases.map((item: any) => (
-              <Link key={item.id} href={`/cases/${item.id}?tab=collection`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-slate-900">
+              <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-slate-900">{item.title}</p>
+                  <Link href={`/cases/${item.id}?tab=collection`} className="font-medium text-slate-900 hover:underline">{item.title}</Link>
                   <Badge tone="amber">{item.stage_key ?? '-'}</Badge>
                 </div>
                 <p className="mt-2 text-sm text-slate-500">{item.reference_no ?? '-'} · {formatCurrency(item.principal_amount)}</p>
-              </Link>
+                {organizationId && (
+                  <div className="mt-3">
+                    <OverdueDraftButton
+                      organizationId={organizationId}
+                      orgName={orgName}
+                      clientName={item.title}
+                      caseTitle={item.title}
+                      overdueAmount={Number(item.principal_amount ?? 0)}
+                      dueDaysAgo={30}
+                    />
+                  </div>
+                )}
+              </div>
             )) : <p className="text-sm text-slate-500">추심 사건이 없습니다.</p>}
           </CardContent>
         </Card>

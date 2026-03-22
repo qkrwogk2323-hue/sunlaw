@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
 import { clientAccountStatusLabel } from '@/lib/client-account';
 import { formatResidentRegistrationNumberMasked } from '@/lib/format';
+import { PLATFORM_PRIVACY_POLICY_VERSION, PLATFORM_TERMS_VERSION } from '@/lib/legal-documents';
 import {
   createConditionFailedFeedback,
   createValidationFailedFeedback,
@@ -75,7 +76,7 @@ export async function submitClientSignupAction(formData: FormData) {
       addressLine2: formData.get('addressLine2'),
       postalCode: formData.get('postalCode'),
       privacyConsent: formData.get('privacyConsent') === 'on',
-      serviceConsent: formData.get('serviceConsent') === 'on'
+      serviceConsent: formData.get('privacyConsent') === 'on'
     });
   } catch (error) {
     throwGuardFeedback(createValidationFailedFeedback({
@@ -145,8 +146,10 @@ export async function submitClientSignupAction(formData: FormData) {
       signup_method: existingMetadata.signup_method ?? 'credential',
       privacy_consent_recorded_at: consentRecordedAt,
       privacy_consent_placeholder: true,
+      privacy_consent_version: PLATFORM_PRIVACY_POLICY_VERSION,
       service_consent_recorded_at: consentRecordedAt,
-      service_consent_placeholder: true
+      service_consent_placeholder: true,
+      service_consent_version: PLATFORM_TERMS_VERSION
     }
   });
 

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PendingIntegrationNotice } from '@/components/ui/pending-integration-notice';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useToast } from '@/components/ui/toast-provider';
 import { createClientBulkInvitationBatchAction, type ClientInvitationBatchResult } from '@/lib/actions/organization-actions';
@@ -79,6 +80,23 @@ function parseInviteCSV(text: string): ClientInviteRow[] {
       secondaryContact: `${row['보조연락처'] || row['secondarycontact'] || row['메모'] || row['note'] || ''}`.trim()
     };
   });
+}
+
+function KakaoBubbleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+      <path
+        d="M12 4C7.03 4 3 7.14 3 11c0 2.38 1.53 4.48 3.87 5.75L6 20l3.77-2.08c.72.14 1.46.21 2.23.21 4.97 0 9-3.13 9-7s-4.03-7-9-7Z"
+        fill="#FEE500"
+        stroke="#3B1E1E"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="11" r="1.05" fill="#3B1E1E" />
+      <circle cx="12" cy="11" r="1.05" fill="#3B1E1E" />
+      <circle cx="15" cy="11" r="1.05" fill="#3B1E1E" />
+    </svg>
+  );
 }
 
 export function ClientStructuredInviteForm({
@@ -491,6 +509,12 @@ export function ClientStructuredInviteForm({
                   ))}
                 </div>
               ) : null}
+
+              <PendingIntegrationNotice
+                title="카카오 자동 발송은 추후 연동 예정입니다."
+                description="지금은 카카오톡 전달용 초대 링크 CSV까지 제공하고, 실제 알림톡·채널·고유 버튼 발송은 이후 키 연동과 함께 붙입니다."
+                icon={<KakaoBubbleIcon />}
+              />
             </div>
           ) : null}
         </div>

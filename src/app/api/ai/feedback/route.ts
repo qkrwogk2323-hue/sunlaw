@@ -10,7 +10,10 @@ const ALLOWED_FEATURES = new Set([
   'next_action_recommendation',
   'draft_assist',
   'anomaly_alert',
-  'admin_copilot'
+  'admin_copilot',
+  'schedule_briefing',
+  'document_checklist',
+  'overdue_notice',
 ]);
 
 const ALLOWED_STATUSES = new Set(['접수', '분석중', '조치완료']);
@@ -40,7 +43,7 @@ export async function POST(request: Request) {
 
   if (!organizationId || !aiFeature || !screen || !reason) {
     return guardValidationFailedResponse(400, {
-      blocked: '오답 신고가 차단되었습니다.',
+      blocked: 'AI 피드백이 차단되었습니다.',
       cause: 'organizationId, aiFeature, screen, reason 중 필수 항목이 누락되었습니다.',
       resolution: '필수 항목을 채운 뒤 다시 시도해 주세요.'
     });
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
 
   if (!ALLOWED_FEATURES.has(aiFeature)) {
     return guardValidationFailedResponse(400, {
-      blocked: '오답 신고가 차단되었습니다.',
+      blocked: 'AI 피드백이 차단되었습니다.',
       cause: '허용되지 않은 AI 기능 식별자입니다.',
       resolution: '정의된 기능 식별자로 다시 시도해 주세요.'
     });
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
   if (!hasMembership && !isPlatformAdmin) {
     return guardAccessDeniedResponse(403, {
-      blocked: '오답 신고가 차단되었습니다.',
+      blocked: 'AI 피드백이 차단되었습니다.',
       cause: '현재 조직 멤버십 또는 플랫폼 관리자 권한이 확인되지 않았습니다.',
       resolution: '권한 없음'
     });
@@ -94,7 +97,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return guardServerErrorResponse(500, '오답 신고 저장에 실패했습니다.');
+    return guardServerErrorResponse(500, 'AI 피드백 저장에 실패했습니다.');
   }
 
   return NextResponse.json({ ok: true, status: '접수' });

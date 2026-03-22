@@ -1,12 +1,17 @@
 import { createHash } from 'node:crypto';
 
 export const AI_FEATURE_IDS = [
+  // 기존 대쉬보드/허브 기능
   'home_ai_assistant',
   'ai_summary_card',
   'next_action_recommendation',
   'draft_assist',
   'anomaly_alert',
-  'admin_copilot'
+  'admin_copilot',
+  // 새로 추가된 기능 (Phase 2~5)
+  'schedule_briefing',      // summary_assist — 캘린더 AI 주간 브리핑
+  'document_checklist',     // triage_assist  — 사건별 AI 서류 체크리스트
+  'overdue_notice',         // draft_assist   — 연체 납부 안내 초안 생성
 ] as const;
 
 export type AiFeatureId = (typeof AI_FEATURE_IDS)[number];

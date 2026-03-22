@@ -4,8 +4,7 @@ import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { getDefaultAppRoute, getEffectiveOrganizationId, getTopLevelAppRoutes, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
-import { getNavUnreadCounts } from '@/lib/queries/notifications';
-import { ModeAwareNav } from '@/components/mode-aware-nav';
+import { NavBadgesAsync } from '@/components/nav-badges-async';
 import { BrandBanner } from '@/components/brand-banner';
 import { PageBackButton } from '@/components/page-back-button';
 import { buttonStyles } from '@/components/ui/button';
@@ -18,7 +17,8 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { enforceSubscriptionRouteAccess, getOrganizationSubscriptionSnapshot, getSubscriptionLockMessage } from '@/lib/subscription-lock';
 
-export const dynamic = 'force-dynamic';
+// auth/subscription은 쿠키 기반이므로 force-dynamic 불필요.
+// navCounts는 NavBadgesAsync(Suspense)로 분리해 레이아웃 블로킹을 제거했음.
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
@@ -45,9 +45,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const effectiveOrganizationId = getEffectiveOrganizationId(auth);
   const defaultAppRoute = getDefaultAppRoute(auth) as Route;
 
-  const [supportSession, navCounts, subscriptionSnapshot] = await Promise.all([
+  const [supportSession, subscriptionSnapshot] = await Promise.all([
     readSupportSessionCookie(),
-    getNavUnreadCounts().catch(() => ({ unreadCount: 0, actionRequiredCount: 0, unreadConversationCount: 0 })),
     getOrganizationSubscriptionSnapshot(effectiveOrganizationId)
   ]);
 
@@ -63,12 +62,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <div className="vs-shell min-h-screen">
       <div className="mx-auto grid min-h-screen max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
         <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
-          <ModeAwareNav
+          <NavBadgesAsync
             memberships={auth.memberships}
             profile={auth.profile}
-            unreadNotificationCount={navCounts.unreadCount}
-            actionRequiredCount={navCounts.actionRequiredCount}
-            unreadConversationCount={navCounts.unreadConversationCount}
           />
 
           <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다.">

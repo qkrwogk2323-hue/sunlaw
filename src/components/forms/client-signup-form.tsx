@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import { isValidResidentRegistrationNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
+import { PLATFORM_PRIVACY_CONSENT_LABEL } from '@/lib/legal-documents';
 import { submitClientSignupAction } from '@/lib/actions/client-account-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
+import Link from 'next/link';
+import type { Route } from 'next';
 
 const privacyConsentNote =
-  '입력한 이름, 연락처, 주민등록번호, 주소는 가입 심사, 본인 확인, 조직 연결 요청 처리와 사건 진행 알림 제공을 위해 수집·이용되며 승인 절차가 끝날 때까지 보호 저장소에 보관됩니다.';
-const serviceConsentNote =
-  '가입 신청은 즉시 업무 접근으로 이어지지 않으며, 승인 이후에만 포털 접근과 사건 소통 기능이 열립니다. 허위 정보 또는 무단 신청 시 이용이 제한될 수 있습니다.';
+  '가입을 진행하면 플랫폼의 개인정보 이용 및 처리방법과 서비스 이용약관에 동의한 것으로 기록됩니다. 자세한 내용은 자세히 보기에서 확인할 수 있습니다.';
 
 export function ClientSignupForm() {
   const [residentNumber, setResidentNumber] = useState('');
@@ -72,15 +73,16 @@ export function ClientSignupForm() {
         <label className="flex items-start gap-3">
           <input type="checkbox" name="privacyConsent" required className="mt-1 size-4 rounded border-slate-300" />
           <span>
-            <span className="block font-medium text-slate-900">개인정보 처리 동의</span>
+            <span className="block font-medium text-slate-900">{PLATFORM_PRIVACY_CONSENT_LABEL} <span className="text-rose-500">*</span></span>
             <span className="block text-xs leading-6 text-slate-500">{privacyConsentNote}</span>
-          </span>
-        </label>
-        <label className="flex items-start gap-3">
-          <input type="checkbox" name="serviceConsent" required className="mt-1 size-4 rounded border-slate-300" />
-          <span>
-            <span className="block font-medium text-slate-900">시스템 이용 동의</span>
-            <span className="block text-xs leading-6 text-slate-500">{serviceConsentNote}</span>
+            <span className="mt-2 flex flex-wrap gap-3 text-xs font-medium">
+              <Link href={'/privacy-policy' as Route} className="text-sky-700 underline underline-offset-4">
+                자세히 보기
+              </Link>
+              <Link href={'/terms' as Route} className="text-slate-600 underline underline-offset-4">
+                이용약관 보기
+              </Link>
+            </span>
           </span>
         </label>
       </div>
