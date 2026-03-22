@@ -167,6 +167,12 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
                           계약서 다운받기
                         </a>
                       ) : null}
+                      <a
+                        href={`/api/contracts/${agreement.id}/receipt`}
+                        className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                      >
+                        체결 기록 다운받기
+                      </a>
                     </div>
                   </div>
 

@@ -214,6 +214,12 @@ export default async function ContractsPage({
                         계약서 다운받기
                       </Link>
                     ) : null}
+                    <Link
+                      href={`/api/contracts/${agreement.id}/receipt` as Route}
+                      className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                    >
+                      체결 기록 다운받기
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -272,6 +278,12 @@ export default async function ContractsPage({
                         계약서 다운받기
                       </Link>
                     ) : null}
+                    <Link
+                      href={`/api/contracts/${agreement.id}/receipt` as Route}
+                      className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                    >
+                      체결 기록 다운받기
+                    </Link>
                     <Link href={`/portal/cases/${agreement.case_id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
                       의뢰인 화면 보기
                     </Link>
