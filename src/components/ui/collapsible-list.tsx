@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import { useState, type ReactNode } from 'react';
 
 type CollapsibleListProps = {
   label: string;
@@ -15,6 +17,8 @@ export function CollapsibleList({
   visibleContent,
   hiddenContent
 }: CollapsibleListProps) {
+  const [open, setOpen] = useState(false);
+
   if (totalCount <= defaultShowCount || !hiddenContent) {
     return <>{visibleContent}</>;
   }
@@ -22,12 +26,17 @@ export function CollapsibleList({
   return (
     <div className="space-y-3">
       {visibleContent}
-      <details className="group rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-        <summary className="cursor-pointer list-none text-sm font-medium text-slate-700">
-          {label} 더 보기 ({totalCount - defaultShowCount}건)
-        </summary>
-        <div className="mt-3 space-y-3">{hiddenContent}</div>
-      </details>
+      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className="w-full text-left text-sm font-medium text-slate-700"
+          aria-expanded={open}
+        >
+          {open ? '접기' : `${label} 더 보기 (${totalCount - defaultShowCount}건)`}
+        </button>
+        {open ? <div className="mt-3 space-y-3">{hiddenContent}</div> : null}
+      </div>
     </div>
   );
 }

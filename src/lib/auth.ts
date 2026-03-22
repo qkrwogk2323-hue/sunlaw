@@ -119,34 +119,36 @@ async function ensureProfileExists(user: {
 async function getProfileWithScopedFields(userId: string): Promise<Profile | null> {
   const supabase = await createSupabaseServerClient();
 
-  const { data: coreProfile, error: coreProfileError } = await supabase
+  // Single combined query — avoids a second round-trip to the profiles table.
+  const { data: fullProfile, error: fullProfileError } = await supabase
     .from('profiles')
-    .select('id, email, full_name, platform_role, default_organization_id, is_active')
+    .select('id, email, full_name, platform_role, default_organization_id, is_active, is_client_account, client_account_status, client_account_status_changed_at, client_account_status_reason, client_last_approved_at, legal_name, legal_name_confirmed_at, must_change_password, must_complete_profile')
     .eq('id', userId)
     .maybeSingle();
 
-  if (coreProfileError) {
-    throw coreProfileError;
+  // If the combined query hits a missing-column error (legacy schema), fall back to core-only.
+  if (fullProfileError && isMissingColumnError(fullProfileError)) {
+    const { data: coreProfile, error: coreProfileError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, platform_role, default_organization_id, is_active')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (coreProfileError) throw coreProfileError;
+    if (!coreProfile || !coreProfile.is_active) return null;
+
+    return {
+      ...(coreProfile as CoreProfile),
+      ...defaultClientAccountProfileFields
+    };
   }
 
-  if (!coreProfile || !coreProfile.is_active) {
-    return null;
-  }
-
-  const { data: clientAccountFields, error: clientAccountError } = await supabase
-    .from('profiles')
-    .select('is_client_account, client_account_status, client_account_status_changed_at, client_account_status_reason, client_last_approved_at, legal_name, legal_name_confirmed_at, must_change_password, must_complete_profile')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (clientAccountError && !isMissingColumnError(clientAccountError)) {
-    throw clientAccountError;
-  }
+  if (fullProfileError) throw fullProfileError;
+  if (!fullProfile || !fullProfile.is_active) return null;
 
   return {
-    ...(coreProfile as CoreProfile),
     ...defaultClientAccountProfileFields,
-    ...((clientAccountError ? null : clientAccountFields) ?? {})
+    ...(fullProfile as unknown as Profile)
   };
 }
 

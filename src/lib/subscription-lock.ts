@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { Route } from 'next';
@@ -33,7 +34,7 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-export async function getOrganizationSubscriptionSnapshot(organizationId: string | null | undefined): Promise<SubscriptionSnapshot | null> {
+export const getOrganizationSubscriptionSnapshot = cache(async (organizationId: string | null | undefined): Promise<SubscriptionSnapshot | null> => {
   if (!organizationId) return null;
 
   const supabase = await createSupabaseServerClient();
@@ -77,7 +78,7 @@ export async function getOrganizationSubscriptionSnapshot(organizationId: string
     exportAllowedWhenCancelled: data.export_allowed_when_cancelled ?? false,
     lockReason: data.lock_reason
   };
-}
+});
 
 export function getSubscriptionLockMessage(snapshot: SubscriptionSnapshot | null) {
   if (!snapshot) return null;
