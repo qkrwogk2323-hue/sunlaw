@@ -63,6 +63,26 @@ export default async function BankruptcyPage({ params }: Props) {
     .select('ruleset_key, display_name, value_amount, value_pct')
     .order('effective_from', { ascending: false });
 
+  // 의뢰인 액션패킷 + 항목 (M08)
+  const { data: packets } = await supabase
+    .from('insolvency_client_action_packets')
+    .select('id, title, status, due_date, completed_count, total_count, created_at, insolvency_client_action_items(id, title, description, responsibility, display_order, client_checked_at, staff_verified_at, is_completed, ai_extracted, client_note)')
+    .eq('case_id', caseId)
+    .order('created_at', { ascending: false });
+
+  // 최근 AI 추출된 보정항목 (correction_recommendation/order 문서에서 추출된 것)
+  const { data: latestJob } = await supabase
+    .from('document_ingestion_jobs')
+    .select('id, correction_items_raw')
+    .eq('case_id', caseId)
+    .in('document_type', ['correction_recommendation', 'correction_order'])
+    .eq('status', 'completed')
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const correctionItemsFromAI = latestJob?.correction_items_raw ?? [];
+
   return (
     <BankruptcyModuleClient
       caseId={caseId}
@@ -74,6 +94,8 @@ export default async function BankruptcyPage({ params }: Props) {
       memberRole={membership.role}
       collaterals={collaterals ?? []}
       rulesetConstants={rulesetConstants ?? []}
+      packets={(packets ?? []).map((p) => ({ ...p, items: p.insolvency_client_action_items ?? [] }))}
+      correctionItemsFromAI={correctionItemsFromAI}
     />
   );
 }

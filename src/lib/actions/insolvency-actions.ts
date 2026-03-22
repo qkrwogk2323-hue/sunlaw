@@ -224,6 +224,104 @@ export async function saveRepaymentPlanFull(input: {
   return { ok: true as const, planId: plan.id, versionNumber };
 }
 
+// ─── 의뢰인 액션패킷 생성 (M08) ───────────────────────────────────────────────
+
+export async function createClientActionPacket(input: {
+  organizationId: string;
+  caseId: string;
+  title: string;
+  dueDate?: string;
+  notes?: string;
+  items: Array<{
+    title: string;
+    description: string | null;
+    responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+    displayOrder: number;
+    aiExtracted?: boolean;
+  }>;
+}) {
+  const { auth } = await requireOrganizationActionAccess(input.organizationId, { permission: 'case_edit' });
+  const supabase = await createSupabaseServerClient();
+
+  const { data: packet, error: packetError } = await supabase
+    .from('insolvency_client_action_packets')
+    .insert({
+      organization_id: input.organizationId,
+      case_id: input.caseId,
+      title: input.title,
+      status: 'pending',
+      due_date: input.dueDate ?? null,
+      notes: input.notes ?? null,
+      total_count: input.items.length,
+      completed_count: 0,
+      created_by: auth.user.id,
+      updated_by: auth.user.id
+    })
+    .select('id')
+    .single();
+
+  if (packetError || !packet) {
+    return { ok: false as const, code: 'DB_ERROR', userMessage: '패킷 생성에 실패했습니다.' };
+  }
+
+  if (input.items.length > 0) {
+    const itemRows = input.items.map((item) => ({
+      packet_id: packet.id,
+      organization_id: input.organizationId,
+      case_id: input.caseId,
+      title: item.title,
+      description: item.description,
+      responsibility: item.responsibility,
+      display_order: item.displayOrder,
+      ai_extracted: item.aiExtracted ?? false,
+      is_completed: false
+    }));
+    const { error: itemsError } = await supabase.from('insolvency_client_action_items').insert(itemRows);
+    if (itemsError) {
+      return { ok: false as const, code: 'DB_ERROR', userMessage: '항목 저장에 실패했습니다.' };
+    }
+  }
+
+  revalidatePath(`/cases/${input.caseId}/bankruptcy`);
+  return { ok: true as const, packetId: packet.id };
+}
+
+// ─── 의뢰인 액션아이템 확인 처리 (클라이언트 포털용) ──────────────────────────
+
+export async function checkClientActionItem(
+  itemId: string,
+  caseId: string,
+  organizationId: string,
+  clientNote?: string
+) {
+  const { auth } = await requireOrganizationActionAccess(organizationId, {});
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('insolvency_client_action_items')
+    .update({
+      client_checked_at: new Date().toISOString(),
+      client_checked_by: auth.user.id,
+      client_note: clientNote ?? null,
+      is_completed: true,
+      completed_at: new Date().toISOString()
+    })
+    .eq('id', itemId)
+    .eq('case_id', caseId);
+
+  if (error) {
+    return { ok: false as const, code: 'DB_ERROR', userMessage: '항목 처리에 실패했습니다.' };
+  }
+
+  // 패킷 completed_count 갱신 (RPC 없으면 무시)
+  try {
+    await supabase.rpc('refresh_action_packet_count', { p_item_id: itemId }).maybeSingle();
+  } catch { /* RPC 없으면 skip */ }
+
+  revalidatePath(`/cases/${caseId}/bankruptcy`);
+  return { ok: true as const };
+}
+
 // ─── 변제계획 생성/저장 (기본 버전) ───────────────────────────────────────────
 
 export async function saveRepaymentPlan(input: {

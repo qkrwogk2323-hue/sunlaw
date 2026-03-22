@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast-provider';
 import { saveCreditorsFromExtraction, softDeleteCreditor } from '@/lib/actions/insolvency-actions';
 import { RepaymentPlanCalculator } from './repayment-plan-calculator';
+import { ClientActionPacketPanel } from './client-action-packet-panel';
 import type { ExtractionResult } from '@/lib/insolvency-types';
 
 type Creditor = {
@@ -58,6 +59,30 @@ type RulesetConstant = {
   value_pct: number | null;
 };
 
+type ActionItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+  display_order: number;
+  client_checked_at: string | null;
+  staff_verified_at: string | null;
+  is_completed: boolean;
+  ai_extracted: boolean;
+  client_note: string | null;
+};
+
+type ActionPacket = {
+  id: string;
+  title: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  due_date: string | null;
+  completed_count: number;
+  total_count: number;
+  created_at: string;
+  items: ActionItem[];
+};
+
 interface Props {
   caseId: string;
   organizationId: string;
@@ -68,6 +93,12 @@ interface Props {
   memberRole: string;
   collaterals: Collateral[];
   rulesetConstants: RulesetConstant[];
+  packets: ActionPacket[];
+  correctionItemsFromAI: Array<{
+    title: string;
+    description: string | null;
+    responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+  }>;
 }
 
 const CLAIM_CLASS_LABEL: Record<string, string> = {
@@ -100,13 +131,13 @@ function ConfidenceBadge({ score }: { score: number | null }) {
   return <span className={`text-xs font-medium ${color}`}>AI {pct}%</span>;
 }
 
-export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, insolvencySubtype, creditors: initialCreditors, latestPlan, memberRole, collaterals, rulesetConstants }: Props) {
+export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, insolvencySubtype, creditors: initialCreditors, latestPlan, memberRole, collaterals, rulesetConstants, packets, correctionItemsFromAI }: Props) {
   const { success, error: toastError, undo } = useToast();
   const [creditors, setCreditors] = useState<Creditor[]>(initialCreditors);
   const [uploading, setUploading] = useState(false);
   const [extractResult, setExtractResult] = useState<ExtractionResult | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'creditors' | 'calculator'>('creditors');
+  const [activeTab, setActiveTab] = useState<'creditors' | 'calculator' | 'packets'>('creditors');
   const [docType, setDocType] = useState<string>('debt_certificate');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -252,7 +283,8 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist">
         {([
           { id: 'creditors', label: '채권자목록' },
-          { id: 'calculator', label: '변제계획 계산기' }
+          { id: 'calculator', label: '변제계획 계산기' },
+          { id: 'packets', label: `액션패킷 ${packets.length > 0 ? `(${packets.length})` : ''}` }
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -500,7 +532,7 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
             </div>
           )}
         </>
-      ) : (
+      ) : activeTab === 'calculator' ? (
         <RepaymentPlanCalculator
           caseId={caseId}
           organizationId={organizationId}
@@ -514,6 +546,13 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
             repayment_months: latestPlan.repayment_months,
             plan_start_date: latestPlan.plan_start_date
           } : null}
+        />
+      ) : (
+        <ClientActionPacketPanel
+          caseId={caseId}
+          organizationId={organizationId}
+          packets={packets}
+          correctionItemsFromAI={correctionItemsFromAI}
         />
       )}
     </div>
