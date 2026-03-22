@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { CalendarCheck2, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, ScrollText } from 'lucide-react';
 import { addScheduleAction, updateScheduleAction, updateScheduleCompletionAction } from '@/lib/actions/case-actions';
+import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { billingStatusLabel, labelFrom } from '@/lib/status-labels';
 import { Badge } from '@/components/ui/badge';
@@ -241,13 +242,15 @@ export function CalendarBoardClient({
   currentUserId,
   canManage,
   snapshot,
-  caseOptions
+  caseOptions,
+  briefing: _briefing
 }: {
   organizationId: string | null;
   currentUserId: string;
   canManage: boolean;
   snapshot: Snapshot;
   caseOptions: CaseOption[];
+  briefing?: ScheduleBriefing;
 }) {
   const [scope, setScope] = useState<'merged' | 'personal' | 'organization'>('merged');
   const [category, setCategory] = useState<'today' | 'week' | 'important' | 'new'>('today');

@@ -132,6 +132,42 @@ async function assertOrgAdmin(organizationId: string) {
   return auth;
 }
 
+async function assertOrganizationLifecycleAccess(organizationId: string) {
+  const auth = await requireAuthenticatedUser();
+  const platformContextId = getPlatformOrganizationContextId(auth);
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
+
+  if (isPlatformAdmin) {
+    return auth;
+  }
+
+  const { auth: orgAuth } = await requireOrganizationActionAccess(organizationId, {
+    requireManager: true,
+    permission: 'organization_settings_manage',
+    errorMessage: '조직 관리자만 조직 비활성화 또는 삭제를 실행할 수 있습니다.'
+  });
+  return orgAuth;
+}
+
+async function insertOrganizationLifecycleAuditLog(params: {
+  actorId: string;
+  organizationId: string;
+  action: 'organization_deactivated' | 'organization_deleted';
+  confirmText: string;
+}) {
+  const admin = createSupabaseAdminClient();
+  await admin.from('audit_logs').insert({
+    actor_id: params.actorId,
+    action: params.action,
+    resource_type: 'organization',
+    resource_id: params.organizationId,
+    organization_id: params.organizationId,
+    meta: {
+      confirm_text: params.confirmText
+    }
+  });
+}
+
 // 플랫폼 전역 설정 값을 생성하거나 갱신한다.
 export async function upsertPlatformSettingAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
@@ -608,11 +644,7 @@ export async function deactivateOrganizationAction(formData: FormData) {
     throw new Error('확인 문구로 "비활성화"를 정확히 입력해 주세요.');
   }
 
-  await requireOrganizationActionAccess(parsed.organizationId, {
-    requireManager: true,
-    permission: 'organization_settings_manage',
-    errorMessage: '조직 관리자만 조직 비활성화를 실행할 수 있습니다.'
-  });
+  const auth = await assertOrganizationLifecycleAccess(parsed.organizationId);
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
@@ -626,9 +658,18 @@ export async function deactivateOrganizationAction(formData: FormData) {
     .neq('lifecycle_status', 'soft_deleted');
   if (error) throw error;
 
+  await insertOrganizationLifecycleAuditLog({
+    actorId: auth.user.id,
+    organizationId: parsed.organizationId,
+    action: 'organization_deactivated',
+    confirmText: parsed.confirmText
+  });
+
   revalidatePath('/settings/organization');
   revalidatePath('/dashboard');
   revalidatePath('/organizations');
+  revalidatePath('/admin/organizations');
+  revalidatePath('/admin/audit');
 }
 
 // 조직을 영구 삭제 상태로 전환한다.
@@ -641,11 +682,7 @@ export async function deleteOrganizationAction(formData: FormData) {
     throw new Error('확인 문구로 "삭제"를 정확히 입력해 주세요.');
   }
 
-  await requireOrganizationActionAccess(parsed.organizationId, {
-    requireManager: true,
-    permission: 'organization_settings_manage',
-    errorMessage: '조직 관리자만 조직 삭제를 실행할 수 있습니다.'
-  });
+  const auth = await assertOrganizationLifecycleAccess(parsed.organizationId);
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
@@ -690,8 +727,17 @@ export async function deleteOrganizationAction(formData: FormData) {
     if (profileError) throw profileError;
   }
 
+  await insertOrganizationLifecycleAuditLog({
+    actorId: auth.user.id,
+    organizationId: parsed.organizationId,
+    action: 'organization_deleted',
+    confirmText: parsed.confirmText
+  });
+
   revalidatePath('/settings/organization');
   revalidatePath('/dashboard');
   revalidatePath('/organizations');
+  revalidatePath('/admin/organizations');
+  revalidatePath('/admin/audit');
   redirect('/organizations');
 }

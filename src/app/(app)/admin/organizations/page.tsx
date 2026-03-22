@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OrganizationCreateForm } from '@/components/forms/organization-create-form';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
@@ -5,6 +7,23 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { listAccessibleOrganizations } from '@/lib/queries/organizations';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import { Badge } from '@/components/ui/badge';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
+import { deactivateOrganizationAction, deleteOrganizationAction } from '@/lib/actions/settings-actions';
+
+function getLifecycleTone(status: string | null | undefined) {
+  if (status === 'active') return 'green';
+  if (status === 'archived') return 'amber';
+  return 'red';
+}
+
+function getLifecycleLabel(status: string | null | undefined) {
+  if (status === 'active') return '운영 중';
+  if (status === 'archived') return '비활성화';
+  if (status === 'soft_deleted') return '삭제됨';
+  return status ?? '-';
+}
 
 export default async function AdminOrganizationsPage({
   searchParams
@@ -55,14 +74,118 @@ export default async function AdminOrganizationsPage({
                 totalCount={organizations.length}
                 visibleContent={organizations.slice(0, 7).map((organization: any) => (
                   <div key={organization.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
-                    <p className="font-medium text-slate-900">{organization.name}</p>
-                    <p className="mt-1">{organization.slug ?? '-'}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">{organization.name}</p>
+                        <p className="mt-1">{organization.slug ?? '-'}</p>
+                      </div>
+                      <Badge tone={getLifecycleTone(organization.lifecycle_status)}>{getLifecycleLabel(organization.lifecycle_status)}</Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Link href={`/admin/audit?tab=general&table=organizations&resource=${organization.id}` as Route} className="text-xs font-medium text-sky-700 underline underline-offset-4">
+                        감사로그 보기
+                      </Link>
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <ClientActionForm
+                        action={deactivateOrganizationAction}
+                        successTitle="조직이 비활성화되었습니다."
+                        successMessage="플랫폼 운영 목록에서도 즉시 상태가 갱신됩니다."
+                        errorTitle="조직 비활성화에 실패했습니다."
+                        errorCause="확인 문구가 틀렸거나 권한이 없습니다."
+                        errorResolution="확인 문구 '비활성화'를 정확히 입력해 주세요."
+                        className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3"
+                      >
+                        <input type="hidden" name="organizationId" value={organization.id} />
+                        <p className="text-xs text-slate-700">확인 문구 입력: 비활성화</p>
+                        <input
+                          name="confirmText"
+                          required
+                          aria-required="true"
+                          className="h-10 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm"
+                          placeholder="비활성화"
+                        />
+                        <SubmitButton pendingLabel="비활성화 중..." variant="secondary">조직 비활성화</SubmitButton>
+                      </ClientActionForm>
+                      <ClientActionForm
+                        action={deleteOrganizationAction}
+                        successTitle="조직 삭제 처리가 완료되었습니다."
+                        successMessage="조직 상태와 기본 연결 해제가 반영됩니다."
+                        errorTitle="조직 삭제에 실패했습니다."
+                        errorCause="확인 문구가 틀렸거나 권한이 없습니다."
+                        errorResolution="확인 문구 '삭제'를 정확히 입력해 주세요."
+                        className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3"
+                      >
+                        <input type="hidden" name="organizationId" value={organization.id} />
+                        <p className="text-xs text-slate-700">확인 문구 입력: 삭제</p>
+                        <input
+                          name="confirmText"
+                          required
+                          aria-required="true"
+                          className="h-10 w-full rounded-lg border border-red-200 bg-white px-3 text-sm"
+                          placeholder="삭제"
+                        />
+                        <SubmitButton pendingLabel="삭제 처리 중..." variant="destructive">조직 삭제</SubmitButton>
+                      </ClientActionForm>
+                    </div>
                   </div>
                 ))}
                 hiddenContent={organizations.slice(7).map((organization: any) => (
                   <div key={organization.id} className="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
-                    <p className="font-medium text-slate-900">{organization.name}</p>
-                    <p className="mt-1">{organization.slug ?? '-'}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">{organization.name}</p>
+                        <p className="mt-1">{organization.slug ?? '-'}</p>
+                      </div>
+                      <Badge tone={getLifecycleTone(organization.lifecycle_status)}>{getLifecycleLabel(organization.lifecycle_status)}</Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Link href={`/admin/audit?tab=general&table=organizations&resource=${organization.id}` as Route} className="text-xs font-medium text-sky-700 underline underline-offset-4">
+                        감사로그 보기
+                      </Link>
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <ClientActionForm
+                        action={deactivateOrganizationAction}
+                        successTitle="조직이 비활성화되었습니다."
+                        successMessage="플랫폼 운영 목록에서도 즉시 상태가 갱신됩니다."
+                        errorTitle="조직 비활성화에 실패했습니다."
+                        errorCause="확인 문구가 틀렸거나 권한이 없습니다."
+                        errorResolution="확인 문구 '비활성화'를 정확히 입력해 주세요."
+                        className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3"
+                      >
+                        <input type="hidden" name="organizationId" value={organization.id} />
+                        <p className="text-xs text-slate-700">확인 문구 입력: 비활성화</p>
+                        <input
+                          name="confirmText"
+                          required
+                          aria-required="true"
+                          className="h-10 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm"
+                          placeholder="비활성화"
+                        />
+                        <SubmitButton pendingLabel="비활성화 중..." variant="secondary">조직 비활성화</SubmitButton>
+                      </ClientActionForm>
+                      <ClientActionForm
+                        action={deleteOrganizationAction}
+                        successTitle="조직 삭제 처리가 완료되었습니다."
+                        successMessage="조직 상태와 기본 연결 해제가 반영됩니다."
+                        errorTitle="조직 삭제에 실패했습니다."
+                        errorCause="확인 문구가 틀렸거나 권한이 없습니다."
+                        errorResolution="확인 문구 '삭제'를 정확히 입력해 주세요."
+                        className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3"
+                      >
+                        <input type="hidden" name="organizationId" value={organization.id} />
+                        <p className="text-xs text-slate-700">확인 문구 입력: 삭제</p>
+                        <input
+                          name="confirmText"
+                          required
+                          aria-required="true"
+                          className="h-10 w-full rounded-lg border border-red-200 bg-white px-3 text-sm"
+                          placeholder="삭제"
+                        />
+                        <SubmitButton pendingLabel="삭제 처리 중..." variant="destructive">조직 삭제</SubmitButton>
+                      </ClientActionForm>
+                    </div>
                   </div>
                 ))}
               />

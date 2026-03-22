@@ -5,13 +5,9 @@ import { listCalendarEntries } from '@/lib/queries/calendar';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => ({})) as {
-      organizationId?: string;
-      todayIso?: string;
-      weekEndIso?: string;
-    };
-
+    const body = await request.json().catch(() => ({})) as { organizationId?: string };
     const { organizationId } = body;
+
     if (!organizationId) {
       return NextResponse.json({ error: '조직 정보가 필요합니다.' }, { status: 400 });
     }
@@ -27,19 +23,18 @@ export async function POST(request: Request) {
     }
 
     const schedules = await listCalendarEntries(organizationId);
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const weekEnd = new Date(today);
-    const dayOfWeek = today.getDay();
-    const daysToSunday = dayOfWeek === 0 ? 6 : 7 - dayOfWeek;
+    const daysToSunday = today.getDay() === 0 ? 6 : 7 - today.getDay();
     weekEnd.setDate(today.getDate() + daysToSunday);
     weekEnd.setHours(23, 59, 59, 999);
 
     const briefing = buildScheduleBriefing(
       schedules,
       today.toISOString(),
-      weekEnd.toISOString(),
+      weekEnd.toISOString()
     );
 
     return NextResponse.json({ briefing });
