@@ -1953,9 +1953,12 @@ export function DashboardHubClient({
         <Card className="border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]">
           <CardHeader className="border-violet-200/70">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle>AI 스케줄도우미</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">업무 우선순위와 다음 처리 순서를 정리합니다.</p>
+              <div className="flex items-center gap-2">
+                <Bot className="size-5 text-violet-600" />
+                <div>
+                  <CardTitle>AI 스케줄도우미</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">업무 우선순위와 다음 처리 순서를 정리합니다.</p>
+                </div>
               </div>
               <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
             </div>
