@@ -131,3 +131,12 @@ export function normalizeGuardFeedback(
 export function formatGuardFeedbackMessage(feedback: GuardFeedback) {
   return `원인: ${feedback.cause} · 해결 방법: ${feedback.resolution}`;
 }
+
+export function fallbackUnexpectedFeedback(): GuardFeedback {
+  return createConditionFailedFeedback({
+    code: 'UNEXPECTED_EXCEPTION',
+    blocked: '설명되지 않은 예외가 발생했습니다.',
+    cause: '현재 오류는 분류된 업무 오류로 설명되지 않았습니다. 버그일 가능성이 높습니다.',
+    resolution: '같은 작업을 다시 시도해도 반복되면 관리자에게 화면과 입력값을 함께 전달해 주세요.'
+  });
+}

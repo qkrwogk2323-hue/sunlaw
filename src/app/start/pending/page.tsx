@@ -40,10 +40,23 @@ export default async function ClientPendingPage({
   }
 
   const resolved = searchParams ? await searchParams : undefined;
-  const [requests, serviceRequests] = await Promise.all([
-    listMyClientAccessRequests(),
-    listMyClientServiceRequests()
-  ]);
+  let requests: any[] = [];
+  let serviceRequests: any[] = [];
+  let pendingDataUnavailable = false;
+
+  try {
+    [requests, serviceRequests] = await Promise.all([
+      listMyClientAccessRequests(),
+      listMyClientServiceRequests()
+    ]);
+  } catch (pendingError) {
+    pendingDataUnavailable = true;
+    console.error('[start/pending] failed to load pending data', {
+      userId: auth.user.id,
+      clientStatus: auth.profile.client_account_status,
+      error: pendingError
+    });
+  }
   const latestRequest = requests[0] ?? null;
   const status = auth.profile.client_account_status;
 
@@ -87,6 +100,12 @@ export default async function ClientPendingPage({
         {resolved?.help ? (
           <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
             고객센터 문의가 접수되었습니다. 처리 상태는 알림 또는 이 화면의 최근 문의 내역에서 확인할 수 있습니다.
+          </div>
+        ) : null}
+
+        {pendingDataUnavailable ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            대기 상태 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
           </div>
         ) : null}
 

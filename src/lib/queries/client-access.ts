@@ -1,3 +1,4 @@
+import { getCurrentAuth } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -24,17 +25,41 @@ export async function searchPublicOrganizations(query?: string) {
     .order('name', { ascending: true })
     .limit(24);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[searchPublicOrganizations] query failed', {
+      query: normalizedQuery,
+      message: error.message,
+      code: error.code ?? null,
+      details: error.details ?? null,
+      hint: error.hint ?? null
+    });
+    return [];
+  }
 
   return data ?? [];
 }
 
 export async function listMyClientAccessRequests() {
+  const auth = await getCurrentAuth();
+  if (!auth) return [];
+
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('client_access_requests')
     .select('id, target_organization_id, target_organization_key, requester_profile_id, requester_name, requester_email, status, request_note, review_note, reviewed_at, created_at, organization:organizations(id, name, slug)')
+    .eq('requester_profile_id', auth.user.id)
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[listMyClientAccessRequests] query failed', {
+      userId: auth.user.id,
+      message: error.message,
+      code: error.code ?? null,
+      details: error.details ?? null,
+      hint: error.hint ?? null
+    });
+    return [];
+  }
 
   return data ?? [];
 }

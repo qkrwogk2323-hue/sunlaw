@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { fallbackUnexpectedFeedback, normalizeGuardFeedback } from '@/lib/guard-feedback';
 
 export default function GlobalError({
   error,
@@ -14,15 +15,20 @@ export default function GlobalError({
     Sentry.captureException(error);
   }, [error]);
 
+  const feedback = normalizeGuardFeedback(error, fallbackUnexpectedFeedback());
+
   return (
     <html lang="ko">
       <body className="bg-slate-950 text-white">
         <main className="flex min-h-screen items-center justify-center px-6 py-16">
           <div className="w-full max-w-xl rounded-[1.8rem] border border-white/12 bg-white/8 p-8 shadow-[0_24px_60px_rgba(15,23,42,0.24)] backdrop-blur-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200/78">전역 오류</p>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">페이지를 다시 불러오지 못했습니다.</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200/78">{feedback.code} 오류</p>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">{feedback.blocked}</h1>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              일시적인 문제가 발생했습니다. 잠시 후 다시 시도해 주세요. 문제가 반복되면 관리자에게 문의해 주세요.
+              <span className="font-medium text-white">원인:</span> {feedback.cause}
+            </p>
+            <p className="mt-2 text-sm leading-7 text-slate-300">
+              <span className="font-medium text-white">해결 방법:</span> {feedback.resolution}
             </p>
             <button
               type="button"

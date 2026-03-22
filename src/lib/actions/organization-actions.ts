@@ -23,7 +23,13 @@ import {
   normalizeResidentRegistrationNumber
 } from '@/lib/format';
 import { parseCsvFile, pickCsvValue } from '@/lib/csv';
-import { normalizeGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
+import {
+  createConditionFailedFeedback,
+  createValidationFailedFeedback,
+  normalizeGuardFeedback,
+  parseGuardFeedback,
+  throwGuardFeedback
+} from '@/lib/guard-feedback';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { encryptString } from '@/lib/pii';
@@ -68,7 +74,12 @@ function resolveRequesterEmail(auth: { user: { email?: string | null }; profile:
   const email = `${auth.user.email ?? auth.profile.email ?? ''}`.trim().toLowerCase();
 
   if (!email) {
-    throw new Error('로그인 계정에 이메일 정보가 없어 요청을 제출할 수 없습니다. 카카오 계정 이메일 제공에 동의한 뒤 다시 시도해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'REQUESTER_EMAIL_MISSING',
+      blocked: '로그인 계정 이메일 확인이 필요합니다.',
+      cause: '로그인 계정에 이메일 정보가 없어 요청을 제출할 수 없습니다. 카카오 계정 이메일 제공에 동의한 뒤 다시 시도해 주세요.',
+      resolution: '이메일이 포함된 계정으로 다시 로그인하거나 계정 정보를 확인한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   return email;
@@ -2896,7 +2907,12 @@ export async function submitClientAccessRequestAction(formData: FormData) {
   const adminClient = createSupabaseAdminClient();
   try {
     if (!auth.profile.is_client_account) {
-      throw new Error('의뢰인 가입 정보를 먼저 등록한 뒤 조직 연결 요청을 보낼 수 있습니다.');
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'CLIENT_PROFILE_REQUIRED',
+        blocked: '의뢰인 가입 정보가 먼저 필요합니다.',
+        cause: '조직 연결 요청은 의뢰인 가입을 완료한 계정만 보낼 수 있습니다.',
+        resolution: '의뢰인 가입을 먼저 완료한 뒤 다시 요청해 주세요.'
+      }));
     }
 
     const parsed = clientAccessRequestSchema.parse({
@@ -2915,11 +2931,21 @@ export async function submitClientAccessRequestAction(formData: FormData) {
       .maybeSingle();
 
     if (organizationError || !organization) {
-      throw organizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'TARGET_ORGANIZATION_NOT_FOUND',
+        blocked: '연결할 조직을 찾을 수 없습니다.',
+        cause: organizationError?.message ?? '입력한 조직이 삭제되었거나 조회할 수 없는 상태입니다.',
+        resolution: '조직명 또는 조직 키를 다시 확인한 뒤 다시 시도해 주세요.'
+      }));
     }
 
     if ((organization.slug ?? '').toLowerCase() !== parsed.organizationKey.toLowerCase()) {
-      throw new Error('조직 키가 일치하지 않습니다.');
+      throwGuardFeedback(createValidationFailedFeedback({
+        code: 'ORGANIZATION_KEY_MISMATCH',
+        blocked: '조직 키가 일치하지 않습니다.',
+        cause: `입력한 조직 키와 실제 조직 키(${organization.slug ?? '-'})가 다릅니다.`,
+        resolution: '조직 담당자에게 받은 조직 키를 다시 확인한 뒤 요청해 주세요.'
+      }));
     }
 
     const { data: existingPending } = await adminClient
@@ -2931,7 +2957,12 @@ export async function submitClientAccessRequestAction(formData: FormData) {
       .maybeSingle();
 
     if (existingPending?.id) {
-      throw new Error('이미 처리 대기 중인 연결 요청이 있습니다.');
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'CLIENT_ACCESS_ALREADY_PENDING',
+        blocked: '이미 검토 중인 조직 연결 요청이 있습니다.',
+        cause: '같은 조직에 대한 연결 요청이 아직 처리 대기 상태입니다.',
+        resolution: '기존 요청의 승인 또는 반려 결과를 먼저 확인해 주세요.'
+      }));
     }
 
     const { data: requestRow, error } = await adminClient

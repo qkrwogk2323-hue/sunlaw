@@ -31,10 +31,24 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
   const query = resolved?.q?.trim() ?? '';
   const error = resolved?.error;
   const auth = await getCurrentAuth();
-  const [visibleOrganizations, myRequests] = await Promise.all([
-    searchPublicOrganizations(query),
-    auth ? listMyClientAccessRequests() : Promise.resolve([])
-  ]);
+  let visibleOrganizations: any[] = [];
+  let myRequests: any[] = [];
+  let requestListUnavailable = false;
+
+  try {
+    [visibleOrganizations, myRequests] = await Promise.all([
+      searchPublicOrganizations(query),
+      auth ? listMyClientAccessRequests() : Promise.resolve([])
+    ]);
+  } catch (requestError) {
+    requestListUnavailable = true;
+    console.error('[client-access/page] failed to load request data', {
+      query,
+      userId: auth?.user.id ?? null,
+      isClientAccount: auth?.profile.is_client_account ?? false,
+      error: requestError
+    });
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-16">
@@ -55,6 +69,14 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
         {error ? (
           <Card className="rounded-[1.8rem] border-rose-200 bg-rose-50">
             <CardContent className="px-6 py-4 text-sm leading-7 text-rose-700">{error}</CardContent>
+          </Card>
+        ) : null}
+
+        {requestListUnavailable ? (
+          <Card className="rounded-[1.8rem] border-amber-200 bg-amber-50">
+            <CardContent className="px-6 py-4 text-sm leading-7 text-amber-800">
+              조직 연결 요청 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+            </CardContent>
           </Card>
         ) : null}
 
