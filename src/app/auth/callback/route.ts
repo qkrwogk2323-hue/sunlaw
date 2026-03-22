@@ -48,6 +48,17 @@ function toCallbackErrorMessage(error: unknown) {
   return '로그인 연결을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
+function classifyCallbackError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return 'unknown';
+  }
+
+  const message = error.message.toLowerCase();
+  if (message.includes('pkce') || message.includes('code verifier')) return 'pkce';
+  if (message.includes('invalid flow state') || message.includes('bad_oauth_state') || message.includes('state')) return 'state';
+  return 'generic';
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -58,12 +69,33 @@ export async function GET(request: NextRequest) {
       const supabase = await createSupabaseServerClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
-        return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent(toCallbackErrorMessage(error))}`, url.origin));
+        const reason = classifyCallbackError(error);
+        console.error('auth callback exchange failure', {
+          reason,
+          message: error.message,
+          host: request.nextUrl.host,
+          hasCode: Boolean(code),
+          hasPostAuthCookie: Boolean(request.cookies.get(POST_AUTH_NEXT_COOKIE)),
+          authCookieNames: request.cookies.getAll()
+            .map((cookie) => cookie.name)
+            .filter((name) => name.includes('sb-') || name === POST_AUTH_NEXT_COOKIE)
+        });
+        return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent(toCallbackErrorMessage(error))}&reason=${reason}`, url.origin));
       }
     }
   } catch (error) {
-    console.error('auth callback failed', error);
-    return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent(toCallbackErrorMessage(error))}`, url.origin));
+    const reason = classifyCallbackError(error);
+    console.error('auth callback failed', {
+      reason,
+      message: error instanceof Error ? error.message : String(error),
+      host: request.nextUrl.host,
+      hasCode: Boolean(code),
+      hasPostAuthCookie: Boolean(request.cookies.get(POST_AUTH_NEXT_COOKIE)),
+      authCookieNames: request.cookies.getAll()
+        .map((cookie) => cookie.name)
+        .filter((name) => name.includes('sb-') || name === POST_AUTH_NEXT_COOKIE)
+    });
+    return redirectWithClearedNext(request, new URL(`/login?error=${encodeURIComponent(toCallbackErrorMessage(error))}&reason=${reason}`, url.origin));
   }
 
   return redirectWithClearedNext(request, new URL(next, url.origin));

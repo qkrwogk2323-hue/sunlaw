@@ -27,20 +27,15 @@ export function resolveCanonicalAuthOrigin() {
 }
 
 export function resolveSupabaseCookieDomain(hostname?: string | null) {
-  const candidate =
-    hostname?.trim() ||
-    (resolveCanonicalAuthOrigin() ? new URL(resolveCanonicalAuthOrigin()!).hostname : '');
-
-  if (!candidate) {
-    return undefined;
-  }
+  const candidate = hostname?.trim()
+    || (resolveCanonicalAuthOrigin() ? new URL(resolveCanonicalAuthOrigin()!).hostname : '');
+  if (!candidate) return undefined;
 
   const normalized = normalizeHostname(candidate);
-  if (!normalized || isLocalHost(normalized)) {
-    return undefined;
-  }
+  if (!normalized || isLocalHost(normalized)) return undefined;
 
-  return `.${normalized}`;
+  // Keep auth cookies host-only to avoid PKCE verifier loss on cross-host transitions.
+  return undefined;
 }
 
 export function getSupabaseCookieOptions(hostname?: string | null) {
