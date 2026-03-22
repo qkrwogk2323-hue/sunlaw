@@ -10,7 +10,6 @@ import { actorCategoryLabel, membershipRoleLabel } from '@/lib/membership-labels
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { MembershipPermissionForm } from '@/components/forms/membership-permission-form';
 import { MemberAdminSummaryForm } from '@/components/forms/member-admin-summary-form';
-import { MemberSelfProfileForm } from '@/components/forms/member-self-profile-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { StaffBulkInviteForm } from '@/components/forms/staff-bulk-invite-form';
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
@@ -20,7 +19,6 @@ import { revokeUserSessionsAction } from '@/lib/actions/auth-actions';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 function toneByStatus(value: string) {
@@ -41,12 +39,7 @@ export default async function TeamSettingsPage({
 
   const workspace = await getOrganizationWorkspace(organizationId);
   if (!workspace) notFound();
-  const [supabase, cookieStore] = await Promise.all([createSupabaseServerClient(), cookies()]);
-  const { data: privateProfile } = await supabase
-    .from('member_private_profiles')
-    .select('resident_number_masked, address_line1_ciphertext')
-    .eq('profile_id', auth.user.id)
-    .maybeSingle();
+  const cookieStore = await cookies();
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
@@ -140,9 +133,12 @@ export default async function TeamSettingsPage({
                 <p className="font-medium text-slate-900">{auth.profile.full_name}</p>
                 <p className="text-sm text-slate-500">{auth.profile.email}</p>
               </div>
-              <a href="#self-edit" className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+              <Link
+                href={'/settings/team/self' as Route}
+                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
                 수정하기
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -378,23 +374,6 @@ export default async function TeamSettingsPage({
           )) : <p className="text-sm text-slate-500">구성원 데이터가 없습니다.</p>}
         </CardContent>
       </Card>
-
-      {currentMembership ? (
-        <Card id="self-edit">
-          <CardHeader><CardTitle>본인 수정 영역</CardTitle></CardHeader>
-          <CardContent>
-            <MemberSelfProfileForm
-              organizationId={organizationId}
-              fullName={auth.profile.full_name}
-              phone={(auth.profile as any).phone_e164 ?? ''}
-              displayTitle={currentMembership.title ?? ''}
-              residentNumberMasked={(privateProfile as any)?.resident_number_masked ?? null}
-              hasSavedAddress={Boolean((privateProfile as any)?.address_line1_ciphertext)}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-
     </div>
   );
 }
