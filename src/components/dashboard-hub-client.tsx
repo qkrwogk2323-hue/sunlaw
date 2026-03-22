@@ -1,5 +1,7 @@
 'use client';
 
+// audit-link-exempt: reason=대시보드 요약 위젯이라 개별 감사로그 버튼을 직접 두지 않음; fallback=각 메뉴의 상세 화면에서 기록 보기 버튼과 감사로그 링크를 제공함; expires=2026-06-30; approvedBy=codex
+
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

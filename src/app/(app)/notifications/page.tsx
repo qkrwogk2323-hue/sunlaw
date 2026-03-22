@@ -77,7 +77,6 @@ function actionCopy(item: NotificationQueueItem) {
 function queueMeaningCards(items: NotificationQueueItem[]) {
   const urgent = items.filter((item) => item.status === 'active' && item.priority === 'urgent').length;
   const pending = items.filter((item) => item.status === 'active' && item.priority !== 'urgent').length;
-  const reference = items.filter((item) => item.status === 'read' || item.status === 'resolved' || item.status === 'archived').length;
 
   return [
     {
@@ -91,12 +90,6 @@ function queueMeaningCards(items: NotificationQueueItem[]) {
       value: pending,
       tone: 'blue' as const,
       description: '읽고 판단해야 하는 일반 업무 알림입니다.'
-    },
-    {
-      label: '완료 / 참고',
-      value: reference,
-      tone: 'slate' as const,
-      description: '이미 확인했거나 이력으로 남겨둘 알림입니다.'
     }
   ];
 }
@@ -276,16 +269,14 @@ export default async function NotificationsPage({
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
             <p className="mt-2 text-sm text-slate-500">알림을 보는 곳이 아니라 사건/일정/의뢰인/협업 업무를 처리하는 큐입니다.</p>
             <p className="mt-1 text-xs text-amber-700">카카오톡 가입자는 중요 알림을 카카오톡으로 받을 수 있습니다. 아래 수신 설정에서 알림 유형을 선택하세요.</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-sm">
-              <Link href={'/admin/audit?tab=general&table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-                알림 생성·상태 변경 기록 보기
-              </Link>
-              <Link href={'/admin/audit?tab=delete&table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-                알림 보관·삭제 기록 보기
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-end">
+              <Link href={'/admin/audit?table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                알림 기록 보기
               </Link>
             </div>
-          </div>
-          <div className="grid min-w-[248px] grid-cols-2 gap-3">
+            <div className="grid min-w-[248px] grid-cols-2 gap-3">
             <div className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
@@ -295,17 +286,16 @@ export default async function NotificationsPage({
               <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
             </Link>
           </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2">
         {meaningCards.map((card) => {
           const href =
             card.label === '즉시 필요'
               ? buildFilterHref({ nextSection: 'immediate', nextPriority: 'urgent', nextState: 'active' })
-              : card.label === '검토 필요'
-                ? buildFilterHref({ nextSection: 'confirm', nextState: 'active' })
-                : buildFilterHref({ nextSection: 'reference', nextState: 'all', nextPriority: 'all' });
+              : buildFilterHref({ nextSection: 'confirm', nextState: 'active' });
 
           return (
             <Link key={card.label} href={href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
@@ -354,7 +344,6 @@ export default async function NotificationsPage({
               <option value="all">전체</option>
               <option value="immediate">즉시 처리</option>
               <option value="confirm">확인 필요</option>
-              <option value="reference">참고/완료</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -418,18 +407,10 @@ export default async function NotificationsPage({
 
       {queueView ? (
         <div className="space-y-4">
-          <CollapsibleList
-            label="알림 큐 섹션"
-            totalCount={3}
-            defaultShowCount={2}
-            visibleContent={
-              <div className="space-y-4">
-                <QueueSection section="immediate" groups={queueView.sections.immediate} />
-                <QueueSection section="confirm" groups={queueView.sections.confirm} />
-              </div>
-            }
-            hiddenContent={<QueueSection section="reference" groups={queueView.sections.reference} />}
-          />
+          <div className="space-y-4">
+            <QueueSection section="immediate" groups={queueView.sections.immediate} />
+            <QueueSection section="confirm" groups={queueView.sections.confirm} />
+          </div>
         </div>
       ) : null}
 

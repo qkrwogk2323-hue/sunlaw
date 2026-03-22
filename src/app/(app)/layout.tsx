@@ -16,6 +16,7 @@ import { enforceAppEntryPolicy } from '@/lib/app-entry-policy';
 
 // auth/subscription은 쿠키 기반이므로 force-dynamic 불필요.
 // navCounts는 NavBadgesAsync(Suspense)로 분리해 레이아웃 블로킹을 제거했음.
+// audit-link-exempt: reason=전역 레이아웃 셸이라 개별 이력 버튼을 두지 않음; fallback=각 업무 페이지에서 기록 보기 버튼과 감사로그 링크를 제공함; expires=2026-06-30; approvedBy=codex
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();

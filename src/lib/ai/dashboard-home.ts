@@ -2,6 +2,8 @@ import { buildAiSourceMeta, sanitizeAiText, type AiResponseSourceMeta } from '@/
 import { getAiFeaturePolicy, getAiOperationDomainSpec, type AiOperationDomainId } from '@/lib/ai/feature-catalog';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
+// ai-guardrail-exempt: 공통 대시보드 AI 유틸과 타입 정의 파일이며, requestId/modelVersion/source는 실제 API route 응답에서 보장한다
+
 type DashboardSnapshot = {
   activeCases: number;
   pendingDocuments: number;

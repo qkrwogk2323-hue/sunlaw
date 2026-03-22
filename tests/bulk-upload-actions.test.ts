@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   requireOrganizationActionAccess: vi.fn(),
-  createSupabaseServerClient: vi.fn(),
-  buildTaskPlan: vi.fn()
+  createSupabaseServerClient: vi.fn()
 }));
 
 vi.mock('next/cache', () => ({
@@ -19,10 +18,6 @@ vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: mocks.createSupabaseServerClient
 }));
 
-vi.mock('@/lib/ai/task-planner', () => ({
-  buildTaskPlan: mocks.buildTaskPlan
-}));
-
 const authContext = {
   user: { id: '11111111-1111-4111-8111-111111111111' },
   profile: { id: '11111111-1111-4111-8111-111111111111', full_name: '조직 관리자' }
@@ -33,7 +28,6 @@ describe('bulk-upload-actions', () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.requireOrganizationActionAccess.mockResolvedValue({ auth: authContext });
-    mocks.buildTaskPlan.mockResolvedValue({ summary: '의뢰인 특이사항에 기록하세요.' });
   });
 
   it('권한 없는 사용자는 의뢰인 일괄 등록에서 차단됨 (error path)', async () => {
@@ -79,7 +73,7 @@ describe('bulk-upload-actions', () => {
       errorMessage: '의뢰인 일괄 등록 권한이 없습니다.'
     });
     expect(caseClientsInsert).toHaveBeenCalledTimes(1);
-    expect(mocks.buildTaskPlan).toHaveBeenCalledTimes(1);
+    expect(result.ok && result.aiSuggestions[0]?.suggestion).toContain('연락 이력 탭');
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/clients');
   });
 
