@@ -91,6 +91,12 @@ function shouldBypassMaintenance(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.hostname === 'veinspiral.com') {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.hostname = 'www.veinspiral.com';
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
 
