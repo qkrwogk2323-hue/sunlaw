@@ -406,7 +406,6 @@ export function ModeAwareNav({
   actionRequiredCount?: number;
   unreadConversationCount?: number;
 }) {
-  const companyManagementStateKey = `vs-nav:collapsed:${profile.id}:company-management-menu`;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [navCounts, setNavCounts] = useState<NavUnreadCounts>({
@@ -417,7 +416,7 @@ export function ModeAwareNav({
   const [pulseNotification, setPulseNotification] = useState(false);
   const [pulseConversation, setPulseConversation] = useState(false);
   const [orgPickerOpen, setOrgPickerOpen] = useState(false);
-  const [collapsedSectionIds, setCollapsedSectionIds] = useState<string[]>([]);
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<string[]>(['company-management-menu']);
   const { success } = useToast();
 
   const isModeKey = (value: string | null | undefined): value is ModeKey => (
@@ -563,38 +562,6 @@ export function ModeAwareNav({
     const activeMode = mode;
     document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=${activeMode}; path=/; max-age=31536000; samesite=lax`;
   }, [mode, pathname]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = window.localStorage.getItem(companyManagementStateKey);
-      if (stored === 'collapsed') {
-        setCollapsedSectionIds((current) => (
-          current.includes('company-management-menu')
-            ? current
-            : [...current, 'company-management-menu']
-        ));
-        return;
-      }
-      if (stored === 'expanded') {
-        setCollapsedSectionIds((current) => current.filter((item) => item !== 'company-management-menu'));
-      }
-    } catch {
-      // ignore storage read errors
-    }
-  }, [companyManagementStateKey]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(
-        companyManagementStateKey,
-        collapsedSectionIds.includes('company-management-menu') ? 'collapsed' : 'expanded'
-      );
-    } catch {
-      // ignore storage write errors
-    }
-  }, [collapsedSectionIds, companyManagementStateKey]);
 
   const toggleSection = (sectionId: string) => {
     setCollapsedSectionIds((current) => (

@@ -41,8 +41,8 @@ function notificationOpenHref(notificationId: string, href: string, organization
 }
 
 function sectionMeta(section: QueueSectionKey) {
-  if (section === 'immediate') return { label: '즉시 필요', tone: 'red' as const, openByDefault: true, description: '지금 바로 처리해야 하는 긴급 알림 목록입니다.' };
-  if (section === 'confirm') return { label: '검토 필요', tone: 'blue' as const, openByDefault: true, description: '읽고 판단하거나 승인 여부를 정해야 하는 알림 목록입니다.' };
+  if (section === 'immediate') return { label: '즉시 필요', tone: 'red' as const, openByDefault: false, description: '지금 바로 처리해야 하는 긴급 알림 목록입니다.' };
+  if (section === 'confirm') return { label: '검토 필요', tone: 'blue' as const, openByDefault: false, description: '읽고 판단하거나 승인 여부를 정해야 하는 알림 목록입니다.' };
   return { label: '완료 / 참고', tone: 'slate' as const, openByDefault: false, description: '이미 확인했거나 이력으로 남겨둔 알림 목록입니다.' };
 }
 
