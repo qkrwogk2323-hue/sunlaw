@@ -119,7 +119,6 @@ function getOrganizationSections({
   const commonItems = isPlatformManagementOrganizationView
     ? uniqueItems([
         { href: '/product-home', label: '운영 첫 화면', icon: LayoutDashboard },
-        { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
         { href: '/admin/audit', label: '감사 로그', icon: ShieldAlert }
       ])
     : mode === 'client_communication'
@@ -130,8 +129,7 @@ function getOrganizationSections({
     : uniqueItems([
         { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
         { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
-        { href: '/calendar', label: '일정 확인', icon: CalendarRange },
-        { href: '/support', label: '고객센터', icon: MessageSquareText }
+        { href: '/calendar', label: '일정 확인', icon: CalendarRange }
       ]);
 
   const organizationItems: NavItem[] = [];
@@ -181,12 +179,18 @@ function getOrganizationSections({
   }
 
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
+  if (isPlatformManagementOrganizationView) {
+    companyManagementItems.push(
+      { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 }
+    );
+  }
   if (!isPlatformManagementOrganizationView && (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')) {
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
       { href: '/settings/team', label: '구성원 관리', icon: Building2 },
       { href: '/contracts', label: '계약 관리', icon: Receipt },
-      { href: '/settings/subscription', label: '구독 관리', icon: Receipt }
+      { href: '/settings/subscription', label: '구독 관리', icon: Receipt },
+      { href: '/support', label: '고객센터', icon: MessageSquareText }
     );
   }
 
