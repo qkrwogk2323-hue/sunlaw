@@ -300,7 +300,7 @@ export default async function CasesPage({
             <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
               <span>{BUCKET_META[bucket].helper}</span>
               <Link
-                href={'/admin/audit?tab=general&table=cases' as Route}
+                href={'/cases/history' as Route}
                 className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
               >
                 사건 변경 이력 보기

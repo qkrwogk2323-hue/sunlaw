@@ -118,10 +118,10 @@ export default async function ClientsPage({
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link href={'/admin/audit?tab=general&table=client_profiles' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+          <Link href={'/clients/history?tab=profiles' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 정보 변경 기록 보기
           </Link>
-          <Link href={'/admin/audit?tab=general&table=client_access_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+          <Link href={'/clients/history?tab=requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 연결 요청 기록 보기
           </Link>
         </div>
