@@ -19,6 +19,8 @@ import { HubContextStrip } from '@/components/hub-context-strip';
 import { PremiumInfoPanel } from '@/components/premium-info-panel';
 import { HubMetricBadge } from '@/components/hub-metric-badge';
 import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
+import { BulkUploadPanel } from '@/components/bulk-upload-panel';
+import { bulkUploadCasesAction } from '@/lib/actions/bulk-upload-actions';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
@@ -268,6 +270,21 @@ export default async function CasesPage({
                 <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
               </CardContent>
             </Card>
+          </div>
+        </details>
+        <details className="group rounded-xl border border-slate-200 bg-white px-2 py-2">
+          <summary className="list-none">
+            <span className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 group-open:bg-emerald-100">
+              CSV 일괄 등록
+            </span>
+          </summary>
+          <div className="mt-3 px-2 pb-4">
+            <p className="mb-3 text-sm text-slate-500">10건 이상의 사건을 한 번에 등록할 때 사용합니다. 양식을 다운로드해 작성 후 업로드하세요.</p>
+            <BulkUploadPanel
+              mode="cases"
+              organizationId={currentOrganizationId ?? ''}
+              action={bulkUploadCasesAction}
+            />
           </div>
         </details>
         <UnifiedListSearch
