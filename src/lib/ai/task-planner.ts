@@ -1,3 +1,5 @@
+import { sanitizeAiChecklist, sanitizeAiText } from '@/lib/ai/guardrails';
+
 export type PlannerTask = {
   title: string;
   summary: string;
@@ -93,7 +95,7 @@ function inferDueAt(text: string) {
 }
 
 function buildRuleBasedPlan(input: string, cases: PlannerCase[]): PlannerTask {
-  const normalized = input.trim().replace(/\s+/g, ' ');
+  const normalized = sanitizeAiText(input).replace(/\s+/g, ' ');
   const matchedCase = cases.find((item) => normalized.includes(item.title));
   const casePrefix = matchedCase ? `[${matchedCase.title}] ` : '';
   const rawTitle = normalized.length > 54 ? `${normalized.slice(0, 54)}...` : normalized;
@@ -103,8 +105,8 @@ function buildRuleBasedPlan(input: string, cases: PlannerCase[]): PlannerTask {
   const isImportant = /긴급|중요|필수|기한|마감|변론|출석|제출/.test(normalized) || scheduleKind === 'hearing' || scheduleKind === 'deadline';
 
   return {
-    title,
-    summary: normalized,
+    title: sanitizeAiText(title),
+    summary: sanitizeAiText(normalized),
     dueAt,
     scheduleKind,
     isImportant,
@@ -136,21 +138,21 @@ function inferNotifyTarget(text: string): CoordinationChecklistItem['notifyTarge
 }
 
 function buildRuleBasedCoordinationPlan(input: string, cases: PlannerCase[]): CoordinationPlan {
-  const normalized = input.trim().replace(/\s+/g, ' ');
+  const normalized = sanitizeAiText(input).replace(/\s+/g, ' ');
   const parts = splitChecklistParts(normalized);
   const matchedCase = cases.find((item) => normalized.includes(item.title));
-  const checklist = (parts.length ? parts : [normalized]).map((part, index) => ({
+  const checklist = sanitizeAiChecklist((parts.length ? parts : [normalized]).map((part, index) => ({
     id: `coord-${index + 1}`,
     label: `${matchedCase ? `[${matchedCase.title}] ` : ''}${part.slice(0, 36)}`,
     detail: part,
     dueAt: inferDueAt(part),
     priority: inferPriority(part),
     notifyTarget: inferNotifyTarget(part)
-  }));
+  })));
   const highPriorityCount = checklist.filter((item) => item.priority === 'high').length;
 
   return {
-    summary: matchedCase ? `${matchedCase.title} 관련 조직간 소통을 실행 항목으로 정리했습니다.` : '조직간 소통 내용을 실행 항목으로 정리했습니다.',
+    summary: sanitizeAiText(matchedCase ? `${matchedCase.title} 관련 조직간 소통을 실행 항목으로 정리했습니다.` : '조직간 소통 내용을 실행 항목으로 정리했습니다.'),
     reason: highPriorityCount ? '긴급성 높은 표현을 감지해 바로 알림과 일정으로 옮기기 쉽게 정리했습니다.' : '문장을 기준으로 공유, 확인, 전달 항목을 분리했습니다.',
     provider: 'rules',
     setupHint: '정교한 AI 추론을 쓰려면 OPENAI_API_KEY 또는 GEMINI_API_KEY를 설정하세요.',
@@ -181,7 +183,7 @@ async function planWithOpenAi(input: string, cases: PlannerCase[]): Promise<Plan
         },
         {
           role: 'user',
-          content: JSON.stringify({ input, cases }, null, 2)
+          content: JSON.stringify({ input: sanitizeAiText(input), cases }, null, 2)
         }
       ]
     })
@@ -198,12 +200,12 @@ async function planWithOpenAi(input: string, cases: PlannerCase[]): Promise<Plan
   try {
     const parsed = JSON.parse(content);
     return {
-      title: String(parsed.title || input).slice(0, 120),
-      summary: String(parsed.summary || input),
+      title: sanitizeAiText(String(parsed.title || input).slice(0, 120)),
+      summary: sanitizeAiText(String(parsed.summary || input)),
       dueAt: parsed.dueAt ? new Date(parsed.dueAt).toISOString() : null,
       scheduleKind: ['deadline', 'meeting', 'hearing', 'reminder', 'other'].includes(parsed.scheduleKind) ? parsed.scheduleKind : 'other',
       isImportant: Boolean(parsed.isImportant),
-      reason: String(parsed.reason || 'AI가 일정 후보를 정리했습니다.'),
+      reason: sanitizeAiText(String(parsed.reason || 'AI가 일정 후보를 정리했습니다.')),
       provider: 'openai',
       setupHint: null
     };
@@ -234,7 +236,7 @@ async function planCoordinationWithOpenAi(input: string, cases: PlannerCase[]): 
         },
         {
           role: 'user',
-          content: JSON.stringify({ input, cases }, null, 2)
+          content: JSON.stringify({ input: sanitizeAiText(input), cases }, null, 2)
         }
       ]
     })
@@ -248,18 +250,18 @@ async function planCoordinationWithOpenAi(input: string, cases: PlannerCase[]): 
 
   try {
     const parsed = JSON.parse(content);
-    const checklist = Array.isArray(parsed.checklist) ? parsed.checklist.slice(0, 4).map((item: any, index: number) => ({
+    const checklist: CoordinationChecklistItem[] = Array.isArray(parsed.checklist) ? sanitizeAiChecklist<CoordinationChecklistItem>(parsed.checklist.slice(0, 4).map((item: any, index: number) => ({
       id: `coord-${index + 1}`,
       label: String(item.label || input).slice(0, 80),
       detail: String(item.detail || item.label || input),
       dueAt: normalizeDueAt(item.dueAt),
       priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium',
       notifyTarget: ['self', 'manager', 'assignee', 'team'].includes(item.notifyTarget) ? item.notifyTarget : 'self'
-    })) : [];
+    }))) : [];
 
     return {
-      summary: String(parsed.summary || '조직간 소통 내용을 AI가 정리했습니다.'),
-      reason: String(parsed.reason || 'AI가 알림과 액션 포인트를 정리했습니다.'),
+      summary: sanitizeAiText(String(parsed.summary || '조직간 소통 내용을 AI가 정리했습니다.')),
+      reason: sanitizeAiText(String(parsed.reason || 'AI가 알림과 액션 포인트를 정리했습니다.')),
       provider: 'openai',
       setupHint: null,
       recommendedRecipientMode: ['self', 'managers', 'all', 'one'].includes(parsed.recommendedRecipientMode) ? parsed.recommendedRecipientMode : 'self',
@@ -287,7 +289,7 @@ async function planWithGemini(input: string, cases: PlannerCase[]): Promise<Plan
                 '한국어 법률/법무 조직의 업무 코디네이터로 동작하세요. 자연어 요청을 일정 후보 JSON으로 바꾸세요. JSON keys: title, summary, dueAt, scheduleKind, isImportant, reason. dueAt은 ISO8601 또는 null, scheduleKind는 deadline|meeting|hearing|reminder|other만 허용.'
             },
             {
-              text: JSON.stringify({ input, cases }, null, 2)
+              text: JSON.stringify({ input: sanitizeAiText(input), cases }, null, 2)
             }
           ]
         }
@@ -310,12 +312,12 @@ async function planWithGemini(input: string, cases: PlannerCase[]): Promise<Plan
   try {
     const parsed = JSON.parse(content);
     return {
-      title: String(parsed.title || input).slice(0, 120),
-      summary: String(parsed.summary || input),
+      title: sanitizeAiText(String(parsed.title || input).slice(0, 120)),
+      summary: sanitizeAiText(String(parsed.summary || input)),
       dueAt: parsed.dueAt ? new Date(parsed.dueAt).toISOString() : null,
       scheduleKind: ['deadline', 'meeting', 'hearing', 'reminder', 'other'].includes(parsed.scheduleKind) ? parsed.scheduleKind : 'other',
       isImportant: Boolean(parsed.isImportant),
-      reason: String(parsed.reason || 'AI가 일정 후보를 정리했습니다.'),
+      reason: sanitizeAiText(String(parsed.reason || 'AI가 일정 후보를 정리했습니다.')),
       provider: 'gemini',
       setupHint: null
     };
@@ -341,7 +343,7 @@ async function planCoordinationWithGemini(input: string, cases: PlannerCase[]): 
                 '당신은 한국어 법률/법무 조직의 협업 코디네이터입니다. 조직간 업무소통 문장을 실행 체크리스트 JSON으로 바꾸세요. JSON keys: summary, reason, recommendedRecipientMode, checklist. recommendedRecipientMode는 self|managers|all|one만 허용. checklist는 최대 4개이며 각 item은 label, detail, dueAt, priority(high|medium|low), notifyTarget(self|manager|assignee|team)만 포함하세요.'
             },
             {
-              text: JSON.stringify({ input, cases }, null, 2)
+              text: JSON.stringify({ input: sanitizeAiText(input), cases }, null, 2)
             }
           ]
         }
@@ -361,18 +363,18 @@ async function planCoordinationWithGemini(input: string, cases: PlannerCase[]): 
 
   try {
     const parsed = JSON.parse(content);
-    const checklist = Array.isArray(parsed.checklist) ? parsed.checklist.slice(0, 4).map((item: any, index: number) => ({
+    const checklist: CoordinationChecklistItem[] = Array.isArray(parsed.checklist) ? sanitizeAiChecklist<CoordinationChecklistItem>(parsed.checklist.slice(0, 4).map((item: any, index: number) => ({
       id: `coord-${index + 1}`,
       label: String(item.label || input).slice(0, 80),
       detail: String(item.detail || item.label || input),
       dueAt: normalizeDueAt(item.dueAt),
       priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium',
       notifyTarget: ['self', 'manager', 'assignee', 'team'].includes(item.notifyTarget) ? item.notifyTarget : 'self'
-    })) : [];
+    }))) : [];
 
     return {
-      summary: String(parsed.summary || '조직간 소통 내용을 AI가 정리했습니다.'),
-      reason: String(parsed.reason || 'AI가 알림과 액션 포인트를 정리했습니다.'),
+      summary: sanitizeAiText(String(parsed.summary || '조직간 소통 내용을 AI가 정리했습니다.')),
+      reason: sanitizeAiText(String(parsed.reason || 'AI가 알림과 액션 포인트를 정리했습니다.')),
       provider: 'gemini',
       setupHint: null,
       recommendedRecipientMode: ['self', 'managers', 'all', 'one'].includes(parsed.recommendedRecipientMode) ? parsed.recommendedRecipientMode : 'self',
@@ -384,7 +386,7 @@ async function planCoordinationWithGemini(input: string, cases: PlannerCase[]): 
 }
 
 export async function buildTaskPlan(input: string, cases: PlannerCase[]) {
-  const trimmed = input.trim();
+  const trimmed = sanitizeAiText(input);
   if (!trimmed) {
     throw new Error('요청 내용을 입력해 주세요.');
   }
@@ -399,7 +401,7 @@ export async function buildTaskPlan(input: string, cases: PlannerCase[]) {
 }
 
 export async function buildCoordinationPlan(input: string, cases: PlannerCase[]) {
-  const trimmed = input.trim();
+  const trimmed = sanitizeAiText(input);
   if (!trimmed) {
     throw new Error('요청 내용을 입력해 주세요.');
   }

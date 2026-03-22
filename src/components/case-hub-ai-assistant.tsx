@@ -25,6 +25,13 @@ type PreviewPayload = {
   checklist: ChecklistItem[];
 };
 
+type AiSourceMeta = {
+  dataType: string;
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  filters: Record<string, unknown>;
+};
+
 export function CaseHubAiAssistant({
   organizationId,
   defaultCaseId,
@@ -38,6 +45,8 @@ export function CaseHubAiAssistant({
   const [input, setInput] = useState('');
   const [preview, setPreview] = useState<PreviewPayload | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [source, setSource] = useState<AiSourceMeta | null>(null);
+  const [estimate, setEstimate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string>(defaultCaseId && caseOptions.some((item) => item.id === defaultCaseId) ? defaultCaseId : (caseOptions[0]?.id ?? ''));
@@ -70,6 +79,8 @@ export function CaseHubAiAssistant({
       }
 
       setPreview(payload.preview as PreviewPayload);
+      setSource((payload.source ?? null) as AiSourceMeta | null);
+      setEstimate(Boolean(payload.estimate));
       setSelectedIds((payload.preview.checklist ?? []).map((item: ChecklistItem) => item.id));
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'AI 분석에 실패했습니다.');
@@ -106,10 +117,46 @@ export function CaseHubAiAssistant({
         throw new Error(payload?.error ?? 'AI 실행 반영에 실패했습니다.');
       }
       setSuccess('분석 제안을 기반으로 일정/할일 등록 요청을 반영했습니다.');
+      setSource(null);
+      setEstimate(false);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'AI 실행 반영에 실패했습니다.');
     } finally {
       setCommitting(false);
+    }
+  };
+
+  const reportIssue = async () => {
+    if (!preview) return;
+    const reason = window.prompt('오답 신고 사유를 입력해 주세요.');
+    if (!reason?.trim()) return;
+
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch('/api/ai/feedback', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          aiFeature: 'ai_summary_card',
+          screen: '/inbox/[hubId]',
+          question: input.trim(),
+          answer: `${preview.summary}\n${preview.checklist.map((item) => `- ${item.label}`).join('\n')}`,
+          rationale: preview.reason,
+          modelVersion: preview.provider ?? 'unknown',
+          requestId: `case-hub-ai:${source?.generatedAt ?? Date.now()}`,
+          reason: reason.trim(),
+          status: '접수'
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? '오답 신고 저장에 실패했습니다.');
+      }
+      setSuccess('오답 신고가 접수되었습니다.');
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : '오답 신고 저장에 실패했습니다.');
     }
   };
 
@@ -154,6 +201,8 @@ export function CaseHubAiAssistant({
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-sm font-medium text-slate-900">{preview.summary}</p>
               <p className="mt-1 text-xs text-slate-500">{preview.reason}</p>
+              {source ? <p className="mt-1 text-xs text-slate-500">출처: {source.dataType} · {source.generatedAt}</p> : null}
+              {estimate ? <p className="mt-1 text-xs text-amber-700">표기: 추정 (자동 실행 금지)</p> : null}
               <div className="mt-3 space-y-2">
                 {preview.checklist.map((item) => (
                   <label key={item.id} className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2 text-xs">
@@ -178,6 +227,9 @@ export function CaseHubAiAssistant({
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button size="sm" onClick={commit} isLoading={committing} disabled={!selectedItems.length}>
                   일정/할일 등록할까요?
+                </Button>
+                <Button size="sm" variant="secondary" onClick={reportIssue}>
+                  오답 신고
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setPreview(null)}>
                   취소
