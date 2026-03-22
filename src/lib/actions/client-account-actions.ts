@@ -53,6 +53,7 @@ async function listActivePlatformAdminIds() {
     .filter(Boolean);
 }
 
+// 의뢰인 회원가입 정보를 저장하고 초기 계정을 생성한다.
 export async function submitClientSignupAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -168,6 +169,7 @@ export async function submitClientSignupAction(formData: FormData) {
   redirect('/start/pending?submitted=1' as Route);
 }
 
+// 의뢰인 포털에서 서비스 요청을 등록한다.
 export async function createClientServiceRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -247,6 +249,7 @@ export async function createClientServiceRequestAction(formData: FormData) {
   redirect('/start/pending?help=1' as Route);
 }
 
+// 의뢰인 포털 접근을 중지하고 관련 연결 상태를 갱신한다.
 export async function deactivateClientPortalAccessAction(formData: FormData) {
   const caseClientId = `${formData.get('caseClientId') ?? ''}`;
   if (!caseClientId) {

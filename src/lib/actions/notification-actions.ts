@@ -62,6 +62,7 @@ async function getOwnedNotification(notificationId: string) {
   return { auth, supabase, notification };
 }
 
+// 단일 알림을 읽음 상태로 변경한다.
 export async function markNotificationReadAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
@@ -89,6 +90,7 @@ export async function markNotificationReadAction(formData: FormData) {
   revalidateNotificationViews();
 }
 
+// 현재 사용자의 알림을 모두 읽음 처리한다.
 export async function markAllNotificationsReadAction() {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -125,6 +127,7 @@ export async function markAllNotificationsReadAction() {
   revalidateNotificationViews();
 }
 
+// 선택한 알림들을 일괄 상태 전이한다.
 export async function bulkNotificationTransitionAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const operation = `${formData.get('operation') ?? ''}`;
@@ -219,6 +222,7 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
   }
 }
 
+// 알림을 해결 완료 상태로 바꾼다.
 export async function markNotificationResolvedAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
@@ -251,6 +255,7 @@ export async function markNotificationResolvedAction(formData: FormData) {
   revalidateNotificationViews();
 }
 
+// 알림을 보관함으로 이동한다.
 export async function moveNotificationToTrashAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
@@ -288,6 +293,7 @@ export async function moveNotificationToTrashAction(formData: FormData) {
   revalidateNotificationViews();
 }
 
+// 보관함의 알림을 다시 활성 목록으로 복구한다.
 export async function restoreNotificationAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
@@ -316,6 +322,7 @@ export async function restoreNotificationAction(formData: FormData) {
   revalidateNotificationViews();
 }
 
+// 보관함에 있는 알림을 모두 비운다.
 export async function emptyNotificationTrashAction() {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -339,6 +346,7 @@ export async function emptyNotificationTrashAction() {
   revalidateNotificationViews();
 }
 
+// 보관된 알림을 영구 삭제한다.
 export async function permanentlyDeleteNotificationAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
@@ -367,6 +375,7 @@ export async function permanentlyDeleteNotificationAction(formData: FormData) {
   revalidateNotificationViews();
 }
 
+// 알림 채널별 수신 설정을 저장한다.
 export async function updateNotificationChannelPreferenceAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -389,6 +398,7 @@ export async function updateNotificationChannelPreferenceAction(formData: FormDa
   revalidateNotificationViews();
 }
 
+// 알림 대상 화면으로 이동하기 전에 상태를 정리한다.
 export async function openNotificationTargetAction(formData: FormData) {
   const notificationId = `${formData.get('notificationId') ?? ''}`;
   const nextOrganizationId = `${formData.get('organizationId') ?? ''}`;

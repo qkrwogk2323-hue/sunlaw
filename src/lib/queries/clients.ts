@@ -66,6 +66,23 @@ export async function listClientRosterSummary(organizationId?: string | null) {
   }
 
   const [{ data: caseClients }, { data: invitations }, { data: tempCredentials }] = await Promise.all([caseClientsQuery, invitationsQuery, tempCredentialsQuery]);
+
+  // 연결된 사건 ID 목록으로 미납 청구 건수 조회
+  const linkedCaseIds = [...new Set((caseClients ?? []).map((row: any) => row.case_id).filter(Boolean))];
+  const overdueByCase = new Map<string, number>();
+  if (linkedCaseIds.length) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: overdueEntries } = await supabase
+      .from('billing_entries')
+      .select('case_id, id')
+      .in('case_id', linkedCaseIds)
+      .eq('status', 'pending')
+      .lt('due_on', today);
+    for (const entry of overdueEntries ?? []) {
+      if (entry.case_id) overdueByCase.set(entry.case_id, (overdueByCase.get(entry.case_id) ?? 0) + 1);
+    }
+  }
+
   const profileIds = [...new Set([
     ...(caseClients ?? []).map((row: any) => row.profile_id).filter(Boolean),
     ...(tempCredentials ?? []).map((row: any) => row.profile_id).filter(Boolean)
@@ -110,6 +127,7 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     linkStatus: row.link_status ?? 'linked',
     orphanReason: row.orphan_reason ?? null,
     reviewDeadline: row.review_deadline ?? null,
+    overdueCount: row.case_id ? (overdueByCase.get(row.case_id) ?? 0) : 0,
     raw: row
   }));
 

@@ -26,6 +26,7 @@ export type SaveCreditorsInput = {
   }>;
 };
 
+// AI 추출 결과에서 채권자 목록을 저장한다.
 export async function saveCreditorsFromExtraction(input: SaveCreditorsInput) {
   const { auth } = await requireOrganizationActionAccess(input.organizationId, {
     permission: 'case_edit'
@@ -66,6 +67,7 @@ export async function saveCreditorsFromExtraction(input: SaveCreditorsInput) {
 
 // ─── 채권자 수동 수정 ─────────────────────────────────────────────────────────
 
+// 단일 채권자 정보를 수정한다.
 export async function updateCreditor(
   creditorId: string,
   organizationId: string,
@@ -113,6 +115,7 @@ export async function updateCreditor(
 
 // ─── 채권자 soft delete ───────────────────────────────────────────────────────
 
+// 채권자를 소프트 삭제 상태로 전환한다.
 export async function softDeleteCreditor(creditorId: string, organizationId: string, caseId: string) {
   const { auth } = await requireOrganizationActionAccess(organizationId, { permission: 'case_edit' });
   const supabase = await createSupabaseServerClient();
@@ -137,6 +140,7 @@ export async function softDeleteCreditor(creditorId: string, organizationId: str
 
 // ─── 변제계획 생성/저장 (allocations 포함 전체 버전) ──────────────────────────
 
+// 변제계획 전체 스냅샷을 저장한다.
 export async function saveRepaymentPlanFull(input: {
   organizationId: string;
   caseId: string;
@@ -226,6 +230,7 @@ export async function saveRepaymentPlanFull(input: {
 
 // ─── 의뢰인 액션패킷 생성 (M08) ───────────────────────────────────────────────
 
+// 의뢰인 액션 패킷을 생성한다.
 export async function createClientActionPacket(input: {
   organizationId: string;
   caseId: string;
@@ -288,6 +293,7 @@ export async function createClientActionPacket(input: {
 
 // ─── 의뢰인 액션아이템 확인 처리 (클라이언트 포털용) ──────────────────────────
 
+// 의뢰인 액션 패킷 항목의 완료 상태를 바꾼다.
 export async function checkClientActionItem(
   itemId: string,
   caseId: string,
@@ -324,6 +330,7 @@ export async function checkClientActionItem(
 
 // ─── 변제계획 생성/저장 (기본 버전) ───────────────────────────────────────────
 
+// 간이 변제계획 저장 요청을 처리한다.
 export async function saveRepaymentPlan(input: {
   organizationId: string;
   caseId: string;

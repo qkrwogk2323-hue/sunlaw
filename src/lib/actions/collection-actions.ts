@@ -17,6 +17,7 @@ async function loadCollectionContext(caseId: string) {
   return { supabase, caseRecord };
 }
 
+// 추심 보상 계획 항목을 추가한다.
 export async function addCollectionCompensationPlanAction(formData: FormData) {
   const parsed = collectionCompensationPlanSchema.parse({
     caseId: formData.get('caseId'),
@@ -69,6 +70,7 @@ export async function addCollectionCompensationPlanAction(formData: FormData) {
   revalidatePath('/collections');
 }
 
+// 조직 정산 항목을 등록한다.
 export async function addOrgSettlementEntryAction(formData: FormData) {
   const parsed = orgSettlementSchema.parse({
     caseId: formData.get('caseId'),

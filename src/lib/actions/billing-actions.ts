@@ -17,6 +17,7 @@ function nullableTimestamp(value: FormDataEntryValue | null) {
   return normalized ? new Date(normalized).toISOString() : null;
 }
 
+// 플랫폼 관리자가 조직 구독 상태를 변경하고 관련 화면을 갱신한다.
 export async function updateOrganizationSubscriptionStateAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 구독 상태를 조정할 수 있습니다.');
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();

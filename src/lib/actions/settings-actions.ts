@@ -132,6 +132,7 @@ async function assertOrgAdmin(organizationId: string) {
   return auth;
 }
 
+// 플랫폼 전역 설정 값을 생성하거나 갱신한다.
 export async function upsertPlatformSettingAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const platformOrganizationId = getPlatformOrganizationContextId(auth);
@@ -172,6 +173,7 @@ export async function upsertPlatformSettingAction(formData: FormData) {
   revalidatePath('/settings/platform');
 }
 
+// 조직별 설정 값을 생성하거나 갱신한다.
 export async function upsertOrganizationSettingAction(formData: FormData) {
   const parsed = settingMutationSchema.parse({
     key: formData.get('key'),
@@ -214,6 +216,7 @@ export async function upsertOrganizationSettingAction(formData: FormData) {
   revalidatePath('/settings/organization');
 }
 
+// 서비스 문구 리소스를 생성하거나 갱신한다.
 export async function upsertContentResourceAction(formData: FormData) {
   const parsed = contentMutationSchema.parse({
     namespace: formData.get('namespace'),
@@ -261,6 +264,7 @@ export async function upsertContentResourceAction(formData: FormData) {
   revalidatePath('/');
 }
 
+// 플랫폼 기능 설정 값을 생성하거나 갱신한다.
 export async function upsertFeatureFlagAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) {
@@ -321,6 +325,7 @@ export async function upsertFeatureFlagAction(formData: FormData) {
   revalidatePath('/settings/features');
 }
 
+// 가장 최근 설정 변경을 이전 상태로 되돌린다.
 export async function rollbackLatestSettingChangeAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   if (!(await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth)))) {
@@ -414,11 +419,13 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
   revalidatePath('/settings/features');
 }
 
+// 설정 화면에서 사용할 현재 조직 컨텍스트를 반환한다.
 export async function getCurrentOrganizationIdForSettings() {
   const auth = await requireAuthenticatedUser();
   return getEffectiveOrganizationId(auth);
 }
 
+// 조직 탈퇴 요청을 생성한다.
 export async function createOrganizationExitRequestAction(formData: FormData) {
   const parsed = organizationExitRequestSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -455,6 +462,7 @@ export async function createOrganizationExitRequestAction(formData: FormData) {
   revalidatePath('/admin/organization-requests');
 }
 
+// 조직 탈퇴 요청을 승인 또는 반려한다.
 export async function reviewOrganizationExitRequestAction(formData: FormData) {
   const parsed = reviewOrganizationExitRequestSchema.parse({
     requestId: formData.get('requestId'),
@@ -504,6 +512,7 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
   revalidatePath('/admin/organization-requests');
 }
 
+// 조직 소개 문구를 저장한다.
 export async function updateOrganizationIntroAction(formData: FormData) {
   const parsed = organizationIntroUpdateSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -527,6 +536,7 @@ export async function updateOrganizationIntroAction(formData: FormData) {
   revalidatePath('/settings/organization');
 }
 
+// 조직 기본 프로필 정보를 저장한다.
 export async function updateOrganizationProfileAction(formData: FormData) {
   const parsed = organizationProfileUpdateSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -588,6 +598,7 @@ export async function updateOrganizationProfileAction(formData: FormData) {
   revalidatePath('/organizations');
 }
 
+// 조직을 비활성 상태로 전환한다.
 export async function deactivateOrganizationAction(formData: FormData) {
   const parsed = organizationLifecycleMutationSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -620,6 +631,7 @@ export async function deactivateOrganizationAction(formData: FormData) {
   revalidatePath('/organizations');
 }
 
+// 조직을 영구 삭제 상태로 전환한다.
 export async function deleteOrganizationAction(formData: FormData) {
   const parsed = organizationLifecycleMutationSchema.parse({
     organizationId: formData.get('organizationId'),

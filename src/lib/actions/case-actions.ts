@@ -405,6 +405,7 @@ function finalizeCreateCase(caseId: string) {
   redirect(`/cases/${caseId}`);
 }
 
+// 새 사건을 생성하고 기본 연결 데이터를 초기화한다.
 export async function createCaseAction(formData: FormData) {
   const parsed = parseCreateCaseInput(formData);
 
@@ -444,6 +445,7 @@ export async function createCaseAction(formData: FormData) {
   finalizeCreateCase(caseId);
 }
 
+// 사건 당사자를 추가한다.
 export async function addPartyAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -490,6 +492,7 @@ export async function addPartyAction(caseId: string, formData: FormData) {
   revalidatePath(`/cases/${caseId}`);
 }
 
+// 사건에 의뢰인을 연결한다.
 export async function linkClientAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -581,6 +584,7 @@ export async function linkClientAction(caseId: string, formData: FormData) {
   revalidatePath('/calendar');
 }
 
+// 사건 단위 의뢰인 초대 링크를 생성한다.
 export async function createClientInvitationAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -623,6 +627,7 @@ export async function createClientInvitationAction(caseId: string, formData: For
   redirect(`/cases/${caseId}?clientInvite=${encodeURIComponent(token)}`);
 }
 
+// 사건 문서를 등록한다.
 export async function addDocumentAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -688,6 +693,7 @@ export async function addDocumentAction(caseId: string, formData: FormData) {
   revalidatePath(`/cases/${caseId}`);
 }
 
+// 문서를 검토 요청 상태로 전환한다.
 export async function requestDocumentReviewAction(documentId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: document } = await supabase
@@ -781,6 +787,7 @@ export async function requestDocumentReviewAction(documentId: string) {
   revalidatePath('/inbox');
 }
 
+// 문서 검토 결과를 승인 또는 반려로 저장한다.
 export async function reviewDocumentAction(documentId: string, formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: document } = await supabase
@@ -884,6 +891,7 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
   revalidatePath('/inbox');
 }
 
+// 사건 일정을 추가한다.
 export async function addScheduleAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -943,6 +951,7 @@ export async function addScheduleAction(caseId: string, formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+// 기존 사건 일정을 수정한다.
 export async function updateScheduleAction(scheduleId: string, formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: scheduleRow, error: scheduleError } = await supabase
@@ -993,6 +1002,7 @@ export async function updateScheduleAction(scheduleId: string, formData: FormDat
   revalidatePath('/dashboard');
 }
 
+// 사건 일정의 완료 상태와 완료자를 갱신한다.
 export async function updateScheduleCompletionAction(scheduleId: string, formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: scheduleRow, error: scheduleError } = await supabase
@@ -1064,6 +1074,7 @@ export async function updateScheduleCompletionAction(scheduleId: string, formDat
   revalidatePath('/dashboard');
 }
 
+// 회수 활동 이력을 추가한다.
 export async function addRecoveryActivityAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1102,6 +1113,7 @@ export async function addRecoveryActivityAction(caseId: string, formData: FormDa
   revalidatePath('/collections');
 }
 
+// 사건 메시지를 남기고 관련 허브를 갱신한다.
 export async function addMessageAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth, membership } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1156,6 +1168,7 @@ export async function addMessageAction(caseId: string, formData: FormData) {
   revalidatePath('/inbox');
 }
 
+// 사건 표지 정보를 저장한다.
 export async function updateCaseCoverAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -1201,6 +1214,7 @@ export async function updateCaseCoverAction(formData: FormData) {
   revalidatePath(`/cases/${caseId}`);
 }
 
+// 사건 진행 단계를 갱신한다.
 export async function updateCaseStageAction(formData: FormData) {
   const parsed = caseStageUpdateSchema.parse({
     caseId: formData.get('caseId'),
@@ -1282,6 +1296,7 @@ export async function updateCaseStageAction(formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+// 사건 요청사항을 추가한다.
 export async function addRequestAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1327,6 +1342,7 @@ export async function addRequestAction(caseId: string, formData: FormData) {
   revalidatePath('/inbox');
 }
 
+// 사건 청구 항목을 등록한다.
 export async function addBillingEntryAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1406,6 +1422,7 @@ export async function addBillingEntryAction(caseId: string, formData: FormData) 
 }
 
 
+// 사건에 참여 조직을 추가한다.
 export async function addCaseOrganizationAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1449,6 +1466,7 @@ export async function addCaseOrganizationAction(caseId: string, formData: FormDa
   revalidatePath(`/cases/${caseId}`);
 }
 
+// 사건 비용 약정을 등록한다.
 export async function addFeeAgreementAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1534,6 +1552,7 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
   revalidatePath('/notifications');
 }
 
+// 사건 입금 내역을 기록한다.
 export async function recordPaymentAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
@@ -1582,6 +1601,7 @@ export async function recordPaymentAction(caseId: string, formData: FormData) {
   revalidatePath(`/cases/${caseId}`);
 }
 
+// 사건을 삭제함으로 이동한다.
 export async function moveCaseToDeletedAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -1612,6 +1632,7 @@ export async function moveCaseToDeletedAction(formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+// 삭제함의 사건을 다시 복구한다.
 export async function restoreCaseAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -1643,6 +1664,7 @@ export async function restoreCaseAction(formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+// 삭제함 사건을 최종 보관 처리한다.
 export async function forceDeleteCaseAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();

@@ -960,6 +960,7 @@ function finalizeInvitationAcceptanceNavigation(kind: string) {
   redirect('/portal');
 }
 
+// 새 조직을 생성하고 기본 멤버십을 연결한다.
 export async function createOrganizationAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 조직을 생성할 수 있습니다.');
   const parsed = organizationCreateSchema.parse({
@@ -1033,6 +1034,7 @@ export async function createOrganizationAction(formData: FormData) {
   redirect(`/organizations/${organization.id}`);
 }
 
+// 조직 가입 신청을 접수한다.
 export async function submitOrganizationSignupRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -1163,6 +1165,7 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
   redirect('/organization-request?submitted=1');
 }
 
+// 작성 중인 조직 가입 신청 내용을 수정한다.
 export async function updateOrganizationSignupRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const admin = createSupabaseAdminClient();
@@ -1304,6 +1307,7 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
   redirect('/organization-request?updated=1');
 }
 
+// 제출한 조직 가입 신청을 취소한다.
 export async function cancelOrganizationSignupRequestAction(formData: FormData) {
   await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
@@ -1329,6 +1333,7 @@ export async function cancelOrganizationSignupRequestAction(formData: FormData) 
   redirect('/organization-request?cancelled=1');
 }
 
+// 조직 가입 신청을 승인 또는 반려한다.
 export async function reviewOrganizationSignupRequestAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 조직 개설 신청을 검토할 수 있습니다.');
   const admin = createSupabaseAdminClient();
@@ -1539,6 +1544,7 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
   }
 }
 
+// 조직 탈퇴 신청을 제출한다.
 export async function submitOrganizationExitRequestAction(formData: FormData) {
   const parsed = organizationExitRequestSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -1596,6 +1602,7 @@ export async function submitOrganizationExitRequestAction(formData: FormData) {
   revalidatePath('/notifications');
 }
 
+// 조직 탈퇴 신청을 승인 또는 반려한다.
 export async function reviewOrganizationExitRequestAction(formData: FormData) {
   const parsed = organizationExitReviewSchema.parse({
     requestId: formData.get('requestId'),
@@ -1632,6 +1639,7 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
   revalidatePath('/notifications');
 }
 
+// 구성원 초대 링크를 생성한다.
 export async function createStaffInvitationAction(formData: FormData) {
   const parsed = parseStaffInvitationInput(formData);
   const returnPath = `${formData.get('returnPath') ?? ''}`.trim();
@@ -1650,6 +1658,7 @@ export async function createStaffInvitationAction(formData: FormData) {
   redirect(`/settings/team?invite=${encodeURIComponent(token)}`);
 }
 
+// 구성원 대량 초대 링크를 생성한다.
 export async function createStaffBulkInvitationAction(formData: FormData) {
   const parsed = staffBulkInviteSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -1716,6 +1725,7 @@ export async function createStaffBulkInvitationAction(formData: FormData) {
   redirect(`/settings/team?staffInviteBatch=${created.length}&staffInviteFailed=${failed.length}`);
 }
 
+// 사전 등록 구성원 초대를 생성한다.
 export async function createStaffPreRegisteredInvitationAction(formData: FormData) {
   const actorCategory = `${formData.get('actorCategory') || 'staff'}`;
   const normalizedRoleTemplateKey = actorCategory === 'admin' ? 'admin_general' : 'org_staff';
@@ -1812,6 +1822,7 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
   redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}`);
 }
 
+// 의뢰인 직접 초대를 생성한다.
 export async function createClientDirectInvitationAction(formData: FormData) {
   const parsed = clientDirectInvitationSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -1858,6 +1869,7 @@ export async function createClientDirectInvitationAction(formData: FormData) {
   redirect(`/clients?invite=${encodeURIComponent(token)}`);
 }
 
+// 의뢰인 대량 초대를 생성한다.
 export async function createClientBulkInvitationAction(formData: FormData) {
   const parsed = clientStructuredBulkInviteSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -2006,6 +2018,7 @@ export async function createClientBulkInvitationAction(formData: FormData) {
   redirect(`/clients?clientInviteBatch=${created.length}&clientInviteFailed=${failed.length}`);
 }
 
+// 사전 등록 의뢰인 초대를 생성한다.
 export async function createClientPreRegisteredInvitationAction(formData: FormData) {
   const parsed = clientPreRegisterInvitationSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -2099,6 +2112,7 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
   redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedOrgName=${encodeURIComponent(orgName)}`);
 }
 
+// 기존 초대 링크를 다시 발송한다.
 export async function resendInvitationLinkAction(formData: FormData) {
   const parsed = resendInvitationSchema.parse({
     invitationId: formData.get('invitationId'),
@@ -2149,6 +2163,7 @@ export async function resendInvitationLinkAction(formData: FormData) {
   redirect(`/clients?invite=${encodeURIComponent(token)}`);
 }
 
+// 내 구성원 프로필 기본 정보를 수정한다.
 export async function updateSelfMemberProfileAction(formData: FormData) {
   const parsed = selfMemberProfileUpdateSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -2217,6 +2232,7 @@ export async function updateSelfMemberProfileAction(formData: FormData) {
   revalidatePath('/settings/team');
 }
 
+// 관리자가 구성원 운영 요약 정보를 수정한다.
 export async function updateMembershipAdminSummaryAction(formData: FormData) {
   const parsed = membershipAdminSummarySchema.parse({
     organizationId: formData.get('organizationId'),
@@ -2260,6 +2276,7 @@ export async function updateMembershipAdminSummaryAction(formData: FormData) {
   revalidatePath('/settings/team');
 }
 
+// 조직 멤버십을 삭제한다.
 export async function deleteMembershipAction(formData: FormData) {
   const parsed = membershipDeleteSchema.parse({
     organizationId: formData.get('organizationId'),
@@ -2301,6 +2318,7 @@ export async function deleteMembershipAction(formData: FormData) {
   revalidatePath('/settings/team');
 }
 
+// 구성원별 권한 설정을 갱신한다.
 export async function updateMembershipPermissionsAction(formData: FormData) {
   const membershipId = `${formData.get('membershipId') ?? ''}`;
   const organizationId = `${formData.get('organizationId') ?? ''}`;
@@ -2340,6 +2358,7 @@ export async function updateMembershipPermissionsAction(formData: FormData) {
   revalidatePath(`/organizations/${organizationId}`);
 }
 
+// 기본 조직 컨텍스트를 전환한다.
 export async function switchDefaultOrganizationAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const organizationId = `${formData.get('organizationId') ?? ''}`;
@@ -2388,6 +2407,7 @@ export async function switchDefaultOrganizationAction(formData: FormData) {
   revalidatePath('/organizations');
 }
 
+// 다른 조직에 협업 제안을 생성한다.
 export async function createOrganizationCollaborationRequestAction(formData: FormData) {
   const parsed = collaborationRequestCreateSchema.parse({
     sourceOrganizationId: formData.get('sourceOrganizationId'),
@@ -2496,6 +2516,7 @@ export async function createOrganizationCollaborationRequestAction(formData: For
   }
 }
 
+// 받은 협업 제안을 승인 또는 반려한다.
 export async function reviewOrganizationCollaborationRequestAction(formData: FormData) {
   const parsed = collaborationRequestReviewSchema.parse({
     requestId: formData.get('requestId'),
@@ -2642,6 +2663,7 @@ export async function reviewOrganizationCollaborationRequestAction(formData: For
   }
 }
 
+// 협업 허브에 메시지를 전송한다.
 export async function postCollaborationHubMessageAction(formData: FormData) {
   const parsed = collaborationHubMessageSchema.parse({
     hubId: formData.get('hubId'),
@@ -2731,6 +2753,7 @@ export async function postCollaborationHubMessageAction(formData: FormData) {
   }
 }
 
+// 협업 허브 메시지를 읽음 처리한다.
 export async function markCollaborationHubReadAction(formData: FormData) {
   const parsed = collaborationHubReadSchema.parse({
     hubId: formData.get('hubId'),
@@ -2770,6 +2793,7 @@ export async function markCollaborationHubReadAction(formData: FormData) {
   revalidatePath(`/inbox/${parsed.hubId}`);
 }
 
+// 사건을 협업 허브에 공유한다.
 export async function shareCaseToCollaborationHubAction(formData: FormData) {
   const parsed = collaborationHubCaseShareSchema.parse({
     hubId: formData.get('hubId'),
@@ -2866,6 +2890,7 @@ export async function shareCaseToCollaborationHubAction(formData: FormData) {
   }
 }
 
+// 의뢰인 조직 연결 요청을 접수한다.
 export async function submitClientAccessRequestAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const adminClient = createSupabaseAdminClient();
@@ -2961,6 +2986,7 @@ export async function submitClientAccessRequestAction(formData: FormData) {
   redirect('/client-access' as Route);
 }
 
+// 의뢰인 조직 연결 요청을 승인 또는 반려한다.
 export async function reviewClientAccessRequestAction(formData: FormData) {
   const parsed = clientAccessReviewSchema.parse({
     requestId: formData.get('requestId'),
@@ -3030,6 +3056,7 @@ export async function reviewClientAccessRequestAction(formData: FormData) {
   revalidatePath('/client-access');
 }
 
+// 승인된 의뢰인 연결 요청을 사건에 붙인다.
 export async function attachClientAccessRequestToCaseAction(formData: FormData) {
   const parsed = clientAccessCaseLinkSchema.parse({
     requestId: formData.get('requestId'),
@@ -3188,6 +3215,7 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
   revalidatePath('/portal');
 }
 
+// 초대 토큰을 수락하고 멤버십 또는 계정 연결을 마무리한다.
 export async function acceptInvitationAction(token: string) {
   const auth = await requireAuthenticatedUser();
   const { adminClient, invitation } = await loadPendingInvitationByToken(token);
@@ -3211,6 +3239,7 @@ export async function acceptInvitationAction(token: string) {
 }
 
 
+// CSV 파일에서 의뢰인 목록을 가져온다.
 export async function importClientsCsvAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   if (!organizationId) throw new Error('조직 정보가 필요합니다.');
@@ -3284,6 +3313,7 @@ export async function importClientsCsvAction(formData: FormData) {
   redirect(`/clients?imported=${imported}&skipped=${skipped}`);
 }
 
+// 가져온 의뢰인 목록을 일괄 초대한다.
 export async function bulkInviteClientsAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const mode = `${formData.get('mode') ?? 'selected'}`.trim();
@@ -3364,6 +3394,7 @@ const CASE_TYPE_CSV_MAP: Record<string, string> = {
   기타: 'other', other: 'other',
 };
 
+// CSV 파일에서 사건 목록을 가져온다.
 export async function importCasesCsvAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   if (!organizationId) throw new Error('조직 정보가 필요합니다.');

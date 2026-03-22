@@ -6,6 +6,7 @@ import { requireAuthenticatedUser, requireOrganizationUserManagementAccess } fro
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+// 현재 세션을 종료하고 로그인 화면 흐름으로 되돌린다.
 export async function signOutAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
@@ -17,6 +18,7 @@ export async function signOutAction() {
  * 관리자가 특정 구성원의 모든 세션을 강제 무효화합니다.
  * 퇴사 처리, 계정 탈취 의심 시 즉시 세션 차단에 사용합니다.
  */
+// 지정한 사용자의 활성 세션을 강제로 종료한다.
 export async function revokeUserSessionsAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`;
   const targetProfileId = `${formData.get('targetProfileId') ?? ''}`;
@@ -45,6 +47,7 @@ export async function revokeUserSessionsAction(formData: FormData) {
   revalidatePath('/settings/team');
 }
 
+// 임시 계정 사용자의 비밀번호 재설정 완료 상태를 저장한다.
 export async function completeTemporaryCredentialPasswordResetAction() {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();

@@ -5,6 +5,7 @@ import { requireOrganizationActionAccess } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+// 대시보드 공지 메시지를 저장하고 조직 구성원에게 노출한다.
 export async function sendDashboardNoticeAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();

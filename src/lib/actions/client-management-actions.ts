@@ -50,6 +50,7 @@ async function notifyOrgManagers(
   );
 }
 
+// 의뢰인 상세 화면에 특이사항 메모를 등록한다.
 export async function createClientSpecialNoteAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const clientKey = `${formData.get('clientKey') ?? ''}`.trim();
@@ -99,6 +100,7 @@ export async function createClientSpecialNoteAction(formData: FormData) {
   }
 }
 
+// 의뢰인 최근 활동을 바탕으로 AI 코멘트 초안을 생성한다.
 export async function generateClientAiCommentAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const clientKey = `${formData.get('clientKey') ?? ''}`.trim();
@@ -135,6 +137,7 @@ export async function generateClientAiCommentAction(formData: FormData) {
   redirect(`${returnPath}${separator}aiComment=${encodeURIComponent(aiComment)}` as Route);
 }
 
+// 두 의뢰인을 관련인 관계로 연결한다.
 export async function linkRelatedClientAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const clientKey = `${formData.get('clientKey') ?? ''}`.trim();

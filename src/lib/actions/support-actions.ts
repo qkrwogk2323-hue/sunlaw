@@ -15,6 +15,7 @@ async function notifyProfiles(rows: Array<Record<string, unknown>>) {
   if (error) throw error;
 }
 
+// 고객센터 문의를 생성하고 담당자에게 알린다.
 export async function createSupportRequestAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 지원 접속을 요청할 수 있습니다.');
   const supabase = await createSupabaseServerClient();
@@ -107,6 +108,7 @@ export async function createSupportRequestAction(formData: FormData) {
   revalidatePath('/admin/support');
 }
 
+// 고객센터 문의를 승인 또는 반려 처리한다.
 export async function decideSupportRequestAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const adminClient = createSupabaseAdminClient();
@@ -187,6 +189,7 @@ export async function decideSupportRequestAction(formData: FormData) {
   revalidatePath('/admin/support');
 }
 
+// 승인된 고객센터 요청에 대한 지원 세션을 시작한다.
 export async function beginSupportSessionAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 지원 세션을 시작할 수 있습니다.');
   const requestId = `${formData.get('requestId') ?? ''}`;
@@ -244,6 +247,7 @@ export async function beginSupportSessionAction(formData: FormData) {
   redirect(data.properties.action_link as never);
 }
 
+// 현재 진행 중인 지원 세션을 종료한다.
 export async function endSupportSessionAction() {
   const supabase = await createSupabaseServerClient();
   await clearSupportSessionCookie();

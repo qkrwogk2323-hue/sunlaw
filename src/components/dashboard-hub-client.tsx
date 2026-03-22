@@ -11,6 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast-provider';
+import type {
+  AdminCopilotResponse,
+  DashboardAiAssistantResponse,
+  DashboardAiOverview,
+  DraftAssistResponse
+} from '@/lib/ai/dashboard-home';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 
@@ -270,6 +276,16 @@ function providerTone(provider: 'openai' | 'gemini' | 'rules') {
   if (provider === 'gemini') return 'green';
   if (provider === 'openai') return 'blue';
   return 'amber';
+}
+
+function recommendationTone(priority: 'high' | 'medium' | 'low') {
+  if (priority === 'high') return 'red';
+  if (priority === 'low') return 'slate';
+  return 'blue';
+}
+
+function anomalyTone(severity: 'warning' | 'notice') {
+  return severity === 'warning' ? 'amber' : 'blue';
 }
 
 function clientAccessStatusLabel(status: string) {
@@ -883,12 +899,16 @@ export function DashboardHubClient({
   organizationId,
   currentUserId,
   scenarioMode,
-  data
+  data,
+  isPlatformAdmin = false,
+  initialAiOverview
 }: {
   organizationId: string | null;
   currentUserId: string;
   scenarioMode?: PlatformScenarioMode | null;
   data: DashboardSnapshot;
+  isPlatformAdmin?: boolean;
+  initialAiOverview: DashboardAiOverview;
 }) {
   const router = useRouter();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -1069,6 +1089,20 @@ export function DashboardHubClient({
   const [workspaceSearch, setWorkspaceSearch] = useState('');
   const [workspaceSearchBusy, setWorkspaceSearchBusy] = useState(false);
   const [workspaceSearchHint, setWorkspaceSearchHint] = useState<string | null>(null);
+  const [assistantQuestion, setAssistantQuestion] = useState('');
+  const [assistantPending, setAssistantPending] = useState(false);
+  const [assistantResult, setAssistantResult] = useState<DashboardAiAssistantResponse | null>(null);
+  const [assistantRequestId, setAssistantRequestId] = useState<string | null>(null);
+  const [draftKind, setDraftKind] = useState<'organization_message' | 'hub_message' | 'client_invite' | 'staff_invite'>('client_invite');
+  const [draftPrompt, setDraftPrompt] = useState('');
+  const [draftContextTitle, setDraftContextTitle] = useState(data.recentCases[0]?.title ?? '');
+  const [draftPending, setDraftPending] = useState(false);
+  const [draftResult, setDraftResult] = useState<DraftAssistResponse | null>(null);
+  const [draftRequestId, setDraftRequestId] = useState<string | null>(null);
+  const [adminQuestion, setAdminQuestion] = useState('이번 주 조직별 참여율 비교');
+  const [adminPending, setAdminPending] = useState(false);
+  const [adminResult, setAdminResult] = useState<AdminCopilotResponse | null>(null);
+  const [adminRequestId, setAdminRequestId] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveQuery, setArchiveQuery] = useState('');
   const [archiveAiHint, setArchiveAiHint] = useState<string | null>(null);
@@ -1169,6 +1203,99 @@ export function DashboardHubClient({
     setArchiveAiHint(
       `AI 점검 결과: 일정 관련 언급 ${scheduleMentions}건, 재확인 필요 언급 ${unresolvedMentions}건으로 감지되었습니다. 캘린더와 요청목록을 함께 확인하세요.`
     );
+  };
+
+  const runAssistant = async () => {
+    const question = assistantQuestion.trim();
+    if (!question || !organizationId) return;
+    setAssistantPending(true);
+    try {
+      const response = await fetch('/api/ai/home-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId, question })
+      });
+      const payload = await response.json().catch(() => null) as ({ answer?: string; actions?: DashboardAiAssistantResponse['actions']; source?: DashboardAiAssistantResponse['source']; provider?: 'rules'; requestId?: string; cause?: string; resolution?: string } | null);
+      if (!response.ok || !payload?.answer || !payload.actions || !payload.source || !payload.provider) {
+        toastError('AI 업무 도우미 응답 실패', { message: payload?.resolution ?? payload?.cause ?? '잠시 후 다시 시도해 주세요.' });
+        return;
+      }
+      setAssistantResult({
+        answer: payload.answer,
+        actions: payload.actions,
+        source: payload.source,
+        provider: payload.provider
+      });
+      setAssistantRequestId(payload.requestId ?? null);
+    } catch {
+      toastError('AI 업무 도우미 응답 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
+    } finally {
+      setAssistantPending(false);
+    }
+  };
+
+  const runDraftAssist = async () => {
+    const prompt = draftPrompt.trim();
+    if (!prompt || !organizationId) return;
+    setDraftPending(true);
+    try {
+      const response = await fetch('/api/ai/draft-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          kind: draftKind,
+          prompt,
+          contextTitle: draftContextTitle
+        })
+      });
+      const payload = await response.json().catch(() => null) as ({ title?: string; body?: string; shortBody?: string; provider?: 'rules'; requestId?: string; cause?: string; resolution?: string } | null);
+      if (!response.ok || !payload?.title || !payload.body || !payload.shortBody || !payload.provider) {
+        toastError('작성 보조 실패', { message: payload?.resolution ?? payload?.cause ?? '잠시 후 다시 시도해 주세요.' });
+        return;
+      }
+      setDraftResult({
+        title: payload.title,
+        body: payload.body,
+        shortBody: payload.shortBody,
+        provider: payload.provider
+      });
+      setDraftRequestId(payload.requestId ?? null);
+    } catch {
+      toastError('작성 보조 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
+    } finally {
+      setDraftPending(false);
+    }
+  };
+
+  const runAdminCopilot = async () => {
+    const question = adminQuestion.trim();
+    if (!question) return;
+    setAdminPending(true);
+    try {
+      const response = await fetch('/api/ai/admin-copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+      const payload = await response.json().catch(() => null) as ({ answer?: string; table?: AdminCopilotResponse['table']; actions?: AdminCopilotResponse['actions']; source?: AdminCopilotResponse['source']; provider?: 'rules'; requestId?: string; cause?: string; resolution?: string } | null);
+      if (!response.ok || !payload?.answer || !payload.table || !payload.actions || !payload.source || !payload.provider) {
+        toastError('운영 코파일럿 응답 실패', { message: payload?.resolution ?? payload?.cause ?? '잠시 후 다시 시도해 주세요.' });
+        return;
+      }
+      setAdminResult({
+        answer: payload.answer,
+        table: payload.table,
+        actions: payload.actions,
+        source: payload.source,
+        provider: payload.provider
+      });
+      setAdminRequestId(payload.requestId ?? null);
+    } catch {
+      toastError('운영 코파일럿 응답 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
+    } finally {
+      setAdminPending(false);
+    }
   };
 
   return (
@@ -1278,6 +1405,391 @@ export function DashboardHubClient({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card className="border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
+          <CardHeader className="border-sky-200/70">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>AI 업무 도우미</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">질문을 적으면 지금 어느 화면으로 가야 하는지 바로 안내합니다.</p>
+              </div>
+              <Badge tone="blue">홈</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="dashboard-ai-question" className="text-sm font-medium text-slate-700">질문</label>
+              <div className="flex flex-col gap-2 lg:flex-row">
+                <Input
+                  id="dashboard-ai-question"
+                  value={assistantQuestion}
+                  onChange={(event) => setAssistantQuestion(event.target.value)}
+                  placeholder="예: 오늘 미읽음 많은 허브 보여줘 / 의뢰인 초대 어디서 해?"
+                  className="h-11 bg-white"
+                />
+                <Button onClick={runAssistant} disabled={assistantPending || !assistantQuestion.trim() || !organizationId}>
+                  {assistantPending ? '정리 중...' : '바로 찾기'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-[1.4rem] border border-sky-200 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">오늘의 AI 요약</p>
+                  <p className="mt-1 text-sm text-slate-600">{initialAiOverview.summary.headline}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    reportAiIssue({
+                      aiFeature: 'ai_summary_card',
+                      question: '오늘의 핵심 요약',
+                      answer: initialAiOverview.summary.headline,
+                      rationale: initialAiOverview.summary.bullets.join(' / '),
+                      modelVersion: 'rules',
+                      requestId: `summary:${initialAiOverview.summary.source.generatedAt}`
+                    });
+                  }}
+                >
+                  오답 신고
+                </Button>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {initialAiOverview.summary.bullets.map((item) => (
+                  <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {initialAiOverview.summary.actions.map((action) => (
+                  <Link
+                    key={action.label}
+                    href={action.href as Route}
+                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 transition hover:border-sky-300 hover:bg-sky-100"
+                  >
+                    {action.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {assistantResult ? (
+              <div className="rounded-[1.4rem] border border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#f3fff8)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">질문 답변</p>
+                    <p className="mt-1 text-sm text-slate-600">{assistantResult.answer}</p>
+                  </div>
+                  <Badge tone="green">{assistantResult.provider}</Badge>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  {assistantResult.actions.map((action) => (
+                    <Link
+                      key={`${action.href}:${action.label}`}
+                      href={action.href as Route}
+                      className="rounded-2xl border border-emerald-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-emerald-300"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">{action.label}</p>
+                          <p className="mt-1 leading-6 text-slate-600">{action.reason}</p>
+                        </div>
+                        <ChevronRight className="mt-0.5 size-4 shrink-0 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                  <span>기준 시각 · {formatDateTime(assistantResult.source.generatedAt)}</span>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      reportAiIssue({
+                        aiFeature: 'home_ai_assistant',
+                        question: assistantQuestion,
+                        answer: assistantResult.answer,
+                        rationale: assistantResult.actions.map((item) => `${item.label}: ${item.reason}`).join(' / '),
+                        modelVersion: assistantResult.provider,
+                        requestId: assistantRequestId ?? undefined
+                      });
+                    }}
+                  >
+                    오답 신고
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <Card className="border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]">
+            <CardHeader className="border-violet-200/70">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle>지금 해야 할 3가지</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">역할과 현재 대기 흐름을 기준으로 우선순위를 제안합니다.</p>
+                </div>
+                <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {initialAiOverview.recommendations.map((item) => (
+                <Link
+                  key={`${item.href}:${item.title}`}
+                  href={item.href as Route}
+                  className="block rounded-2xl border border-violet-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-violet-300"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-900">{item.title}</p>
+                    <Badge tone={recommendationTone(item.priority)}>{item.priority === 'high' ? '우선' : item.priority === 'medium' ? '권장' : '여유'}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.detail}</p>
+                </Link>
+              ))}
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  reportAiIssue({
+                    aiFeature: 'next_action_recommendation',
+                    question: '지금 해야 할 3가지',
+                    answer: initialAiOverview.recommendations.map((item) => item.title).join(' / '),
+                    rationale: initialAiOverview.recommendations.map((item) => item.detail).join(' / '),
+                    modelVersion: 'rules',
+                    requestId: `recommendation:${initialAiOverview.summary.source.generatedAt}`
+                  });
+                }}
+              >
+                오답 신고
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff5dd)]">
+            <CardHeader className="border-amber-200/70">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle>이상 징후 알림</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">평소보다 급증하거나 쌓인 항목을 홈에서 먼저 경고합니다.</p>
+                </div>
+                <Badge tone="amber">{initialAiOverview.anomalies.length}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {initialAiOverview.anomalies.length ? (
+                initialAiOverview.anomalies.map((item) => (
+                  <Link
+                    key={`${item.href}:${item.title}`}
+                    href={item.href as Route}
+                    className="block rounded-2xl border border-amber-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-amber-300"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold text-slate-900">{item.title}</p>
+                      <Badge tone={anomalyTone(item.severity)}>{item.severity === 'warning' ? '경고' : '주의'}</Badge>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.detail}</p>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-amber-200 bg-white px-4 py-5 text-sm text-slate-600">지금은 눈에 띄는 급증이나 누락 흐름이 보이지 않습니다.</div>
+              )}
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  reportAiIssue({
+                    aiFeature: 'anomaly_alert',
+                    question: '이상 징후 알림',
+                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '이상 징후 없음',
+                    rationale: initialAiOverview.anomalies.map((item) => item.detail).join(' / '),
+                    modelVersion: 'rules',
+                    requestId: `anomaly:${initialAiOverview.summary.source.generatedAt}`
+                  });
+                }}
+              >
+                오답 신고
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className={`grid gap-6 ${isPlatformAdmin ? 'xl:grid-cols-[0.95fr_1.05fr]' : 'xl:grid-cols-1'}`}>
+        <Card className="border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]">
+          <CardHeader className="border-emerald-200/70">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>작성 보조</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">초대 문구, 허브 안내, 조직 공지 초안을 빠르게 만듭니다.</p>
+              </div>
+              <Badge tone="green">초안</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+              <div className="space-y-2">
+                <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
+                <select
+                  id="draft-kind"
+                  value={draftKind}
+                  onChange={(event) => setDraftKind(event.target.value as typeof draftKind)}
+                  className="h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm text-slate-900"
+                >
+                  <option value="client_invite">의뢰인 초대</option>
+                  <option value="staff_invite">구성원 초대</option>
+                  <option value="hub_message">허브 안내</option>
+                  <option value="organization_message">조직 공지</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
+                <Input
+                  id="draft-context"
+                  value={draftContextTitle}
+                  onChange={(event) => setDraftContextTitle(event.target.value)}
+                  placeholder="예: 베인 사건 보정 안내"
+                  className="h-11 bg-white"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">초안 요청</label>
+              <Textarea
+                id="draft-prompt"
+                value={draftPrompt}
+                onChange={(event) => setDraftPrompt(event.target.value)}
+                placeholder="예: 보정기한이 이번 주 금요일이고, 재산관계 확인 서류를 꼭 보내 달라는 안내문을 부드럽게 작성해 줘"
+                className="min-h-28 border-emerald-200 bg-white"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={runDraftAssist} disabled={draftPending || !draftPrompt.trim() || !organizationId}>
+                {draftPending ? '초안 만드는 중...' : '초안 만들기'}
+              </Button>
+              {draftResult ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    reportAiIssue({
+                      aiFeature: 'draft_assist',
+                      question: draftPrompt,
+                      answer: `${draftResult.title}\n${draftResult.body}`,
+                      rationale: draftResult.shortBody,
+                      modelVersion: draftResult.provider,
+                      requestId: draftRequestId ?? undefined
+                    });
+                  }}
+                >
+                  오답 신고
+                </Button>
+              ) : null}
+            </div>
+            {draftResult ? (
+              <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-slate-900">{draftResult.title}</p>
+                  <Badge tone="green">{draftResult.provider}</Badge>
+                </div>
+                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draftResult.body}</p>
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                  짧은 문구 · {draftResult.shortBody}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {isPlatformAdmin ? (
+          <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f6f8fb)]">
+            <CardHeader className="border-slate-200/70">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle>관리자용 운영 코파일럿</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">조직별 참여 흐름이나 운영 대기 상황을 바로 비교합니다.</p>
+                </div>
+                <Badge tone="slate">운영자</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-2 lg:flex-row">
+                <Input
+                  value={adminQuestion}
+                  onChange={(event) => setAdminQuestion(event.target.value)}
+                  placeholder="예: 이번 주 조직별 참여율 비교"
+                  className="h-11 bg-white"
+                />
+                <Button onClick={runAdminCopilot} disabled={adminPending || !adminQuestion.trim()}>
+                  {adminPending ? '분석 중...' : '운영 질의'}
+                </Button>
+              </div>
+
+              {adminResult ? (
+                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">운영 답변</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{adminResult.answer}</p>
+                    </div>
+                    <Badge tone="blue">{adminResult.provider}</Badge>
+                  </div>
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-semibold">조직</th>
+                          <th className="px-3 py-2 text-left font-semibold">참여율</th>
+                          <th className="px-3 py-2 text-left font-semibold">최근 메시지</th>
+                          <th className="px-3 py-2 text-left font-semibold">대기 요청</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {adminResult.table.map((row) => (
+                          <tr key={row.organizationId}>
+                            <td className="px-3 py-2 text-slate-900">{row.organizationName}</td>
+                            <td className="px-3 py-2 text-slate-700">{row.participationRate}%</td>
+                            <td className="px-3 py-2 text-slate-700">{row.recentMessages}건</td>
+                            <td className="px-3 py-2 text-slate-700">{row.pendingRequests}건</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {adminResult.actions.map((action) => (
+                      <Link
+                        key={`${action.href}:${action.label}`}
+                        href={action.href as Route}
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-100"
+                      >
+                        {action.label}
+                      </Link>
+                    ))}
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        reportAiIssue({
+                          aiFeature: 'admin_copilot',
+                          question: adminQuestion,
+                          answer: adminResult.answer,
+                          rationale: adminResult.table.map((item) => `${item.organizationName} ${item.participationRate}%`).join(' / '),
+                          modelVersion: adminResult.provider,
+                          requestId: adminRequestId ?? undefined
+                        });
+                      }}
+                    >
+                      오답 신고
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600">운영 질문을 입력하면 최근 1주일 기준 조직별 흐름을 바로 비교해 줍니다.</div>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">

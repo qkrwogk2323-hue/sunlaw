@@ -7,12 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientStructuredInviteForm } from '@/components/forms/client-structured-invite-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
+import { BulkUploadPanel } from '@/components/bulk-upload-panel';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { listCases } from '@/lib/queries/cases';
 import { listClientRosterSummary } from '@/lib/queries/clients';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { bulkUploadClientsAction } from '@/lib/actions/bulk-upload-actions';
 
 function linkStatusTone(status: string): 'green' | 'amber' | 'red' | 'slate' {
   if (status === '연결 완료') return 'green';
@@ -92,6 +94,9 @@ export default async function ClientsPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge tone={linkStatusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
+            {item.overdueCount > 0 && (
+              <Badge tone="red">미납 {item.overdueCount}건</Badge>
+            )}
             <Badge tone="slate">의뢰인 상세 관리</Badge>
           </div>
         </div>
@@ -254,6 +259,19 @@ export default async function ClientsPage({
               </Card>
             </div>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>CSV 일괄 등록</CardTitle>
+              <p className="text-sm text-slate-500">10건 이상의 의뢰인을 한 번에 등록할 때 사용합니다. 양식을 다운로드해 작성 후 업로드하세요.</p>
+            </CardHeader>
+            <CardContent>
+              <BulkUploadPanel
+                mode="clients"
+                organizationId={organizationId!}
+                action={bulkUploadClientsAction}
+              />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader><CardTitle>초대 링크 재발송</CardTitle></CardHeader>
             <CardContent className="space-y-2">

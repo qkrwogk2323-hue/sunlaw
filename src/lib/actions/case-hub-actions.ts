@@ -35,6 +35,7 @@ async function getAccessibleHubRecord(admin: ReturnType<typeof createSupabaseAdm
 // createCaseHubAction: 사건허브 생성
 // 권한: case_edit
 // ────────────────────────────────────────────────────────────────────
+// 사건허브를 새로 만들고 초기 좌석 구성을 저장한다.
 export async function createCaseHubAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
@@ -171,6 +172,7 @@ export async function createCaseHubAction(formData: FormData) {
 // updateCaseHubAction: 허브 설정 수정
 // 권한: case_edit
 // ────────────────────────────────────────────────────────────────────
+// 기존 사건허브의 기본 정보와 설정을 수정한다.
 export async function updateCaseHubAction(formData: FormData) {
   const hubId = `${formData.get('hubId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -226,6 +228,7 @@ export async function updateCaseHubAction(formData: FormData) {
 // inviteHubMemberAction: 참여자 초대
 // 권한: case_assign
 // ────────────────────────────────────────────────────────────────────
+// 사건허브에 새 참여자를 초대한다.
 export async function inviteHubMemberAction(formData: FormData) {
   const hubId = `${formData.get('hubId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -301,6 +304,7 @@ export async function inviteHubMemberAction(formData: FormData) {
 // updateHubMemberSeatAction: 좌석 변경
 // 권한: case_assign
 // ────────────────────────────────────────────────────────────────────
+// 사건허브 참여자의 좌석과 역할을 변경한다.
 export async function updateHubMemberSeatAction(formData: FormData) {
   const hubId = `${formData.get('hubId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -346,6 +350,7 @@ export async function updateHubMemberSeatAction(formData: FormData) {
 // archiveCaseHubAction: 허브 보관 (soft delete)
 // 권한: case_edit
 // ────────────────────────────────────────────────────────────────────
+// 사건허브를 보관 상태로 전환한다.
 export async function archiveCaseHubAction(formData: FormData) {
   const hubId = `${formData.get('hubId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -392,6 +397,7 @@ export async function archiveCaseHubAction(formData: FormData) {
 // activateCaseHubAction: 허브 상태를 active로 전환 (협업 시작)
 // 권한: case_edit
 // ────────────────────────────────────────────────────────────────────
+// 보관된 사건허브를 다시 활성화한다.
 export async function activateCaseHubAction(formData: FormData) {
   const hubId = `${formData.get('hubId') ?? ''}`.trim();
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
