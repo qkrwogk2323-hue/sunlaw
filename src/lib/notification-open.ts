@@ -3,6 +3,7 @@ import 'server-only';
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { requireAuthenticatedUser } from '@/lib/auth';
+import { createAccessDeniedFeedback, createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 function revalidateNotificationViews() {
@@ -25,7 +26,12 @@ async function getOwnedNotification(notificationId: string) {
     .single();
 
   if (error || !notification) {
-    throw error ?? new Error('알림을 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'NOTIFICATION_NOT_FOUND',
+      blocked: '알림을 찾지 못했습니다.',
+      cause: error?.message ?? '이미 처리되었거나 현재 계정에 속하지 않는 알림입니다.',
+      resolution: '알림 목록을 새로고침한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   return { auth, supabase, notification };
@@ -43,7 +49,12 @@ export async function resolveNotificationOpenTarget({
   const id = notificationId.trim();
 
   if (!id) {
-    throw new Error('알림 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'NOTIFICATION_ID_MISSING',
+      blocked: '열 알림 정보를 찾지 못했습니다.',
+      cause: '알림 식별자가 함께 전달되지 않았습니다.',
+      resolution: '알림 목록에서 다시 열어 주세요.'
+    }));
   }
 
   const resolvedOrganizationId = `${nextOrganizationId ?? ''}`.trim();
@@ -53,7 +64,12 @@ export async function resolveNotificationOpenTarget({
   if (resolvedOrganizationId && resolvedOrganizationId !== auth.profile.default_organization_id) {
     const hasMembership = auth.memberships.some((membership) => membership.organization_id === resolvedOrganizationId);
     if (!hasMembership) {
-      throw new Error('해당 조직으로 전환할 수 없습니다.');
+      throwGuardFeedback(createAccessDeniedFeedback({
+        code: 'NOTIFICATION_TARGET_ORGANIZATION_FORBIDDEN',
+        blocked: '해당 조직으로 전환할 수 없습니다.',
+        cause: '현재 계정은 지정된 조직의 활성 구성원이 아닙니다.',
+        resolution: '조직 전환 권한을 확인하거나 올바른 알림에서 다시 시도해 주세요.'
+      }));
     }
 
     const { error: profileError } = await supabase
@@ -62,7 +78,12 @@ export async function resolveNotificationOpenTarget({
       .eq('id', auth.user.id);
 
     if (profileError) {
-      throw profileError;
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'NOTIFICATION_ORGANIZATION_SWITCH_FAILED',
+        blocked: '알림 확인 중 조직 전환을 저장하지 못했습니다.',
+        cause: profileError.message,
+        resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+      }));
     }
   }
 
@@ -76,7 +97,12 @@ export async function resolveNotificationOpenTarget({
     .eq('recipient_profile_id', auth.user.id);
 
   if (notificationError) {
-    throw notificationError;
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'NOTIFICATION_MARK_READ_FAILED',
+      blocked: '알림 읽음 처리를 저장하지 못했습니다.',
+      cause: notificationError.message,
+      resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    }));
   }
 
   revalidateNotificationViews();

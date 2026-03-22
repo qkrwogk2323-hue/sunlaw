@@ -86,7 +86,9 @@ export const clientSignupSchema = z.object({
   privacyConsent: z.literal(true, {
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),
-  serviceConsent: z.boolean().optional().default(true)
+  serviceConsent: z.literal(true, {
+    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
+  })
 });
 
 export const generalSignupSchema = z.object({
@@ -104,7 +106,9 @@ export const generalSignupSchema = z.object({
   privacyConsent: z.literal(true, {
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),
-  serviceConsent: z.boolean().optional().default(true)
+  serviceConsent: z.literal(true, {
+    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
+  })
 });
 
 export const lightAccountSignupSchema = z.object({

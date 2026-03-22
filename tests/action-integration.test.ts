@@ -573,7 +573,7 @@ describe('server action integration', () => {
 
     const { createSupportRequestAction } = await import('@/lib/actions/support-actions');
 
-    await expect(createSupportRequestAction(formData)).rejects.toThrow('지원 접속 대상은 해당 조직의 활성 구성원이어야 합니다.');
+    await expect(createSupportRequestAction(formData)).rejects.toThrow('지원 접속 대상을 승인할 수 없습니다.');
   });
 
   it('blocks duplicate document review requests when a document is already pending', async () => {

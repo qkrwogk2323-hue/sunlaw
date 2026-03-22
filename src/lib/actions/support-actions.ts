@@ -10,6 +10,14 @@ import { clearSupportSessionCookie, writeSupportSessionCookie } from '@/lib/supp
 import { createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 
+function throwSupportValidation(code: string, blocked: string, cause: string, resolution: string): never {
+  throwGuardFeedback(createValidationFailedFeedback({ code, blocked, cause, resolution }));
+}
+
+function throwSupportCondition(code: string, blocked: string, cause: string, resolution: string): never {
+  throwGuardFeedback(createConditionFailedFeedback({ code, blocked, cause, resolution }));
+}
+
 async function notifyProfiles(rows: Array<Record<string, unknown>>) {
   if (!rows.length) return;
   const supabase = await createSupabaseServerClient();
@@ -182,12 +190,22 @@ export async function createSupportRequestAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const adminClient = createSupabaseAdminClient();
 
-  const parsed = supportRequestSchema.parse({
-    organizationId: formData.get('organizationId'),
-    targetEmail: formData.get('targetEmail'),
-    reason: formData.get('reason'),
-    expiresHours: formData.get('expiresHours')
-  });
+  let parsed;
+  try {
+    parsed = supportRequestSchema.parse({
+      organizationId: formData.get('organizationId'),
+      targetEmail: formData.get('targetEmail'),
+      reason: formData.get('reason'),
+      expiresHours: formData.get('expiresHours')
+    });
+  } catch (error) {
+    throwSupportValidation(
+      'SUPPORT_REQUEST_INVALID',
+      '지원 접속 요청 정보를 다시 확인해 주세요.',
+      error instanceof Error ? error.message : '필수 항목이 누락되었거나 형식이 올바르지 않습니다.',
+      '조직, 대상 이메일, 사유와 접속 시간을 다시 입력한 뒤 시도해 주세요.'
+    );
+  }
 
   const { data: targetProfile } = await adminClient
     .from('profiles')
@@ -196,7 +214,12 @@ export async function createSupportRequestAction(formData: FormData) {
     .maybeSingle();
 
   if (!targetProfile) {
-    throw new Error('대상 사용자를 찾을 수 없습니다. 먼저 Supabase Auth 사용자로 생성되어 있어야 합니다.');
+    throwSupportCondition(
+      'SUPPORT_TARGET_USER_NOT_FOUND',
+      '지원 접속 대상 사용자를 찾지 못했습니다.',
+      '입력한 이메일에 해당하는 계정이 아직 생성되지 않았습니다.',
+      '먼저 대상 사용자를 가입시키거나 계정 이메일을 다시 확인해 주세요.'
+    );
   }
 
   const { data: organization } = await supabase
@@ -206,7 +229,12 @@ export async function createSupportRequestAction(formData: FormData) {
     .single();
 
   if (!organization) {
-    throw new Error('조직을 찾을 수 없습니다.');
+    throwSupportCondition(
+      'SUPPORT_ORGANIZATION_NOT_FOUND',
+      '지원 대상 조직을 찾지 못했습니다.',
+      '선택한 조직이 삭제되었거나 현재 권한으로 조회되지 않습니다.',
+      '조직 목록을 새로고침한 뒤 다시 선택해 주세요.'
+    );
   }
 
   const { data: activeMembership } = await adminClient
@@ -218,7 +246,12 @@ export async function createSupportRequestAction(formData: FormData) {
     .maybeSingle();
 
   if (!activeMembership) {
-    throw new Error('지원 접속 대상은 해당 조직의 활성 구성원이어야 합니다.');
+    throwSupportCondition(
+      'SUPPORT_TARGET_NOT_ACTIVE_MEMBER',
+      '지원 접속 대상을 승인할 수 없습니다.',
+      '대상 계정이 해당 조직의 활성 구성원이 아닙니다.',
+      '먼저 조직 구성원 상태를 활성으로 맞춘 뒤 다시 요청해 주세요.'
+    );
   }
 
   const expiresAt = new Date(Date.now() + parsed.expiresHours * 60 * 60 * 1000).toISOString();
@@ -241,7 +274,12 @@ export async function createSupportRequestAction(formData: FormData) {
     .single();
 
   if (error || !requestRow) {
-    throw error ?? new Error('지원 접속 요청 생성 실패');
+    throwSupportCondition(
+      'SUPPORT_REQUEST_CREATE_FAILED',
+      '지원 접속 요청을 저장하지 못했습니다.',
+      error?.message ?? '요청 번호를 생성하지 못했습니다.',
+      '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    );
   }
 
   const { data: approvers } = await supabase
@@ -278,7 +316,12 @@ export async function decideSupportRequestAction(formData: FormData) {
   const approvalNote = `${formData.get('approvalNote') ?? ''}`;
 
   if (!requestId || !['approved', 'rejected'].includes(decision)) {
-    throw new Error('잘못된 요청입니다.');
+    throwSupportValidation(
+      'SUPPORT_REQUEST_DECISION_INVALID',
+      '지원 접속 승인 요청 형식이 올바르지 않습니다.',
+      '요청 번호가 없거나 승인 상태 값이 허용된 범위를 벗어났습니다.',
+      '목록에서 다시 요청을 선택한 뒤 승인 또는 반려를 진행해 주세요.'
+    );
   }
 
   const { data: requestRow } = await supabase
@@ -288,7 +331,12 @@ export async function decideSupportRequestAction(formData: FormData) {
     .single();
 
   if (!requestRow) {
-    throw new Error('지원 접속 요청을 찾을 수 없습니다.');
+    throwSupportCondition(
+      'SUPPORT_REQUEST_NOT_FOUND',
+      '지원 접속 요청을 찾지 못했습니다.',
+      '이미 처리되었거나 삭제된 요청입니다.',
+      '목록을 새로고침해 최신 요청 상태를 확인해 주세요.'
+    );
   }
 
   const { auth } = await requireOrganizationActionAccess(requestRow.organization_id, {
@@ -355,7 +403,12 @@ export async function beginSupportSessionAction(formData: FormData) {
   const auth = await requirePlatformAdminAction('플랫폼 관리자만 지원 세션을 시작할 수 있습니다.');
   const requestId = `${formData.get('requestId') ?? ''}`;
   if (!requestId) {
-    throw new Error('requestId is required');
+    throwSupportValidation(
+      'SUPPORT_SESSION_REQUEST_ID_MISSING',
+      '지원 세션을 시작할 요청 번호가 없습니다.',
+      '지원 세션 시작에 필요한 요청 식별자가 전달되지 않았습니다.',
+      '지원 요청 목록에서 다시 시작해 주세요.'
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -367,15 +420,30 @@ export async function beginSupportSessionAction(formData: FormData) {
     .single();
 
   if (!requestRow) {
-    throw new Error('지원 접속 요청을 찾을 수 없습니다.');
+    throwSupportCondition(
+      'SUPPORT_SESSION_REQUEST_NOT_FOUND',
+      '지원 세션 대상 요청을 찾지 못했습니다.',
+      '요청이 이미 처리되었거나 삭제되었습니다.',
+      '목록을 새로고침한 뒤 다시 시도해 주세요.'
+    );
   }
 
   if (requestRow.status !== 'approved') {
-    throw new Error('승인된 요청만 지원 접속으로 전환할 수 있습니다.');
+    throwSupportCondition(
+      'SUPPORT_SESSION_REQUEST_NOT_APPROVED',
+      '지원 세션을 시작할 수 없는 상태입니다.',
+      '승인된 요청만 실제 지원 세션으로 전환할 수 있습니다.',
+      '먼저 해당 요청을 승인한 뒤 다시 시도해 주세요.'
+    );
   }
 
   if (requestRow.expires_at && new Date(requestRow.expires_at).getTime() < Date.now()) {
-    throw new Error('만료된 지원 접속 요청입니다.');
+    throwSupportCondition(
+      'SUPPORT_SESSION_REQUEST_EXPIRED',
+      '지원 접속 요청의 유효시간이 지났습니다.',
+      '요청 만료 시각이 지나 더 이상 세션을 시작할 수 없습니다.',
+      '새 지원 접속 요청을 다시 생성해 주세요.'
+    );
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -388,7 +456,12 @@ export async function beginSupportSessionAction(formData: FormData) {
   });
 
   if (error || !data?.properties?.action_link) {
-    throw error ?? new Error('지원 접속 링크를 생성하지 못했습니다.');
+    throwSupportCondition(
+      'SUPPORT_SESSION_LINK_CREATE_FAILED',
+      '지원 접속 링크를 생성하지 못했습니다.',
+      error?.message ?? '로그인 링크를 만들지 못했습니다.',
+      '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    );
   }
 
   await writeSupportSessionCookie({
