@@ -74,9 +74,8 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
   });
   const contractRequestMap = new Map<string, any>();
   for (const request of contractRequests) {
-    const matchedAgreement = pendingContractAgreements.find((agreement: any) => request.title === `[계약] ${agreement.title} 서명 요청`);
-    if (matchedAgreement && !contractRequestMap.has(matchedAgreement.id)) {
-      contractRequestMap.set(matchedAgreement.id, request);
+    if (request.fee_agreement_id && !contractRequestMap.has(request.fee_agreement_id)) {
+      contractRequestMap.set(request.fee_agreement_id, request);
     }
   }
   const documentMap = new Map((detail.documents ?? []).map((item: any) => [item.id, item]));

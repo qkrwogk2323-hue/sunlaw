@@ -222,7 +222,7 @@ export async function getPortalCaseDetail(caseId: string) {
     supabase.from('case_documents').select('id, title, document_kind, approval_status, updated_at').eq('case_id', caseId).eq('client_visibility', 'client_visible').order('updated_at', { ascending: false }),
     supabase.from('case_schedules').select('id, title, schedule_kind, scheduled_start, location').eq('case_id', caseId).eq('client_visibility', 'client_visible').order('scheduled_start', { ascending: true }),
     supabase.from('case_messages').select('id, body, created_at, sender_role, sender:profiles(full_name)').eq('case_id', caseId).eq('is_internal', false).order('created_at', { ascending: false }).limit(20),
-    supabase.from('case_requests').select('id, request_kind, title, body, status, due_at, created_at').eq('case_id', caseId).eq('client_visible', true).order('created_at', { ascending: false }).limit(20),
+    supabase.from('case_requests').select('id, fee_agreement_id, request_kind, title, body, status, due_at, created_at').eq('case_id', caseId).eq('client_visible', true).order('created_at', { ascending: false }).limit(20),
     supabase.from('billing_entries').select('id, entry_kind, title, amount, status, due_on, paid_at, bill_to_case_client_id').eq('case_id', caseId).eq('bill_to_case_client_id', clientRow.id).order('created_at', { ascending: false }),
     supabase.from('case_handlers').select('id, role, handler_name, created_at').eq('case_id', caseId).order('created_at', { ascending: true }),
     supabase

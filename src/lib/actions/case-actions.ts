@@ -1738,6 +1738,7 @@ export async function registerContractPacketAction(formData: FormData) {
         organization_id: caseRecord.organization_id,
         case_id: caseRecord.id,
         created_by: auth.user.id,
+        fee_agreement_id: agreementRow.id,
         request_kind: 'signature_request',
         title: `[계약] ${parsed.title} 서명 요청`,
         body: signatureBody,

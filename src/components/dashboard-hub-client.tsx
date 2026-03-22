@@ -1323,7 +1323,8 @@ export function DashboardHubClient({
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          {/* 운영 큐 */}
           <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1332,7 +1333,7 @@ export function DashboardHubClient({
               </div>
               <Badge tone="red">우선순위</Badge>
             </div>
-            <div className="mt-3 grid gap-3 xl:grid-cols-2">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -1398,8 +1399,336 @@ export function DashboardHubClient({
               </div>
             </div>
           </div>
+
+          {/* 주의할 변화 알림 */}
+          <div className="rounded-[1.6rem] border border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff5dd)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">주의할 변화 알림</p>
+                <p className="mt-1 text-xs text-slate-500">평소보다 갑자기 늘었거나 한곳에 몰린 항목을 먼저 보여 줍니다.</p>
+              </div>
+              <Badge tone="amber">{initialAiOverview.anomalies.length}</Badge>
+            </div>
+            <div className="mt-3 space-y-2">
+              {initialAiOverview.anomalies.length ? (
+                initialAiOverview.anomalies.map((item) => (
+                  <Link
+                    key={`${item.href}:${item.title}`}
+                    href={item.href as Route}
+                    className="block rounded-2xl border border-amber-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-amber-300"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-slate-900">{item.title}</p>
+                      <Badge tone={anomalyTone(item.severity)}>{item.severity === 'warning' ? '경고' : '주의'}</Badge>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">{item.detail}</p>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-amber-200 bg-white px-3 py-5 text-sm text-slate-600">지금은 눈에 띄는 급증이나 누락 흐름이 보이지 않습니다.</div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                aria-label="AI 변화 알림이 잘못됐나요? 피드백 보내기"
+                onClick={() => {
+                  reportAiIssue({
+                    aiFeature: 'anomaly_alert',
+                    question: '주의할 변화 알림',
+                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '특별히 늘어난 항목 없음',
+                    rationale: initialAiOverview.anomalies.map((item) => item.detail).join(' / '),
+                    modelVersion: 'rules',
+                    requestId: `anomaly:${initialAiOverview.summary.source.generatedAt}`
+                  });
+                }}
+              >
+                <ThumbsDown className="size-3.5" />
+                AI 결과가 틀렸나요?
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle>{communicationTitle}</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">{communicationHint}</p>
+                <p className="mt-1 text-xs text-slate-500">현재 시각: {nowText}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {scenarioMode ? <Badge tone="blue">가상 조직간 협업방</Badge> : null}
+                {!scenarioMode ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="space-y-2">
+                      <label htmlFor="workspace-search" className="text-sm font-medium text-slate-700">
+                        통합 검색
+                      </label>
+                      <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        id="workspace-search"
+                        value={workspaceSearch}
+                        onChange={(event) => setWorkspaceSearch(event.target.value)}
+                        placeholder="사건·의뢰인·문서 검색"
+                        className="h-10 w-64 pl-9"
+                      />
+                    </div>
+                    </div>
+                    <Button variant="secondary" onClick={runWorkspaceSearch} disabled={workspaceSearchBusy || !workspaceSearch.trim()}>
+                      {workspaceSearchBusy ? '확인 중...' : '확인'}
+                    </Button>
+                  </div>
+                ) : null}
+                <Badge tone="slate">조직 전체 소통방</Badge>
+                {!scenarioMode ? (
+                  <Button className="bg-sky-600 text-white hover:bg-sky-700" onClick={summarizeThread} disabled={coordinationPending || !visibleMessages.length}>
+                    <Bot className="mr-2 size-4" />AI 일정 제안
+                  </Button>
+                ) : null}
+                {!scenarioMode && canOpenArchive ? (
+                  <Button variant="secondary" onClick={() => setArchiveOpen(true)}>
+                    조직 업무소통 보관함
+                  </Button>
+                ) : null}
+              </div>
+              {!scenarioMode && workspaceSearchHint ? (
+                <p className="text-xs text-slate-500">{workspaceSearchHint}</p>
+              ) : null}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {scenarioMode ? (
+            <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <label htmlFor="scenario-conversation-id" className="text-xs font-medium text-slate-500">
+                    대화방 선택
+                  </label>
+                  <select
+                    id="scenario-conversation-id"
+                    value={selectedScenarioConversationId}
+                    onChange={(event) => setSelectedScenarioConversationId(event.target.value)}
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                  >
+                    {scenarioConversationRooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.partner_organization_name} · {room.topic}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-slate-900">{activeScenarioConversation?.partner_organization_name ?? '조직 대화방'}</p>
+                    <p className="mt-1 text-sm text-slate-500">{activeScenarioConversation?.topic ?? '협업 흐름'} · {activeScenarioConversation?.case_title ?? '공통 협업'}</p>
+                  </div>
+                  <Badge tone="slate">조직간 스레드</Badge>
+                </div>
+
+                <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
+                  {activeScenarioConversation?.messages.length ? activeScenarioConversation.messages.map((message) => {
+                    const mine = message.sender_organization_name !== activeScenarioConversation.partner_organization_name;
+                    return (
+                      <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[90%] rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${mine ? 'bg-slate-950 text-white' : 'bg-white text-slate-800'}`}>
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] opacity-80">
+                            <span>{message.sender_organization_name}</span>
+                            <span>{message.sender_name}</span>
+                            <span>{formatDateTime(message.created_at)}</span>
+                            {message.case_title ? <Badge tone="slate">{message.case_title}</Badge> : null}
+                          </div>
+                          <p className="mt-2 whitespace-pre-wrap leading-6">{message.body}</p>
+                        </div>
+                      </div>
+                    );
+                  }) : <p className="px-2 py-12 text-center text-sm text-slate-500">선택한 조직 대화방 기록이 없습니다.</p>}
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  시나리오 모드에서는 조직간 협업 흐름을 읽기 전용으로 제공합니다. 이 방들을 기준으로 사건, 의뢰인, 일정, 문서가 서로 연결된 상태를 점검할 수 있습니다.
+                </div>
+            </div>
+          ) : (
+            <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-base font-semibold text-slate-900">조직 전체 소통방</p>
+                <Badge tone="slate">오늘 대화 {todayMessages.length}건</Badge>
+              </div>
+
+                <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
+                  {todayMessages.length ? (
+                    todayMessages.map((item) => {
+                      const mine = item.sender_profile_id === effectiveCurrentUserId;
+                      return (
+                        <div key={item.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[88%] rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${mine ? 'bg-slate-950 text-white' : 'bg-white text-slate-800'}`}>
+                            <div className="flex items-center gap-2 text-[11px] opacity-80">
+                              <span>{senderName(item)}</span>
+                              <span>{formatDateTime(item.created_at)}</span>
+                              {item.is_internal ? <Badge tone="slate">내부</Badge> : null}
+                            </div>
+                            <p className="mt-2 whitespace-pre-wrap leading-6">{item.body}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="px-2 py-12 text-center text-sm text-slate-500">오늘 작성된 조직 업무소통이 없습니다.</p>
+                  )}
+                </div>
+
+                <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
+                  <div className="space-y-2">
+                    <label htmlFor="organization-message-input" className="text-sm font-medium text-slate-700">
+                      조직 소통 메시지 <span className="text-rose-600">*</span>
+                    </label>
+                  <Textarea
+                    id="organization-message-input"
+                    value={messageInput}
+                    onChange={(event) => setMessageInput(event.target.value)}
+                    aria-required="true"
+                    placeholder="조직 전체 소통방에 메시지를 입력하세요."
+                    className="min-h-24"
+                  />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs text-slate-500">하루 지난 대화는 자동으로 보관함에서 확인됩니다.</span>
+                    <Button
+                      onClick={sendMessage}
+                      disabled={
+                        messagePending
+                        || !messageInput.trim()
+                      }
+                    >
+                      {messagePending ? '전송 중...' : '대화 보내기'}
+                    </Button>
+                  </div>
+                </div>
+
+                {coordinationPreview ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-slate-900">AI 요약 · 오늘 대화 실행 항목</p>
+                        <p className="mt-1 text-sm text-slate-600">{coordinationPreview.summary}</p>
+                        {coordinationSource ? <p className="mt-1 text-xs text-slate-500">출처: {coordinationSourceLabel} · {coordinationSourceTimeLabel}</p> : null}
+                        {coordinationEstimate ? <p className="mt-1 text-xs text-amber-700">표기: 추정 (자동 실행 금지)</p> : null}
+                      </div>
+                      <Badge tone={providerTone(coordinationPreview.provider)}>{providerLabel(coordinationPreview.provider)}</Badge>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {coordinationPreview.checklist.map((item) => {
+                        const checked = selectedChecklistIds.includes(item.id);
+                        return (
+                          <label key={item.id} className="flex gap-3 rounded-2xl border border-emerald-200 bg-white px-3 py-3">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                setSelectedChecklistIds((current) => event.target.checked ? [...current, item.id] : current.filter((value) => value !== item.id));
+                              }}
+                              className="mt-1 size-4 rounded border-slate-300"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-medium text-slate-900">{item.label}</p>
+                                <Badge tone={priorityTone(item.priority)}>{priorityLabel(item.priority)}</Badge>
+                                {item.dueAt ? <span className="text-xs text-slate-500">{formatDateTime(item.dueAt)}</span> : null}
+                              </div>
+                              <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {coordinationPreview.setupHint ? <p className="mt-3 text-xs text-amber-700">{coordinationPreview.setupHint}</p> : null}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button onClick={commitCoordination} disabled={coordinationPending || !selectedChecklistIds.length}>정리 내용 반영</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                        aria-label="AI 대화 분석이 잘못됐나요? 피드백 보내기"
+                        onClick={() => {
+                          if (!coordinationPreview) return;
+                          reportAiIssue({
+                            aiFeature: 'ai_summary_card',
+                            question: visibleMessages.slice(-8).map((item) => `${senderName(item)}: ${item.body}`).join('\n'),
+                            answer: `${coordinationPreview.summary}\n${coordinationPreview.checklist.map((item) => `- ${item.label}`).join('\n')}`,
+                            rationale: coordinationPreview.reason,
+                            modelVersion: coordinationPreview.provider,
+                            requestId: `coordination:${coordinationSource?.generatedAt ?? Date.now()}`
+                          });
+                        }}
+                      >
+                        <ThumbsDown className="size-3.5" />
+                        AI 결과가 틀렸나요?
+                      </Button>
+                      <Button variant="secondary" onClick={() => setCoordinationPreview(null)}>닫기</Button>
+                    </div>
+                  </div>
+                ) : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {archiveOpen && canOpenArchive ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_24px_64px_rgba(15,23,42,0.35)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">조직 업무소통 보관함</p>
+                <p className="text-xs text-slate-500">하루 지난 대화만 보관됩니다. (관리자 전용)</p>
+              </div>
+              <Button variant="secondary" onClick={() => setArchiveOpen(false)}>닫기</Button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="space-y-2">
+                <label htmlFor="archive-query" className="text-sm font-medium text-slate-700">
+                  보관함 검색
+                </label>
+                <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="archive-query"
+                  value={archiveQuery}
+                  onChange={(event) => setArchiveQuery(event.target.value)}
+                  placeholder="날짜, 작성자, 내용 검색"
+                  className="h-10 w-72 pl-9"
+                />
+              </div>
+              </div>
+              <Button variant="secondary" onClick={runArchiveAiCheck}>
+                <Bot className="mr-1 size-4" />
+                AI 점검
+              </Button>
+            </div>
+            {archiveAiHint ? <p className="mt-2 text-xs text-sky-700">{archiveAiHint}</p> : null}
+
+            <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
+              {filteredArchivedMessages.length ? filteredArchivedMessages.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                    <span>{senderName(item)}</span>
+                    <span>{formatDateTime(item.created_at)}</span>
+                    {relatedTitle(item.cases) ? <Badge tone="slate">{relatedTitle(item.cases)}</Badge> : null}
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{item.body}</p>
+                </div>
+              )) : (
+                <p className="py-10 text-center text-sm text-slate-500">조건에 맞는 보관 대화가 없습니다.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
@@ -1409,9 +1738,20 @@ export function DashboardHubClient({
                 <CardTitle>AI 업무 도우미</CardTitle>
                 <p className="mt-1 text-sm text-slate-500">질문을 적으면 지금 어느 화면으로 가야 하는지 바로 안내합니다.</p>
               </div>
-              <Badge tone="blue">홈</Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone="blue">홈</Badge>
+                <button
+                  type="button"
+                  aria-label={aiAssistantOpen ? 'AI 업무 도우미 접기' : 'AI 업무 도우미 펼치기'}
+                  onClick={() => setAiAssistantOpen((v) => !v)}
+                  className="flex size-7 items-center justify-center rounded-full border border-sky-200 bg-white text-slate-500 hover:bg-sky-50"
+                >
+                  {aiAssistantOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
+                </button>
+              </div>
             </div>
           </CardHeader>
+          {aiAssistantOpen ? (
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p className="text-xs text-slate-500">
@@ -1535,6 +1875,7 @@ export function DashboardHubClient({
               </div>
             ) : null}
           </CardContent>
+          ) : null}
         </Card>
 
         <div className="space-y-6">
@@ -1545,9 +1886,20 @@ export function DashboardHubClient({
                   <CardTitle>지금 해야 할 항목</CardTitle>
                   <p className="mt-1 text-sm text-slate-500">역할과 현재 대기 흐름을 기준으로 우선순위를 제안합니다.</p>
                 </div>
-                <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
+                  <button
+                    type="button"
+                    aria-label={todoOpen ? '지금 해야 할 항목 접기' : '지금 해야 할 항목 펼치기'}
+                    onClick={() => setTodoOpen((v) => !v)}
+                    className="flex size-7 items-center justify-center rounded-full border border-violet-200 bg-white text-slate-500 hover:bg-violet-50"
+                  >
+                    {todoOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
+                  </button>
+                </div>
               </div>
             </CardHeader>
+            {todoOpen ? (
             <CardContent className="space-y-3">
               {initialAiOverview.recommendations.map((item) => (
                 <Link
@@ -1582,203 +1934,177 @@ export function DashboardHubClient({
                 AI 결과가 틀렸나요?
               </Button>
             </CardContent>
+            ) : null}
           </Card>
 
-          <Card className="border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff5dd)]">
-            <CardHeader className="border-amber-200/70">
+          <Card className="border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]">
+            <CardHeader className="border-emerald-200/70">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <CardTitle>갑자기 늘어난 항목 안내</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">평소보다 갑자기 늘었거나 한곳에 몰린 항목을 먼저 보여 줍니다.</p>
+                  <CardTitle>작성 보조</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">초대 문구, 허브 안내, 조직 공지 초안을 빠르게 만듭니다.</p>
                 </div>
-                <Badge tone="amber">{initialAiOverview.anomalies.length}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge tone="green">초안</Badge>
+                  <button
+                    type="button"
+                    aria-label={draftOpen ? '작성 보조 접기' : '작성 보조 펼치기'}
+                    onClick={() => setDraftOpen((v) => !v)}
+                    className="flex size-7 items-center justify-center rounded-full border border-emerald-200 bg-white text-slate-500 hover:bg-emerald-50"
+                  >
+                    {draftOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
+                  </button>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {initialAiOverview.anomalies.length ? (
-                initialAiOverview.anomalies.map((item) => (
-                  <Link
-                    key={`${item.href}:${item.title}`}
-                    href={item.href as Route}
-                    className="block rounded-2xl border border-amber-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-amber-300"
+            {draftOpen ? (
+            <CardContent className="space-y-4">
+              <p className="text-xs text-slate-500">
+                <span className="text-red-500" aria-hidden="true">*</span> 작성 종류와 요청 내용을 입력하면 바로 초안이 만들어집니다.
+              </p>
+              <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+                <div className="space-y-2">
+                  <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
+                  <select
+                    id="draft-kind"
+                    value={draftKind}
+                    onChange={(event) => setDraftKind(event.target.value as typeof draftKind)}
+                    className="h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm text-slate-900"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold text-slate-900">{item.title}</p>
-                      <Badge tone={anomalyTone(item.severity)}>{item.severity === 'warning' ? '경고' : '주의'}</Badge>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.detail}</p>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-amber-200 bg-white px-4 py-5 text-sm text-slate-600">지금은 눈에 띄는 급증이나 누락 흐름이 보이지 않습니다.</div>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
-                aria-label="AI 변화 알림이 잘못됐나요? 피드백 보내기"
-                onClick={() => {
-                  reportAiIssue({
-                    aiFeature: 'anomaly_alert',
-                    question: '갑자기 늘어난 항목 안내',
-                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '특별히 늘어난 항목 없음',
-                    rationale: initialAiOverview.anomalies.map((item) => item.detail).join(' / '),
-                    modelVersion: 'rules',
-                    requestId: `anomaly:${initialAiOverview.summary.source.generatedAt}`
-                  });
-                }}
-              >
-                <ThumbsDown className="size-3.5" />
-                AI 결과가 틀렸나요?
-              </Button>
+                    <option value="client_invite">의뢰인 초대</option>
+                    <option value="staff_invite">구성원 초대</option>
+                    <option value="hub_message">허브 안내</option>
+                    <option value="organization_message">조직 공지</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
+                  <Input
+                    id="draft-context"
+                    value={draftContextTitle}
+                    onChange={(event) => setDraftContextTitle(event.target.value)}
+                    placeholder="예: 베인 사건 보정 안내"
+                    className="h-11 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">
+                  초안 요청 <span className="text-red-500" aria-hidden="true">*</span>
+                </label>
+                <Textarea
+                  id="draft-prompt"
+                  value={draftPrompt}
+                  onChange={(event) => setDraftPrompt(event.target.value)}
+                  aria-required="true"
+                  placeholder="예: 보정기한이 이번 주 금요일이고, 재산관계 확인 서류를 꼭 보내 달라는 안내문을 부드럽게 작성해 줘"
+                  className="min-h-28 border-emerald-200 bg-white"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={runDraftAssist} disabled={draftPending || !draftPrompt.trim() || !organizationId}>
+                  {draftPending ? '초안 만드는 중...' : '초안 만들기'}
+                </Button>
+                {draftResult ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      reportAiIssue({
+                        aiFeature: 'draft_assist',
+                        question: draftPrompt,
+                        answer: `${draftResult.title}\n${draftResult.body}`,
+                        rationale: draftResult.shortBody,
+                        modelVersion: draftResult.provider,
+                        requestId: draftRequestId ?? undefined
+                      });
+                    }}
+                  >
+                    AI 결과가 틀렸나요?
+                  </Button>
+                ) : null}
+              </div>
+              {draftResult ? (
+                <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-900">{draftResult.title}</p>
+                    <Badge tone="green">{providerLabel(draftResult.provider)}</Badge>
+                  </div>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draftResult.body}</p>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                    짧은 문구 · {draftResult.shortBody}
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
+            ) : null}
           </Card>
+
         </div>
       </div>
 
-      <div className={`grid gap-6 ${isPlatformAdmin ? 'xl:grid-cols-[0.95fr_1.05fr]' : 'xl:grid-cols-1'}`}>
-        <Card className="border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]">
-          <CardHeader className="border-emerald-200/70">
+      {isPlatformAdmin ? (
+        <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f6f8fb)]">
+          <CardHeader className="border-slate-200/70">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle>작성 보조</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">초대 문구, 허브 안내, 조직 공지 초안을 빠르게 만듭니다.</p>
+                <CardTitle>관리자 운영 코파일럿</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">플랫폼 운영 판단과 조정은 아래 운영 메뉴에서 직접 확인해 주세요.</p>
               </div>
-              <Badge tone="green">초안</Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone="amber">직접 확인</Badge>
+                <button
+                  type="button"
+                  aria-label={adminCopilotOpen ? '관리자 운영 코파일럿 접기' : '관리자 운영 코파일럿 펼치기'}
+                  onClick={() => setAdminCopilotOpen((v) => !v)}
+                  className="flex size-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                >
+                  {adminCopilotOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
+                </button>
+              </div>
             </div>
           </CardHeader>
+          {adminCopilotOpen ? (
           <CardContent className="space-y-4">
-            <p className="text-xs text-slate-500">
-              <span className="text-red-500" aria-hidden="true">*</span> 작성 종류와 요청 내용을 입력하면 바로 초안이 만들어집니다.
-            </p>
-            <div className="grid gap-3 md:grid-cols-[180px_1fr]">
-              <div className="space-y-2">
-                <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
-                <select
-                  id="draft-kind"
-                  value={draftKind}
-                  onChange={(event) => setDraftKind(event.target.value as typeof draftKind)}
-                  className="h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm text-slate-900"
-                >
-                  <option value="client_invite">의뢰인 초대</option>
-                  <option value="staff_invite">구성원 초대</option>
-                  <option value="hub_message">허브 안내</option>
-                  <option value="organization_message">조직 공지</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
-                <Input
-                  id="draft-context"
-                  value={draftContextTitle}
-                  onChange={(event) => setDraftContextTitle(event.target.value)}
-                  placeholder="예: 베인 사건 보정 안내"
-                  className="h-11 bg-white"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">
-                초안 요청 <span className="text-red-500" aria-hidden="true">*</span>
-              </label>
-              <Textarea
-                id="draft-prompt"
-                value={draftPrompt}
-                onChange={(event) => setDraftPrompt(event.target.value)}
-                aria-required="true"
-                placeholder="예: 보정기한이 이번 주 금요일이고, 재산관계 확인 서류를 꼭 보내 달라는 안내문을 부드럽게 작성해 줘"
-                className="min-h-28 border-emerald-200 bg-white"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={runDraftAssist} disabled={draftPending || !draftPrompt.trim() || !organizationId}>
-                {draftPending ? '초안 만드는 중...' : '초안 만들기'}
-              </Button>
-              {draftResult ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    reportAiIssue({
-                      aiFeature: 'draft_assist',
-                      question: draftPrompt,
-                      answer: `${draftResult.title}\n${draftResult.body}`,
-                      rationale: draftResult.shortBody,
-                      modelVersion: draftResult.provider,
-                      requestId: draftRequestId ?? undefined
-                    });
-                  }}
-                >
-                  AI 결과가 틀렸나요?
-                </Button>
-              ) : null}
-            </div>
-            {draftResult ? (
-              <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-slate-900">{draftResult.title}</p>
-                  <Badge tone="green">{providerLabel(draftResult.provider)}</Badge>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+                  <ShieldAlert className="size-4" aria-hidden="true" />
                 </div>
-                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draftResult.body}</p>
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                  짧은 문구 · {draftResult.shortBody}
+                <div className="space-y-1">
+                  <p className="font-semibold">플랫폼 운영 질문은 AI가 답하지 않습니다.</p>
+                  <p className="leading-6 text-amber-900">
+                    조직 승인, 구독 조정, 조직 삭제, 운영 권한, 감사로그 판단 같은 항목은 AI 제안 없이 직접 확인하고 처리해야 합니다.
+                  </p>
                 </div>
               </div>
-            ) : null}
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Link
+                href={'/admin/organization-requests' as Route}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
+              >
+                <p className="font-semibold text-slate-900">조직 신청 관리</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">신청, 승인, 반려와 최근 기록을 직접 확인합니다.</p>
+              </Link>
+              <Link
+                href={'/admin/organizations' as Route}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
+              >
+                <p className="font-semibold text-slate-900">조직 관리</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">조직 상태 변경, 비활성화, 삭제, 로그를 직접 확인합니다.</p>
+              </Link>
+              <Link
+                href={'/settings/subscription' as Route}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
+              >
+                <p className="font-semibold text-slate-900">구독 관리</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">구독 상태와 제한, 변경 기록을 직접 확인합니다.</p>
+              </Link>
+            </div>
           </CardContent>
+          ) : null}
         </Card>
-
-        {isPlatformAdmin ? (
-          <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f6f8fb)]">
-            <CardHeader className="border-slate-200/70">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <CardTitle>플랫폼 운영 직접 확인</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">플랫폼 운영 판단과 조정은 AI가 답하지 않습니다. 아래 운영 메뉴에서 직접 확인해 주세요.</p>
-                </div>
-                <Badge tone="amber">직접 확인</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
-                    <ShieldAlert className="size-4" aria-hidden="true" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-semibold">플랫폼 운영 질문은 AI가 답하지 않습니다.</p>
-                    <p className="leading-6 text-amber-900">
-                      조직 승인, 구독 조정, 조직 삭제, 운영 권한, 감사로그 판단 같은 항목은 AI 제안 없이 직접 확인하고 처리해야 합니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <Link
-                  href={'/admin/organization-requests' as Route}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
-                >
-                  <p className="font-semibold text-slate-900">조직 신청 관리</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">신청, 승인, 반려와 최근 기록을 직접 확인합니다.</p>
-                </Link>
-                <Link
-                  href={'/admin/organizations' as Route}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
-                >
-                  <p className="font-semibold text-slate-900">조직 관리</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">조직 상태 변경, 비활성화, 삭제, 로그를 직접 확인합니다.</p>
-                </Link>
-                <Link
-                  href={'/settings/subscription' as Route}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
-                >
-                  <p className="font-semibold text-slate-900">구독 관리</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">구독 상태와 제한, 변경 기록을 직접 확인합니다.</p>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-      </div>
+      ) : null}
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <Card className="border-amber-200 bg-[linear-gradient(180deg,#fffdf2,#fff8da)]">
@@ -1973,284 +2299,6 @@ export function DashboardHubClient({
       </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <CardTitle>{communicationTitle}</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">{communicationHint}</p>
-                <p className="mt-1 text-xs text-slate-500">현재 시각: {nowText}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {scenarioMode ? <Badge tone="blue">가상 조직간 협업방</Badge> : null}
-                {!scenarioMode ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="space-y-2">
-                      <label htmlFor="workspace-search" className="text-sm font-medium text-slate-700">
-                        통합 검색
-                      </label>
-                      <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                      <Input
-                        id="workspace-search"
-                        value={workspaceSearch}
-                        onChange={(event) => setWorkspaceSearch(event.target.value)}
-                        placeholder="사건·의뢰인·문서 검색"
-                        className="h-10 w-64 pl-9"
-                      />
-                    </div>
-                    </div>
-                    <Button variant="secondary" onClick={runWorkspaceSearch} disabled={workspaceSearchBusy || !workspaceSearch.trim()}>
-                      {workspaceSearchBusy ? '확인 중...' : '확인'}
-                    </Button>
-                  </div>
-                ) : null}
-                <Badge tone="slate">조직 전체 소통방</Badge>
-                {!scenarioMode ? (
-                  <Button className="bg-sky-600 text-white hover:bg-sky-700" onClick={summarizeThread} disabled={coordinationPending || !visibleMessages.length}>
-                    <Bot className="mr-2 size-4" />AI 일정 제안
-                  </Button>
-                ) : null}
-                {!scenarioMode && canOpenArchive ? (
-                  <Button variant="secondary" onClick={() => setArchiveOpen(true)}>
-                    조직 업무소통 보관함
-                  </Button>
-                ) : null}
-              </div>
-              {!scenarioMode && workspaceSearchHint ? (
-                <p className="text-xs text-slate-500">{workspaceSearchHint}</p>
-              ) : null}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {scenarioMode ? (
-            <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <label htmlFor="scenario-conversation-id" className="text-xs font-medium text-slate-500">
-                    대화방 선택
-                  </label>
-                  <select
-                    id="scenario-conversation-id"
-                    value={selectedScenarioConversationId}
-                    onChange={(event) => setSelectedScenarioConversationId(event.target.value)}
-                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
-                  >
-                    {scenarioConversationRooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.partner_organization_name} · {room.topic}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold text-slate-900">{activeScenarioConversation?.partner_organization_name ?? '조직 대화방'}</p>
-                    <p className="mt-1 text-sm text-slate-500">{activeScenarioConversation?.topic ?? '협업 흐름'} · {activeScenarioConversation?.case_title ?? '공통 협업'}</p>
-                  </div>
-                  <Badge tone="slate">조직간 스레드</Badge>
-                </div>
-
-                <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
-                  {activeScenarioConversation?.messages.length ? activeScenarioConversation.messages.map((message) => {
-                    const mine = message.sender_organization_name !== activeScenarioConversation.partner_organization_name;
-                    return (
-                      <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[90%] rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${mine ? 'bg-slate-950 text-white' : 'bg-white text-slate-800'}`}>
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] opacity-80">
-                            <span>{message.sender_organization_name}</span>
-                            <span>{message.sender_name}</span>
-                            <span>{formatDateTime(message.created_at)}</span>
-                            {message.case_title ? <Badge tone="slate">{message.case_title}</Badge> : null}
-                          </div>
-                          <p className="mt-2 whitespace-pre-wrap leading-6">{message.body}</p>
-                        </div>
-                      </div>
-                    );
-                  }) : <p className="px-2 py-12 text-center text-sm text-slate-500">선택한 조직 대화방 기록이 없습니다.</p>}
-                </div>
-
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  시나리오 모드에서는 조직간 협업 흐름을 읽기 전용으로 제공합니다. 이 방들을 기준으로 사건, 의뢰인, 일정, 문서가 서로 연결된 상태를 점검할 수 있습니다.
-                </div>
-            </div>
-          ) : (
-            <div className="flex h-[42rem] flex-col rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-base font-semibold text-slate-900">조직 전체 소통방</p>
-                <Badge tone="slate">오늘 대화 {todayMessages.length}건</Badge>
-              </div>
-
-                <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
-                  {todayMessages.length ? (
-                    todayMessages.map((item) => {
-                      const mine = item.sender_profile_id === effectiveCurrentUserId;
-                      return (
-                        <div key={item.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[88%] rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${mine ? 'bg-slate-950 text-white' : 'bg-white text-slate-800'}`}>
-                            <div className="flex items-center gap-2 text-[11px] opacity-80">
-                              <span>{senderName(item)}</span>
-                              <span>{formatDateTime(item.created_at)}</span>
-                              {item.is_internal ? <Badge tone="slate">내부</Badge> : null}
-                            </div>
-                            <p className="mt-2 whitespace-pre-wrap leading-6">{item.body}</p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="px-2 py-12 text-center text-sm text-slate-500">오늘 작성된 조직 업무소통이 없습니다.</p>
-                  )}
-                </div>
-
-                <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
-                  <div className="space-y-2">
-                    <label htmlFor="organization-message-input" className="text-sm font-medium text-slate-700">
-                      조직 소통 메시지 <span className="text-rose-600">*</span>
-                    </label>
-                  <Textarea
-                    id="organization-message-input"
-                    value={messageInput}
-                    onChange={(event) => setMessageInput(event.target.value)}
-                    aria-required="true"
-                    placeholder="조직 전체 소통방에 메시지를 입력하세요."
-                    className="min-h-24"
-                  />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs text-slate-500">하루 지난 대화는 자동으로 보관함에서 확인됩니다.</span>
-                    <Button
-                      onClick={sendMessage}
-                      disabled={
-                        messagePending
-                        || !messageInput.trim()
-                      }
-                    >
-                      {messagePending ? '전송 중...' : '대화 보내기'}
-                    </Button>
-                  </div>
-                </div>
-
-                {coordinationPreview ? (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-slate-900">AI 요약 · 오늘 대화 실행 항목</p>
-                        <p className="mt-1 text-sm text-slate-600">{coordinationPreview.summary}</p>
-                        {coordinationSource ? <p className="mt-1 text-xs text-slate-500">출처: {coordinationSourceLabel} · {coordinationSourceTimeLabel}</p> : null}
-                        {coordinationEstimate ? <p className="mt-1 text-xs text-amber-700">표기: 추정 (자동 실행 금지)</p> : null}
-                      </div>
-                      <Badge tone={providerTone(coordinationPreview.provider)}>{coordinationPreview.provider}</Badge>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {coordinationPreview.checklist.map((item) => {
-                        const checked = selectedChecklistIds.includes(item.id);
-                        return (
-                          <label key={item.id} className="flex gap-3 rounded-2xl border border-emerald-200 bg-white px-3 py-3">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(event) => {
-                                setSelectedChecklistIds((current) => event.target.checked ? [...current, item.id] : current.filter((value) => value !== item.id));
-                              }}
-                              className="mt-1 size-4 rounded border-slate-300"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-medium text-slate-900">{item.label}</p>
-                                <Badge tone={priorityTone(item.priority)}>{item.priority}</Badge>
-                                {item.dueAt ? <span className="text-xs text-slate-500">{formatDateTime(item.dueAt)}</span> : null}
-                              </div>
-                              <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    {coordinationPreview.setupHint ? <p className="mt-3 text-xs text-amber-700">{coordinationPreview.setupHint}</p> : null}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button onClick={commitCoordination} disabled={coordinationPending || !selectedChecklistIds.length}>정리 내용 반영</Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
-                        aria-label="AI 대화 분석이 잘못됐나요? 피드백 보내기"
-                        onClick={() => {
-                          if (!coordinationPreview) return;
-                          reportAiIssue({
-                            aiFeature: 'ai_summary_card',
-                            question: visibleMessages.slice(-8).map((item) => `${senderName(item)}: ${item.body}`).join('\n'),
-                            answer: `${coordinationPreview.summary}\n${coordinationPreview.checklist.map((item) => `- ${item.label}`).join('\n')}`,
-                            rationale: coordinationPreview.reason,
-                            modelVersion: coordinationPreview.provider,
-                            requestId: `coordination:${coordinationSource?.generatedAt ?? Date.now()}`
-                          });
-                        }}
-                      >
-                        <ThumbsDown className="size-3.5" />
-                        AI 결과가 틀렸나요?
-                      </Button>
-                      <Button variant="secondary" onClick={() => setCoordinationPreview(null)}>닫기</Button>
-                    </div>
-                  </div>
-                ) : null}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {archiveOpen && canOpenArchive ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_24px_64px_rgba(15,23,42,0.35)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-lg font-semibold text-slate-900">조직 업무소통 보관함</p>
-                <p className="text-xs text-slate-500">하루 지난 대화만 보관됩니다. (관리자 전용)</p>
-              </div>
-              <Button variant="secondary" onClick={() => setArchiveOpen(false)}>닫기</Button>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <div className="space-y-2">
-                <label htmlFor="archive-query" className="text-sm font-medium text-slate-700">
-                  보관함 검색
-                </label>
-                <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  id="archive-query"
-                  value={archiveQuery}
-                  onChange={(event) => setArchiveQuery(event.target.value)}
-                  placeholder="날짜, 작성자, 내용 검색"
-                  className="h-10 w-72 pl-9"
-                />
-              </div>
-              </div>
-              <Button variant="secondary" onClick={runArchiveAiCheck}>
-                <Bot className="mr-1 size-4" />
-                AI 점검
-              </Button>
-            </div>
-            {archiveAiHint ? <p className="mt-2 text-xs text-sky-700">{archiveAiHint}</p> : null}
-
-            <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
-              {filteredArchivedMessages.length ? filteredArchivedMessages.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                    <span>{senderName(item)}</span>
-                    <span>{formatDateTime(item.created_at)}</span>
-                    {relatedTitle(item.cases) ? <Badge tone="slate">{relatedTitle(item.cases)}</Badge> : null}
-                  </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{item.body}</p>
-                </div>
-              )) : (
-                <p className="py-10 text-center text-sm text-slate-500">조건에 맞는 보관 대화가 없습니다.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
