@@ -632,6 +632,19 @@ function buildQueueGroups(items: NotificationQueueItem[]) {
   }));
 }
 
+export function classifyNotificationCategory(item: NotificationQueueItem): 'immediate' | 'confirm' | 'meeting' | 'other' {
+  // immediate: urgent schedule notifications (work/deadline)
+  if (item.priority === 'urgent' && item.entityType === 'schedule') return 'immediate';
+  // meeting: schedule that is meeting type
+  if (item.entityType === 'schedule' && item.type.includes('meeting')) return 'meeting';
+  // confirm: client requests or collaboration/org requests
+  if (item.entityType === 'client' || item.entityType === 'collaboration') return 'confirm';
+  // immediate fallback for all urgent
+  if (item.priority === 'urgent') return 'immediate';
+  // other: billing notifications or anything else
+  return 'other';
+}
+
 export async function getDashboardRecentNotifications(organizationId?: string | null, limit = 5): Promise<NotificationQueueItem[]> {
   const auth = await getCurrentAuth();
   if (!auth) return [];
@@ -693,6 +706,12 @@ export async function getNotificationQueueView({
         confirm: [] as QueueGroup[],
         reference: [] as QueueGroup[]
       },
+      categories: {
+        immediate: [] as NotificationQueueItem[],
+        confirm: [] as NotificationQueueItem[],
+        meeting: [] as NotificationQueueItem[],
+        other: [] as NotificationQueueItem[]
+      },
       nextCursor: null as string | null
     };
   }
@@ -720,6 +739,12 @@ export async function getNotificationQueueView({
         immediate: [] as QueueGroup[],
         confirm: [] as QueueGroup[],
         reference: [] as QueueGroup[]
+      },
+      categories: {
+        immediate: [] as NotificationQueueItem[],
+        confirm: [] as NotificationQueueItem[],
+        meeting: [] as NotificationQueueItem[],
+        other: [] as NotificationQueueItem[]
       },
       nextCursor: null as string | null
     };
@@ -751,10 +776,18 @@ export async function getNotificationQueueView({
     reference: normalizedSection && normalizedSection !== 'reference' ? [] : buildQueueGroups(reference)
   };
 
+  const categories = {
+    immediate: pageItems.filter((item) => classifyNotificationCategory(item) === 'immediate'),
+    confirm: pageItems.filter((item) => classifyNotificationCategory(item) === 'confirm'),
+    meeting: pageItems.filter((item) => classifyNotificationCategory(item) === 'meeting'),
+    other: pageItems.filter((item) => classifyNotificationCategory(item) === 'other')
+  };
+
   return {
     currentOrganizationId,
     items: pageItems,
     sections,
+    categories,
     nextCursor
   };
 }

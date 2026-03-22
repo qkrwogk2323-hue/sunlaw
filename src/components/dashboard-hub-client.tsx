@@ -1153,11 +1153,36 @@ export function DashboardHubClient({
     }
   }, [data.caseOptions, messageCaseId, setMessageCaseId]);
 
+  const immediateNotifications = useMemo(
+    () => data.actionableNotifications.filter(
+      (item) => item.requires_action &&
+        (item.action_entity_type === 'schedule' || item.destination_url?.includes('/calendar'))
+    ),
+    [data.actionableNotifications]
+  );
+
+  const confirmNotifications = useMemo(
+    () => data.actionableNotifications.filter(
+      (item) => item.requires_action &&
+        (item.action_entity_type === 'client' || item.action_entity_type === 'collaboration' ||
+          item.destination_url?.includes('/clients') || item.destination_url?.includes('/inbox'))
+    ),
+    [data.actionableNotifications]
+  );
+
+  const meetingNotifications = useMemo(
+    () => data.actionableNotifications.filter(
+      (item) => item.action_entity_type === 'schedule' &&
+        (item.destination_url?.includes('meeting') || item.title?.toLowerCase().includes('미팅'))
+    ),
+    [data.actionableNotifications]
+  );
+
   const summaryRows = [
     {
       label: '알림',
-      detail: `읽지 않은 알림 ${data.unreadNotifications}건, 즉시 처리 ${data.actionableNotifications.length}건`,
-      href: '/notifications?section=immediate' as Route
+      detail: `즉시필요 ${immediateNotifications.length}건 · 검토필요 ${confirmNotifications.length}건 · 미팅 ${meetingNotifications.length}건`,
+      href: '/notifications' as Route
     },
     {
       label: '사건',
@@ -1263,6 +1288,30 @@ export function DashboardHubClient({
           </div>
         </div>
 
+      </div>
+
+      {/* 알림-일정 연동 요약 스트립 */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Link href={'/notifications?section=immediate' as Route} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center transition hover:bg-rose-100" aria-label={`즉시필요 알림 ${immediateNotifications.length}건`}>
+          <p className="text-xs font-semibold text-rose-700">즉시필요</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">{immediateNotifications.length}</p>
+          <p className="mt-1 text-[10px] text-rose-600">업무일정 임박</p>
+        </Link>
+        <Link href={'/notifications?section=confirm' as Route} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center transition hover:bg-blue-100" aria-label={`검토필요 알림 ${confirmNotifications.length}건`}>
+          <p className="text-xs font-semibold text-blue-700">검토필요</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-blue-800">{confirmNotifications.length}</p>
+          <p className="mt-1 text-[10px] text-blue-600">요청·협업 알림</p>
+        </Link>
+        <Link href={'/notifications' as Route} className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-center transition hover:bg-violet-100" aria-label={`미팅알림 ${meetingNotifications.length}건`}>
+          <p className="text-xs font-semibold text-violet-700">미팅알림</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-violet-800">{meetingNotifications.length}</p>
+          <p className="mt-1 text-[10px] text-violet-600">미팅 일정</p>
+        </Link>
+        <Link href={'/notifications' as Route} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center transition hover:bg-slate-100" aria-label={`기타알림 ${Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}건`}>
+          <p className="text-xs font-semibold text-slate-700">기타알림</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}</p>
+          <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
+        </Link>
       </div>
 
       <Card>
