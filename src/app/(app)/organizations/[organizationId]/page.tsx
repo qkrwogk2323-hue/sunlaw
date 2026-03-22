@@ -64,12 +64,7 @@ export default async function OrganizationDetailPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{workspace.organization.name}</h1>
           <p className="mt-2 text-sm text-slate-600">슬러그: {workspace.organization.slug}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Link href={`/admin/audit?tab=general&table=organizations&resource=${organizationId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              이 조직 변경 기록 보기
-            </Link>
-            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              협업 제안 기록 보기
-            </Link>
+            {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
           </div>
         </div>
         {linkedHub ? (

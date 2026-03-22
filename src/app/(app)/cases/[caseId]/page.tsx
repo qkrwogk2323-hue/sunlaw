@@ -696,12 +696,7 @@ export default async function CaseDetailPage({
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <CardTitle>진행이력</CardTitle>
-                <Link
-                  href={`/admin/audit?tab=general&table=cases&actor=${encodeURIComponent(auth.user.id)}` as import('next').Route}
-                  className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  감사로그 보기
-                </Link>
+                {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-slate-700">

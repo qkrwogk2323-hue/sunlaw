@@ -92,18 +92,7 @@ export default async function CollaborationHubPage({
       </div>
 
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route}
-          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
-        >
-          허브 메시지 기록 보기
-        </Link>
-        <Link
-          href={'/admin/audit?tab=general&table=organization_collaboration_case_shares' as Route}
-          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
-        >
-          허브 사건 공유 기록 보기
-        </Link>
+        {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
       </div>
 
       {query?.invite ? (

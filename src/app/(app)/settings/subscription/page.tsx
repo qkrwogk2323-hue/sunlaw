@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import type { Route } from 'next';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -230,12 +228,7 @@ export default async function SubscriptionSettingsPage({
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>구독 변경 기록</CardTitle>
-            <Link
-              href={'/admin/audit?tab=general&table=organization_subscription_states' as Route}
-              className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
-            >
-              감사로그 보기
-            </Link>
+            {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
           </div>
         </CardHeader>
         <CardContent className="space-y-3">

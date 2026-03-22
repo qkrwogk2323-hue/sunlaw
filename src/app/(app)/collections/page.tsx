@@ -1,8 +1,6 @@
 import Link from 'next/link';
-import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { buttonStyles } from '@/components/ui/button';
 import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCollectionsWorkspace } from '@/lib/queries/collections';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
@@ -62,15 +60,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">추심 운영</h2>
           <p className="mt-2 text-sm text-slate-600">회수 활동, 보수 산정, 성과 흐름을 기간별로 정리합니다.</p>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Link href={'/admin/audit?tab=general&table=collection_performance_daily' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              회수 실적 기록 보기
-            </Link>
-            <Link href={'/admin/audit?tab=general&table=collection_compensation_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              보수 산정 기록 보기
-            </Link>
-            <Link href={'/admin/audit?tab=general&table=collection_compensation_plans' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              보수 규칙 변경 기록 보기
-            </Link>
+            {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
           </div>
         </div>
         <ExportLinks resource="collections" period={period} />

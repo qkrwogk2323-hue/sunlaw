@@ -217,9 +217,7 @@ export default async function NotificationsPage({
       <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="알림 센터" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
-        <Link href={'/admin/audit?table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-          알림 기록 보기
-        </Link>
+        {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

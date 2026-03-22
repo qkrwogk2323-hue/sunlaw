@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
@@ -27,9 +25,7 @@ export default async function FeatureFlagsPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">기능 설정</h1>
         <p className="mt-2 text-sm text-slate-600">플랫폼 기능의 사용 여부와 단계적 적용 비율을 관리합니다.</p>
         <p className="mt-2 text-sm text-sky-700">
-          <Link href={'/admin/audit?tab=general&table=feature_flags' as Route} className="font-medium underline underline-offset-4">
-            기능 설정 변경 이력 보기
-          </Link>
+          {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
         </p>
       </div>
       <SettingsNav currentPath="/settings/features" canViewPlatformControls={canViewPlatformControls} />

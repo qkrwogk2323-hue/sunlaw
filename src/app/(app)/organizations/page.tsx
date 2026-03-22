@@ -49,12 +49,7 @@ export default async function OrganizationsPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
           <p className="mt-2 text-sm text-slate-600">협업할 상대 조직을 찾고, 제안 현황과 승인된 업무 허브까지 한 번에 관리합니다.</p>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Link href={'/admin/audit?tab=general&table=organizations' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              조직 정보 변경 기록 보기
-            </Link>
-            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              협업 제안 기록 보기
-            </Link>
+            {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
           </div>
         </div>
         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">

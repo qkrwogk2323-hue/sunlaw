@@ -138,12 +138,7 @@ export default async function TeamSettingsPage({
               </Link>
             </div>
           </details>
-          <Link href={'/admin/audit?tab=general&table=organization_memberships' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-            구성원 권한 변경 기록 보기
-          </Link>
-          <Link href={'/admin/audit?tab=violation&table=organization_memberships' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-            구성원 권한 위반 기록 보기
-          </Link>
+          {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
         </div>
       </div>
 
