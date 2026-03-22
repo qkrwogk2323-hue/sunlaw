@@ -15,7 +15,6 @@ import {
   MessageSquareText,
   Network,
   Receipt,
-  Search,
   Settings,
   ShieldAlert,
   Users,
@@ -414,7 +413,6 @@ export function ModeAwareNav({
   const [pulseNotification, setPulseNotification] = useState(false);
   const [pulseConversation, setPulseConversation] = useState(false);
   const [orgPickerOpen, setOrgPickerOpen] = useState(false);
-  const [quickSearchQuery, setQuickSearchQuery] = useState('');
   const [collapsedSectionIds, setCollapsedSectionIds] = useState<string[]>([]);
   const { success } = useToast();
 
@@ -617,37 +615,10 @@ export function ModeAwareNav({
         onToggleSection={toggleSection}
       />
 
-      <div className="hidden lg:block">
-        <div className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
-          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-              <p className="px-1 pb-1 text-xs font-semibold text-slate-500">공통 메뉴 빠른 검색</p>
-              <div className="flex items-center gap-2">
-                <label htmlFor="quick-search-query" className="sr-only">공통 메뉴 빠른 검색</label>
-                <input
-                  id="quick-search-query"
-                  aria-label="사건, 의뢰인, 문서 검색"
-                  value={quickSearchQuery}
-                  onChange={(event) => setQuickSearchQuery(event.target.value)}
-                  placeholder="사건, 의뢰인, 문서 검색"
-                  className="h-9 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  aria-label="검색"
-                  className="size-9 px-0"
-                  onClick={() => {
-                    const query = quickSearchQuery.trim();
-                    window.dispatchEvent(new CustomEvent('open-global-search', { detail: { query } }));
-                  }}
-                >
-                  <Search className="size-4" />
-                </Button>
-              </div>
-            </div>
-
+      <div className="hidden lg:block lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
+        <div className="flex h-full flex-col gap-3">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] p-4 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">조직</p>
               <button
@@ -696,55 +667,56 @@ export function ModeAwareNav({
               <p className="mt-1 text-lg font-medium text-slate-800">{roleDetail}</p>
             </div>
           </div>
-        </div>
+          </div>
 
-        <div className="mt-3 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
-          <div className="space-y-2">
-            {sections.map((section) => (
-              <div
-                key={section.id}
-                className={`rounded-[1.15rem] border p-2 ${
-                  section.id === 'common-menu' && hasUnreadNotifications
-                    ? 'border-amber-300 bg-amber-50/65'
-                    : sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3 px-3 py-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{section.label}</p>
-                    {section.id === 'common-menu' && hasUnreadNotifications ? (
-                      <p className="mt-0.5 text-[11px] font-medium text-amber-700">새 알림을 확인하세요!</p>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-[1.3rem] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.10)]">
+            <div className="h-full space-y-2 overflow-y-auto pr-1">
+              {sections.map((section) => (
+                <div
+                  key={section.id}
+                  className={`rounded-[1.05rem] border p-2 ${
+                    section.id === 'common-menu' && hasUnreadNotifications
+                      ? 'border-amber-300 bg-amber-50/65'
+                      : sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{section.label}</p>
+                      {section.id === 'common-menu' && hasUnreadNotifications ? (
+                        <p className="mt-0.5 text-[11px] font-medium text-amber-700">새 알림을 확인하세요!</p>
+                      ) : null}
+                    </div>
+                    {section.id === 'company-management-menu' ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(section.id)}
+                        aria-label={collapsedSectionIds.includes(section.id) ? '회사 관리 메뉴 펼치기' : '회사 관리 메뉴 접기'}
+                        className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        {collapsedSectionIds.includes(section.id) ? '+' : '-'}
+                      </button>
                     ) : null}
                   </div>
-                  {section.id === 'company-management-menu' ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(section.id)}
-                      aria-label={collapsedSectionIds.includes(section.id) ? '회사 관리 메뉴 펼치기' : '회사 관리 메뉴 접기'}
-                      className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      {collapsedSectionIds.includes(section.id) ? '+' : '-'}
-                    </button>
+                  {!collapsedSectionIds.includes(section.id) ? (
+                    <div className="mt-1 space-y-1">
+                      {section.items.map((item) => (
+                        <ModeNavItem
+                          key={item.href}
+                          href={item.href}
+                          label={item.label}
+                          icon={item.icon}
+                          sectionId={section.id}
+                          active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                          pulse={Boolean(item.pulse)}
+                          emphasize={Boolean(item.emphasize)}
+                        />
+                      ))}
+                    </div>
                   ) : null}
                 </div>
-                {!collapsedSectionIds.includes(section.id) ? (
-                  <div className="mt-1 space-y-1">
-                    {section.items.map((item) => (
-                    <ModeNavItem
-                      key={item.href}
-                      href={item.href}
-                      label={item.label}
-                      icon={item.icon}
-                      sectionId={section.id}
-                      active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-                      pulse={Boolean(item.pulse)}
-                      emphasize={Boolean(item.emphasize)}
-                    />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
