@@ -43,3 +43,8 @@ create trigger trg_client_special_notes_updated_at
 before update on public.client_special_notes
 for each row execute function app.set_updated_at();
 
+
+drop trigger if exists audit_client_special_notes on public.client_special_notes;
+create trigger audit_client_special_notes
+  after insert or update or delete on public.client_special_notes
+  for each row execute procedure audit.capture_row_change();
