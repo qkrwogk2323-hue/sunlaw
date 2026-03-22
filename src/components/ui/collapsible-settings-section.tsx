@@ -12,10 +12,10 @@ type Props = {
 export function CollapsibleSettingsSection({
   title,
   description,
-  defaultOpen = false,
+  defaultOpen: _defaultOpen = false,
   children
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
