@@ -26,7 +26,11 @@ function operationLabel(operation: string) {
   return operation;
 }
 
-export default async function CaseHistoryPage() {
+export default async function CaseHistoryPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
 
@@ -39,9 +43,16 @@ export default async function CaseHistoryPage() {
       />
     );
   }
-
+  const resolved = searchParams ? await searchParams : undefined;
+  const query = `${resolved?.q ?? ''}`.trim().toLowerCase();
   const logs = await listOrganizationTableHistory(organizationId, 'cases');
   const caseTitles = await listOrganizationCaseTitles(logs.map((item) => item.case_id ?? item.record_id ?? ''));
+  const filteredLogs = logs.filter((log) => {
+    if (!query) return true;
+    const caseTitle = caseTitles.get(log.case_id ?? log.record_id ?? '') ?? '';
+    const haystack = `${caseTitle} ${log.actor_email ?? ''} ${(log.changed_fields ?? []).join(' ')}`.toLowerCase();
+    return haystack.includes(query);
+  });
 
   return (
     <div className="space-y-6">
@@ -55,15 +66,25 @@ export default async function CaseHistoryPage() {
         </Link>
       </div>
 
+      <form action="/cases/history" className="rounded-2xl border border-slate-200 bg-white p-3">
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="사건명, 작업자, 변경 항목 검색"
+          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          aria-label="사건 변경 기록 검색"
+        />
+      </form>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle>최근 기록</CardTitle>
-            <Badge tone="slate">{logs.length}</Badge>
+            <Badge tone="slate">{filteredLogs.length}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {logs.length ? logs.map((log) => (
+          {filteredLogs.length ? filteredLogs.map((log) => (
             <div key={log.id} className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -94,4 +115,3 @@ export default async function CaseHistoryPage() {
     </div>
   );
 }
-

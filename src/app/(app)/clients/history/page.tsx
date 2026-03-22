@@ -43,7 +43,7 @@ function requestStatusLabel(status?: string | null) {
 export default async function ClientHistoryPage({
   searchParams
 }: {
-  searchParams?: Promise<{ tab?: string }>;
+  searchParams?: Promise<{ tab?: string; q?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -60,17 +60,27 @@ export default async function ClientHistoryPage({
 
   const resolved = searchParams ? await searchParams : undefined;
   const tab = parseTab(resolved?.tab);
+  const query = `${resolved?.q ?? ''}`.trim().toLowerCase();
   const [profileLogs, requestLogs] = await Promise.all([
     tab === 'profiles' ? listOrganizationTableHistory(organizationId, 'case_clients') : Promise.resolve([]),
     tab === 'requests' ? listOrganizationClientAccessRequests(organizationId) : Promise.resolve([])
   ]);
+  const filteredProfileLogs = profileLogs.filter((log) => {
+    if (!query) return true;
+    const haystack = `${(log.new_values?.client_name as string) ?? ''} ${(log.old_values?.client_name as string) ?? ''} ${log.actor_email ?? ''} ${(log.changed_fields ?? []).join(' ')}`.toLowerCase();
+    return haystack.includes(query);
+  });
+  const filteredRequestLogs = requestLogs.filter((request: any) => {
+    if (!query) return true;
+    const haystack = `${request.requester_name ?? ''} ${request.requester_email ?? ''} ${request.request_note ?? ''} ${request.review_note ?? ''}`.toLowerCase();
+    return haystack.includes(query);
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">의뢰인 기록</h1>
-          <p className="mt-2 text-sm text-slate-600">의뢰인 정보 변경과 연결 요청을 분리해서 확인합니다.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -91,16 +101,27 @@ export default async function ClientHistoryPage({
         </div>
       </div>
 
+      <form action="/clients/history" className="rounded-2xl border border-slate-200 bg-white p-3">
+        <input type="hidden" name="tab" value={tab} />
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder={tab === 'profiles' ? '의뢰인명, 작업자, 변경 항목 검색' : '요청자, 이메일, 요청 메모 검색'}
+          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          aria-label="의뢰인 기록 검색"
+        />
+      </form>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle>{tab === 'profiles' ? '의뢰인 정보 변경 기록' : '의뢰인 연결 요청 기록'}</CardTitle>
-            <Badge tone="slate">{tab === 'profiles' ? profileLogs.length : requestLogs.length}</Badge>
+            <Badge tone="slate">{tab === 'profiles' ? filteredProfileLogs.length : filteredRequestLogs.length}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {tab === 'profiles' ? (
-            profileLogs.length ? profileLogs.map((log) => (
+            filteredProfileLogs.length ? filteredProfileLogs.map((log) => (
               <div key={log.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -126,7 +147,7 @@ export default async function ClientHistoryPage({
               </div>
             )
           ) : (
-            requestLogs.length ? requestLogs.map((request: any) => (
+            filteredRequestLogs.length ? filteredRequestLogs.map((request: any) => (
               <div key={request.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -155,4 +176,3 @@ export default async function ClientHistoryPage({
     </div>
   );
 }
-
