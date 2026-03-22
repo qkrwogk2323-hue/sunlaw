@@ -182,7 +182,7 @@ export default async function AdminModulesPage() {
               <Boxes className="size-4" />
               <p className="font-medium">향후 확장 기준 정리</p>
             </div>
-            <p className="mt-2 leading-6">회생/파산, 추심-법무 협업 같은 하위 모듈은 여기서 먼저 정의해 두고 이후 기능 플래그나 조직별 계약 옵션으로 연결하면 됩니다.</p>
+            <p className="mt-2 leading-6">회생/파산, 추심-법무 협업 같은 하위 모듈은 여기서 먼저 정의해 두고 이후 기능 설정이나 조직별 계약 옵션으로 연결하면 됩니다.</p>
           </div>
         </CardContent>
       </Card>

@@ -29,7 +29,7 @@ export default async function ContractsPage({
           </p>
         </div>
         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-          계약은 비용 청구와 분리해 보여주되, 실제 원본은 사건 Billing 탭과 같은 데이터를 사용합니다.
+          계약은 비용 청구와 분리해 보여주되, 실제 원본은 사건 비용 탭과 같은 데이터를 사용합니다.
         </div>
       </div>
 
@@ -93,7 +93,7 @@ export default async function ContractsPage({
             </Link>
           )) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-              표시할 계약이 없습니다. 사건 화면의 Billing 탭에서 비용 약정을 먼저 등록해 주세요.
+              표시할 계약이 없습니다. 사건 화면의 비용 탭에서 비용 약정을 먼저 등록해 주세요.
             </div>
           )}
         </CardContent>

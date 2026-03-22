@@ -24,7 +24,7 @@ export function CaseOrganizationForm({ caseId }: { caseId: string }) {
         <option value="read_only">읽기 전용</option>
       </select>
       <select name="billingScope" defaultValue="none" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-        <option value="none">Billing 없음</option>
+        <option value="none">비용 권한 없음</option>
         <option value="direct_client_billing">의뢰인 직접 청구</option>
         <option value="upstream_settlement">상위 조직 정산</option>
         <option value="internal_settlement_only">내부 정산만</option>

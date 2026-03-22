@@ -18,8 +18,8 @@ export function OrganizationSettingForm({ item, organizationId, currentValue }: 
       />
       <input name="reason" placeholder="변경 사유" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-        <span>{item.domain} · org override</span>
-        <SubmitButton variant="secondary" pendingLabel="저장 중...">조직 값 저장</SubmitButton>
+        <span>{item.domain} · 조직별 설정</span>
+        <SubmitButton pendingLabel="저장 중...">조직 값 저장</SubmitButton>
       </div>
     </ClientActionForm>
   );

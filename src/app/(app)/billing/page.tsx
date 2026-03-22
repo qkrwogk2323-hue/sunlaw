@@ -220,7 +220,7 @@ export default async function BillingPage({
       </div>
 
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        사건 Billing 탭, 허브, 의뢰인 포털의 청구/입금 카드는 같은 비용 데이터를 바라봅니다. 즉 여기서 밀린 분납이나 청구 기한을 보면 의뢰인에게 무엇이 보이는지도 같이 추적할 수 있습니다.
+        사건 비용 탭, 허브, 의뢰인 포털의 청구/입금 카드는 같은 비용 데이터를 바라봅니다. 즉 여기서 밀린 분납이나 청구 기한을 보면 의뢰인에게 무엇이 보이는지도 같이 추적할 수 있습니다.
       </div>
 
       <section className="flex flex-wrap gap-2">
@@ -306,7 +306,7 @@ export default async function BillingPage({
           <CardContent className="space-y-3 text-sm text-slate-700">
             <p>1. 조직 메뉴의 비용 관리는 의뢰인과 약속한 금액, 분납, 입금 추적입니다.</p>
             <p>2. 회사 관리의 구독 관리는 우리 조직이 플랫폼에 내는 구독료입니다.</p>
-            <p>3. 분납 미이행이 보이면 사건 Billing 탭에서 바로 조정하고, 의뢰인 포털의 청구 카드와 같은 항목인지 함께 확인합니다.</p>
+            <p>3. 분납 미이행이 보이면 사건 비용 탭에서 바로 조정하고, 의뢰인 포털의 청구 카드와 같은 항목인지 함께 확인합니다.</p>
             <p>4. 계약 원본은 계약 관리에 두고, 청구/입금 현황은 이 화면에서 기간 기준으로 비교합니다.</p>
           </CardContent>
         </Card>
@@ -331,7 +331,7 @@ export default async function BillingPage({
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
                   <p>금액 {formatCurrency(entry.totalAmount)}</p>
                   <p>기한 {formatDate(entry.due_on)}</p>
-                  <p>사건 Billing 탭에서 후속 조치</p>
+                  <p>사건 비용 탭에서 후속 조치</p>
                 </div>
               </Link>
             )) : (

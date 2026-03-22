@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
-import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
@@ -17,14 +17,15 @@ export default async function SettingsIndexPage() {
     );
   }
   const data = await getSettingsAdminData(organizationId);
+  const canViewPlatformControls = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Settings</h1>
-        <p className="mt-2 text-sm text-slate-600">Dynamic Configuration, 문구, 기능 플래그, 권한 템플릿을 한 곳에서 관리합니다.</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">설정</h1>
+        <p className="mt-2 text-sm text-slate-600">조직 운영 설정, 문구, 구독 상태, 플랫폼 제어 항목을 권한에 맞게 관리합니다.</p>
       </div>
-      <SettingsNav currentPath="/settings" />
+      <SettingsNav currentPath="/settings" canViewPlatformControls={canViewPlatformControls} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">카탈로그 키 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.catalog.length}</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">기본 설정 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.platformSettings.length}</p></CardContent></Card>
