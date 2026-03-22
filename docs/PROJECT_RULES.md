@@ -1241,10 +1241,20 @@ type ActionResult =
 
 ### 5-7. 테스트 및 릴리즈 게이트 규칙
 
-1. 머지 전 `typecheck`, `lint`, `test`, `build`, `check:migrations`를 모두 통과한다.
-2. 권한, RLS, soft delete, 결제, 관리자 기능 변경은 회귀 테스트를 추가한다.
-3. 신규 Server Action은 최소 한 개 이상의 성공 경로와 실패 경로 테스트를 갖는다.
-4. TODO 또는 FIXME는 이슈 번호와 제거 조건 없이 머지하지 않는다.
+**기본 게이트 (모든 PR 필수):**
+1. 머지 전 `typecheck`, `lint`, `test`, `build`, `check:migrations`, `check:test-coverage`를 모두 통과한다.
+2. TODO 또는 FIXME는 이슈 번호와 제거 조건 없이 머지하지 않는다.
+
+**기능 변경 시 테스트 동시 작성 강제 (Test-With-Feature Rule):**
+3. `src/lib/actions/` 하위 파일을 신규 생성하거나 수정할 때 반드시 해당 액션을 import하는 테스트 파일을 `tests/` 하위에 함께 커밋해야 한다.
+4. 신규 Server Action은 최소 한 개 이상의 성공 경로(happy path)와 실패 경로(error path) 테스트를 갖는다.
+5. 권한 가드(`requireXxxAccess`)가 포함된 액션은 반드시 **권한 없는 사용자 차단** 테스트를 포함한다.
+6. 신규 페이지(`src/app/**/page.tsx`)를 추가할 때 해당 라우트를 커버하는 E2E 테스트(`tests/e2e/`)를 함께 작성한다. E2E 환경이 없으면 최소한 인증 보호(미인증 → 로그인 리디렉션) 테스트 1개를 추가한다.
+7. 권한, RLS, soft delete, 결제, 관리자 기능 변경은 회귀 테스트를 추가한다.
+
+**검사 자동화:**
+8. `pnpm check:test-coverage` 스크립트(`scripts/check-test-coverage.mjs`)가 위 규칙 준수 여부를 자동으로 검사한다. CI에서 반드시 실행한다.
+9. 스크립트가 커버되지 않은 액션 파일을 발견하면 즉시 빌드 실패로 처리한다.
 
 ### 5-8. 관측성(Observability) 규칙
 

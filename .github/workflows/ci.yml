@@ -38,7 +38,7 @@ jobs:
         run: pnpm audit --audit-level=high
 
       - name: Run enforced validation
-        run: pnpm check:all
+        run: pnpm check:migrations && pnpm check:test-coverage && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 
   e2e-smoke:
     runs-on: ubuntu-latest

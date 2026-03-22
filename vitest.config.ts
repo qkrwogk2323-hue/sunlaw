@@ -9,6 +9,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts']
+    include: ['tests/**/*.test.ts'],
+    server: {
+      deps: {
+        // server-only 패키지는 테스트 환경에서 no-op으로 처리
+        inline: ['server-only']
+      }
+    }
   }
 });
