@@ -279,7 +279,8 @@ export default async function CasesPage({
             </span>
           </summary>
           <div className="mt-3 px-2 pb-4">
-            <p className="mb-3 text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 사건은 양식을 내려받아 한 번에 등록하세요.</p>
+            <p className="mb-1 text-sm font-medium text-slate-900">대량 등록은 CSV 양식에 맞춰 올려 주세요.</p>
+            <p className="mb-3 text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 사건은 양식을 내려받아 그대로 작성한 뒤 한 번에 등록하세요.</p>
             <BulkUploadPanel
               mode="cases"
               organizationId={currentOrganizationId ?? ''}

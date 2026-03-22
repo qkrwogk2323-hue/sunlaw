@@ -73,6 +73,10 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+        <p className="text-sm font-medium text-sky-900">대량 등록은 CSV 양식에 맞춰 올려 주세요.</p>
+        <p className="mt-1 text-xs leading-6 text-sky-800">양식 다운로드 버튼으로 기본 양식을 받은 뒤 그대로 작성해서 올리면 가장 빠르게 등록됩니다.</p>
+      </div>
       <p className="text-xs text-slate-500">
         <span className="text-red-500" aria-hidden="true">*</span> 파일 선택 또는 CSV 내용 입력 중 하나는 반드시 필요합니다.
       </p>
@@ -82,7 +86,7 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
           size="sm"
           onClick={downloadTemplate}
         >
-          양식 다운로드
+          {`${label} CSV 양식 내려받기`}
         </Button>
         <label className="cursor-pointer rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800 hover:bg-blue-100">
           CSV 파일 선택
@@ -106,7 +110,7 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
         <label htmlFor={`bulk-upload-${mode}`} className="text-sm font-medium text-slate-700">
           CSV 내용 <span className="text-red-500" aria-hidden="true">*</span>
         </label>
-        <p className="text-xs text-slate-500">직접 입력은 최대 5건까지 권장하며, 그 이상은 파일 업로드로 진행해 주세요.</p>
+        <p className="text-xs text-slate-500">직접 입력은 최대 5건까지 권장하며, 그 이상은 내려받은 CSV 양식 그대로 파일 업로드로 진행해 주세요.</p>
       </div>
       <Textarea
         id={`bulk-upload-${mode}`}

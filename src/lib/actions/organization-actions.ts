@@ -1845,7 +1845,12 @@ export async function createStaffBulkInvitationAction(formData: FormData) {
   }
 
   if (!created.length) {
-    throw new Error(failed[0]?.reason || '직원 초대 링크를 생성하지 못했습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'STAFF_BULK_INVITE_ALL_FAILED',
+      blocked: '직원 대량 초대를 생성하지 못했습니다.',
+      cause: failed[0]?.reason || '모든 대상에서 초대 링크 생성이 실패했습니다.',
+      resolution: '입력한 이메일과 대상 정보를 다시 확인한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   const cookieStore = await cookies();
@@ -1897,7 +1902,14 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
     .select('id, slug')
     .eq('id', parsed.organizationId)
     .maybeSingle();
-  if (organizationError || !organization) throw organizationError ?? new Error('조직 정보를 찾을 수 없습니다.');
+  if (organizationError || !organization) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'STAFF_PREREGISTER_ORGANIZATION_NOT_FOUND',
+      blocked: '선등록 대상 조직을 찾을 수 없습니다.',
+      cause: organizationError?.message ?? '해당 조직이 삭제되었거나 더 이상 접근할 수 없습니다.',
+      resolution: '조직을 다시 선택한 뒤 시도해 주세요.'
+    }));
+  }
 
   const loginId = await generateUniqueTempLoginId(admin, parsed.organizationId);
   const loginEmail = `${organization.slug || parsed.organizationId}__${loginId}@staff.vein.local`;
@@ -1912,7 +1924,14 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
       invited_by_organization_id: parsed.organizationId
     }
   });
-  if (createUserError || !createdUser.user) throw createUserError ?? new Error('임시 직원 계정을 생성하지 못했습니다.');
+  if (createUserError || !createdUser.user) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'STAFF_PREREGISTER_ACCOUNT_CREATE_FAILED',
+      blocked: '임시 직원 계정을 생성하지 못했습니다.',
+      cause: createUserError?.message ?? '임시 계정 생성 후 사용자 정보를 돌려받지 못했습니다.',
+      resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    }));
+  }
   const createdUserId = createdUser.user.id;
 
   try {
@@ -2562,7 +2581,12 @@ export async function createOrganizationCollaborationRequestAction(formData: For
   });
 
   if (parsed.sourceOrganizationId === parsed.targetOrganizationId) {
-    throw new Error('같은 조직에는 협업 제안을 보낼 수 없습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'COLLABORATION_SAME_ORGANIZATION',
+      blocked: '같은 조직에는 협업 제안을 보낼 수 없습니다.',
+      cause: '출발 조직과 대상 조직이 동일합니다.',
+      resolution: '다른 조직을 선택한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   const { auth } = await requireOrganizationActionAccess(parsed.sourceOrganizationId, {
@@ -2572,7 +2596,12 @@ export async function createOrganizationCollaborationRequestAction(formData: For
 
   const effectiveOrganizationId = getEffectiveOrganizationId(auth);
   if (effectiveOrganizationId !== parsed.sourceOrganizationId) {
-    throw new Error('현재 선택된 조직 기준으로만 협업 제안을 보낼 수 있습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_CONTEXT_MISMATCH',
+      blocked: '현재 선택된 조직 기준으로만 협업 제안을 보낼 수 있습니다.',
+      cause: `현재 조직 컨텍스트(${effectiveOrganizationId})와 요청 조직(${parsed.sourceOrganizationId})이 다릅니다.`,
+      resolution: '상단 조직 전환 후 다시 시도해 주세요.'
+    }));
   }
 
   const adminClient = createSupabaseAdminClient();
@@ -2589,17 +2618,32 @@ export async function createOrganizationCollaborationRequestAction(formData: For
   ]);
 
   if (sourceOrgResponse.error || !sourceOrgResponse.data) {
-    throw sourceOrgResponse.error ?? new Error('현재 조직 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_SOURCE_ORG_NOT_FOUND',
+      blocked: '현재 조직 정보를 찾을 수 없습니다.',
+      cause: sourceOrgResponse.error?.message ?? '출발 조직이 삭제되었거나 조회할 수 없습니다.',
+      resolution: '조직 상태를 확인한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   if (targetOrgResponse.error || !targetOrgResponse.data || targetOrgResponse.data.lifecycle_status === 'soft_deleted') {
-    throw targetOrgResponse.error ?? new Error('제안할 대상 조직을 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_TARGET_ORG_NOT_FOUND',
+      blocked: '제안할 대상 조직을 찾을 수 없습니다.',
+      cause: targetOrgResponse.error?.message ?? '대상 조직이 삭제되었거나 조회할 수 없습니다.',
+      resolution: '대상 조직을 다시 확인한 뒤 시도해 주세요.'
+    }));
   }
 
   const sourceOrganization = sourceOrgResponse.data;
 
   if (existingHub?.id) {
-    throw new Error('이미 활성화된 업무 허브가 있습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_HUB_ALREADY_EXISTS',
+      blocked: '이미 활성화된 업무 허브가 있습니다.',
+      cause: '두 조직 사이에 활성 상태의 협업 허브가 이미 존재합니다.',
+      resolution: '기존 업무 허브를 열어 이어서 사용해 주세요.'
+    }));
   }
 
   if (existingRequestResponse.error) {
@@ -2607,7 +2651,12 @@ export async function createOrganizationCollaborationRequestAction(formData: For
   }
 
   if (existingRequestResponse.data?.id) {
-    throw new Error('이미 처리 대기 중인 협업 제안이 있습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_REQUEST_ALREADY_PENDING',
+      blocked: '이미 처리 대기 중인 협업 제안이 있습니다.',
+      cause: '같은 조직 조합에 대해 보류 중인 협업 요청이 존재합니다.',
+      resolution: '기존 요청의 승인 또는 반려 결과를 먼저 확인해 주세요.'
+    }));
   }
 
   const { data: requestRow, error: insertError } = await adminClient
@@ -2623,7 +2672,12 @@ export async function createOrganizationCollaborationRequestAction(formData: For
     .single();
 
   if (insertError || !requestRow) {
-    throw insertError ?? new Error('협업 제안을 저장하지 못했습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_REQUEST_CREATE_FAILED',
+      blocked: '협업 제안을 저장하지 못했습니다.',
+      cause: insertError?.message ?? '협업 요청을 저장했지만 요청 ID를 돌려받지 못했습니다.',
+      resolution: '잠시 후 다시 시도해 주세요.'
+    }));
   }
 
   const targetManagerIds = await listOrganizationManagerProfileIds(adminClient, parsed.targetOrganizationId);
@@ -2684,11 +2738,21 @@ export async function reviewOrganizationCollaborationRequestAction(formData: For
     .maybeSingle();
 
   if (requestError || !requestRow) {
-    throw requestError ?? new Error('협업 제안을 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_REQUEST_NOT_FOUND',
+      blocked: '협업 제안을 찾을 수 없습니다.',
+      cause: requestError?.message ?? '해당 협업 제안이 삭제되었거나 더 이상 접근할 수 없습니다.',
+      resolution: '목록을 새로고침한 뒤 다시 확인해 주세요.'
+    }));
   }
 
   if (requestRow.status !== 'pending') {
-    throw new Error('이미 처리된 협업 제안입니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_REQUEST_ALREADY_REVIEWED',
+      blocked: '이미 처리된 협업 제안입니다.',
+      cause: `현재 협업 제안 상태가 ${requestRow.status} 입니다.`,
+      resolution: '목록을 새로고침해 현재 상태를 확인해 주세요.'
+    }));
   }
 
   const [sourceOrgResponse, targetOrgResponse] = await Promise.all([
@@ -2697,11 +2761,21 @@ export async function reviewOrganizationCollaborationRequestAction(formData: For
   ]);
 
   if (sourceOrgResponse.error || !sourceOrgResponse.data) {
-    throw sourceOrgResponse.error ?? new Error('제안 조직 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_SOURCE_ORG_NOT_FOUND',
+      blocked: '제안 조직 정보를 찾을 수 없습니다.',
+      cause: sourceOrgResponse.error?.message ?? '제안을 보낸 조직 정보를 조회할 수 없습니다.',
+      resolution: '잠시 후 다시 시도해 주세요.'
+    }));
   }
 
   if (targetOrgResponse.error || !targetOrgResponse.data) {
-    throw targetOrgResponse.error ?? new Error('대상 조직 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_TARGET_ORG_NOT_FOUND',
+      blocked: '대상 조직 정보를 찾을 수 없습니다.',
+      cause: targetOrgResponse.error?.message ?? '대상 조직 정보를 조회할 수 없습니다.',
+      resolution: '잠시 후 다시 시도해 주세요.'
+    }));
   }
 
   const sourceOrganization = sourceOrgResponse.data;
@@ -2728,7 +2802,12 @@ export async function reviewOrganizationCollaborationRequestAction(formData: For
         .single();
 
       if (hubError || !createdHub) {
-        throw hubError ?? new Error('업무 허브를 생성하지 못했습니다.');
+        throwGuardFeedback(createConditionFailedFeedback({
+          code: 'COLLABORATION_HUB_CREATE_FAILED',
+          blocked: '업무 허브를 생성하지 못했습니다.',
+          cause: hubError?.message ?? '허브 생성 후 허브 ID를 돌려받지 못했습니다.',
+          resolution: '잠시 후 다시 시도해 주세요.'
+        }));
       }
 
       approvedHubId = createdHub.id;
@@ -3406,15 +3485,36 @@ export async function acceptInvitationAction(token: string) {
 // CSV 파일에서 의뢰인 목록을 가져온다.
 export async function importClientsCsvAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
-  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+  if (!organizationId) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_CSV_ORGANIZATION_MISSING',
+      blocked: '조직 정보가 없어 의뢰인 CSV를 등록할 수 없습니다.',
+      cause: 'organizationId 값이 비어 있습니다.',
+      resolution: '조직을 다시 선택한 뒤 시도해 주세요.'
+    }));
+  }
 
   const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인 CSV를 등록할 수 있습니다.');
   const file = formData.get('file');
-  if (!(file instanceof File) || file.size === 0) throw new Error('CSV 파일을 선택해 주세요.');
+  if (!(file instanceof File) || file.size === 0) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_CSV_FILE_MISSING',
+      blocked: 'CSV 파일을 선택해 주세요.',
+      cause: '업로드할 CSV 파일이 비어 있거나 선택되지 않았습니다.',
+      resolution: 'CSV 파일을 다시 선택한 뒤 시도해 주세요.'
+    }));
+  }
 
   const supabase = await createSupabaseServerClient();
   const rows = await parseCsvFile(file);
-  if (!rows.length) throw new Error('CSV에서 읽을 수 있는 행이 없습니다.');
+  if (!rows.length) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_CSV_EMPTY',
+      blocked: 'CSV에서 읽을 수 있는 행이 없습니다.',
+      cause: '헤더를 제외한 유효 데이터 행이 없습니다.',
+      resolution: 'CSV 내용을 확인한 뒤 다시 업로드해 주세요.'
+    }));
+  }
 
   let imported = 0;
   let skipped = 0;
@@ -3481,7 +3581,14 @@ export async function importClientsCsvAction(formData: FormData) {
 export async function bulkInviteClientsAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const mode = `${formData.get('mode') ?? 'selected'}`.trim();
-  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+  if (!organizationId) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_BULK_INVITE_ORGANIZATION_MISSING',
+      blocked: '조직 정보가 없어 의뢰인 초대를 진행할 수 없습니다.',
+      cause: 'organizationId 값이 비어 있습니다.',
+      resolution: '조직을 다시 선택한 뒤 시도해 주세요.'
+    }));
+  }
 
   const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인을 초대할 수 있습니다.');
   const supabase = await createSupabaseServerClient();
@@ -3499,7 +3606,14 @@ export async function bulkInviteClientsAction(formData: FormData) {
     targetIds = (data ?? []).map((item: any) => item.id);
   }
 
-  if (!targetIds.length) throw new Error('초대할 의뢰인을 선택해 주세요.');
+  if (!targetIds.length) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_BULK_INVITE_SELECTION_MISSING',
+      blocked: '초대할 의뢰인을 선택해 주세요.',
+      cause: '선택된 의뢰인 ID가 없습니다.',
+      resolution: '초대할 대상을 선택한 뒤 다시 시도해 주세요.'
+    }));
+  }
 
   const { data: clients, error } = await supabase
     .from('case_clients')
@@ -3561,7 +3675,14 @@ const CASE_TYPE_CSV_MAP: Record<string, string> = {
 // CSV 파일에서 사건 목록을 가져온다.
 export async function importCasesCsvAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
-  if (!organizationId) throw new Error('조직 정보가 필요합니다.');
+  if (!organizationId) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CASE_CSV_ORGANIZATION_MISSING',
+      blocked: '조직 정보가 없어 사건 CSV를 등록할 수 없습니다.',
+      cause: 'organizationId 값이 비어 있습니다.',
+      resolution: '조직을 다시 선택한 뒤 시도해 주세요.'
+    }));
+  }
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
     permission: 'case_create',
@@ -3569,10 +3690,24 @@ export async function importCasesCsvAction(formData: FormData) {
   });
 
   const file = formData.get('file');
-  if (!(file instanceof File) || file.size === 0) throw new Error('CSV 파일을 선택해 주세요.');
+  if (!(file instanceof File) || file.size === 0) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CASE_CSV_FILE_MISSING',
+      blocked: 'CSV 파일을 선택해 주세요.',
+      cause: '업로드할 CSV 파일이 비어 있거나 선택되지 않았습니다.',
+      resolution: 'CSV 파일을 다시 선택한 뒤 시도해 주세요.'
+    }));
+  }
 
   const rows = await parseCsvFile(file);
-  if (!rows.length) throw new Error('CSV에서 읽을 수 있는 행이 없습니다.');
+  if (!rows.length) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CASE_CSV_EMPTY',
+      blocked: 'CSV에서 읽을 수 있는 행이 없습니다.',
+      cause: '헤더를 제외한 유효 데이터 행이 없습니다.',
+      resolution: 'CSV 내용을 확인한 뒤 다시 업로드해 주세요.'
+    }));
+  }
 
   const supabase = await createSupabaseServerClient();
   const org = auth.memberships.find((m) => m.organization_id === organizationId)?.organization;
