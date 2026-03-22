@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { resolveSupabaseCookieDomain } from '@/lib/supabase/cookie-options';
 
 const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
 
@@ -21,7 +22,9 @@ function redirectWithClearedNext(request: NextRequest, destination: URL | string
     response.cookies.set(POST_AUTH_NEXT_COOKIE, '', {
       path: '/',
       maxAge: 0,
-      sameSite: 'lax'
+      sameSite: 'lax',
+      secure: request.nextUrl.protocol === 'https:',
+      domain: resolveSupabaseCookieDomain(request.nextUrl.hostname)
     });
   }
 

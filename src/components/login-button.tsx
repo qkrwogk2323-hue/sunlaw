@@ -3,47 +3,15 @@
 import { useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
+import {
+  resolveCanonicalAuthOrigin,
+  resolveSupabaseCookieDomain
+} from '@/lib/supabase/cookie-options';
 
 const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
 
 function resolveAuthOrigin() {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredOrigin) {
-    try {
-      const parsed = new URL(configuredOrigin);
-      if (parsed.protocol === 'https:' || parsed.hostname === 'localhost') {
-        return parsed.origin;
-      }
-    } catch {
-      // Fall back to current origin when the configured URL is malformed.
-    }
-  }
-
-  // OAuth PKCE verifier is stored per-origin. In production we prefer the
-  // canonical public origin to avoid www/non-www mismatches.
-  return window.location.origin;
-}
-
-function resolveCookieDomain(authOrigin: string) {
-  const currentHostname = window.location.hostname;
-  const authHostname = new URL(authOrigin).hostname;
-
-  if (currentHostname === authHostname) {
-    return null;
-  }
-
-  const currentWithoutWww = currentHostname.replace(/^www\./, '');
-  const authWithoutWww = authHostname.replace(/^www\./, '');
-
-  if (currentWithoutWww !== authWithoutWww) {
-    return null;
-  }
-
-  if (currentWithoutWww === 'localhost' || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(currentWithoutWww)) {
-    return null;
-  }
-
-  return `.${currentWithoutWww}`;
+  return resolveCanonicalAuthOrigin() ?? window.location.origin;
 }
 
 function writePostAuthNextCookie(next?: string) {
@@ -52,7 +20,7 @@ function writePostAuthNextCookie(next?: string) {
   }
 
   const authOrigin = resolveAuthOrigin();
-  const domain = resolveCookieDomain(authOrigin);
+  const domain = resolveSupabaseCookieDomain(window.location.hostname);
   const secure = authOrigin.startsWith('https://') ? '; secure' : '';
   const domainAttribute = domain ? `; domain=${domain}` : '';
 
