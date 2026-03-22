@@ -1,5 +1,6 @@
 import type { AuthContext, Membership, PermissionKey } from './types';
 import { createAccessDeniedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
+import { resolveMembershipPermissions } from '@/lib/permissions';
 
 type OrganizationAccessOptions = {
   permission?: PermissionKey;
@@ -35,7 +36,7 @@ export function evaluateOrganizationAccess(
     }));
   }
 
-  if (options.permission && !membership.permissions?.[options.permission]) {
+  if (options.permission && !resolveMembershipPermissions(membership)[options.permission]) {
     throwGuardFeedback(createAccessDeniedFeedback({
       code: 'ORG_PERMISSION_REQUIRED',
       blocked: errorMessage,

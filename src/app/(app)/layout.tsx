@@ -1,21 +1,18 @@
 import type { ReactNode } from 'react';
 import type { Route } from 'next';
-import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { getDefaultAppRoute, getEffectiveOrganizationId, getTopLevelAppRoutes, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
-import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
+import { getDefaultAppRoute, getTopLevelAppRoutes, requireAuthenticatedUser } from '@/lib/auth';
 import { NavBadgesAsync } from '@/components/nav-badges-async';
 import { BrandBanner } from '@/components/brand-banner';
 import { PageBackButton } from '@/components/page-back-button';
 import { buttonStyles } from '@/components/ui/button';
 import { signOutAction } from '@/lib/actions/auth-actions';
-import { readSupportSessionCookie } from '@/lib/support-cookie';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
 import { GlobalCommandPalette } from '@/components/global-command-palette';
 import { FloatingExportWidget } from '@/components/floating-export-widget';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { enforceSubscriptionRouteAccess, getOrganizationSubscriptionSnapshot, getSubscriptionLockMessage } from '@/lib/subscription-lock';
+import { enforceAppEntryPolicy } from '@/lib/app-entry-policy';
 
 // auth/subscription은 쿠키 기반이므로 force-dynamic 불필요.
 // navCounts는 NavBadgesAsync(Suspense)로 분리해 레이아웃 블로킹을 제거했음.
@@ -23,40 +20,9 @@ import { enforceSubscriptionRouteAccess, getOrganizationSubscriptionSnapshot, ge
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const auth = await requireAuthenticatedUser();
 
-  if (auth.profile.must_change_password) {
-    redirect('/start/password-reset' as Route);
-  }
-  if (auth.profile.must_complete_profile) {
-    redirect('/start/member-profile' as Route);
-  }
+  const { effectiveOrganizationId, supportSession, lockMessage } = await enforceAppEntryPolicy(auth);
 
-  if (!hasCompletedLegalName(auth.profile)) {
-    redirect('/start/profile-name' as Route);
-  }
-
-  if (isClientAccountPending(auth.profile)) {
-    redirect('/start/pending' as Route);
-  }
-
-  if (isClientAccountActive(auth.profile)) {
-    redirect('/portal' as Route);
-  }
-
-  const effectiveOrganizationId = getEffectiveOrganizationId(auth);
   const defaultAppRoute = getDefaultAppRoute(auth, effectiveOrganizationId) as Route;
-
-  const [supportSession, subscriptionSnapshot] = await Promise.all([
-    readSupportSessionCookie(),
-    getOrganizationSubscriptionSnapshot(effectiveOrganizationId)
-  ]);
-
-  await enforceSubscriptionRouteAccess(subscriptionSnapshot);
-
-  if (!auth.memberships.length && !isPlatformOperator(auth)) {
-    redirect('/start/signup' as Route);
-  }
-
-  const lockMessage = getSubscriptionLockMessage(subscriptionSnapshot);
 
   return (
     <div className="vs-shell min-h-screen">

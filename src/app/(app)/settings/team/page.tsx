@@ -13,7 +13,7 @@ import { MemberAdminSummaryForm } from '@/components/forms/member-admin-summary-
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { StaffBulkInviteForm } from '@/components/forms/staff-bulk-invite-form';
 import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
-import { isWorkspaceAdmin } from '@/lib/permissions';
+import { isWorkspaceAdmin, hasPermission } from '@/lib/permissions';
 import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
 import { revokeUserSessionsAction } from '@/lib/actions/auth-actions';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
@@ -43,7 +43,7 @@ export default async function TeamSettingsPage({
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
-  const canManage = isWorkspaceAdmin(currentMembership) && Boolean(currentMembership?.permissions?.user_manage);
+  const canManage = isWorkspaceAdmin(currentMembership) && hasPermission(auth, organizationId, 'user_manage');
   const inviteToken = resolvedSearchParams?.invite;
   const issuedLoginId = resolvedSearchParams?.issuedLoginId;
   const staffInviteSummaryRaw = cookieStore.get('_vs_staff_invite_summary')?.value ?? null;

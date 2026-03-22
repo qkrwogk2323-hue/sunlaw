@@ -25,8 +25,12 @@ export async function createSupabaseServerClient() {
           cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options as any);
           });
-        } catch {
-          // Server Components에서는 쓰기 실패 가능.
+        } catch (err) {
+          // Server Components에서는 쓰기 실패 가능 (Read-only context).
+          // 예외를 전파하지 않되, 개발 환경에서는 경고를 남겨 디버깅을 돕습니다.
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Supabase] 쿠키 쓰기 실패 (Read-only context):', (err as Error).message);
+          }
         }
       }
     }

@@ -14,24 +14,152 @@ export type DashboardSummary = {
   unreadNotifications: number;
 };
 
+// ─── Dashboard DTO 타입 ────────────────────────────────────────────────────────
+
+export type DashboardScheduleItem = {
+  id: string;
+  title: string | null;
+  schedule_kind: string | null;
+  scheduled_start: string | null;
+  location: string | null;
+  notes?: string | null;
+  is_important?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  case_id: string | null;
+  cases?: { title: string | null } | { title: string | null }[] | null;
+};
+
+export type DashboardCaseItem = {
+  id: string;
+  title: string | null;
+  reference_no: string | null;
+  case_status: string | null;
+  case_type?: string | null;
+  stage_key?: string | null;
+  updated_at?: string | null;
+  principal_amount?: number | null;
+};
+
+export type DashboardRequestItem = {
+  id: string;
+  title: string | null;
+  body: string | null;
+  status: string | null;
+  request_kind: string | null;
+  due_at: string | null;
+  case_id: string | null;
+  cases: { title: string | null } | { title: string | null }[] | null;
+};
+
+export type DashboardMessageItem = {
+  id: string;
+  body: string | null;
+  is_internal: boolean | null;
+  created_at: string | null;
+  sender_role: string | null;
+  sender_profile_id: string | null;
+  case_id: string | null;
+  cases: { title: string | null } | { title: string | null }[] | null;
+  sender: { full_name: string | null } | { full_name: string | null }[] | null;
+};
+
+export type DashboardBillingItem = {
+  id: string;
+  title: string | null;
+  amount: number | null;
+  status: string | null;
+  due_on: string | null;
+  case_id: string | null;
+  cases: { title: string | null } | { title: string | null }[] | null;
+};
+
+export type DashboardNotificationItem = {
+  id: string;
+  title: string | null;
+  destination_url: string | null;
+  priority: string | null;
+  status: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  organization_id: string | null;
+  action_label: string;
+  created_at: string | null;
+};
+
+export type DashboardActionableNotificationItem = {
+  id: string;
+  title: string | null;
+  body: string;
+  action_label: string;
+  action_href: string | null;
+  destination_url: string | null;
+  action_entity_type: string | null;
+  requires_action: boolean;
+  resolved_at: null;
+  organization_id: string | null;
+  created_at: string | null;
+};
+
+export type DashboardClientAccessItem = {
+  id: string;
+  requester_name: string | null;
+  requester_email: string | null;
+  status: string | null;
+  request_note: string | null;
+  created_at: string | null;
+  target_organization_id: string | null;
+  organization: { name: string | null; slug: string | null } | { name: string | null; slug: string | null }[] | null;
+};
+
+export type DashboardTeamMemberItem = {
+  id: string;
+  role: string | null;
+  actor_category: string | null;
+  title: string | null;
+  profile: { id: string; full_name: string | null; email: string | null } | { id: string; full_name: string | null; email: string | null }[] | null;
+};
+
+export type DashboardClientContactItem = {
+  id: string;
+  case_id: string | null;
+  profile_id: string | null;
+  client_name: string | null;
+  relation_label: string | null;
+  cases: { title: string | null } | { title: string | null }[] | null;
+};
+
+export type DashboardPartnerContactItem = {
+  case_organization_id: string;
+  case_id: string | null;
+  organization_id: string | null;
+  organization_name: string;
+  role: string | null;
+  membership_id: string;
+  member_role: string | null;
+  profile: null;
+};
+
+// ─── Dashboard 섹션 타입 ──────────────────────────────────────────────────────
+
 export type DashboardQueues = {
-  urgentSchedules: any[];
-  recentCases: any[];
-  caseOptions: any[];
-  recentRequests: any[];
-  recentMessageItems: any[];
-  monthlyHighlights: any[];
-  upcomingBilling: any[];
-  unreadNotificationItems: any[];
-  clientAccessQueue: any[];
-  actionableNotifications: any[];
+  urgentSchedules: DashboardScheduleItem[];
+  recentCases: DashboardCaseItem[];
+  caseOptions: DashboardCaseItem[];
+  recentRequests: DashboardRequestItem[];
+  recentMessageItems: DashboardMessageItem[];
+  monthlyHighlights: DashboardScheduleItem[];
+  upcomingBilling: DashboardBillingItem[];
+  unreadNotificationItems: DashboardNotificationItem[];
+  clientAccessQueue: DashboardClientAccessItem[];
+  actionableNotifications: DashboardActionableNotificationItem[];
 };
 
 export type DashboardSecondaryPanels = {
-  teamMembers: any[];
-  clientContacts: any[];
-  partnerContacts: any[];
-  organizationConversations: any[];
+  teamMembers: DashboardTeamMemberItem[];
+  clientContacts: DashboardClientContactItem[];
+  partnerContacts: DashboardPartnerContactItem[];
+  organizationConversations: never[];
 };
 
 const getDashboardSections = cache(async (organizationId?: string | null) => {
@@ -274,10 +402,10 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     clientAccessQueueQuery
   ]);
 
-  const availableCaseIds = (caseOptions ?? []).map((item: any) => item.id).filter(Boolean);
+  const availableCaseIds = (caseOptions ?? []).map((item) => item.id).filter(Boolean);
 
-  let clientContacts: any[] = [];
-  let partnerContacts: any[] = [];
+  let clientContacts: DashboardClientContactItem[] = [];
+  let partnerContacts: DashboardPartnerContactItem[] = [];
 
   if (organizationId && availableCaseIds.length) {
     const { data: caseClients } = await supabase
@@ -298,16 +426,27 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
         .neq('organization_id', organizationId)
         .eq('status', 'active');
 
-      const partnerOrgIds = [...new Set((caseOrganizations ?? []).map((item: any) => item.organization_id).filter(Boolean))];
+      // Supabase admin client may infer the organization field as never for nested select.
+      // Use explicit cast to work around type inference limitation.
+      type CaseOrgRow = {
+        id: string;
+        case_id: string | null;
+        organization_id: string | null;
+        role: string | null;
+        organization: { id: string; name: string } | { id: string; name: string }[] | null;
+      };
+      const typedRows = (caseOrganizations ?? []) as unknown as CaseOrgRow[];
+
+      const partnerOrgIds = [...new Set(typedRows.map((item) => item.organization_id).filter((id): id is string => Boolean(id)))];
 
       if (partnerOrgIds.length) {
-        partnerContacts = (caseOrganizations ?? []).map((caseOrganization: any) => ({
+        partnerContacts = typedRows.map((caseOrganization) => ({
           case_organization_id: caseOrganization.id,
           case_id: caseOrganization.case_id,
           organization_id: caseOrganization.organization_id,
           organization_name: Array.isArray(caseOrganization.organization)
             ? caseOrganization.organization[0]?.name ?? '협업사'
-            : caseOrganization.organization?.name ?? '협업사',
+            : (caseOrganization.organization as { name: string } | null)?.name ?? '협업사',
           role: caseOrganization.role,
           membership_id: caseOrganization.id,
           member_role: caseOrganization.role,
@@ -334,7 +473,7 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     recentMessageItems: messageItems ?? [],
     monthlyHighlights: monthlyHighlights ?? [],
     upcomingBilling: upcomingBilling ?? [],
-    unreadNotificationItems: (unreadNotificationItems ?? []).map((item: any) => ({
+    unreadNotificationItems: (unreadNotificationItems ?? []).map((item) => ({
       id: item.notificationId,
       title: item.title,
       destination_url: item.destinationUrl,
@@ -348,9 +487,9 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     })),
     clientAccessQueue: clientAccessQueue ?? [],
     actionableNotifications: (unreadNotificationItems ?? [])
-      .filter((item: any) => item.status === 'active' && item.priority === 'urgent')
+      .filter((item) => item.status === 'active' && item.priority === 'urgent')
       .slice(0, 6)
-      .map((item: any) => ({
+      .map((item) => ({
         id: item.notificationId,
         title: item.title,
         body: '',
@@ -360,7 +499,8 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
         action_entity_type: item.entityType,
         requires_action: item.priority === 'urgent',
         resolved_at: null,
-        organization_id: item.organizationId ?? null
+        organization_id: item.organizationId ?? null,
+        created_at: item.createdAt ?? null
       }))
   };
 

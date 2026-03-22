@@ -9,13 +9,13 @@ type DashboardSnapshot = {
   recentMessages: number;
   pendingBillingCount: number;
   unreadNotifications: number;
-  urgentSchedules: Array<{ id: string; title: string; scheduled_start?: string | null; case_id?: string | null }>;
-  recentCases: Array<{ id: string; title: string }>;
-  recentRequests: Array<{ id: string; title: string; status: string; case_id?: string | null }>;
-  upcomingBilling: Array<{ id: string; title: string; due_on?: string | null; case_id?: string | null; status: string }>;
-  unreadNotificationItems: Array<{ id: string; title: string; destination_url?: string | null; status?: string | null; priority?: string | null }>;
-  clientAccessQueue: Array<{ id: string; requester_name: string; status: string }>;
-  actionableNotifications: Array<{ id: string; title: string; action_href?: string | null; destination_url?: string | null }>;
+  urgentSchedules: Array<{ id: string; title: string | null; scheduled_start?: string | null; case_id?: string | null }>;
+  recentCases: Array<{ id: string; title: string | null }>;
+  recentRequests: Array<{ id: string; title: string | null; status: string | null; case_id?: string | null }>;
+  upcomingBilling: Array<{ id: string; title: string | null; due_on?: string | null; case_id?: string | null; status: string | null }>;
+  unreadNotificationItems: Array<{ id: string; title: string | null; destination_url?: string | null; status?: string | null; priority?: string | null }>;
+  clientAccessQueue: Array<{ id: string; requester_name: string | null; status: string | null }>;
+  actionableNotifications: Array<{ id: string; title: string | null; action_href?: string | null; destination_url?: string | null }>;
   organizationConversations: Array<{ id: string }>;
 };
 
