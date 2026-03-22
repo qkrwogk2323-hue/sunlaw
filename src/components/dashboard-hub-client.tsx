@@ -1543,9 +1543,12 @@ export function DashboardHubClient({
         {activeAiPanels.includes('assistant') ? (
         <Card className="border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
           <CardHeader className="border-sky-200/70">
-            <div>
-              <CardTitle>업무관련 질의</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">질문 답변과 초안 작성이 한 번에 이어집니다.</p>
+            <div className="flex items-center gap-2">
+              <Bot className="size-5 text-sky-600" />
+              <div>
+                <CardTitle>AI 업무 질의</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">질문 답변, 문서 분류, 초안 작성이 한 번에 이어집니다.</p>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1569,54 +1572,6 @@ export function DashboardHubClient({
               </div>
             </div>
 
-            <div className="rounded-[1.4rem] border border-sky-200 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">오늘의 첫 확인</p>
-                  <p className="mt-1 text-sm text-slate-600">{initialAiOverview.summary.headline}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
-                  aria-label="AI 요약이 잘못됐나요? 피드백 보내기"
-                  onClick={() => {
-                    reportAiIssue({
-                      aiFeature: 'ai_summary_card',
-                      question: '오늘의 핵심 요약',
-                      answer: initialAiOverview.summary.headline,
-                      rationale: initialAiOverview.summary.bullets.join(' / '),
-                      modelVersion: 'rules',
-                      requestId: `summary:${initialAiOverview.summary.source.generatedAt}`
-                    });
-                  }}
-                >
-                  <ThumbsDown className="size-3.5" />
-                  AI 결과가 틀렸나요?
-                </Button>
-                {summaryRows.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
-                  >
-                    <p className="font-semibold text-slate-900">{item.label}</p>
-                    <p className="mt-1">{item.detail}</p>
-                  </Link>
-                ))}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {initialAiOverview.summary.actions.map((action) => (
-                  <Link
-                    key={action.label}
-                    href={action.href as Route}
-                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 transition hover:border-sky-300 hover:bg-sky-100"
-                  >
-                    {action.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
             <div className="rounded-[1.4rem] border border-emerald-200 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
               <div className="flex items-center justify-between gap-3">
                 <div>

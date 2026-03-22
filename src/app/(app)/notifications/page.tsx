@@ -215,32 +215,18 @@ export default async function NotificationsPage({
   return (
     <div className="space-y-5">
       <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="알림 센터" />
-      <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f3f8fd)] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-end">
-              <Link href={'/admin/audit?table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-                알림 기록 보기
-              </Link>
-            </div>
-            <div className="min-w-[124px]">
-              <Link href={buildFilterHref({ nextState: 'active' }) as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
-                <p className="mt-1 text-center text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
-              </Link>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
+        <Link href={'/admin/audit?table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+          알림 기록 보기
+        </Link>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
           <Link key={card.label} href={card.href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
-            <p className="mt-6 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
+            <p className="mt-5 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
           </Link>
         ))}
       </div>
