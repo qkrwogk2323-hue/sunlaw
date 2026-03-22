@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { buildDraftAssist } from '@/lib/ai/dashboard-home';
+import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
 import { sanitizeAiText } from '@/lib/ai/guardrails';
 import { guardAccessDeniedResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     requestId: `draft-assist:${Date.now()}`,
+    area: getAiFeaturePolicy('draft_assist').areaId,
+    featureLabel: getAiFeaturePolicy('draft_assist').label,
     ...response
   });
 }

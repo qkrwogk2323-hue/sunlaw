@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { answerDashboardAssistant } from '@/lib/ai/dashboard-home';
+import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
 import { sanitizeAiText } from '@/lib/ai/guardrails';
 import { guardAccessDeniedResponse, guardServerErrorResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       requestId: `home-ai:${Date.now()}`,
+      area: getAiFeaturePolicy('home_ai_assistant').areaId,
+      featureLabel: getAiFeaturePolicy('home_ai_assistant').label,
       ...response
     });
   } catch {

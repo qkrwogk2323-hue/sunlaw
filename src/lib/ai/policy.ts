@@ -1,5 +1,7 @@
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
 import { guardAccessDeniedResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
+import { getAiFeaturePolicy, type AiAnswerType } from '@/lib/ai/feature-catalog';
+import type { AiFeatureId } from '@/lib/ai/guardrails';
 import { containsSensitiveData } from '@/lib/ai/guardrails';
 
 export type AiAccessContext = {
@@ -66,4 +68,16 @@ export function validateAiInputSafety(params: {
     cause: '민감정보 패턴이 탐지되어 모델 호출 또는 저장이 차단되었습니다.',
     resolution: '민감정보를 제거한 뒤 다시 시도해 주세요.'
   });
+}
+
+export function getAiAllowedAnswerTypes(feature: AiFeatureId): AiAnswerType[] {
+  return getAiFeaturePolicy(feature).allowedAnswerTypes;
+}
+
+export function isAiFeatureBlocked(feature: AiFeatureId) {
+  return getAiFeaturePolicy(feature).blocked;
+}
+
+export function getAiBlockedReason(feature: AiFeatureId) {
+  return getAiFeaturePolicy(feature).blockedReason ?? null;
 }

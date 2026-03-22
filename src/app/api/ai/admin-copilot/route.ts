@@ -1,8 +1,10 @@
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
+import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
 import { sanitizeAiText } from '@/lib/ai/guardrails';
 import { guardAccessDeniedResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 
 export async function POST(request: Request) {
+  const featurePolicy = getAiFeaturePolicy('admin_copilot');
   const auth = await getCurrentAuth();
   if (!auth) {
     return guardAccessDeniedResponse(401, {
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
   return guardAccessDeniedResponse(403, {
     code: 'PLATFORM_AI_DISABLED',
     blocked: '플랫폼 운영 관련 AI 답변은 제공하지 않습니다.',
-    cause: '조직 승인, 구독 조정, 운영 판단 같은 플랫폼 업무는 AI가 답하거나 제안하지 않습니다.',
+    cause: featurePolicy.blockedReason ?? '플랫폼 운영 관련 질문은 AI가 답하지 않습니다.',
     resolution: '플랫폼 운영 메뉴에서 직접 확인해 주세요.'
   });
 }

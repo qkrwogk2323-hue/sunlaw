@@ -1,4 +1,5 @@
 import { buildAiSourceMeta, sanitizeAiText, type AiResponseSourceMeta } from '@/lib/ai/guardrails';
+import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 type DashboardSnapshot = {
@@ -56,6 +57,7 @@ export type DashboardAiAssistantResponse = {
   actions: DashboardAiAction[];
   source: AiResponseSourceMeta;
   provider: 'rules';
+  allowedAnswerTypes?: string[];
 };
 
 export type DraftAssistResponse = {
@@ -63,6 +65,7 @@ export type DraftAssistResponse = {
   body: string;
   shortBody: string;
   provider: 'rules';
+  allowedAnswerTypes?: string[];
 };
 
 export type AdminCopilotRow = {
@@ -79,6 +82,7 @@ export type AdminCopilotResponse = {
   actions: DashboardAiAction[];
   source: AiResponseSourceMeta;
   provider: 'rules';
+  allowedAnswerTypes?: string[];
 };
 
 const PLATFORM_AI_BLOCK_PATTERN = /(플랫폼|구독|조직\s*(승인|신청|삭제|비활성화|정지|해지)|운영\s*(권한|승인|삭제|정지)|감사\s*로그|고객센터|지원\s*접속)/;
@@ -373,6 +377,7 @@ export function answerDashboardAssistant(input: {
   isPlatformAdmin: boolean;
 }): DashboardAiAssistantResponse {
   const question = sanitizeAiText(input.question);
+  const featurePolicy = getAiFeaturePolicy('home_ai_assistant');
   if (PLATFORM_AI_BLOCK_PATTERN.test(question)) {
     return {
       answer: input.isPlatformAdmin
@@ -409,6 +414,7 @@ export function answerDashboardAssistant(input: {
             }
           ],
       provider: 'rules',
+      allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
       source: buildAiSourceMeta({
         feature: 'home_ai_assistant',
         dataType: 'platform_ai_block',
@@ -423,6 +429,7 @@ export function answerDashboardAssistant(input: {
       answer: billingAnswer.answer,
       actions: billingAnswer.actions,
       provider: 'rules',
+      allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
       source: buildAiSourceMeta({
         feature: 'home_ai_assistant',
         dataType: 'billing_follow_up',
@@ -438,6 +445,7 @@ export function answerDashboardAssistant(input: {
     answer,
     actions,
     provider: 'rules',
+    allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
     source: buildAiSourceMeta({
       feature: 'home_ai_assistant',
       dataType: 'dashboard_snapshot',
@@ -459,18 +467,21 @@ export function buildDraftAssist(input: {
     : '조직 안내';
   const context = input.contextTitle ? `${input.contextTitle} 관련 ` : '';
   const cleanedPrompt = sanitizeAiText(input.prompt);
+  const featurePolicy = getAiFeaturePolicy('draft_assist');
 
   return {
     title: `${context}${subjectPrefix}`,
     body: `${context}${cleanedPrompt}\n\n필요한 확인 사항이 있으면 이 메시지에 바로 답장해 주세요.`,
     shortBody: `${context}${cleanedPrompt}`,
-    provider: 'rules'
+    provider: 'rules',
+    allowedAnswerTypes: featurePolicy.allowedAnswerTypes
   };
 }
 
 export async function runAdminCopilot(input: {
   question: string;
 }): Promise<AdminCopilotResponse> {
+  const featurePolicy = getAiFeaturePolicy('admin_copilot');
   if (PLATFORM_AI_BLOCK_PATTERN.test(sanitizeAiText(input.question))) {
     return {
       answer: '플랫폼 운영 관련 판단과 조정은 AI가 답하지 않습니다. 운영 메뉴에서 직접 확인해 주세요.',
@@ -493,6 +504,7 @@ export async function runAdminCopilot(input: {
         }
       ],
       provider: 'rules',
+      allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
       source: buildAiSourceMeta({
         feature: 'admin_copilot',
         dataType: 'platform_ai_block',
@@ -540,6 +552,7 @@ export async function runAdminCopilot(input: {
       }
     ],
     provider: 'rules',
+    allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
     source: buildAiSourceMeta({
       feature: 'admin_copilot',
       dataType: 'platform_organization_metrics',
