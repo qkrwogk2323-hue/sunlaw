@@ -243,7 +243,7 @@ export function OrganizationSignupForm({
           PDF, PNG, JPG 파일만 업로드할 수 있으며 파일 크기는 10MB 이하여야 합니다. {isEditMode ? '새 파일을 올리지 않으면 기존 제출 문서를 그대로 유지합니다.' : '파일을 선택하면 제출 전에 형식과 용량을 먼저 확인합니다.'}
         </p>
       </div>
-      <Textarea name="note" placeholder="검토 메모 또는 온보딩 요청사항" defaultValue={defaultValues?.note ?? ''} className="md:col-span-2" />
+      <Textarea name="note" placeholder="검토 메모 또는 초기 설정 요청사항" defaultValue={defaultValues?.note ?? ''} className="md:col-span-2" />
       <div className="md:col-span-2">
         <SubmitButton pendingLabel={isEditMode ? '수정 중...' : '신청 중...'} disabled={Boolean(documentError)}>{isEditMode ? '신청 내용 수정' : '조직 개설 신청'}</SubmitButton>
       </div>

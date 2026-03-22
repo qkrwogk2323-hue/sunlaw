@@ -18,13 +18,14 @@ function isMissingLegalNameColumnError(error: { code?: string; message?: string 
     || Boolean(error?.message?.includes('legal_name'));
 }
 
-const onboardingProfileSchema = z.object({
+const initialProfileSchema = z.object({
   phone: z.string().trim().min(8, '연락처를 입력해 주세요.'),
   residentNumber: z.string().trim().min(13, '주민등록번호 13자리를 입력해 주세요.'),
   addressLine1: z.string().trim().min(3, '주소를 입력해 주세요.'),
   addressLine2: z.string().trim().optional().or(z.literal(''))
 });
 
+// 회원 실명 입력을 확정하고 필수 프로필 단계를 갱신한다.
 export async function completeLegalNameAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const parsed = profileLegalNameSchema.parse({
@@ -72,9 +73,10 @@ export async function completeLegalNameAction(formData: FormData) {
   }) as Route);
 }
 
-export async function completeMemberOnboardingProfileAction(formData: FormData) {
+// 구성원이 처음 사용하는 데 필요한 기본 프로필을 저장한다.
+export async function completeMemberInitialProfileAction(formData: FormData) {
   const auth = await requireAuthenticatedUser();
-  const parsed = onboardingProfileSchema.parse({
+  const parsed = initialProfileSchema.parse({
     phone: formData.get('phone'),
     residentNumber: formData.get('residentNumber'),
     addressLine1: formData.get('addressLine1'),

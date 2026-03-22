@@ -29,7 +29,7 @@ export default async function ContractsPage({
           </p>
         </div>
         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-          계약은 비용 청구와 분리해 보여주되, 실제 원본은 사건 비용 탭과 같은 데이터를 사용합니다.
+          계약 내용은 이 화면에서 따로 모아 보고, 청구나 입금 진행 상황은 비용 관리에서 이어서 확인할 수 있습니다.
         </div>
       </div>
 

@@ -256,7 +256,9 @@ function MobileSectionBar({
   baseRoleLabel,
   currentOrganization,
   organizationOptions,
-  hasUnreadNotifications
+  hasUnreadNotifications,
+  collapsedSectionIds,
+  onToggleSection
 }: {
   sections: NavSection[];
   pathname: string;
@@ -265,6 +267,8 @@ function MobileSectionBar({
   currentOrganization: OrganizationOption | Membership['organization'] | null;
   organizationOptions: Array<{ id: string; name: string }>;
   hasUnreadNotifications: boolean;
+  collapsedSectionIds: string[];
+  onToggleSection: (sectionId: string) => void;
 }) {
   const derivedSectionId = useMemo(
     () => resolveSectionIdByPath(sections, pathname),
@@ -278,6 +282,7 @@ function MobileSectionBar({
   }, [derivedSectionId, manualSectionId, sections]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
+  const isActiveSectionCollapsed = activeSection ? collapsedSectionIds.includes(activeSection.id) : false;
 
   return (
     <div className="space-y-3 lg:hidden">
@@ -325,7 +330,18 @@ function MobileSectionBar({
 
           {activeSection ? (
             <div className="mt-3 grid gap-2">
-              {activeSection.items.map((item) => {
+              {activeSection.id === 'company-management-menu' ? (
+                <button
+                  type="button"
+                  onClick={() => onToggleSection(activeSection.id)}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-900"
+                >
+                  <span>회사 관리 {isActiveSectionCollapsed ? '펼치기' : '접기'}</span>
+                  <span className="text-lg leading-none">{isActiveSectionCollapsed ? '+' : '-'}</span>
+                </button>
+              ) : null}
+
+              {!isActiveSectionCollapsed ? activeSection.items.map((item) => {
                 const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
                 const badge = item.badge;
                 return (
@@ -356,7 +372,7 @@ function MobileSectionBar({
                     )}
                   </Link>
                 );
-              })}
+              }) : null}
             </div>
           ) : null}
         </div>
@@ -392,6 +408,7 @@ export function ModeAwareNav({
   const [pulseConversation, setPulseConversation] = useState(false);
   const [orgPickerOpen, setOrgPickerOpen] = useState(false);
   const [quickSearchQuery, setQuickSearchQuery] = useState('');
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<string[]>([]);
   const { success } = useToast();
 
   const isModeKey = (value: string | null | undefined): value is ModeKey => (
@@ -538,6 +555,14 @@ export function ModeAwareNav({
     document.cookie = `${ACTIVE_VIEW_MODE_COOKIE}=${activeMode}; path=/; max-age=31536000; samesite=lax`;
   }, [mode, pathname]);
 
+  const toggleSection = (sectionId: string) => {
+    setCollapsedSectionIds((current) => (
+      current.includes(sectionId)
+        ? current.filter((item) => item !== sectionId)
+        : [...current, sectionId]
+    ));
+  };
+
   return (
     <div className="space-y-3">
       <MobileSectionBar
@@ -548,6 +573,8 @@ export function ModeAwareNav({
         currentOrganization={currentOrganization}
         organizationOptions={orgOptions}
         hasUnreadNotifications={hasUnreadNotifications}
+        collapsedSectionIds={collapsedSectionIds}
+        onToggleSection={toggleSection}
       />
 
       <div className="hidden lg:block">
@@ -635,14 +662,27 @@ export function ModeAwareNav({
                     : sectionAccent[section.id as keyof typeof sectionAccent]?.soft ?? 'border-slate-200 bg-slate-50'
                 }`}
               >
-                <div className="px-3 py-2">
-                  <p className="text-sm font-semibold text-slate-900">{section.label}</p>
-                  {section.id === 'common-menu' && hasUnreadNotifications ? (
-                    <p className="mt-0.5 text-[11px] font-medium text-amber-700">새 알림을 확인하세요!</p>
+                <div className="flex items-center justify-between gap-3 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{section.label}</p>
+                    {section.id === 'common-menu' && hasUnreadNotifications ? (
+                      <p className="mt-0.5 text-[11px] font-medium text-amber-700">새 알림을 확인하세요!</p>
+                    ) : null}
+                  </div>
+                  {section.id === 'company-management-menu' ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.id)}
+                      aria-label={collapsedSectionIds.includes(section.id) ? '회사 관리 메뉴 펼치기' : '회사 관리 메뉴 접기'}
+                      className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      {collapsedSectionIds.includes(section.id) ? '+' : '-'}
+                    </button>
                   ) : null}
                 </div>
-                <div className="mt-1 space-y-1">
-                  {section.items.map((item) => (
+                {!collapsedSectionIds.includes(section.id) ? (
+                  <div className="mt-1 space-y-1">
+                    {section.items.map((item) => (
                     <ModeNavItem
                       key={item.href}
                       href={item.href}
@@ -653,8 +693,9 @@ export function ModeAwareNav({
                       pulse={Boolean(item.pulse)}
                       emphasize={Boolean(item.emphasize)}
                     />
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

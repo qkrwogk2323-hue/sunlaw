@@ -154,7 +154,7 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     inviteStatus: '임시계정 발급',
     caseLinkStatus: item.case_id ? '연결 완료' : '미연결',
     nextAction: item.must_change_password ? '비밀번호 변경 대기' : '상세 확인',
-    onboardingStatus: (item.profile?.must_change_password || item.profile?.must_complete_profile || item.must_change_password) ? '이행 필요' : '이행 완료',
+    initialSetupStatus: (item.profile?.must_change_password || item.profile?.must_complete_profile || item.must_change_password) ? '이행 필요' : '이행 완료',
     tempLoginId: item.login_id,
     raw: item
   }));

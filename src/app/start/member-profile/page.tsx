@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { completeMemberOnboardingProfileAction } from '@/lib/actions/profile-actions';
+import { completeMemberInitialProfileAction } from '@/lib/actions/profile-actions';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MemberProfileOnboardingPage() {
+export default async function MemberProfileSetupPage() {
   const auth = await requireAuthenticatedUser();
   if (!auth.profile.must_complete_profile) {
     redirect('/dashboard');
@@ -30,7 +30,7 @@ export default async function MemberProfileOnboardingPage() {
           <p className="text-sm text-slate-600">임시 계정은 아래 정보를 입력하기 전까지 메뉴를 볼 수 없습니다.</p>
         </CardHeader>
         <CardContent>
-          <ClientActionForm action={completeMemberOnboardingProfileAction} successTitle="본인 정보가 저장되었습니다." className="space-y-4">
+          <ClientActionForm action={completeMemberInitialProfileAction} successTitle="본인 정보가 저장되었습니다." className="space-y-4">
             <div>
               <label className="mb-1 block text-sm text-slate-700">연락처</label>
               <Input name="phone" placeholder="01012345678" required />

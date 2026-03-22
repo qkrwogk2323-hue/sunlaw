@@ -220,7 +220,7 @@ export default async function BillingPage({
       </div>
 
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        사건 비용 탭, 허브, 의뢰인 포털의 청구/입금 카드는 같은 비용 데이터를 바라봅니다. 즉 여기서 밀린 분납이나 청구 기한을 보면 의뢰인에게 무엇이 보이는지도 같이 추적할 수 있습니다.
+        여기서 보는 청구와 입금 상태는 사건 화면, 허브, 의뢰인 화면에도 같은 내용으로 이어집니다. 그래서 밀린 분납이나 다가오는 납부 기한을 한 번에 함께 확인할 수 있습니다.
       </div>
 
       <section className="flex flex-wrap gap-2">
