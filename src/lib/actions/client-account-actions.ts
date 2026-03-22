@@ -304,7 +304,12 @@ export async function createClientServiceRequestAction(formData: FormData) {
 export async function deactivateClientPortalAccessAction(formData: FormData) {
   const caseClientId = `${formData.get('caseClientId') ?? ''}`;
   if (!caseClientId) {
-    throw new Error('caseClientId is required');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_PORTAL_DEACTIVATE_TARGET_MISSING',
+      blocked: '연결 해제 대상 정보가 없어 작업을 진행할 수 없습니다.',
+      cause: 'caseClientId 값이 비어 있습니다.',
+      resolution: '사건 상세 화면에서 다시 시도해 주세요.'
+    }));
   }
 
   const admin = createSupabaseAdminClient();
@@ -315,7 +320,12 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
     .maybeSingle();
 
   if (caseClientError || !caseClient) {
-    throw caseClientError ?? new Error('의뢰인 연결 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_PORTAL_LINK_NOT_FOUND',
+      blocked: '의뢰인 연결 정보를 찾을 수 없습니다.',
+      cause: caseClientError?.message ?? '해당 연결이 이미 삭제되었거나 더 이상 접근할 수 없습니다.',
+      resolution: '화면을 새로고침한 뒤 다시 확인해 주세요.'
+    }));
   }
 
   const { auth } = await requireOrganizationActionAccess(caseClient.organization_id, {
@@ -333,7 +343,14 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
     })
     .eq('id', caseClientId);
 
-  if (updateError) throw updateError;
+  if (updateError) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_PORTAL_LINK_UPDATE_FAILED',
+      blocked: '의뢰인 연결 상태를 해제하지 못했습니다.',
+      cause: updateError.message,
+      resolution: '잠시 후 다시 시도해 주세요.'
+    }));
+  }
 
   if (caseClient.profile_id) {
     const { count: remainingActiveLinks, error: remainingError } = await admin
@@ -342,7 +359,14 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
       .eq('profile_id', caseClient.profile_id)
       .eq('is_portal_enabled', true);
 
-    if (remainingError) throw remainingError;
+    if (remainingError) {
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'CLIENT_PORTAL_LINK_COUNT_FAILED',
+        blocked: '남은 활성 연결 수를 확인하지 못했습니다.',
+        cause: remainingError.message,
+        resolution: '잠시 후 다시 시도해 주세요.'
+      }));
+    }
 
     if ((remainingActiveLinks ?? 0) === 0) {
       const now = new Date().toISOString();
@@ -356,7 +380,14 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
         })
         .eq('id', caseClient.profile_id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        throwGuardFeedback(createConditionFailedFeedback({
+          code: 'CLIENT_REAPPROVAL_PROFILE_UPDATE_FAILED',
+          blocked: '재승인 대기 상태로 전환하지 못했습니다.',
+          cause: profileError.message,
+          resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+        }));
+      }
 
       const { error: notificationError } = await admin.from('notifications').insert({
         organization_id: caseClient.organization_id,
@@ -376,7 +407,14 @@ export async function deactivateClientPortalAccessAction(formData: FormData) {
         destination_url: '/start/pending'
       });
 
-      if (notificationError) throw notificationError;
+      if (notificationError) {
+        throwGuardFeedback(createConditionFailedFeedback({
+          code: 'CLIENT_REAPPROVAL_NOTIFICATION_FAILED',
+          blocked: '재승인 안내 알림 생성에 실패했습니다.',
+          cause: notificationError.message,
+          resolution: '연결 해제는 반영되었을 수 있으니 대기 상태 화면을 다시 확인해 주세요.'
+        }));
+      }
     }
   }
 

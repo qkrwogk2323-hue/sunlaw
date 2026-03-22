@@ -1413,7 +1413,12 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
   const reviewNote = `${formData.get('reviewNote') ?? ''}`;
 
   if (!requestId || !['approved', 'rejected'].includes(decision)) {
-    throw new Error('잘못된 요청입니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_REVIEW_INPUT_INVALID',
+      blocked: '조직 신청 검토 요청 형식이 올바르지 않습니다.',
+      cause: '신청 ID 또는 승인/반려 결정값이 누락되었거나 유효하지 않습니다.',
+      resolution: '목록 화면에서 다시 열어 검토를 진행해 주세요.'
+    }));
   }
 
   const { data: initialRequestRow, error: requestError } = await admin
@@ -1422,8 +1427,22 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
     .eq('id', requestId)
     .maybeSingle();
 
-  if (requestError || !initialRequestRow) throw requestError ?? new Error('요청을 찾을 수 없습니다.');
-  if (!initialRequestRow.requester_profile_id) throw new Error('신청자 프로필이 연결되어 있지 않습니다.');
+  if (requestError || !initialRequestRow) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'ORG_SIGNUP_REQUEST_NOT_FOUND',
+      blocked: '검토할 조직 신청을 찾을 수 없습니다.',
+      cause: requestError?.message ?? '해당 신청이 삭제되었거나 더 이상 접근할 수 없는 상태입니다.',
+      resolution: '신청 목록을 새로고침한 뒤 다시 선택해 주세요.'
+    }));
+  }
+  if (!initialRequestRow.requester_profile_id) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'ORG_SIGNUP_REQUESTER_MISSING',
+      blocked: '신청자 계정 정보가 없어 검토를 진행할 수 없습니다.',
+      cause: '조직 신청에 연결된 신청자 프로필 ID가 비어 있습니다.',
+      resolution: '관리자에게 신청 시각과 조직명을 전달해 주세요.'
+    }));
+  }
 
   if (initialRequestRow.status === 'approved' && initialRequestRow.approved_organization_id) {
     revalidatePath('/admin/organization-requests');
@@ -1434,7 +1453,12 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
   }
 
   if (initialRequestRow.status !== 'pending') {
-    throw new Error('이미 처리된 요청입니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'ORG_SIGNUP_ALREADY_REVIEWED',
+      blocked: '이미 처리된 조직 신청입니다.',
+      cause: `현재 신청 상태가 ${initialRequestRow.status} 이므로 다시 검토할 수 없습니다.`,
+      resolution: '신청 목록을 새로고침해 현재 상태를 확인해 주세요.'
+    }));
   }
 
   let requestRow = initialRequestRow;
@@ -1442,7 +1466,12 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
 
   if (!ownsReviewLock) {
     if (initialRequestRow.approval_locked_by_profile_id && initialRequestRow.approval_locked_by_profile_id !== auth.user.id) {
-      throw new Error('다른 관리자가 현재 이 신청을 처리 중입니다. 잠시 후 다시 확인해 주세요.');
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'ORG_SIGNUP_REVIEW_LOCKED',
+        blocked: '다른 관리자가 현재 이 신청을 처리 중입니다.',
+        cause: '이미 다른 검토자가 승인 잠금을 잡고 있어 중복 처리를 막고 있습니다.',
+        resolution: '잠시 후 다시 확인해 주세요.'
+      }));
     }
 
     const claimedRow = await claimOrganizationSignupReviewLock(requestId, auth.user.id);
@@ -1454,7 +1483,12 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
         .maybeSingle();
 
       if (refreshedRequestError || !refreshedRequest) {
-        throw refreshedRequestError ?? new Error('요청을 다시 불러오지 못했습니다.');
+        throwGuardFeedback(createConditionFailedFeedback({
+          code: 'ORG_SIGNUP_REQUEST_REFRESH_FAILED',
+          blocked: '신청 상태를 다시 불러오지 못했습니다.',
+          cause: refreshedRequestError?.message ?? '잠금 재확인 중 신청 정보를 찾지 못했습니다.',
+          resolution: '목록을 새로고침한 뒤 다시 시도해 주세요.'
+        }));
       }
 
       if (refreshedRequest.status === 'approved' && refreshedRequest.approved_organization_id) {
@@ -1466,11 +1500,21 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
       }
 
       if (refreshedRequest.status !== 'pending') {
-        throw new Error('이미 처리된 요청입니다.');
+        throwGuardFeedback(createConditionFailedFeedback({
+          code: 'ORG_SIGNUP_ALREADY_REVIEWED',
+          blocked: '이미 처리된 조직 신청입니다.',
+          cause: `현재 신청 상태가 ${refreshedRequest.status} 이므로 다시 검토할 수 없습니다.`,
+          resolution: '신청 목록을 새로고침해 현재 상태를 확인해 주세요.'
+        }));
       }
 
       if (refreshedRequest.approval_locked_by_profile_id && refreshedRequest.approval_locked_by_profile_id !== auth.user.id) {
-        throw new Error('다른 관리자가 현재 이 신청을 처리 중입니다. 잠시 후 다시 확인해 주세요.');
+        throwGuardFeedback(createConditionFailedFeedback({
+          code: 'ORG_SIGNUP_REVIEW_LOCKED',
+          blocked: '다른 관리자가 현재 이 신청을 처리 중입니다.',
+          cause: '잠금 재확인 시 이미 다른 검토자가 이 신청을 처리 중인 것으로 확인되었습니다.',
+          resolution: '잠시 후 다시 확인해 주세요.'
+        }));
       }
 
       requestRow = refreshedRequest;
@@ -1557,11 +1601,21 @@ export async function reviewOrganizationSignupRequestAction(formData: FormData) 
           .maybeSingle();
 
         if (refreshedRequestError || !refreshedRequest) {
-          throw refreshedRequestError ?? new Error('승인 상태를 다시 확인하지 못했습니다.');
+          throwGuardFeedback(createConditionFailedFeedback({
+            code: 'ORG_SIGNUP_APPROVAL_REFRESH_FAILED',
+            blocked: '승인 결과를 다시 확인하지 못했습니다.',
+            cause: refreshedRequestError?.message ?? '승인 처리 후 신청 상태를 다시 읽어오지 못했습니다.',
+            resolution: '신청 목록을 새로고침해 승인 결과를 다시 확인해 주세요.'
+          }));
         }
 
         if (refreshedRequest.status !== 'approved' || refreshedRequest.approved_organization_id !== organization.id) {
-          throw new Error('승인 상태를 확정하지 못했습니다. 다시 시도해 주세요.');
+          throwGuardFeedback(createConditionFailedFeedback({
+            code: 'ORG_SIGNUP_APPROVAL_NOT_FINALIZED',
+            blocked: '승인 상태를 확정하지 못했습니다.',
+            cause: '조직은 생성되었지만 신청 상태가 승인 완료로 확정되지 않았습니다.',
+            resolution: '신청 목록을 새로고침한 뒤 다시 확인해 주세요. 반복되면 관리자에게 문의해 주세요.'
+          }));
         }
       }
 
@@ -1637,7 +1691,12 @@ export async function submitOrganizationExitRequestAction(formData: FormData) {
     .maybeSingle();
 
   if (existingPending?.id) {
-    throw new Error('이미 처리 대기 중인 조직 탈퇴 신청이 있습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'ORG_EXIT_ALREADY_PENDING',
+      blocked: '이미 처리 대기 중인 조직 탈퇴 신청이 있습니다.',
+      cause: '같은 조직에 대해 보류 중인 탈퇴 신청이 존재합니다.',
+      resolution: '현재 신청 결과를 먼저 확인해 주세요.'
+    }));
   }
 
   const { error } = await admin.from('organization_exit_requests').insert({
@@ -1689,8 +1748,22 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
     .select('id, organization_id, status')
     .eq('id', parsed.requestId)
     .maybeSingle();
-  if (requestError || !requestRow) throw requestError ?? new Error('조직 탈퇴 요청을 찾을 수 없습니다.');
-  if (requestRow.status !== 'pending') throw new Error('이미 처리된 요청입니다.');
+  if (requestError || !requestRow) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'ORG_EXIT_REQUEST_NOT_FOUND',
+      blocked: '조직 탈퇴 요청을 찾을 수 없습니다.',
+      cause: requestError?.message ?? '해당 탈퇴 요청이 삭제되었거나 더 이상 접근할 수 없는 상태입니다.',
+      resolution: '목록을 새로고침한 뒤 다시 확인해 주세요.'
+    }));
+  }
+  if (requestRow.status !== 'pending') {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'ORG_EXIT_ALREADY_REVIEWED',
+      blocked: '이미 처리된 조직 탈퇴 요청입니다.',
+      cause: `현재 요청 상태가 ${requestRow.status} 입니다.`,
+      resolution: '목록을 새로고침해 현재 상태를 확인해 주세요.'
+    }));
+  }
 
   const reviewer = await requireAuthenticatedUser();
   const { error } = await admin
