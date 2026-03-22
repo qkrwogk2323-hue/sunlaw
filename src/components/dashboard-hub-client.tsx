@@ -20,7 +20,7 @@ const PLATFORM_SCENARIO_MEMBER_STORAGE_KEY = 'vs_platform_scenario_member';
 
 type CaseOption = {
   id: string;
-  title: string;
+  title: string | null;
   reference_no?: string | null;
   case_status?: string | null;
   stage_key?: string | null;
@@ -57,9 +57,9 @@ type MessageItem = {
 
 type ScheduleItem = {
   id: string;
-  title: string;
-  schedule_kind: string;
-  scheduled_start: string;
+  title: string | null;
+  schedule_kind: string | null;
+  scheduled_start: string | null;
   location?: string | null;
   notes?: string | null;
   is_important?: boolean | null;
@@ -69,8 +69,8 @@ type ScheduleItem = {
 
 type RequestItem = {
   id: string;
-  title: string;
-  status: string;
+  title: string | null;
+  status: string | null;
   request_kind?: string | null;
   due_at?: string | null;
   case_id?: string | null;
@@ -79,9 +79,9 @@ type RequestItem = {
 
 type BillingItem = {
   id: string;
-  title: string;
-  amount: number;
-  status: string;
+  title: string | null;
+  amount: number | null;
+  status: string | null;
   due_on?: string | null;
   case_id?: string | null;
   cases?: { title?: string | null } | Array<{ title?: string | null }> | null;
@@ -89,9 +89,9 @@ type BillingItem = {
 
 type NotificationItem = {
   id: string;
-  title: string;
+  title: string | null;
   body?: string;
-  created_at: string;
+  created_at: string | null;
   action_label?: string | null;
   action_href?: string | null;
   destination_url?: string | null;
@@ -1109,9 +1109,7 @@ export function DashboardHubClient({
   const [archiveQuery, setArchiveQuery] = useState('');
   const [archiveAiHint, setArchiveAiHint] = useState<string | null>(null);
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
-  const [aiAssistantOpen, setAiAssistantOpen] = useState(true);
-  const [todoOpen, setTodoOpen] = useState(true);
-  const [draftOpen, setDraftOpen] = useState(true);
+  const [activeAiPanels, setActiveAiPanels] = useState<Array<'assistant' | 'todo' | 'draft'>>(['assistant']);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -1142,6 +1140,13 @@ export function DashboardHubClient({
     [data.teamMembers, effectiveCurrentUserId]
   );
   const canOpenArchive = Boolean(currentViewerMembership && isManagementRole(currentViewerMembership.role));
+  const toggleAiPanel = (panel: 'assistant' | 'todo' | 'draft') => {
+    setActiveAiPanels((current) => (
+      current.includes(panel)
+        ? current.filter((item) => item !== panel)
+        : [...current, panel]
+    ));
+  };
   useEffect(() => {
     const interval = window.setInterval(() => {
       setNowText(formatDateTime(new Date().toISOString()));
@@ -1729,28 +1734,47 @@ export function DashboardHubClient({
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          {[
+            { key: 'assistant' as const, title: 'AI 업무도우미', desc: '질문하면 바로 갈 화면과 이유를 안내합니다.', tone: 'border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]', badge: '홈' },
+            { key: 'todo' as const, title: '지금 해야 할 항목', desc: '현재 대기 흐름 기준으로 우선순위를 제안합니다.', tone: 'border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]', badge: String(initialAiOverview.recommendations.length) },
+            { key: 'draft' as const, title: '작성보조', desc: '초대, 허브 안내, 공지 초안을 빠르게 만듭니다.', tone: 'border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]', badge: '초안' }
+          ].map((panel) => {
+            const active = activeAiPanels.includes(panel.key);
+            return (
+              <button
+                key={panel.key}
+                type="button"
+                onClick={() => toggleAiPanel(panel.key)}
+                className={`flex min-h-[176px] flex-col rounded-2xl border p-4 text-left transition ${active ? 'border-slate-950 ring-2 ring-slate-950/10' : panel.tone}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-base font-semibold text-slate-900">{panel.title}</p>
+                  <Badge tone={panel.key === 'assistant' ? 'blue' : panel.key === 'todo' ? 'blue' : 'green'}>
+                    {panel.badge}
+                  </Badge>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{panel.desc}</p>
+                <div className="mt-auto flex items-center justify-between pt-4 text-xs font-medium">
+                  <span className={active ? 'text-slate-900' : 'text-slate-500'}>{active ? '열림' : '닫힘'}</span>
+                  <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full border ${active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+                    {active ? '-' : '+'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeAiPanels.includes('assistant') ? (
         <Card className="border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
           <CardHeader className="border-sky-200/70">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle>AI 업무 도우미</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">질문을 적으면 지금 어느 화면으로 가야 하는지 바로 안내합니다.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone="blue">홈</Badge>
-                <button
-                  type="button"
-                  aria-label={aiAssistantOpen ? 'AI 업무 도우미 접기' : 'AI 업무 도우미 펼치기'}
-                  onClick={() => setAiAssistantOpen((v) => !v)}
-                  className="flex size-7 items-center justify-center rounded-full border border-sky-200 bg-white text-slate-500 hover:bg-sky-50"
-                >
-                  {aiAssistantOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
-                </button>
-              </div>
+            <div>
+              <CardTitle>AI 업무도우미</CardTitle>
+              <p className="mt-1 text-sm text-slate-500">질문을 적으면 지금 어느 화면으로 가야 하는지 바로 안내합니다.</p>
             </div>
           </CardHeader>
-          {aiAssistantOpen ? (
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p className="text-xs text-slate-500">
@@ -1822,7 +1846,6 @@ export function DashboardHubClient({
                 ))}
               </div>
             </div>
-
             {assistantResult ? (
               <div className="rounded-[1.4rem] border border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#f3fff8)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
                 <div className="flex items-center justify-between gap-3">
@@ -1874,32 +1897,21 @@ export function DashboardHubClient({
               </div>
             ) : null}
           </CardContent>
-          ) : null}
         </Card>
+        ) : null}
 
-        <div className="space-y-6">
-          <Card className="border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]">
-            <CardHeader className="border-violet-200/70">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <CardTitle>지금 해야 할 항목</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">역할과 현재 대기 흐름을 기준으로 우선순위를 제안합니다.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
-                  <button
-                    type="button"
-                    aria-label={todoOpen ? '지금 해야 할 항목 접기' : '지금 해야 할 항목 펼치기'}
-                    onClick={() => setTodoOpen((v) => !v)}
-                    className="flex size-7 items-center justify-center rounded-full border border-violet-200 bg-white text-slate-500 hover:bg-violet-50"
-                  >
-                    {todoOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
-                  </button>
-                </div>
+        {activeAiPanels.includes('todo') ? (
+        <Card className="border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]">
+          <CardHeader className="border-violet-200/70">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>지금 해야 할 항목</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">역할과 현재 대기 흐름을 기준으로 우선순위를 제안합니다.</p>
               </div>
-            </CardHeader>
-            {todoOpen ? (
-            <CardContent className="space-y-3">
+              <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
               {initialAiOverview.recommendations.map((item) => (
                 <Link
                   key={`${item.href}:${item.title}`}
@@ -1932,32 +1944,22 @@ export function DashboardHubClient({
                 <ThumbsDown className="size-3.5" />
                 AI 결과가 틀렸나요?
               </Button>
-            </CardContent>
-            ) : null}
-          </Card>
+          </CardContent>
+        </Card>
+        ) : null}
 
-          <Card className="border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]">
-            <CardHeader className="border-emerald-200/70">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <CardTitle>작성 보조</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">초대 문구, 허브 안내, 조직 공지 초안을 빠르게 만듭니다.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone="green">초안</Badge>
-                  <button
-                    type="button"
-                    aria-label={draftOpen ? '작성 보조 접기' : '작성 보조 펼치기'}
-                    onClick={() => setDraftOpen((v) => !v)}
-                    className="flex size-7 items-center justify-center rounded-full border border-emerald-200 bg-white text-slate-500 hover:bg-emerald-50"
-                  >
-                    {draftOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
-                  </button>
-                </div>
+        {activeAiPanels.includes('draft') ? (
+        <Card className="border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]">
+          <CardHeader className="border-emerald-200/70">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>작성보조</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">초대 문구, 허브 안내, 조직 공지 초안을 빠르게 만듭니다.</p>
               </div>
-            </CardHeader>
-            {draftOpen ? (
-            <CardContent className="space-y-4">
+              <Badge tone="green">초안</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
               <p className="text-xs text-slate-500">
                 <span className="text-red-500" aria-hidden="true">*</span> 작성 종류와 요청 내용을 입력하면 바로 초안이 만들어집니다.
               </p>
@@ -2034,11 +2036,9 @@ export function DashboardHubClient({
                   </div>
                 </div>
               ) : null}
-            </CardContent>
-            ) : null}
-          </Card>
-
-        </div>
+          </CardContent>
+        </Card>
+        ) : null}
       </div>
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
