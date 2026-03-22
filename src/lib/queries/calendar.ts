@@ -19,6 +19,13 @@ function startOfWeek(date: Date) {
   return copy;
 }
 
+function endOfWeek(date: Date) {
+  const copy = startOfWeek(date);
+  copy.setDate(copy.getDate() + 6);
+  copy.setHours(23, 59, 59, 999);
+  return copy;
+}
+
 export async function listCalendarEntries(organizationId?: string | null) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -38,10 +45,8 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
   const focusMonth = parseFocusMonth(month);
   const monthStart = new Date(focusMonth.getFullYear(), focusMonth.getMonth(), 1);
   const monthEnd = new Date(focusMonth.getFullYear(), focusMonth.getMonth() + 1, 0, 23, 59, 59, 999);
-  // 3-month window: prev month ~ next 2 months (covers calendar grid edges + near-term navigation)
-  const windowStart = new Date(focusMonth.getFullYear(), focusMonth.getMonth() - 1, 1);
-  const windowEnd = new Date(focusMonth.getFullYear(), focusMonth.getMonth() + 3, 0, 23, 59, 59, 999);
-  // Keep yearStart/yearEnd for return value metadata only (not used in queries)
+  const visibleGridStart = startOfWeek(monthStart);
+  const visibleGridEnd = endOfWeek(monthEnd);
   const yearStart = new Date(focusMonth.getFullYear(), 0, 1);
   const yearEnd = new Date(focusMonth.getFullYear() + 1, 0, 0, 23, 59, 59, 999);
   const today = new Date();
@@ -56,53 +61,47 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
   let schedulesQuery = supabase
     .from('case_schedules')
     .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, created_by, created_by_name, created_at, updated_at, cases(title)')
-    .gte('scheduled_start', windowStart.toISOString())
-    .lte('scheduled_start', windowEnd.toISOString())
+    .gte('scheduled_start', visibleGridStart.toISOString())
+    .lte('scheduled_start', visibleGridEnd.toISOString())
     .order('scheduled_start', { ascending: true })
-    .limit(150);
-
-  let workLogsQuery = supabase
-    .from('case_schedule_activity_logs')
-    .select('id, case_id, case_schedule_id, actor_name, action_type, summary, schedule_title, schedule_scheduled_start, created_at')
-    .order('created_at', { ascending: false })
-    .limit(30);
+    .limit(80);
 
   let requestsQuery = supabase
     .from('case_requests')
     .select('id, title, body, status, request_kind, due_at, case_id, cases(title), assigned:profiles!case_requests_assigned_to_fkey(full_name, email), creator:profiles(full_name, email)')
-    .gte('due_at', windowStart.toISOString())
-    .lte('due_at', windowEnd.toISOString())
+    .gte('due_at', visibleGridStart.toISOString())
+    .lte('due_at', visibleGridEnd.toISOString())
     .in('status', ['open', 'in_review', 'waiting_client'])
     .order('due_at', { ascending: true })
-    .limit(100);
+    .limit(60);
 
   let billingQuery = supabase
     .from('billing_entries')
     .select('id, title, amount, status, due_on, case_id, notes, cases(title)')
-    .gte('due_on', windowStart.toISOString().slice(0, 10))
-    .lte('due_on', windowEnd.toISOString().slice(0, 10))
+    .gte('due_on', visibleGridStart.toISOString().slice(0, 10))
+    .lte('due_on', visibleGridEnd.toISOString().slice(0, 10))
     .in('status', ['draft', 'issued', 'partial'])
     .order('due_on', { ascending: true })
-    .limit(100);
+    .limit(60);
 
   if (organizationId) {
     schedulesQuery = schedulesQuery.eq('organization_id', organizationId);
     requestsQuery = requestsQuery.eq('organization_id', organizationId);
     billingQuery = billingQuery.eq('organization_id', organizationId);
-    workLogsQuery = workLogsQuery.eq('organization_id', organizationId);
   }
 
-  const [{ data: schedules }, { data: requests }, { data: billingEntries }, { data: workLogs }] = await Promise.all([
+  const [{ data: schedules }, { data: requests }, { data: billingEntries }] = await Promise.all([
     schedulesQuery,
     requestsQuery,
-    billingQuery,
-    workLogsQuery
+    billingQuery
   ]);
 
   return {
     focusMonth: `${focusMonth.getFullYear()}-${`${focusMonth.getMonth() + 1}`.padStart(2, '0')}`,
     monthStart: monthStart.toISOString(),
     monthEnd: monthEnd.toISOString(),
+    visibleGridStart: visibleGridStart.toISOString(),
+    visibleGridEnd: visibleGridEnd.toISOString(),
     yearStart: yearStart.toISOString(),
     yearEnd: yearEnd.toISOString(),
     today: today.toISOString(),
@@ -112,7 +111,7 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     schedules: schedules ?? [],
     requests: requests ?? [],
     billingEntries: billingEntries ?? [],
-    workLogs: workLogs ?? []
+    workLogs: []
   };
 }
 
