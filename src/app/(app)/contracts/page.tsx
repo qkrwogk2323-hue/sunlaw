@@ -14,7 +14,7 @@ import {
   PLATFORM_TERMS_VERSION
 } from '@/lib/legal-documents';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { formatCurrency, formatDate } from '@/lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -114,6 +114,11 @@ export default async function ContractsPage({
       default:
         return '플랫폼 확인 체크';
     }
+  }
+
+  function signatureStatusLabel(status?: string | null) {
+    if (status === 'completed') return '동의 완료';
+    return '응답 대기';
   }
 
   return (
@@ -238,6 +243,8 @@ export default async function ContractsPage({
                       <p>공유 상태 · {terms.sent_to_client ? '의뢰인 공유' : '내부 보관'}</p>
                       <p>동의 방법 · {signatureMethodLabel(terms.signature_method)}</p>
                       <p>서명 요청 · {terms.signature_request ? '보냄' : '없음'}</p>
+                      {terms.signature_request ? <p>현재 상태 · {signatureStatusLabel(terms.signature_status)}</p> : null}
+                      {terms.signature_completed_at ? <p>동의 시각 · {formatDateTime(terms.signature_completed_at)}</p> : null}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">

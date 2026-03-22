@@ -356,6 +356,15 @@ export const contractRegistrationSchema = z.object({
   scanProvider: z.string().trim().max(80).optional().or(z.literal(''))
 });
 
+export const portalContractConsentSchema = z.object({
+  caseId: z.string().uuid(),
+  agreementId: z.string().uuid(),
+  requestId: z.string().uuid().optional().or(z.literal('')),
+  agreed: z.boolean().refine((value) => value, {
+    message: '계약 내용을 확인하고 동의해야 완료할 수 있습니다.'
+  })
+});
+
 export const billingEntrySchema = z.object({
   billToPartyKind: z.enum(['case_client', 'case_organization']).default('case_client'),
   billToCaseClientId: z.string().uuid().optional().or(z.literal('')),

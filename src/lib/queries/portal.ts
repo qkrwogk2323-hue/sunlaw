@@ -214,6 +214,7 @@ export async function getPortalCaseDetail(caseId: string) {
     { data: requests },
     { data: billingEntries },
     { data: handlers },
+    { data: contractAgreements },
     { data: insolvencyCreditors },
     { data: latestRepaymentPlan },
     { data: latestCorrectionJob }
@@ -224,6 +225,12 @@ export async function getPortalCaseDetail(caseId: string) {
     supabase.from('case_requests').select('id, request_kind, title, body, status, due_at, created_at').eq('case_id', caseId).eq('client_visible', true).order('created_at', { ascending: false }).limit(20),
     supabase.from('billing_entries').select('id, entry_kind, title, amount, status, due_on, paid_at, bill_to_case_client_id').eq('case_id', caseId).eq('bill_to_case_client_id', clientRow.id).order('created_at', { ascending: false }),
     supabase.from('case_handlers').select('id, role, handler_name, created_at').eq('case_id', caseId).order('created_at', { ascending: true }),
+    supabase
+      .from('fee_agreements')
+      .select('id, title, agreement_type, effective_from, effective_to, terms_json')
+      .eq('case_id', caseId)
+      .eq('bill_to_case_client_id', clientRow.id)
+      .order('created_at', { ascending: false }),
     caseRow.case_type === 'insolvency'
       ? supabase
           .from('insolvency_creditors')
@@ -262,6 +269,7 @@ export async function getPortalCaseDetail(caseId: string) {
     requests: requests ?? [],
     billingEntries: billingEntries ?? [],
     handlers: handlers ?? [],
+    contractAgreements: contractAgreements ?? [],
     insolvency: caseRow.case_type === 'insolvency'
       ? {
           subtype: caseRow.insolvency_subtype ?? null,

@@ -1,10 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
+import { PortalContractSignatureForm } from '@/components/forms/portal-contract-signature-form';
 import { getCurrentAuth } from '@/lib/auth';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel } from '@/lib/case-stage';
 import { getPortalActionQueue, getPortalCaseDetail } from '@/lib/queries/portal';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +32,27 @@ const CLAIM_CLASS_LABEL: Record<string, string> = {
   general: '일반'
 };
 
+const AGREEMENT_TYPE_LABEL: Record<string, string> = {
+  retainer: '착수금',
+  flat_fee: '정액 보수',
+  success_fee: '성공보수',
+  expense_reimbursement: '실비 정산',
+  installment_plan: '분납 약정',
+  internal_settlement: '내부 정산'
+};
+
+function signatureMethodLabel(method?: string | null) {
+  if (method === 'electronic_signature') return '전자서명';
+  if (method === 'kakao_confirmation') return '카카오 확인';
+  if (method === 'signed_document_upload') return '서명본 업로드';
+  return '플랫폼 동의 확인';
+}
+
+function signatureStatusLabel(status?: string | null) {
+  if (status === 'completed') return '동의 완료';
+  return '응답 대기';
+}
+
 export default async function PortalCaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const auth = await getCurrentAuth();
   if (!auth) redirect('/login');
@@ -42,6 +65,20 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
   const latestPlan = detail.insolvency?.latestPlan ?? null;
   const correctionNotice = detail.insolvency?.latestCorrectionNotice ?? null;
   const totalInsolvencyClaim = insolvencyCreditors.reduce((sum: number, item: any) => sum + (item.total_claim_amount ?? 0), 0);
+  const contractAgreements = detail.contractAgreements ?? [];
+  const contractRequests = detail.requests.filter((item: any) => item.request_kind === 'signature_request');
+  const pendingContractAgreements = contractAgreements.filter((item: any) => {
+    const terms = item.terms_json ?? {};
+    return Boolean(terms.signature_request);
+  });
+  const contractRequestMap = new Map<string, any>();
+  for (const request of contractRequests) {
+    const matchedAgreement = pendingContractAgreements.find((agreement: any) => request.title === `[계약] ${agreement.title} 서명 요청`);
+    if (matchedAgreement && !contractRequestMap.has(matchedAgreement.id)) {
+      contractRequestMap.set(matchedAgreement.id, request);
+    }
+  }
+  const documentMap = new Map((detail.documents ?? []).map((item: any) => [item.id, item]));
 
   const progressSentence = (text?: string | null) => {
     const raw = `${text ?? ''}`.trim();
@@ -87,6 +124,69 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
           )) : <p className="text-sm text-slate-500">지금 즉시 필요한 요청은 없습니다.</p>}
         </CardContent>
       </Card>
+
+      {pendingContractAgreements.length ? (
+        <Card>
+          <CardHeader><CardTitle>서명 요청 받은 계약</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {pendingContractAgreements.map((agreement: any) => {
+              const terms = agreement.terms_json ?? {};
+              const request = contractRequestMap.get(agreement.id);
+              const contractDocument = terms.contract_document_id ? documentMap.get(terms.contract_document_id) : null;
+              const isCompleted = terms.signature_status === 'completed';
+
+              return (
+                <div key={agreement.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-slate-900">{agreement.title}</p>
+                        <Badge tone={isCompleted ? 'green' : 'amber'}>{signatureStatusLabel(terms.signature_status)}</Badge>
+                        <Badge tone="blue">{AGREEMENT_TYPE_LABEL[agreement.agreement_type] ?? agreement.agreement_type}</Badge>
+                      </div>
+                      <div className="mt-2 space-y-1 text-sm text-slate-600">
+                        <p>계약서 · {terms.contract_document_title ?? contractDocument?.title ?? '등록된 계약서'}</p>
+                        <p>동의 방법 · {signatureMethodLabel(terms.signature_method)}</p>
+                        <p>적용 기간 · {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
+                        {terms.contract_summary ? <p>계약 요약 · {terms.contract_summary}</p> : null}
+                        {terms.signature_completed_at ? <p>완료 시각 · {formatDateTime(terms.signature_completed_at)}</p> : null}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {contractDocument ? (
+                        <a
+                          href={`/api/documents/${contractDocument.id}/download`}
+                          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                        >
+                          계약서 다운받기
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {!isCompleted ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                      <p className="text-sm text-amber-900">계약서를 확인한 뒤 아래 버튼으로 동의 완료를 남겨 주세요.</p>
+                      <div className="mt-3">
+                        <PortalContractSignatureForm
+                          caseId={caseId}
+                          agreementId={agreement.id}
+                          requestId={request?.id ?? null}
+                          buttonLabel={`${signatureMethodLabel(terms.signature_method)} 방식으로 동의 완료`}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+                      계약 동의가 이미 기록되었습니다. 담당 조직이 계약 체결 현황에서 바로 확인할 수 있습니다.
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader><CardTitle>최근 진행 상황</CardTitle></CardHeader>

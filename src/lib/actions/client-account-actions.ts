@@ -19,7 +19,7 @@ import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { clientServiceRequestSchema, clientSignupSchema } from '@/lib/validators';
+import { clientServiceRequestSchema, clientSignupSchema, portalContractConsentSchema } from '@/lib/validators';
 
 function getActionErrorMessage(error: unknown, fallback: string) {
   const guardFeedback = parseGuardFeedback(error);
@@ -301,6 +301,140 @@ export async function createClientServiceRequestAction(formData: FormData) {
   revalidatePath('/start/pending');
   revalidatePath('/notifications');
   redirect('/start/pending?help=1' as Route);
+}
+
+// 의뢰인 포털에서 계약 동의/서명을 완료 처리한다.
+export async function confirmPortalContractSignatureAction(formData: FormData) {
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+
+  let parsed: z.infer<typeof portalContractConsentSchema>;
+  try {
+    parsed = portalContractConsentSchema.parse({
+      caseId: formData.get('caseId'),
+      agreementId: formData.get('agreementId'),
+      requestId: formData.get('requestId'),
+      agreed: formData.get('agreed') === 'on'
+    });
+  } catch (error) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'PORTAL_CONTRACT_CONSENT_INVALID',
+      blocked: '계약 동의 정보를 다시 확인해 주세요.',
+      cause: getActionErrorMessage(error, '동의 여부나 계약 정보가 올바르지 않습니다.'),
+      resolution: '계약 내용을 확인하고 동의 체크 후 다시 제출해 주세요.'
+    }));
+  }
+
+  const { data: caseClient, error: caseClientError } = await supabase
+    .from('case_clients')
+    .select('id, organization_id, case_id, client_name, is_portal_enabled')
+    .eq('case_id', parsed.caseId)
+    .eq('profile_id', auth.user.id)
+    .eq('is_portal_enabled', true)
+    .maybeSingle();
+
+  if (caseClientError || !caseClient) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PORTAL_CONTRACT_ACCESS_DENIED',
+      blocked: '이 계약에 접근할 수 없습니다.',
+      cause: caseClientError?.message ?? '현재 계정으로 연결된 의뢰인 사건이 아닙니다.',
+      resolution: '포털 연결 상태를 확인한 뒤 다시 시도해 주세요.'
+    }));
+  }
+
+  const { data: agreement, error: agreementError } = await supabase
+    .from('fee_agreements')
+    .select('id, title, terms_json')
+    .eq('id', parsed.agreementId)
+    .eq('case_id', parsed.caseId)
+    .eq('bill_to_case_client_id', caseClient.id)
+    .maybeSingle();
+
+  if (agreementError || !agreement) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PORTAL_CONTRACT_NOT_FOUND',
+      blocked: '계약 정보를 찾지 못했습니다.',
+      cause: agreementError?.message ?? '의뢰인과 연결된 계약이 아니거나 이미 정리된 계약입니다.',
+      resolution: '계약 목록을 새로고침한 뒤 다시 확인해 주세요.'
+    }));
+  }
+
+  const terms = (agreement.terms_json as Record<string, unknown> | null) ?? {};
+  if (!terms.signature_request) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PORTAL_CONTRACT_SIGNATURE_NOT_REQUIRED',
+      blocked: '이 계약은 서명 요청 대상이 아닙니다.',
+      cause: '서명 요청이 등록되지 않은 계약입니다.',
+      resolution: '계약 공유 여부를 다시 확인해 주세요.'
+    }));
+  }
+
+  if (terms.signature_status === 'completed') {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PORTAL_CONTRACT_SIGNATURE_ALREADY_COMPLETED',
+      blocked: '이미 동의가 완료된 계약입니다.',
+      cause: '같은 계약에 대해 중복 동의를 시도했습니다.',
+      resolution: '계약 체결 현황에서 완료 기록을 확인해 주세요.'
+    }));
+  }
+
+  const now = new Date().toISOString();
+  const nextTerms = {
+    ...terms,
+    signature_status: 'completed',
+    signature_completed_at: now,
+    signature_completed_by_profile_id: auth.user.id,
+    signature_completed_by_name: auth.profile.full_name,
+    signature_confirmed_via: 'portal'
+  };
+
+  const { error: agreementUpdateError } = await supabase
+    .from('fee_agreements')
+    .update({ terms_json: nextTerms })
+    .eq('id', agreement.id);
+
+  if (agreementUpdateError) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PORTAL_CONTRACT_SIGNATURE_SAVE_FAILED',
+      blocked: '계약 동의 결과를 저장하지 못했습니다.',
+      cause: agreementUpdateError.message,
+      resolution: '잠시 후 다시 시도해 주세요.'
+    }));
+  }
+
+  if (parsed.requestId) {
+    const { error: requestError } = await supabase
+      .from('case_requests')
+      .update({ status: 'completed' })
+      .eq('id', parsed.requestId)
+      .eq('case_id', parsed.caseId)
+      .eq('request_kind', 'signature_request')
+      .eq('client_visible', true);
+
+    if (requestError) {
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'PORTAL_CONTRACT_REQUEST_COMPLETE_FAILED',
+        blocked: '서명 요청 상태를 완료로 바꾸지 못했습니다.',
+        cause: requestError.message,
+        resolution: '잠시 후 다시 시도해 주세요.'
+      }));
+    }
+  }
+
+  await supabase.from('case_messages').insert({
+    organization_id: caseClient.organization_id,
+    case_id: parsed.caseId,
+    sender_profile_id: auth.user.id,
+    sender_role: 'client',
+    body: `[계약 동의 완료] ${agreement.title}\n${auth.profile.full_name}님이 포털에서 계약 확인을 마쳤습니다.`,
+    is_internal: false
+  });
+
+  revalidatePath('/portal');
+  revalidatePath('/portal/messages');
+  revalidatePath(`/portal/cases/${parsed.caseId}`);
+  revalidatePath('/contracts');
+  revalidatePath(`/cases/${parsed.caseId}`);
 }
 
 // 의뢰인 포털 접근을 중지하고 관련 연결 상태를 갱신한다.
