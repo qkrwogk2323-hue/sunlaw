@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -84,6 +86,14 @@ export default async function OrganizationRequestsPage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 신청 관리</h1>
         <p className="mt-2 text-sm text-slate-600">조직 개설 신청을 검토하고 승인 또는 반려하세요.</p>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <Link href={'/admin/audit?tab=general&table=organization_signup_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            조직 신청 기록 보기
+          </Link>
+          <Link href={'/admin/audit?tab=general&table=organization_exit_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            조직 탈퇴 기록 보기
+          </Link>
+        </div>
       </div>
 
       <Card>

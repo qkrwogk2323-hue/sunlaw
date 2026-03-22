@@ -32,6 +32,12 @@ export async function updateOrganizationSubscriptionStateAction(formData: FormDa
   }
 
   const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from('organization_subscription_states')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .maybeSingle();
+
   const payload = {
     organization_id: organizationId,
     state,
@@ -56,7 +62,31 @@ export async function updateOrganizationSubscriptionStateAction(formData: FormDa
     throw error;
   }
 
+  await supabase.from('setting_change_logs').insert({
+    target_type: 'organization_subscription_state',
+    organization_id: organizationId,
+    target_key: 'organization_subscription_states',
+    old_value_json: existing ?? null,
+    new_value_json: payload,
+    changed_by: auth.user.id,
+    reason: `subscription state -> ${state}`
+  });
+
+  await supabase.from('audit_logs').insert({
+    actor_id: auth.user.id,
+    action: 'organization_subscription_state_updated',
+    resource_type: 'organization',
+    resource_id: organizationId,
+    organization_id: organizationId,
+    meta: {
+      previous_state: existing?.state ?? null,
+      next_state: state,
+      plan_code: payload.plan_code
+    }
+  });
+
   revalidatePath('/billing');
   revalidatePath('/settings/subscription');
   revalidatePath('/dashboard');
+  revalidatePath('/admin/audit');
 }

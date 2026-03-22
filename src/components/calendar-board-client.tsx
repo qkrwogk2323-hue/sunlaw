@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { CalendarCheck2, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, ScrollText } from 'lucide-react';
+import { AlertTriangle, CalendarCheck2, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, ScrollText, Sparkles, ThumbsDown } from 'lucide-react';
 import { addScheduleAction, updateScheduleAction, updateScheduleCompletionAction } from '@/lib/actions/case-actions';
 import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
@@ -237,13 +237,127 @@ function ScheduleCompletionCheckbox({
   );
 }
 
+function BriefingCard({ briefing }: { briefing: ScheduleBriefing }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+
+  const urgencyBadge = (urgency: ScheduleBriefing['thisWeekItems'][number]['urgency']) => {
+    if (urgency === 'critical') return <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">긴급</span>;
+    if (urgency === 'high') return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">우선</span>;
+    return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">일반</span>;
+  };
+
+  const formatDays = (days: number) => {
+    if (days === 0) return '오늘';
+    if (days === 1) return '내일';
+    return `D-${days}`;
+  };
+
+  return (
+    <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-violet-600">
+            <Sparkles className="size-4 text-white" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-violet-600">AI 일정 브리핑</p>
+            <p className="text-sm font-semibold text-slate-900">{briefing.todayLabel} 기준</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {!feedbackSent && (
+            <button
+              type="button"
+              onClick={() => {
+                const reason = window.prompt('어떤 부분이 잘못됐나요? (선택 사항)');
+                if (reason !== null) setFeedbackSent(true);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              aria-label="AI 브리핑 피드백 제출"
+            >
+              <ThumbsDown className="size-3" aria-hidden="true" />
+              <span>틀렸나요?</span>
+            </button>
+          )}
+          {feedbackSent && <span className="text-xs text-slate-400">피드백 감사합니다</span>}
+          <button
+            type="button"
+            onClick={() => setCollapsed((prev) => !prev)}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'AI 브리핑 펼치기' : 'AI 브리핑 접기'}
+          >
+            {collapsed ? '브리핑 보기 ▼' : '접기 ▲'}
+          </button>
+        </div>
+      </div>
+
+      <p className="mt-3 text-sm font-medium text-slate-700">{briefing.weekSummary}</p>
+
+      {!collapsed && (
+        <div className="mt-4 space-y-3">
+          {briefing.conflicts.length > 0 && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
+              <p className="text-sm text-amber-800">
+                {briefing.conflicts[0].date} 에 일정 {briefing.conflicts[0].titles.length}개 겹침 —{' '}
+                {briefing.conflicts[0].titles.join(', ')}
+              </p>
+            </div>
+          )}
+
+          {briefing.thisWeekItems.length === 0 && (
+            <p className="py-2 text-center text-sm text-slate-400">이번 주 예정된 기일·마감이 없습니다.</p>
+          )}
+
+          {briefing.thisWeekItems.map((item) => (
+            <div
+              key={item.id}
+              className={`rounded-xl border p-3 ${item.urgency === 'critical' ? 'border-red-200 bg-red-50' : item.urgency === 'high' ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'}`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                {urgencyBadge(item.urgency)}
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                  {item.kindLabel}
+                </span>
+                <span className={`text-xs font-bold ${item.urgency === 'critical' ? 'text-red-600' : 'text-slate-500'}`}>
+                  {formatDays(item.daysUntil)}
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{item.title}</p>
+              {item.caseTitle && (
+                <p className="mt-0.5 text-xs text-slate-500">사건: {item.caseTitle}</p>
+              )}
+              {item.preparations.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {item.preparations.map((prep) => (
+                    <li key={prep} className="flex items-center gap-1.5 text-xs text-slate-600">
+                      <span className="size-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
+                      {prep}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+
+          {briefing.tip && (
+            <p className="mt-1 rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600">{briefing.tip}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CalendarBoardClient({
   organizationId,
   currentUserId,
   canManage,
   snapshot,
   caseOptions,
-  briefing: _briefing
+  briefing
 }: {
   organizationId: string | null;
   currentUserId: string;
@@ -415,6 +529,9 @@ export function CalendarBoardClient({
 
   return (
     <div className="space-y-6">
+      {briefing && (
+        <BriefingCard briefing={briefing} />
+      )}
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

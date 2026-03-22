@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import type { Route } from 'next';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -8,8 +10,10 @@ import { formatDate } from '@/lib/format';
 import { updateOrganizationSubscriptionStateAction } from '@/lib/actions/billing-actions';
 import { getOrganizationSubscriptionSnapshot } from '@/lib/subscription-lock';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import { listAccessibleOrganizations } from '@/lib/queries/organizations';
+import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 
-type SearchParams = Promise<{ locked?: string }>;
+type SearchParams = Promise<{ locked?: string; org?: string }>;
 
 function subscriptionTone(state: string | null | undefined) {
   if (state === 'locked_hard' || state === 'locked_soft') return 'red';
@@ -34,9 +38,9 @@ export default async function SubscriptionSettingsPage({
   searchParams?: SearchParams;
 }) {
   const auth = await requireAuthenticatedUser();
-  const organizationId = getEffectiveOrganizationId(auth);
+  const defaultOrganizationId = getEffectiveOrganizationId(auth);
 
-  if (!organizationId && !isPlatformOperator(auth)) {
+  if (!defaultOrganizationId && !isPlatformOperator(auth)) {
     return (
       <AccessDeniedBlock
         blocked="구독 관리 화면 접근이 차단되었습니다."
@@ -47,9 +51,16 @@ export default async function SubscriptionSettingsPage({
   }
 
   const resolved = searchParams ? await searchParams : undefined;
-  const canAdjustSubscription = await hasActivePlatformAdminView(auth, organizationId);
   const canViewPlatformControls = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
-  const subscriptionSnapshot = await getOrganizationSubscriptionSnapshot(organizationId);
+  const organizationOptions = canViewPlatformControls ? await listAccessibleOrganizations({ includeAll: true }) : [];
+  const selectedOrganizationId = canViewPlatformControls
+    ? (`${resolved?.org ?? ''}`.trim() || defaultOrganizationId)
+    : defaultOrganizationId;
+  const canAdjustSubscription = Boolean(canViewPlatformControls && selectedOrganizationId);
+  const subscriptionSnapshot = await getOrganizationSubscriptionSnapshot(selectedOrganizationId);
+  const settingsAdminData = selectedOrganizationId ? await getSettingsAdminData(selectedOrganizationId) : null;
+  const subscriptionLogs = (settingsAdminData?.changeLogs ?? []).filter((row: any) => row.target_type === 'organization_subscription_state').slice(0, 8);
+  const selectedOrganization = organizationOptions.find((item: any) => item.id === selectedOrganizationId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -59,6 +70,26 @@ export default async function SubscriptionSettingsPage({
       </div>
 
       <SettingsNav currentPath="/settings/subscription" canViewPlatformControls={canViewPlatformControls} />
+
+      {canViewPlatformControls && organizationOptions.length ? (
+        <Card className="vs-mesh-card">
+          <CardHeader><CardTitle>조직별 구독 권한 조정</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <form action="/settings/subscription" className="flex flex-wrap items-end gap-3">
+              <label className="space-y-2 text-sm text-slate-600">
+                <span className="font-medium text-slate-800">대상 조직</span>
+                <select name="org" defaultValue={selectedOrganizationId ?? ''} className="h-10 min-w-72 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                  {organizationOptions.map((organization: any) => (
+                    <option key={organization.id} value={organization.id}>{organization.name}</option>
+                  ))}
+                </select>
+              </label>
+              <SubmitButton variant="secondary" pendingLabel="불러오는 중...">대상 변경</SubmitButton>
+            </form>
+            <p className="text-xs text-slate-500">플랫폼 조직은 여기서 각 조직의 이용 권한을 부여하거나 제한할 수 있습니다.</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {resolved?.locked ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -70,6 +101,7 @@ export default async function SubscriptionSettingsPage({
         <Card className="vs-mesh-card">
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">현재 상태</CardTitle></CardHeader>
           <CardContent>
+            {selectedOrganization ? <p className="mb-2 text-sm font-medium text-slate-900">{selectedOrganization.name}</p> : null}
             <Badge tone={subscriptionTone(subscriptionSnapshot?.state)}>{subscriptionStateLabel(subscriptionSnapshot?.state)}</Badge>
           </CardContent>
         </Card>
@@ -127,7 +159,7 @@ export default async function SubscriptionSettingsPage({
           <CardHeader><CardTitle>플랫폼 조직 관리자 조정</CardTitle></CardHeader>
           <CardContent>
             <ClientActionForm action={updateOrganizationSubscriptionStateAction} successTitle="구독 상태가 반영되었습니다." className="space-y-4">
-              <input type="hidden" name="organizationId" value={organizationId ?? ''} />
+              <input type="hidden" name="organizationId" value={selectedOrganizationId ?? ''} />
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <label className="space-y-2 text-sm text-slate-600">
                   <span className="font-medium text-slate-800">상태</span>
@@ -189,6 +221,28 @@ export default async function SubscriptionSettingsPage({
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="vs-mesh-card">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>구독 변경 기록</CardTitle>
+            <Link href={'/admin/audit?tab=general&table=organization_subscription_states' as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+              감사로그 보기
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {subscriptionLogs.length ? subscriptionLogs.map((row: any) => (
+            <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+              <p className="font-medium text-slate-900">{row.reason ?? '구독 상태 변경'}</p>
+              <p className="mt-1 text-xs text-slate-500">변경 시각: {formatDate(row.created_at)}</p>
+              <p className="mt-1 text-xs text-slate-500">변경자: {row.changed_by_profile?.full_name ?? row.changed_by}</p>
+            </div>
+          )) : (
+            <p className="text-sm text-slate-500">표시할 구독 변경 기록이 없습니다.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
