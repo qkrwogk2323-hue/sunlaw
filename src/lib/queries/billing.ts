@@ -43,25 +43,31 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
     paymentsQuery
   ]);
 
+  const caseIds = [...new Set((entries ?? []).map((item: any) => item.case_id).concat((agreements ?? []).map((item: any) => item.case_id)).concat((payments ?? []).map((item: any) => item.case_id)).filter(Boolean))];
   const clientIds = [...new Set((entries ?? []).map((item: any) => item.bill_to_case_client_id).concat((agreements ?? []).map((item: any) => item.bill_to_case_client_id)).filter(Boolean))];
   const caseOrganizationIds = [...new Set((entries ?? []).map((item: any) => item.bill_to_case_organization_id).concat((agreements ?? []).map((item: any) => item.bill_to_case_organization_id)).filter(Boolean))];
 
-  const [{ data: clients }, { data: caseOrganizations }] = await Promise.all([
+  const [{ data: clients }, { data: caseOrganizations }, { data: hubs }] = await Promise.all([
     clientIds.length
       ? supabase.from('case_clients').select('id, client_name').in('id', clientIds)
       : Promise.resolve({ data: [] as any[] }),
     caseOrganizationIds.length
       ? supabase.from('case_organizations').select('id, organization:organizations(name)').in('id', caseOrganizationIds)
+      : Promise.resolve({ data: [] as any[] }),
+    caseIds.length
+      ? supabase.from('case_hubs').select('id, case_id, title').in('case_id', caseIds)
       : Promise.resolve({ data: [] as any[] })
   ]);
 
   const clientMap = new Map((clients ?? []).map((item: any) => [item.id, item.client_name]));
   const caseOrganizationMap = new Map((caseOrganizations ?? []).map((item: any) => [item.id, item.organization?.name ?? '참여 조직']));
+  const hubMap = new Map((hubs ?? []).map((item: any) => [item.case_id, { id: item.id, title: item.title ?? '사건허브' }]));
 
   const normalizedEntries = (entries ?? []).map((item: any) => ({
     ...item,
     totalAmount: Number(item.total_amount ?? (Number(item.amount ?? 0) + Number(item.tax_amount ?? 0))),
     dueStatus: dueStatus(item.due_on),
+    hub: item.case_id ? (hubMap.get(item.case_id) ?? null) : null,
     targetLabel: item.bill_to_case_client_id
       ? clientMap.get(item.bill_to_case_client_id) ?? '의뢰인'
       : item.bill_to_case_organization_id
@@ -85,6 +91,7 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
 
   const normalizedAgreements = (agreements ?? []).map((item: any) => ({
     ...item,
+    hub: item.case_id ? (hubMap.get(item.case_id) ?? null) : null,
     paidAmount: paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.amount ?? 0,
     recentPaymentAt: paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.latestAt ?? null,
     shortageAmount: Math.max(
@@ -113,6 +120,7 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
     entries: normalizedEntries,
     agreements: normalizedAgreements,
     payments: payments ?? [],
+    hubs: hubs ?? [],
     summary: {
       openEntryCount: normalizedEntries.length,
       overdueEntryCount: normalizedEntries.filter((item: any) => item.dueStatus === 'overdue').length,

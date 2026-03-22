@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { Settings2 } from 'lucide-react';
 import { buttonStyles } from '@/components/ui/button';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { decodeInvitationNote } from '@/lib/invitation-metadata';
 import { actorCategoryLabel, membershipRoleLabel } from '@/lib/membership-labels';
@@ -107,12 +109,35 @@ export default async function TeamSettingsPage({
   });
 
   const roster = [...memberRows, ...inviteOnlyRows];
+  const selectedMember = selectedMemberId
+    ? roster.find((row: any) => !row.isInviteOnly && row.raw.id === selectedMemberId) ?? null
+    : null;
+  const staleMemberSelection = Boolean(selectedMemberId && !selectedMember);
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">구성원 관리</h1>
-        <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 보고 가입/초대/활성 상태를 운영합니다.</p>
-        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">구성원 관리</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+            <span>{currentMembership?.title ?? '직책 미설정'}</span>
+            <span>·</span>
+            <span>{membershipRoleLabel(currentMembership?.role ?? 'member')}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <details className="relative">
+            <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
+              <Settings2 className="size-4" />
+            </summary>
+            <div className="absolute right-0 z-10 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+              <Link
+                href={'/settings/team/self' as Route}
+                className="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                내 프로필 수정하기
+              </Link>
+            </div>
+          </details>
           <Link href={'/admin/audit?tab=general&table=organization_memberships' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             구성원 권한 변경 기록 보기
           </Link>
@@ -121,28 +146,6 @@ export default async function TeamSettingsPage({
           </Link>
         </div>
       </div>
-
-      {currentMembership ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>내 프로필</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-              <div>
-                <p className="font-medium text-slate-900">{auth.profile.full_name}</p>
-                <p className="text-sm text-slate-500">{auth.profile.email}</p>
-              </div>
-              <Link
-                href={'/settings/team/self' as Route}
-                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-              >
-                수정하기
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
 
       {inviteToken ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
@@ -223,25 +226,20 @@ export default async function TeamSettingsPage({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {staleMemberSelection ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              현재 조직에서는 선택한 구성원 정보를 찾을 수 없습니다. 조직을 변경했다면 이 화면에서 다시 선택해 주세요.
+            </div>
+          ) : null}
+
           {canManage ? (
-            <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">표준 초대 플로우</p>
-                  <p className="mt-2 text-sm text-slate-700">구성원 초대는 목록 확인 후 기본 3행 입력, 권한 설정, 완료 카드 확인 순서로 운영합니다.</p>
-                </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <CollapsibleSettingsSection title="구성원 초대하기" description="새 구성원을 조직에 초대합니다.">
                 <StaffBulkInviteForm organizationId={organizationId} />
-              </div>
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">고급/예외 경로</p>
-                  <p className="mt-1 text-sm text-slate-500">비밀번호를 직접 전달해야 하는 예외 상황에서만 임시 계정 발급을 사용합니다.</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="mb-2 text-sm font-semibold text-slate-900">직원 임시 계정 발급</p>
-                  <StaffPreRegisterForm organizationId={organizationId} />
-                </div>
-              </div>
+              </CollapsibleSettingsSection>
+              <CollapsibleSettingsSection title="임시 계정 발급" description="예외 상황에서만 임시 계정을 발급합니다.">
+                <StaffPreRegisterForm organizationId={organizationId} />
+              </CollapsibleSettingsSection>
             </div>
           ) : null}
 
@@ -333,10 +331,10 @@ export default async function TeamSettingsPage({
                 </div>
               </div>
 
-              {canManage && !row.isInviteOnly && selectedMemberId === row.raw.id ? (
+              {canManage && !row.isInviteOnly && selectedMember?.raw.id === row.raw.id ? (
                 <div id={`member-edit-${row.raw.id}`} className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-sm text-slate-700">
-                    <p className="font-medium text-slate-900">관리자 수정 영역</p>
+                    <p className="font-medium text-slate-900">구성원 수정</p>
                     <p>대상: {row.raw.profile?.full_name ?? '-'} · {row.raw.profile?.email ?? '-'}</p>
                     <p className="mt-1 text-slate-500">현재 역할: {membershipRoleLabel(row.raw.role)} · {actorCategoryLabel(row.raw.actor_category)}</p>
                   </div>

@@ -1344,8 +1344,7 @@ export function DashboardHubClient({
             </div>
           ) : (
             <div className={`flex ${conversationExpanded ? 'h-[42rem]' : 'h-[28rem]'} flex-col rounded-2xl border border-slate-200 bg-white p-4`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-base font-semibold text-slate-900">조직소통 대화방</p>
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 <Badge tone="slate">오늘 대화 {todayMessages.length}건</Badge>
               </div>
 
@@ -1371,26 +1370,22 @@ export function DashboardHubClient({
                   )}
                 </div>
 
-                <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
-                  <div className="space-y-2">
-                    <label htmlFor="organization-message-input" className="text-sm font-medium text-slate-700">
-                      조직 소통 메시지
-                    </label>
-                  <Textarea
-                    id="organization-message-input"
-                    value={messageInput}
-                    onChange={(event) => setMessageInput(event.target.value)}
-                    placeholder="조직소통 대화방에 메시지를 입력하세요."
-                    className="min-h-24"
-                  />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-end gap-3">
+                    <Textarea
+                      id="organization-message-input"
+                      value={messageInput}
+                      onChange={(event) => setMessageInput(event.target.value)}
+                      placeholder="조직소통 대화방에 메시지를 입력하세요."
+                      className="min-h-24 flex-1"
+                    />
                     <Button
                       onClick={sendMessage}
                       disabled={
                         messagePending
                         || !messageInput.trim()
                       }
+                      className="min-h-24 rounded-2xl px-5"
                     >
                       {messagePending ? '전송 중...' : '대화 보내기'}
                     </Button>

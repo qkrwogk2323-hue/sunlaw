@@ -81,24 +81,24 @@ export default async function BillingPage() {
   const contractLinkedCosts = activeAgreements.filter((agreement: any) => Boolean(agreement.case_id));
   const topCards = [
     {
-      label: '사건 연결 청구',
-      value: caseLinkedEntries.length,
-      href: '/cases' as Route
+      label: '분납 후속 처리',
+      value: installmentPendingAgreements.length + missedInstallmentEntries.length,
+      href: '/billing#installment-follow-up' as Route
+    },
+    {
+      label: '즉시 처리할 비용',
+      value: overdueEntries.length + missedInstallmentEntries.length,
+      href: '/billing#immediate-billing' as Route
     },
     {
       label: '계약 연결 비용',
       value: contractLinkedCosts.length,
-      href: '/contracts' as Route
+      href: '/billing#agreement-costs' as Route
     },
     {
-      label: '의뢰인 확인 필요',
+      label: '미납 금액',
       value: clientAttentionEntries.length,
-      href: '/portal/billing' as Route
-    },
-    {
-      label: '분납 후속 처리',
-      value: installmentPendingAgreements.length + missedInstallmentEntries.length,
-      href: '/billing#installment-follow-up' as Route
+      href: '/billing#outstanding-amounts' as Route
     }
   ];
 
@@ -109,22 +109,16 @@ export default async function BillingPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">비용 관리</h1>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
-          <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-            청구 기록 보기
-          </Link>
-          <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-            분납·약정 기록 보기
+          <Link href={'/billing/history' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+            비용 기록 보기
           </Link>
           <Link href="/contracts" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
             계약 관리
           </Link>
-          <Link href={'/notifications' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
-            알림센터
-          </Link>
         </div>
       </div>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 xl:grid-cols-4">
         {topCards.map((card) => (
           <Link
             key={card.label}
@@ -179,7 +173,7 @@ export default async function BillingPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="immediate-billing">
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
               <CardTitle>즉시 처리할 비용</CardTitle>
@@ -250,7 +244,7 @@ export default async function BillingPage() {
           </CardContent>
         </Card>
 
-        <div>
+        <div id="agreement-costs">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
@@ -292,13 +286,11 @@ export default async function BillingPage() {
         </div>
       </section>
 
-      <Card>
+      <Card id="outstanding-amounts">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>의뢰인 확인 필요</CardTitle>
-            <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              포털 청구 보기
-            </Link>
+            <CardTitle>미납 금액</CardTitle>
+            <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>포털 청구 보기</Link>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
