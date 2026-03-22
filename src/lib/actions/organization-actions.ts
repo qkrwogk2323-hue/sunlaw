@@ -109,19 +109,22 @@ function getActionErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-async function listActivePlatformAdminIds() {
+async function listActivePlatformAdminRecipients() {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('organization_memberships')
-    .select('profile_id, profile:profiles(id, is_active), organization:organizations(id, kind, is_platform_root)')
+    .select('profile_id, organization_id, profile:profiles(id, is_active), organization:organizations(id, kind, is_platform_root)')
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
   return (data ?? [])
     .filter((row: any) => isPlatformManagementOrganization(row.organization) && row.profile?.is_active !== false)
-    .map((row: any) => row.profile_id)
-    .filter(Boolean);
+    .map((row: any) => ({
+      profileId: row.profile_id,
+      organizationId: row.organization_id
+    }))
+    .filter((row: any) => row.profileId && row.organizationId);
 }
 
 async function listOrganizationManagerProfileIds(adminClient: ReturnType<typeof createSupabaseAdminClient>, organizationId: string) {
@@ -1190,11 +1193,12 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
 
       if (notificationError) throw notificationError;
 
-      const platformAdminIds = (await listActivePlatformAdminIds()).filter((profileId) => profileId !== auth.user.id);
-      if (platformAdminIds.length) {
+      const platformAdmins = (await listActivePlatformAdminRecipients()).filter((item) => item.profileId !== auth.user.id);
+      if (platformAdmins.length) {
         const { error: adminNotificationError } = await admin.from('notifications').insert(
-          platformAdminIds.map((profileId) => ({
-            recipient_profile_id: profileId,
+          platformAdmins.map((item) => ({
+            organization_id: item.organizationId,
+            recipient_profile_id: item.profileId,
             kind: 'generic',
             title: '새 조직 개설 신청이 접수되었습니다.',
             body: `${parsed.name} 조직 신청이 접수되었습니다. 사업자등록번호 자동 대조 결과는 ${verification.status} 상태입니다. 검토 대기열에서 확인해 주세요.`,
@@ -1707,12 +1711,12 @@ export async function submitOrganizationExitRequestAction(formData: FormData) {
   });
   if (error) throw error;
 
-  const adminIds = await listActivePlatformAdminIds();
-  if (adminIds.length) {
+  const platformAdmins = await listActivePlatformAdminRecipients();
+  if (platformAdmins.length) {
     await admin.from('notifications').insert(
-      adminIds.map((recipientProfileId) => ({
-        organization_id: parsed.organizationId,
-        recipient_profile_id: recipientProfileId,
+      platformAdmins.map((item) => ({
+        organization_id: item.organizationId,
+        recipient_profile_id: item.profileId,
         kind: 'generic',
         title: '조직 탈퇴 승인 요청이 접수되었습니다.',
         body: `${parsed.organizationId} 조직에서 탈퇴 승인 요청이 들어왔습니다.`,
