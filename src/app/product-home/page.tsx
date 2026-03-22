@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { getOrganizationAdminMode } from '@/components/mode-switcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +11,94 @@ export default async function ProductHomePage() {
   const auth = await requireAuthenticatedUser();
   const isPlatformView = isPlatformOperator(auth);
   const organizationId = getEffectiveOrganizationId(auth) ?? '';
+  const currentMembership = auth.memberships.find((membership) => membership.organization_id === organizationId) ?? auth.memberships[0] ?? null;
+  const currentOrganizationKind = currentMembership?.organization?.kind;
+  const organizationMode = getOrganizationAdminMode(currentOrganizationKind);
   const data = isPlatformView ? null : await getDashboardSnapshot(organizationId);
+
+  type StartCard = {
+    href: Route;
+    eyebrow: string;
+    title: string;
+    description: string;
+    value?: number;
+    suffix?: string;
+  };
+
+  const startCards: StartCard[] = isPlatformView
+    ? [
+        {
+          href: '/product-home' as Route,
+          eyebrow: '공통 시작',
+          title: '운영 첫 화면',
+          description: '플랫폼 운영에서 가장 먼저 확인할 시작 화면입니다.'
+        },
+        {
+          href: '/admin/organization-requests' as Route,
+          eyebrow: '조직 메뉴',
+          title: '조직 신청 관리',
+          description: '신규 조직 신청과 탈퇴 신청을 검토합니다.'
+        },
+        {
+          href: '/admin/audit' as Route,
+          eyebrow: '공통 기록',
+          title: '감사 로그',
+          description: '플랫폼에서 일어난 변경 기록을 추적합니다.'
+        }
+      ]
+    : organizationMode === 'collection_admin'
+      ? [
+          {
+            href: '/dashboard' as Route,
+            eyebrow: '공통 시작',
+            title: '대시보드',
+            description: '오늘의 핵심 요약과 다음 액션을 먼저 확인합니다.',
+            value: data?.activeCases ?? 0,
+            suffix: '개'
+          },
+          {
+            href: '/collections' as Route,
+            eyebrow: '조직 메뉴',
+            title: '신용정보 운영',
+            description: '회수 활동과 미처리 요청을 이어서 봅니다.',
+            value: data?.pendingRequests ?? 0,
+            suffix: '건'
+          },
+          {
+            href: '/notifications' as Route,
+            eyebrow: '공통 확인',
+            title: '알림 센터',
+            description: '새 알림과 확인 대기 항목을 확인합니다.',
+            value: data?.unreadNotifications ?? 0,
+            suffix: '개'
+          }
+        ]
+      : [
+          {
+            href: '/dashboard' as Route,
+            eyebrow: '공통 시작',
+            title: '대시보드',
+            description: '오늘의 핵심 요약과 다음 액션을 먼저 확인합니다.',
+            value: data?.activeCases ?? 0,
+            suffix: '건'
+          },
+          {
+            href: '/cases' as Route,
+            eyebrow: '조직 메뉴',
+            title: '사건 목록',
+            description: '진행 중 사건과 후속 작업을 이어서 봅니다.',
+            value: data?.activeCases ?? 0,
+            suffix: '건'
+          },
+          {
+            href: '/notifications' as Route,
+            eyebrow: '공통 확인',
+            title: '알림 센터',
+            description: '새 알림과 확인 대기 항목을 확인합니다.',
+            value: data?.unreadNotifications ?? 0,
+            suffix: '개'
+          }
+        ];
 
   return (
     <main className="space-y-6">
@@ -20,43 +109,16 @@ export default async function ProductHomePage() {
       </div>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        {isPlatformView ? (
-          <>
-            <Link href="/admin/organization-requests" className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
-              <p className="text-xs font-semibold uppercase text-slate-500">플랫폼 운영</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">조직 신청 관리</p>
-              <p className="mt-1 text-sm text-slate-500">신규 조직 신청과 탈퇴 신청을 검토합니다.</p>
-            </Link>
-            <Link href="/admin/organizations" className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
-              <p className="text-xs font-semibold uppercase text-slate-500">조직 운영</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">조직 관리</p>
-              <p className="mt-1 text-sm text-slate-500">조직 비활성화, 삭제, 상태 조정을 확인합니다.</p>
-            </Link>
-            <Link href="/admin/audit" className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
-              <p className="text-xs font-semibold uppercase text-slate-500">운영 기록</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">감사 로그</p>
-              <p className="mt-1 text-sm text-slate-500">플랫폼에서 일어난 변경 기록을 추적합니다.</p>
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link href="/cases" className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
-              <p className="text-xs font-semibold uppercase text-slate-500">사건 관리</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{data?.activeCases ?? 0}</p>
-              <p className="mt-1 text-sm text-slate-500">진행 중 사건</p>
-            </Link>
-            <Link href="/collections" className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
-              <p className="text-xs font-semibold uppercase text-slate-500">추심 관리</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{data?.pendingRequests ?? 0}</p>
-              <p className="mt-1 text-sm text-slate-500">미처리 요청</p>
-            </Link>
-            <Link href="/notifications" className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
-              <p className="text-xs font-semibold uppercase text-slate-500">알림 센터</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{data?.unreadNotifications ?? 0}</p>
-              <p className="mt-1 text-sm text-slate-500">새 알림</p>
-            </Link>
-          </>
-        )}
+        {startCards.map((card) => (
+          <Link key={card.href} href={card.href} className="vs-interactive rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-300">
+            <p className="text-xs font-semibold uppercase text-slate-500">{card.eyebrow}</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">
+              {typeof card.value === 'number' ? `${card.value}${card.suffix ?? ''}` : card.title}
+            </p>
+            <p className="mt-1 text-sm font-medium text-slate-800">{typeof card.value === 'number' ? card.title : null}</p>
+            <p className="mt-1 text-sm text-slate-500">{card.description}</p>
+          </Link>
+        ))}
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">

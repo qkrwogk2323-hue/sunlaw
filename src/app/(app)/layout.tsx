@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-import { getDefaultAppRoute, getEffectiveOrganizationId, getTopLevelAppRoutes, requireAuthenticatedUser } from '@/lib/auth';
+import { getDefaultAppRoute, getEffectiveOrganizationId, getTopLevelAppRoutes, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { getNavUnreadCounts } from '@/lib/queries/notifications';
 import { ModeAwareNav } from '@/components/mode-aware-nav';

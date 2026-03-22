@@ -310,12 +310,12 @@ export function isPlatformOperator(auth: AuthContext) {
 }
 
 export function getDefaultAppRoute(auth: AuthContext) {
-  return isPlatformOperator(auth) ? '/admin/organization-requests' : '/dashboard';
+  return isPlatformOperator(auth) ? '/product-home' : '/dashboard';
 }
 
 export function getTopLevelAppRoutes(auth: AuthContext): Route[] {
   if (isPlatformOperator(auth)) {
-    return ['/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
+    return ['/product-home', '/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
   }
 
   return ['/dashboard', '/inbox', '/cases', '/clients', '/organizations', '/collections', '/documents', '/notifications', '/calendar', '/reports', '/settings'];

@@ -118,7 +118,10 @@ function getOrganizationSections({
   const isPlatformManagementOrganizationView = isPlatformManagementOrganization(organization);
 
   const commonItems = isPlatformManagementOrganizationView
-    ? []
+    ? uniqueItems([
+        { href: '/product-home', label: '운영 첫 화면', icon: LayoutDashboard },
+        { href: '/admin/audit', label: '감사 로그', icon: ShieldAlert }
+      ])
     : mode === 'client_communication'
     ? uniqueItems([
         { href: '/notifications', label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification }
@@ -188,7 +191,7 @@ function getOrganizationSections({
 
   const sections: NavSection[] = [];
   if (commonItems.length) sections.push({ id: 'common-menu', label: '공통 메뉴', items: commonItems });
-  if (organizationItems.length) sections.push({ id: 'organization-menu', label: isPlatformManagementOrganizationView ? '플랫폼 운영' : '조직 메뉴', items: uniqueItems(organizationItems) });
+  if (organizationItems.length) sections.push({ id: 'organization-menu', label: '조직 메뉴', items: uniqueItems(organizationItems) });
   if (collaborationItems.length) sections.push({ id: 'collaboration-menu', label: '협업 메뉴', items: uniqueItems(collaborationItems) });
   if (companyManagementItems.length) sections.push({ id: 'company-management-menu', label: '회사 관리', items: uniqueItems(companyManagementItems) });
 
