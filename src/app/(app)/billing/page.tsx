@@ -4,75 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
 import { OverdueDraftButton } from '@/components/overdue-draft-button';
 import { InstallmentFollowUpActions } from '@/components/forms/installment-follow-up-actions';
-
-type SearchParams = Promise<{ period?: string }>;
-
-const PERIOD_OPTIONS = [
-  { key: 'week', label: '주별' },
-  { key: 'month', label: '월별' },
-  { key: 'quarter', label: '분기별' },
-  { key: 'year', label: '연도별' }
-] as const;
-
-type PeriodKey = (typeof PERIOD_OPTIONS)[number]['key'];
-
-function normalizePeriod(value?: string | null): PeriodKey {
-  return PERIOD_OPTIONS.some((item) => item.key === value) ? (value as PeriodKey) : 'month';
-}
-
-function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function endOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
-}
-
-function getPeriodBounds(period: PeriodKey, now = new Date()) {
-  const base = startOfDay(now);
-  let start = new Date(base);
-  let end = new Date(base);
-
-  if (period === 'week') {
-    const day = base.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    start.setDate(base.getDate() + diff);
-    end = new Date(start);
-    end.setDate(start.getDate() + 6);
-  } else if (period === 'month') {
-    start = new Date(base.getFullYear(), base.getMonth(), 1);
-    end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-  } else if (period === 'quarter') {
-    const quarterStartMonth = Math.floor(base.getMonth() / 3) * 3;
-    start = new Date(base.getFullYear(), quarterStartMonth, 1);
-    end = new Date(base.getFullYear(), quarterStartMonth + 3, 0);
-  } else {
-    start = new Date(base.getFullYear(), 0, 1);
-    end = new Date(base.getFullYear(), 11, 31);
-  }
-
-  return { start: startOfDay(start), end: endOfDay(end) };
-}
-
-function parseDate(value?: string | null) {
-  if (!value) return null;
-  const date = value.includes('T') ? new Date(value) : new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function isInRange(value: string | null | undefined, start: Date, end: Date) {
-  const date = parseDate(value);
-  if (!date) return false;
-  return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
-}
 
 function badgeTone(status: string) {
   if (status === 'overdue' || status === 'locked_hard') return 'red';
@@ -80,6 +15,22 @@ function badgeTone(status: string) {
   if (status === 'issued' || status === 'partial' || status === 'trialing') return 'blue';
   if (status === 'draft' || status === 'cancelled') return 'slate';
   return 'green';
+}
+
+function billingStatusLabel(status: string) {
+  if (status === 'draft') return '초안';
+  if (status === 'issued') return '발행';
+  if (status === 'partial') return '일부 입금';
+  if (status === 'paid') return '입금 완료';
+  if (status === 'overdue') return '연체';
+  if (status === 'cancelled') return '취소';
+  return status;
+}
+
+function dueStatusLabel(status: string) {
+  if (status === 'overdue') return '기한 지남';
+  if (status === 'upcoming') return '기한 예정';
+  return '기한 없음';
 }
 
 function agreementLabel(type: string) {
@@ -99,23 +50,15 @@ function billingIntentLabel(intent?: string | null) {
   return '별도 분류 없음';
 }
 
-export default async function BillingPage({
-  searchParams
-}: {
-  searchParams?: SearchParams;
-}) {
+export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  const resolved = searchParams ? await searchParams : undefined;
-  const period = normalizePeriod(resolved?.period);
   const billing = await getBillingHubSnapshot(organizationId);
 
   const orgName = auth.memberships.find((m) => m.organization_id === organizationId)?.organization?.name ?? '우리 사무소';
   const lawyerName: string | undefined = undefined;
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe here
   const nowMs = Date.now();
-
-  const bounds = getPeriodBounds(period);
   const openStatuses = new Set(['draft', 'issued', 'partial']);
   const overdueEntries = billing.entries.filter((entry: any) => entry.dueStatus === 'overdue' && openStatuses.has(entry.status));
   const clientVisibleEntries = billing.entries.filter((entry: any) => Boolean(entry.bill_to_case_client_id));
@@ -136,7 +79,6 @@ export default async function BillingPage({
   const activeAgreements = billing.agreements.filter((item: any) => item.is_active);
   const caseLinkedEntries = billing.entries.filter((entry: any) => Boolean(entry.case_id));
   const contractLinkedCosts = activeAgreements.filter((agreement: any) => Boolean(agreement.case_id));
-  const paymentRecords = billing.payments;
   const topCards = [
     {
       label: '사건 연결 청구',
@@ -157,61 +99,32 @@ export default async function BillingPage({
       label: '분납 후속 처리',
       value: installmentPendingAgreements.length + missedInstallmentEntries.length,
       href: '/billing#installment-follow-up' as Route
-    },
-    {
-      label: '입금 기록',
-      value: paymentRecords.length,
-      href: '/billing#recent-payments' as Route
     }
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">비용 관리</h1>
-          <p className="mt-2 text-sm text-slate-600">사건, 계약, 의뢰인 확인, 분납 흐름만 묶어서 봅니다.</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              청구 기록 보기
-            </Link>
-            <Link href={'/admin/audit?tab=general&table=billing_payments' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              입금 기록 보기
-            </Link>
-            <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
-              분납·약정 기록 보기
-            </Link>
-          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+            청구 기록 보기
+          </Link>
+          <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+            분납·약정 기록 보기
+          </Link>
           <Link href="/contracts" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
             계약 관리
           </Link>
           <Link href={'/notifications' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
-            비용 알림 보기
+            알림센터
           </Link>
         </div>
       </div>
 
-      <section className="flex flex-wrap gap-2">
-        {PERIOD_OPTIONS.map((option) => {
-          const active = option.key === period;
-          return (
-            <Link
-              key={option.key}
-              href={`/billing?period=${option.key}`}
-              className={`rounded-full px-4 py-2 text-sm font-medium ${active ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
-            >
-              {option.label}
-            </Link>
-          );
-        })}
-        <div className="flex items-center rounded-full bg-slate-100 px-4 py-2 text-xs text-slate-500">
-          현재 기준 {formatDate(bounds.start.toISOString())} ~ {formatDate(bounds.end.toISOString())}
-        </div>
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {topCards.map((card) => (
           <Link
             key={card.label}
@@ -248,7 +161,9 @@ export default async function BillingPage({
                   <p>{agreement.fixed_amount != null ? `약정금액 ${formatCurrency(agreement.fixed_amount)}` : '약정금액 미지정'}</p>
                   <p>{`현재 입금 ${formatCurrency(agreement.paidAmount ?? 0)} · 부족 ${formatCurrency(agreement.shortageAmount ?? 0)}`}</p>
                   <p>기준 {agreement.terms_json?.installment_start_mode === 'first_due' ? '첫 납부일 기준' : '오늘부터 확인'}</p>
-                  <Link href={`/cases/${agreement.case_id}?tab=billing`} className="font-medium text-slate-900 underline underline-offset-4">사건 비용 탭 열기</Link>
+                </div>
+                <div className="mt-3">
+                  <Link href={`/cases/${agreement.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건 비용 탭 열기</Link>
                 </div>
                 {(agreement.shortageAmount ?? 0) > 0 ? (
                   <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -283,13 +198,15 @@ export default async function BillingPage({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Badge tone="red">분납 미이행</Badge>
-                    <Badge tone={badgeTone(entry.status)}>{entry.status}</Badge>
+                    <Badge tone={badgeTone(entry.status)}>{billingStatusLabel(entry.status)}</Badge>
                   </div>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
                   <p>금액 {formatCurrency(entry.totalAmount)}</p>
                   <p>기한 {formatDate(entry.due_on)}</p>
-                  <p>사건 비용 탭에서 후속 조치</p>
+                </div>
+                <div className="mt-3">
+                  <span className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건 비용 탭 열기</span>
                 </div>
               </Link>
             )) : (
@@ -333,7 +250,7 @@ export default async function BillingPage({
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
@@ -372,26 +289,6 @@ export default async function BillingPage({
               )) : <p className="text-sm text-slate-500">활성 계약이 없습니다.</p>}
             </CardContent>
           </Card>
-
-          <Card id="recent-payments">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>최근 입금 기록</CardTitle>
-            </div>
-          </CardHeader>
-            <CardContent className="space-y-3">
-              {paymentRecords.length ? paymentRecords.slice(0, 10).map((payment: any) => (
-                <Link key={payment.id} href={`/cases/${payment.case_id}?tab=billing`} className="block rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-900">{formatCurrency(payment.amount)}</p>
-                    <Badge tone="green">{payment.payment_status}</Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-500">{payment.cases?.title ?? '사건'} · {payment.payment_method}</p>
-                  <p className="mt-2 text-xs text-slate-400">{formatDateTime(payment.received_at)}</p>
-                </Link>
-              )) : <p className="text-sm text-slate-500">최근 입금 기록이 없습니다.</p>}
-            </CardContent>
-          </Card>
         </div>
       </section>
 
@@ -406,22 +303,24 @@ export default async function BillingPage({
         </CardHeader>
         <CardContent className="space-y-3">
           {clientAttentionEntries.length ? clientAttentionEntries.map((entry: any) => (
-            <div key={`client-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium text-slate-900">{entry.title}</p>
-                  <p className="mt-1 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
+              <div key={`client-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">{entry.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge tone={badgeTone(entry.status)}>{billingStatusLabel(entry.status)}</Badge>
+                    <Badge tone={badgeTone(entry.dueStatus)}>{dueStatusLabel(entry.dueStatus)}</Badge>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone={badgeTone(entry.status)}>{entry.status}</Badge>
-                  <Badge tone={badgeTone(entry.dueStatus)}>{entry.dueStatus === 'overdue' ? '연체' : entry.dueStatus === 'upcoming' ? '예정' : '미지정'}</Badge>
-                </div>
-              </div>
-              <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-4">
+              <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
                 <p>금액 {formatCurrency(entry.totalAmount)}</p>
                 <p>기한 {formatDate(entry.due_on)}</p>
-                <p>포털에서 확인 중</p>
-                <Link href={`/cases/${entry.case_id}?tab=billing`} className="font-medium text-slate-900 underline underline-offset-4">사건에서 보기</Link>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href={`/cases/${entry.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
+                <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>포털 청구 보기</Link>
               </div>
             </div>
           )) : (
