@@ -15,22 +15,21 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
 
   let entriesQuery = supabase
     .from('billing_entries')
-    .select('id, title, amount, tax_amount, status, due_on, notes, entry_kind, created_at, case_id, bill_to_case_client_id, bill_to_case_organization_id, cases(title, reference_no)')
-    .in('status', ['draft', 'issued', 'partial'])
-    .order('due_on', { ascending: true, nullsFirst: false })
-    .limit(60);
+    .select('id, title, amount, tax_amount, total_amount, status, due_on, paid_at, notes, entry_kind, created_at, case_id, bill_to_case_client_id, bill_to_case_organization_id, cases(title, reference_no)')
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   let agreementsQuery = supabase
     .from('fee_agreements')
-    .select('id, title, agreement_type, fixed_amount, rate, effective_from, effective_to, is_active, case_id, bill_to_case_client_id, bill_to_case_organization_id, cases(title, reference_no)')
+    .select('id, title, agreement_type, fixed_amount, rate, effective_from, effective_to, is_active, description, terms_json, created_at, case_id, bill_to_case_client_id, bill_to_case_organization_id, cases(title, reference_no)')
     .order('created_at', { ascending: false })
-    .limit(30);
+    .limit(120);
 
   let paymentsQuery = supabase
     .from('payments')
     .select('id, amount, payment_status, payment_method, received_at, reference_text, case_id, cases(title, reference_no)')
     .order('received_at', { ascending: false })
-    .limit(20);
+    .limit(200);
 
   if (organizationId) {
     entriesQuery = entriesQuery.eq('organization_id', organizationId);
@@ -61,6 +60,7 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
 
   const normalizedEntries = (entries ?? []).map((item: any) => ({
     ...item,
+    totalAmount: Number(item.total_amount ?? (Number(item.amount ?? 0) + Number(item.tax_amount ?? 0))),
     dueStatus: dueStatus(item.due_on),
     targetLabel: item.bill_to_case_client_id
       ? clientMap.get(item.bill_to_case_client_id) ?? '의뢰인'
@@ -83,7 +83,7 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
     const due = new Date(`${item.due_on}T00:00:00`);
     const now = new Date();
     if (due.getFullYear() === now.getFullYear() && due.getMonth() === now.getMonth()) {
-      return sum + Number(item.amount ?? 0) + Number(item.tax_amount ?? 0);
+      return sum + Number(item.totalAmount ?? 0);
     }
     return sum;
   }, 0);

@@ -5,6 +5,7 @@ const items: { href: Route; label: string }[] = [
   { href: '/settings', label: '개요' },
   { href: '/settings/team', label: '구성원 관리' },
   { href: '/settings/organization', label: '조직 설정' },
+  { href: '/settings/subscription' as Route, label: '구독 관리' },
   { href: '/settings/content', label: '문구/리소스' },
   { href: '/settings/features', label: '기능 플래그' }
 ];

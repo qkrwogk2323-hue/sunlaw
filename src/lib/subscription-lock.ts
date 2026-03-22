@@ -25,9 +25,9 @@ type SubscriptionSnapshot = {
   lockReason: string | null;
 };
 
-const LOCKED_SOFT_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login', '/collections', '/reports'];
-const LOCKED_HARD_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login'];
-const CANCELLED_ALLOWED_PREFIXES = ['/billing', '/admin/support', '/login'];
+const LOCKED_SOFT_ALLOWED_PREFIXES = ['/billing', '/settings/subscription', '/admin/support', '/login', '/collections', '/reports'];
+const LOCKED_HARD_ALLOWED_PREFIXES = ['/billing', '/settings/subscription', '/admin/support', '/login'];
+const CANCELLED_ALLOWED_PREFIXES = ['/billing', '/settings/subscription', '/admin/support', '/login'];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -84,7 +84,7 @@ export function getSubscriptionLockMessage(snapshot: SubscriptionSnapshot | null
   if (snapshot.state === 'locked_soft') {
     return {
       title: '결제 확인이 지연되어 일부 기능이 잠겼습니다.',
-      description: '결제, 고객센터, 내보내기만 허용됩니다. 청구 페이지에서 결제를 재개해 주세요.'
+      description: '결제, 고객센터, 내보내기만 허용됩니다. 구독 관리 페이지에서 결제를 재개해 주세요.'
     };
   }
   if (snapshot.state === 'locked_hard') {
@@ -96,7 +96,7 @@ export function getSubscriptionLockMessage(snapshot: SubscriptionSnapshot | null
   if (snapshot.state === 'past_due') {
     return {
       title: '결제 갱신이 지연되고 있습니다.',
-      description: '청구 페이지 상단의 결제 CTA에서 갱신을 완료해 주세요.'
+      description: '구독 관리 페이지에서 갱신을 완료해 주세요.'
     };
   }
   if (snapshot.state === 'cancelled') {
@@ -117,11 +117,11 @@ export async function enforceSubscriptionRouteAccess(snapshot: SubscriptionSnaps
   const pathname = headerStore.get('x-pathname') ?? '/dashboard';
 
   if (snapshot.state === 'locked_soft' && !matchesPrefix(pathname, LOCKED_SOFT_ALLOWED_PREFIXES)) {
-    redirect('/billing?locked=soft' as Route);
+    redirect('/settings/subscription?locked=soft' as Route);
   }
 
   if (snapshot.state === 'locked_hard' && !matchesPrefix(pathname, LOCKED_HARD_ALLOWED_PREFIXES)) {
-    redirect('/billing?locked=hard' as Route);
+    redirect('/settings/subscription?locked=hard' as Route);
   }
 
   if (snapshot.state === 'cancelled') {
@@ -131,7 +131,7 @@ export async function enforceSubscriptionRouteAccess(snapshot: SubscriptionSnaps
       allowed.push('/reports');
     }
     if (!matchesPrefix(pathname, allowed)) {
-      redirect('/billing?locked=cancelled' as Route);
+      redirect('/settings/subscription?locked=cancelled' as Route);
     }
   }
 }

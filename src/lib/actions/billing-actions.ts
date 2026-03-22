@@ -56,5 +56,6 @@ export async function updateOrganizationSubscriptionStateAction(formData: FormDa
   }
 
   revalidatePath('/billing');
+  revalidatePath('/settings/subscription');
   revalidatePath('/dashboard');
 }
