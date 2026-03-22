@@ -86,25 +86,32 @@ export default async function OrganizationRequestsPage() {
     return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
   });
 
+  const pendingSignupCount = signupRequests.filter((request: any) => request.status === 'pending').length;
+  const pendingExitCount = exitRequests.filter((item: any) => item.status === 'pending').length;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 신청 관리</h1>
-        <p className="mt-2 text-sm text-slate-600">조직 개설 신청을 검토하고 승인 또는 반려하세요.</p>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 신청 관리</h1>
+          <p className="mt-2 text-sm text-slate-600">신청 목록과 탈퇴 요청을 먼저 보고, 기록과 검토 기준은 옆에서 확인하는 구조로 정리했습니다.</p>
+        </div>
+        <div className="flex flex-wrap gap-3 text-sm">
           <Link href={'/admin/audit?tab=general&table=organization_signup_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
-            조직 신청 기록 보기
+            조직 신청 기록
           </Link>
           <Link href={'/admin/audit?tab=general&table=organization_exit_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
-            조직 탈퇴 기록 보기
+            조직 탈퇴 기록
           </Link>
         </div>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>신청 목록</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {signupRequests.length ? signupRequests.map((request: any) => (
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_360px]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle>신청 목록</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {signupRequests.length ? signupRequests.map((request: any) => (
             <div key={request.id} className="rounded-2xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -182,58 +189,14 @@ export default async function OrganizationRequestsPage() {
                 </div>
               ) : null}
             </div>
-          )) : <p className="text-sm text-slate-500">신청 내역이 없습니다.</p>}
-        </CardContent>
-      </Card>
+              )) : <p className="text-sm text-slate-500">신청 내역이 없습니다.</p>}
+            </CardContent>
+          </Card>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>최근 조직 신청 기록</CardTitle>
-            <p className="text-sm text-slate-600">신규 조직 개설 신청과 검토 상태 변경 기록을 바로 확인합니다.</p>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {signupLogs.length ? signupLogs.map((row: any) => (
-              <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="blue">{row.action}</Badge>
-                  <span className="text-sm font-medium text-slate-900">{row.table_name}</span>
-                  <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
-              </div>
-            )) : (
-              <p className="text-sm text-slate-500">아직 조직 신청 관련 감사로그가 없습니다.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>최근 조직 탈퇴 기록</CardTitle>
-            <p className="text-sm text-slate-600">조직 탈퇴 신청 접수와 검토 이력을 이 화면에서 함께 확인합니다.</p>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {exitLogs.length ? exitLogs.map((row: any) => (
-              <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="blue">{row.action}</Badge>
-                  <span className="text-sm font-medium text-slate-900">{row.table_name}</span>
-                  <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
-              </div>
-            )) : (
-              <p className="text-sm text-slate-500">아직 조직 탈퇴 관련 감사로그가 없습니다.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle>조직 탈퇴 신청</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {exitRequests.length ? exitRequests.map((item: any) => (
+          <Card>
+            <CardHeader><CardTitle>조직 탈퇴 신청</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {exitRequests.length ? exitRequests.map((item: any) => (
             <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -280,9 +243,61 @@ export default async function OrganizationRequestsPage() {
                 <p className="mt-3 text-sm text-slate-600">검토 메모: {item.reviewed_note}</p>
               ) : null}
             </div>
-          )) : <p className="text-sm text-slate-500">조직 탈퇴 신청이 없습니다.</p>}
-        </CardContent>
-      </Card>
+              )) : <p className="text-sm text-slate-500">조직 탈퇴 신청이 없습니다.</p>}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>빠른 현황</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm text-slate-700">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-slate-500">개설 신청 검토 대기</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{pendingSignupCount}건</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-slate-500">탈퇴 신청 검토 대기</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{pendingExitCount}건</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="font-medium text-slate-900">검토 기준</p>
+                <p className="mt-1 text-slate-600">문서 대조 불일치, 자동 판독 불가, 일반 검토 대기 순으로 위에서부터 확인하면 됩니다.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>최근 조직 신청 기록</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {signupLogs.length ? signupLogs.map((row: any) => (
+                <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="blue">{row.action}</Badge>
+                    <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
+                </div>
+              )) : <p className="text-sm text-slate-500">아직 조직 신청 관련 감사로그가 없습니다.</p>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>최근 조직 탈퇴 기록</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {exitLogs.length ? exitLogs.map((row: any) => (
+                <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="blue">{row.action}</Badge>
+                    <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
+                </div>
+              )) : <p className="text-sm text-slate-500">아직 조직 탈퇴 관련 감사로그가 없습니다.</p>}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
