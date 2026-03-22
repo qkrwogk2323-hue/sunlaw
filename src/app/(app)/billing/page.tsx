@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
-import { OverdueDraftButton } from '@/components/overdue-draft-button';
 import { InstallmentFollowUpActions } from '@/components/forms/installment-follow-up-actions';
 
 function badgeTone(status: string) {
@@ -43,42 +42,17 @@ function agreementLabel(type: string) {
   return type;
 }
 
-function billingIntentLabel(intent?: string | null) {
-  if (intent === 'receivable') return '받아야 할 금액';
-  if (intent === 'received') return '이미 받은 금액';
-  if (intent === 'installment_pending') return '비용입금 미확인 분납계약';
-  return '별도 분류 없음';
-}
-
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
   const billing = await getBillingHubSnapshot(organizationId);
 
-  const orgName = auth.memberships.find((m) => m.organization_id === organizationId)?.organization?.name ?? '우리 사무소';
-  const lawyerName: string | undefined = undefined;
-  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe here
-  const nowMs = Date.now();
   const openStatuses = new Set(['draft', 'issued', 'partial']);
-  const overdueEntries = billing.entries.filter((entry: any) => entry.dueStatus === 'overdue' && openStatuses.has(entry.status));
   const clientVisibleEntries = billing.entries.filter((entry: any) => Boolean(entry.bill_to_case_client_id));
   const clientAttentionEntries = clientVisibleEntries.filter((entry: any) => openStatuses.has(entry.status)).slice(0, 8);
   const remunerationEntries = billing.entries.filter((entry: any) => ['retainer_fee', 'flat_fee', 'success_fee', 'service_fee', 'adjustment', 'discount'].includes(entry.entry_kind));
   const publicChargeEntries = billing.entries.filter((entry: any) => ['expense', 'court_fee'].includes(entry.entry_kind));
   const installmentAgreements = billing.agreements.filter((agreement: any) => agreement.agreement_type === 'installment_plan' && agreement.is_active);
-  const installmentPendingAgreements = billing.agreements.filter((agreement: any) => (
-    agreement.is_active && agreement.terms_json?.billing_intent === 'installment_pending'
-  ));
-  const missedInstallmentEntries = overdueEntries.filter((entry: any) => installmentAgreements.some((agreement: any) => (
-    agreement.case_id === entry.case_id
-    && agreement.bill_to_case_client_id === entry.bill_to_case_client_id
-    && agreement.bill_to_case_organization_id === entry.bill_to_case_organization_id
-  )));
-
-  const missedInstallmentAgreementKeys = new Set(missedInstallmentEntries.map((entry: any) => `${entry.case_id}:${entry.bill_to_case_client_id ?? ''}:${entry.bill_to_case_organization_id ?? ''}`));
-  const installmentComplianceCount = Math.max(installmentAgreements.length - missedInstallmentAgreementKeys.size, 0);
-
-  const activeAgreements = billing.agreements.filter((item: any) => item.is_active);
   const topCards = [
     {
       label: '보수',
