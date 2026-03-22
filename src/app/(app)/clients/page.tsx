@@ -224,24 +224,9 @@ export default async function ClientsPage({
 
         {canManage ? (
           <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>빠른 작업</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-700">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="font-medium text-slate-900">기본 원칙</p>
-                  <p className="mt-1 text-slate-600">사건을 먼저 고정하고, 의뢰인을 연결합니다. 설명은 접어서 두고 실제 목록과 작업을 먼저 보게 구성합니다.</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="font-medium text-slate-900">재발송 가능 초대</p>
-                  <p className="mt-1 text-slate-600">{roster.filter((item: any) => item.source === 'invite' && item.invitationId).length}건</p>
-                </div>
-              </CardContent>
-            </Card>
-
+            <div className="grid gap-3 md:grid-cols-2">
             <CollapsibleSettingsSection
-              title="기본 의뢰인 초대"
+              title="기존의뢰인초대"
               description="의뢰인 초대 링크를 만들거나 CSV로 여러 명을 한 번에 준비합니다."
             >
                 <ClientStructuredInviteForm
@@ -293,6 +278,7 @@ export default async function ClientsPage({
                 ) : null}
               </div>
             </CollapsibleSettingsSection>
+            </div>
           </div>
         ) : null}
       </div>

@@ -8,6 +8,7 @@ import { ExportLinks } from '@/components/export-links';
 type ExportResource = 'calendar' | 'case-board' | 'collections' | 'reports';
 
 function resolveResource(pathname: string): ExportResource | null {
+  if (pathname === '/cases') return null;
   if (pathname.startsWith('/cases')) return 'case-board';
   if (pathname.startsWith('/calendar')) return 'calendar';
   if (pathname.startsWith('/collections')) return 'collections';
@@ -41,4 +42,3 @@ export function FloatingExportWidget() {
     </details>
   );
 }
-

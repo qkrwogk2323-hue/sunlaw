@@ -413,6 +413,7 @@ export function CalendarBoardClient({
   const [monthJump, setMonthJump] = useState(snapshot.focusMonth);
   const [currentMoment] = useState(() => new Date());
   const [recentEntryCutoff] = useState(() => Date.now() - 1000 * 60 * 60 * 48);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const todayKey = toLocalDateKey(currentMoment);
   const weekLaterTime = useMemo(() => {
@@ -546,66 +547,47 @@ export function CalendarBoardClient({
       {briefing && (
         <BriefingCard briefing={briefing} />
       )}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">일정확인</p>
-          </div>
-          <div className="grid w-full gap-3 sm:max-w-[34rem] sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <CalendarDays className="size-4 text-sky-600" />
-                달력 이동
-              </div>
-              <label className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <span className="sr-only">기준 월 선택</span>
-                <Input
-                  type="month"
-                  value={monthJump}
-                  onChange={(event) => setMonthJump(event.target.value)}
-                  className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-semibold shadow-none focus:border-0"
-                />
-              </label>
-              <div className="mt-3 flex gap-2">
-                <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
-                  <ChevronLeft className="size-4" />
-                </Link>
-                <Link href={`/calendar?month=${monthJump}` as Route} className="inline-flex h-9 flex-[2] items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
-                  보기
-                </Link>
-                <Link href={`/calendar?month=${nextMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
-                  <ChevronRight className="size-4" />
-                </Link>
-              </div>
-            </div>
-            <div className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <ScrollText className="size-4 text-emerald-600" />
-                일정 기록
-              </div>
-              <div className="mt-3 grid gap-2">
-                <Link href={'/admin/audit?tab=general&table=case_schedules' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
-                  일정 변경 기록
-                </Link>
-                <Link href={'/calendar/worklog' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
-                  일정 처리 기록
-                </Link>
-                <Link href={'/calendar/worklog' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
-                  업무일지
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>일정확인</CardTitle>
+              <CardTitle>일정</CardTitle>
             </div>
             <div className="flex items-center gap-3">
+              {filteredScheduleEntries.length > 0 ? (
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    aria-label="전체 선택"
+                    className="size-4 rounded border-slate-300"
+                    checked={selectedIds.size === filteredScheduleEntries.filter(e => e.source === 'schedule').length && filteredScheduleEntries.filter(e => e.source === 'schedule').length > 0}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        setSelectedIds(new Set(filteredScheduleEntries.filter(e => e.source === 'schedule').map(e => e.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                  />
+                  <span className="text-xs">전체</span>
+                </label>
+              ) : null}
+              {selectedIds.size > 0 ? (
+                <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2">
+                  <span className="text-xs font-medium text-rose-700">{selectedIds.size}건 선택됨</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedIds(new Set());
+                    }}
+                    className="text-xs font-semibold text-rose-600 hover:text-rose-800"
+                    aria-label="선택 취소"
+                  >
+                    선택 취소
+                  </button>
+                </div>
+              ) : null}
               <div className="min-w-[92px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                   {kindFilter === 'all' ? '전체' : kindFilter === 'work' ? '업무일정' : kindFilter === 'meeting' ? '미팅일정' : '기타일정'}
@@ -629,136 +611,24 @@ export function CalendarBoardClient({
                   </button>
                 ))}
               </div>
+              {canManage ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setCreateFormOpen((prev) => !prev)}
+                  aria-label="일정 추가"
+                  className="h-9 rounded-xl px-3 text-xs"
+                >
+                  {createFormOpen ? '닫기' : '+ 일정 추가'}
+                </Button>
+              ) : null}
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {filteredScheduleEntries.length ? (
-            filteredScheduleEntries.map((entry) => {
-              const editable = canManage && entry.source === 'schedule' && entry.raw;
-              const urgent = !entry.completedAt && !entry.canceledAt && new Date(entry.when).getTime() <= endOfWeek.getTime();
-              const canceled = Boolean(entry.canceledAt);
-              return (
-                <div key={`${entry.source}-${entry.id}`} className={`rounded-2xl border bg-white p-4 shadow-sm ${urgent ? 'border-amber-200' : 'border-slate-200'}`}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className={`font-semibold ${canceled ? 'text-red-600 underline decoration-red-500 decoration-2 underline-offset-4' : entry.completedAt ? 'line-through text-slate-400' : 'text-slate-900'}`}>{entry.title}</p>
-                        <Badge tone={entry.tone}>{entry.badge}</Badge>
-                        {entry.isImportant ? <Badge tone="amber">중요</Badge> : null}
-                        {entry.isNew ? <Badge tone="green">신규</Badge> : null}
-                        {urgent ? <Badge tone="amber">임박</Badge> : null}
-                        {canceled ? <Badge tone="red">취소됨</Badge> : null}
-                      </div>
-                      <p className="mt-1 text-sm text-slate-500">{entry.caseTitle} · {formatDateTime(entry.when)}</p>
-                      <p className={`mt-2 text-sm leading-6 ${canceled ? 'text-red-600 underline decoration-red-400 underline-offset-4' : entry.completedAt ? 'line-through text-slate-400' : 'text-slate-600'}`}>{entry.detail}</p>
-                      {completionLabel(entry) ? <p className="mt-2 text-xs text-slate-500">완료 체크 · {completionLabel(entry)}</p> : null}
-                      {cancellationLabel(entry) ? <p className="mt-2 text-xs text-red-600">취소 기록 · {cancellationLabel(entry)}</p> : null}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {entry.source === 'schedule' && !canceled ? <ScheduleCompletionCheckbox entry={entry} /> : null}
-                      {entry.source === 'schedule' ? <ScheduleCancellationButton entry={entry} /> : null}
-                      {entry.caseId ? (
-                        <Link
-                          href={`/cases/${entry.caseId}` as Route}
-                          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs' })}
-                        >
-                          사건 보기
-                        </Link>
-                      ) : null}
-                      {editable ? (
-                        <button type="button" onClick={() => setEditingScheduleId((current) => current === entry.id ? null : entry.id)} className="text-sm font-medium text-slate-700 underline underline-offset-4">
-                          {editingScheduleId === entry.id ? '편집 닫기' : '일정 편집'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {editable && editingScheduleId === entry.id && entry.raw ? (
-                    <ClientActionForm
-                      action={updateScheduleAction.bind(null, entry.id)}
-                      successTitle="일정 수정 완료"
-                      errorCause="일정 수정 정보를 저장하지 못했습니다."
-                      errorResolution="일정 시간과 입력값을 확인한 뒤 다시 저장해 주세요."
-                      className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2"
-                    >
-                      <input type="hidden" name="clientVisibility" value="internal_only" />
-                      <div className="space-y-1 md:col-span-2">
-                        <label htmlFor={`edit-title-${entry.id}`} className="text-sm font-medium text-slate-700">
-                          일정 제목 <span className="text-red-500" aria-hidden="true">*</span>
-                        </label>
-                        <Input id={`edit-title-${entry.id}`} name="title" defaultValue={entry.raw.title} required aria-required="true" className="md:col-span-2" />
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`edit-kind-${entry.id}`} className="text-sm font-medium text-slate-700">
-                          유형 <span className="text-red-500" aria-hidden="true">*</span>
-                        </label>
-                        <select id={`edit-kind-${entry.id}`} name="scheduleKind" defaultValue={entry.raw.schedule_kind} aria-required="true" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
-                          <option value="hearing">기일</option>
-                          <option value="deadline">마감</option>
-                          <option value="meeting">회의</option>
-                          <option value="reminder">리마인더</option>
-                          <option value="collection_visit">방문회수</option>
-                          <option value="other">기타</option>
-                        </select>
-                      </div>
-                      <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-500">
-                        공통 일정은 내부 전용으로만 관리됩니다.
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`edit-start-${entry.id}`} className="text-sm font-medium text-slate-700">
-                          시작 일시 <span className="text-red-500" aria-hidden="true">*</span>
-                        </label>
-                        <Input id={`edit-start-${entry.id}`} name="scheduledStart" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_start)} required aria-required="true" />
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`edit-end-${entry.id}`} className="text-sm font-medium text-slate-700">
-                          종료 일시
-                        </label>
-                        <Input id={`edit-end-${entry.id}`} name="scheduledEnd" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_end)} />
-                      </div>
-                      <Input name="location" aria-label="장소" defaultValue={entry.raw.location || ''} placeholder="장소" className="md:col-span-2" />
-                      <Textarea name="notes" defaultValue={entry.raw.notes || ''} className="md:col-span-2" />
-                      <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
-                        <input type="checkbox" name="isImportant" defaultChecked={Boolean(entry.raw.is_important)} className="size-4 rounded border-slate-300" />
-                        중요 일정으로 유지
-                      </label>
-                      <div className="md:col-span-2">
-                        <SubmitButton>일정 수정 저장</SubmitButton>
-                      </div>
-                    </ClientActionForm>
-                  ) : null}
-                </div>
-              );
-            })
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-              <p>현재 조건에 맞는 일정이 없습니다.</p>
-              <p className="mt-1">범위나 일정 종류를 바꾸거나 새 일정을 등록해 보세요.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {canManage ? (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-              <Plus className="size-4 text-slate-700" />
-                <CardTitle>일정 등록</CardTitle>
-              </div>
-              <Button type="button" variant="secondary" size="sm" onClick={() => setCreateFormOpen((current) => !current)}>
-                {createFormOpen ? '닫기' : '등록 열기'}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            {!createFormOpen ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                날짜를 누르면 해당 날짜로 일정 등록이 바로 열립니다. 기본 화면은 일정 목록 확인에 집중합니다.
-              </div>
-            ) : (
+          {canManage && createFormOpen ? (
+            <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50/40 p-4">
               <ClientActionForm
                 action={createScheduleAction}
                 successTitle="일정 등록 완료"
@@ -791,14 +661,13 @@ export function CalendarBoardClient({
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="create-schedule-kind" className="text-sm font-medium text-slate-700">
-                    유형 <span className="text-red-500" aria-hidden="true">*</span>
+                    일정 종류 <span className="text-red-500" aria-hidden="true">*</span>
                   </label>
-                  <select id="create-schedule-kind" name="scheduleKind" defaultValue="deadline" aria-required="true" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                  <select id="create-schedule-kind" name="scheduleKind" defaultValue="" required aria-required="true" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                    <option value="" disabled>종류 선택 *</option>
                     <option value="hearing">기일</option>
                     <option value="deadline">마감</option>
                     <option value="meeting">회의</option>
-                    <option value="reminder">리마인더</option>
-                    <option value="collection_visit">방문회수</option>
                     <option value="other">기타</option>
                   </select>
                 </div>
@@ -813,7 +682,7 @@ export function CalendarBoardClient({
                 </div>
                 <details className="xl:col-span-5">
                   <summary className="cursor-pointer text-sm font-medium text-slate-600">추가 항목</summary>
-                  <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
+                  <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-2">
                     <Input name="location" aria-label="장소" placeholder="장소" className="md:col-span-2" />
                     <Textarea name="notes" placeholder="메모" className="md:col-span-2 min-h-24" />
                     <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
@@ -823,10 +692,182 @@ export function CalendarBoardClient({
                   </div>
                 </details>
               </ClientActionForm>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
+            </div>
+          ) : null}
+          {filteredScheduleEntries.length ? (
+            filteredScheduleEntries.map((entry) => {
+              const editable = canManage && entry.source === 'schedule' && entry.raw;
+              const urgent = !entry.completedAt && !entry.canceledAt && new Date(entry.when).getTime() <= endOfWeek.getTime();
+              const canceled = Boolean(entry.canceledAt);
+              return (
+                <div key={`${entry.source}-${entry.id}`} className={`flex gap-3 rounded-2xl border bg-white p-4 shadow-sm ${urgent ? 'border-amber-200' : 'border-slate-200'}`}>
+                  <div className="shrink-0 pt-0.5">
+                    {entry.source === 'schedule' ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`${entry.title} 선택`}
+                        className="size-4 rounded border-slate-300"
+                        checked={selectedIds.has(entry.id)}
+                        onChange={(event) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (event.target.checked) next.add(entry.id); else next.delete(entry.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    ) : <div className="size-4" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className={`font-semibold ${canceled ? 'text-red-600 underline decoration-red-500 decoration-2 underline-offset-4' : entry.completedAt ? 'line-through text-slate-400' : 'text-slate-900'}`}>{entry.title}</p>
+                          <Badge tone={entry.tone}>{entry.badge}</Badge>
+                          {entry.isImportant ? <Badge tone="amber">중요</Badge> : null}
+                          {entry.isNew ? <Badge tone="green">신규</Badge> : null}
+                          {urgent ? <Badge tone="amber">임박</Badge> : null}
+                          {canceled ? <Badge tone="red">취소됨</Badge> : null}
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500">{entry.caseTitle} · {formatDateTime(entry.when)}</p>
+                        <p className={`mt-2 text-sm leading-6 ${canceled ? 'text-red-600 underline decoration-red-400 underline-offset-4' : entry.completedAt ? 'line-through text-slate-400' : 'text-slate-600'}`}>{entry.detail}</p>
+                        {completionLabel(entry) ? <p className="mt-2 text-xs text-slate-500">완료 체크 · {completionLabel(entry)}</p> : null}
+                        {cancellationLabel(entry) ? <p className="mt-2 text-xs text-red-600">취소 기록 · {cancellationLabel(entry)}</p> : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {entry.source === 'schedule' && !canceled ? <ScheduleCompletionCheckbox entry={entry} /> : null}
+                        {entry.source === 'schedule' ? <ScheduleCancellationButton entry={entry} /> : null}
+                        {entry.caseId ? (
+                          <Link
+                            href={`/cases/${entry.caseId}` as Route}
+                            className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs' })}
+                          >
+                            사건 보기
+                          </Link>
+                        ) : null}
+                        {editable ? (
+                          <button type="button" onClick={() => setEditingScheduleId((current) => current === entry.id ? null : entry.id)} className="text-sm font-medium text-slate-700 underline underline-offset-4">
+                            {editingScheduleId === entry.id ? '편집 닫기' : '일정 편집'}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {editable && editingScheduleId === entry.id && entry.raw ? (
+                      <ClientActionForm
+                        action={updateScheduleAction.bind(null, entry.id)}
+                        successTitle="일정 수정 완료"
+                        errorCause="일정 수정 정보를 저장하지 못했습니다."
+                        errorResolution="일정 시간과 입력값을 확인한 뒤 다시 저장해 주세요."
+                        className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2"
+                      >
+                        <input type="hidden" name="clientVisibility" value="internal_only" />
+                        <div className="space-y-1 md:col-span-2">
+                          <label htmlFor={`edit-title-${entry.id}`} className="text-sm font-medium text-slate-700">
+                            일정 제목 <span className="text-red-500" aria-hidden="true">*</span>
+                          </label>
+                          <Input id={`edit-title-${entry.id}`} name="title" defaultValue={entry.raw.title} required aria-required="true" className="md:col-span-2" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={`edit-kind-${entry.id}`} className="text-sm font-medium text-slate-700">
+                            유형 <span className="text-red-500" aria-hidden="true">*</span>
+                          </label>
+                          <select id={`edit-kind-${entry.id}`} name="scheduleKind" defaultValue={entry.raw.schedule_kind} aria-required="true" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                            <option value="hearing">기일</option>
+                            <option value="deadline">마감</option>
+                            <option value="meeting">회의</option>
+                            <option value="reminder">리마인더</option>
+                            <option value="collection_visit">방문회수</option>
+                            <option value="other">기타</option>
+                          </select>
+                        </div>
+                        <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-500">
+                          공통 일정은 내부 전용으로만 관리됩니다.
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={`edit-start-${entry.id}`} className="text-sm font-medium text-slate-700">
+                            시작 일시 <span className="text-red-500" aria-hidden="true">*</span>
+                          </label>
+                          <Input id={`edit-start-${entry.id}`} name="scheduledStart" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_start)} required aria-required="true" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={`edit-end-${entry.id}`} className="text-sm font-medium text-slate-700">
+                            종료 일시
+                          </label>
+                          <Input id={`edit-end-${entry.id}`} name="scheduledEnd" type="datetime-local" defaultValue={toDateInput(entry.raw.scheduled_end)} />
+                        </div>
+                        <Input name="location" aria-label="장소" defaultValue={entry.raw.location || ''} placeholder="장소" className="md:col-span-2" />
+                        <Textarea name="notes" defaultValue={entry.raw.notes || ''} className="md:col-span-2" />
+                        <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
+                          <input type="checkbox" name="isImportant" defaultChecked={Boolean(entry.raw.is_important)} className="size-4 rounded border-slate-300" />
+                          중요 일정으로 유지
+                        </label>
+                        <div className="md:col-span-2">
+                          <SubmitButton>일정 수정 저장</SubmitButton>
+                        </div>
+                      </ClientActionForm>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <p>현재 조건에 맞는 일정이 없습니다.</p>
+              <p className="mt-1">범위나 일정 종류를 바꾸거나 새 일정을 등록해 보세요.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="grid w-full gap-3 sm:max-w-[34rem] sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <CalendarDays className="size-4 text-sky-600" />
+              달력 이동
+            </div>
+            <label className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+              <span className="sr-only">기준 월 선택</span>
+              <Input
+                type="month"
+                value={monthJump}
+                onChange={(event) => setMonthJump(event.target.value)}
+                className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-semibold shadow-none focus:border-0"
+              />
+            </label>
+            <div className="mt-3 flex gap-2">
+              <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+                <ChevronLeft className="size-4" />
+              </Link>
+              <Link href={`/calendar?month=${monthJump}` as Route} className="inline-flex h-9 flex-[2] items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+                보기
+              </Link>
+              <Link href={`/calendar?month=${nextMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+                <ChevronRight className="size-4" />
+              </Link>
+            </div>
+          </div>
+          <div className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <ScrollText className="size-4 text-emerald-600" />
+              일정 기록
+            </div>
+            <div className="mt-3 grid gap-2">
+              {/* BUG: 감사로그 직접 이동 버그 제거 */}
+              <button type="button" disabled className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-400 cursor-not-allowed" aria-disabled="true" title="감사 기록은 준비 중입니다.">
+                일정 변경 기록 (준비 중)
+              </button>
+              <Link href={'/calendar/worklog' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
+                일정 처리 기록
+              </Link>
+              <Link href={'/calendar/worklog' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
+                업무일지
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div>
   );

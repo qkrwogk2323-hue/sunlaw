@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { BriefcaseBusiness } from 'lucide-react';
+import { BriefcaseBusiness, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CaseCreateForm } from '@/components/forms/case-create-form';
@@ -21,6 +21,7 @@ import { BulkUploadPanel } from '@/components/bulk-upload-panel';
 import { bulkUploadCasesAction } from '@/lib/actions/bulk-upload-actions';
 import { buttonStyles } from '@/components/ui/button';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
+import { ExportLinks } from '@/components/export-links';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
@@ -232,13 +233,28 @@ export default async function CasesPage({
             />
           </div>
         </CollapsibleSettingsSection>
-        <UnifiedListSearch
-          action="/cases"
-          defaultValue={queryFilter}
-          placeholder="사건명, 참조번호, 사건번호 검색"
-          ariaLabel="사건 목록 검색"
-          hiddenFields={{ bucket }}
-        />
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <UnifiedListSearch
+              action="/cases"
+              defaultValue={queryFilter}
+              placeholder="사건명, 참조번호, 사건번호 검색"
+              ariaLabel="사건 목록 검색"
+              hiddenFields={{ bucket }}
+            />
+          </div>
+          <details className="relative shrink-0">
+            <summary
+              className="flex h-10 w-10 list-none items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
+              aria-label="사건 목록 다운로드"
+            >
+              <Download className="size-4" />
+            </summary>
+            <div className="absolute right-0 top-12 z-20 w-44 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_38px_rgba(15,23,42,0.14)]">
+              <ExportLinks resource="case-board" className="flex-col items-stretch" />
+            </div>
+          </details>
+        </div>
       </div>
 
       {bucket === 'active' ? (
