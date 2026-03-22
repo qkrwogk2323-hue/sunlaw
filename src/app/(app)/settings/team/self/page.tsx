@@ -7,6 +7,14 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { SelfProfileEditForm } from '@/components/forms/self-profile-edit-form';
 
+/**
+ * @rule-meta-start
+ * surfaceScope: organization
+ * requiresAuth: true
+ * requiresTraceability: false
+ * traceEntity: member_self_profile
+ * @rule-meta-end
+ */
 export const dynamic = 'force-dynamic';
 
 export default async function TeamSelfProfilePage() {

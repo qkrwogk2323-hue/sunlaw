@@ -22,18 +22,36 @@ const AI_FILE_RE = /^src\/lib\/ai\/[^/]+\.(ts|tsx)$/;
 const RULE_META_BLOCK_RE = /@rule-meta-start([\s\S]*?)@rule-meta-end/;
 const EXEMPT_MARK_RE = /ai-guardrail-exempt:\s*([^\n]+)/i;
 
+function hasOriginMain() {
+  try {
+    execSync('git rev-parse --verify origin/main', { encoding: 'utf8', stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getChangedFiles() {
+  if (hasOriginMain()) {
+    try {
+      const mergeBase = execSync('git merge-base HEAD origin/main', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      if (mergeBase) {
+        const out = execSync(`git diff --name-only ${mergeBase}...HEAD`, { encoding: 'utf8', stdio: 'pipe' }).trim();
+        if (out) return out.split('\n').filter(Boolean);
+      }
+    } catch {}
+  }
+
   try {
-    const mergeBase = execSync('git merge-base HEAD origin/main', { encoding: 'utf8' }).trim();
-    if (mergeBase) {
-      const out = execSync(`git diff --name-only ${mergeBase}...HEAD`, { encoding: 'utf8' }).trim();
-      if (out) return out.split('\n').filter(Boolean);
-    }
-  } catch {}
-  try {
-    const out = execSync('git diff --name-only HEAD~1..HEAD', { encoding: 'utf8' }).trim();
+    const out = execSync('git diff --name-only HEAD~1..HEAD', { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (out) return out.split('\n').filter(Boolean);
   } catch {}
+
+  try {
+    const out = execSync('git diff --name-only', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    if (out) return out.split('\n').filter(Boolean);
+  } catch {}
+
   return [];
 }
 

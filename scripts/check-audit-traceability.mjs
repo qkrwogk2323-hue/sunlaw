@@ -35,22 +35,33 @@ const EXEMPT_FALLBACK_RE = /fallback=([^;]+)/i;
 const EXEMPT_EXPIRES_RE = /expires=(\d{4}-\d{2}-\d{2})/i;
 const EXEMPT_APPROVED_RE = /approvedBy=([^;]+)/i;
 
-function getChangedFiles() {
+function hasOriginMain() {
   try {
-    const mergeBase = execSync('git merge-base HEAD origin/main', { encoding: 'utf8' }).trim();
-    if (mergeBase) {
-      const out = execSync(`git diff --name-only ${mergeBase}...HEAD`, { encoding: 'utf8' }).trim();
-      if (out) return out.split('\n').filter(Boolean);
-    }
-  } catch {}
+    execSync('git rev-parse --verify origin/main', { encoding: 'utf8', stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getChangedFiles() {
+  if (hasOriginMain()) {
+    try {
+      const mergeBase = execSync('git merge-base HEAD origin/main', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      if (mergeBase) {
+        const out = execSync(`git diff --name-only ${mergeBase}...HEAD`, { encoding: 'utf8', stdio: 'pipe' }).trim();
+        if (out) return out.split('\n').filter(Boolean);
+      }
+    } catch {}
+  }
 
   try {
-    const out = execSync('git diff --name-only HEAD~1..HEAD', { encoding: 'utf8' }).trim();
+    const out = execSync('git diff --name-only HEAD~1..HEAD', { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (out) return out.split('\n').filter(Boolean);
   } catch {}
 
   try {
-    const out = execSync('git diff --name-only', { encoding: 'utf8' }).trim();
+    const out = execSync('git diff --name-only', { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (out) return out.split('\n').filter(Boolean);
   } catch {}
 
@@ -104,7 +115,7 @@ const changedFiles = getChangedFiles();
 const targets = changedFiles.filter((file) => TARGET_FILE_RE.test(file));
 
 if (!targets.length) {
-  console.log('✅ check:audit-traceability skip — 변경된 page.tsx 대상이 없습니다.');
+  console.log('✅ check:audit-traceability skip — 변경된 추적성 대상 파일이 없습니다.');
   process.exit(0);
 }
 
@@ -143,4 +154,3 @@ if (errors > 0) {
 
 console.log('\n🎉 check:audit-traceability 통과');
 process.exit(0);
-

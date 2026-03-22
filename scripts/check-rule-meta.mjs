@@ -36,18 +36,36 @@ const AI_REQUIRED_FIELDS = [
 const RULE_META_BLOCK_RE = /@rule-meta-start([\s\S]*?)@rule-meta-end/;
 const EXEMPT_MARK_RE = /rule-meta-exempt:\s*([^\n]+)/i;
 
+function hasOriginMain() {
+  try {
+    execSync('git rev-parse --verify origin/main', { encoding: 'utf8', stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getNewFiles() {
+  if (hasOriginMain()) {
+    try {
+      const mergeBase = execSync('git merge-base HEAD origin/main', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      if (mergeBase) {
+        const out = execSync(`git diff --name-only --diff-filter=A ${mergeBase}...HEAD`, { encoding: 'utf8', stdio: 'pipe' }).trim();
+        if (out) return out.split('\n').filter(Boolean);
+      }
+    } catch {}
+  }
+
   try {
-    const mergeBase = execSync('git merge-base HEAD origin/main', { encoding: 'utf8' }).trim();
-    if (mergeBase) {
-      const out = execSync(`git diff --name-only --diff-filter=A ${mergeBase}...HEAD`, { encoding: 'utf8' }).trim();
-      if (out) return out.split('\n').filter(Boolean);
-    }
-  } catch {}
-  try {
-    const out = execSync('git diff --name-only --diff-filter=A HEAD~1..HEAD', { encoding: 'utf8' }).trim();
+    const out = execSync('git diff --name-only --diff-filter=A HEAD~1..HEAD', { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (out) return out.split('\n').filter(Boolean);
   } catch {}
+
+  try {
+    const out = execSync('git diff --name-only --diff-filter=A', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    if (out) return out.split('\n').filter(Boolean);
+  } catch {}
+
   return [];
 }
 
@@ -56,7 +74,8 @@ function parseMetaBlock(content) {
   if (!match) return null;
   const result = {};
   for (const line of match[1].split('\n')) {
-    const kv = line.trim().match(/^([a-zA-Z]+):\s*(.*)$/);
+    const normalized = line.trim().replace(/^\*\s*/, '');
+    const kv = normalized.match(/^([a-zA-Z]+):\s*(.*)$/);
     if (kv) result[kv[1]] = kv[2].trim();
   }
   return result;
