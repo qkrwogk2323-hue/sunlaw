@@ -4,9 +4,10 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { SupportRequestForm } from '@/components/forms/support-request-form';
+import { updatePlatformSupportTicketAction } from '@/lib/actions/support-actions';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser, isManagementRole } from '@/lib/auth';
 import { listAccessibleOrganizations } from '@/lib/queries/organizations';
-import { listSupportRequests } from '@/lib/queries/support';
+import { listPlatformSupportTickets, listSupportRequests } from '@/lib/queries/support';
 import { beginSupportSessionAction, decideSupportRequestAction } from '@/lib/actions/support-actions';
 import { formatDateTime } from '@/lib/format';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
@@ -27,9 +28,10 @@ export default async function SupportPage() {
     );
   }
 
-  const [organizations, requests] = await Promise.all([
+  const [organizations, requests, tickets] = await Promise.all([
     isPlatformAdmin ? listAccessibleOrganizations({ includeAll: true }) : Promise.resolve([]),
-    listSupportRequests()
+    listSupportRequests(),
+    isPlatformAdmin ? listPlatformSupportTickets() : Promise.resolve([])
   ]);
 
   return (
@@ -41,6 +43,54 @@ export default async function SupportPage() {
 
       {isPlatformAdmin ? (
         <Card>
+          <CardHeader>
+            <CardTitle>고객센터 접수함</CardTitle>
+            <p className="text-sm text-slate-600">사용자조직과 의뢰인이 플랫폼 운영팀에 보낸 문의, 요청, 의견, 오류 신고를 이 화면에서 처리합니다.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {tickets.length ? tickets.map((ticket: any) => (
+              <div key={ticket.id} className="rounded-2xl border border-slate-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">{ticket.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{ticket.requester_name_snapshot} · {ticket.requester_email_snapshot} · {ticket.organization_name_snapshot ?? '개인 문의'}</p>
+                  </div>
+                  <Badge tone={ticket.status === 'received' ? 'amber' : ticket.status === 'in_review' ? 'blue' : ticket.status === 'answered' ? 'green' : 'slate'}>
+                    {ticket.status === 'received' ? '접수됨' : ticket.status === 'in_review' ? '검토 중' : ticket.status === 'answered' ? '답변 완료' : '종료'}
+                  </Badge>
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-700">{ticket.body}</p>
+                <p className="mt-3 text-xs text-slate-400">접수 {formatDateTime(ticket.created_at)}</p>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  {[
+                    { status: 'in_review', label: '검토 중으로 변경' },
+                    { status: 'answered', label: '답변 완료로 변경' },
+                    { status: 'closed', label: '종료로 변경' }
+                  ].map((option) => (
+                    <ClientActionForm
+                      key={option.status}
+                      action={updatePlatformSupportTicketAction}
+                      successTitle="고객센터 상태가 갱신되었습니다."
+                      errorTitle="고객센터 상태 변경에 실패했습니다."
+                      errorCause="처리 대상 문의를 찾지 못했거나 상태 저장에 실패했습니다."
+                      errorResolution="목록을 새로고침한 뒤 다시 시도해 주세요."
+                      className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <input type="hidden" name="ticketId" value={ticket.id} />
+                      <input type="hidden" name="status" value={option.status} />
+                      <textarea name="handledNote" placeholder="운영팀 메모 또는 답변" className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                      <SubmitButton pendingLabel="저장 중...">{option.label}</SubmitButton>
+                    </ClientActionForm>
+                  ))}
+                </div>
+              </div>
+            )) : <p className="text-sm text-slate-500">접수된 고객센터 문의가 없습니다.</p>}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isPlatformAdmin ? (
+        <Card>
           <CardHeader><CardTitle>지원 접속 요청 생성</CardTitle></CardHeader>
           <CardContent>
             <SupportRequestForm organizations={organizations.map((organization: any) => ({ id: organization.id, name: organization.name }))} />
@@ -49,7 +99,7 @@ export default async function SupportPage() {
       ) : null}
 
       <Card>
-        <CardHeader><CardTitle>요청 목록</CardTitle></CardHeader>
+        <CardHeader><CardTitle>지원 접속 요청 목록</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {requests.length ? requests.map((request: any) => {
             const membership = auth.memberships.find((item) => item.organization_id === request.organization_id) ?? null;

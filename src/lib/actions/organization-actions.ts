@@ -634,7 +634,7 @@ const clientStructuredBulkInviteSchema = z.object({
   organizationId: z.string().uuid(),
   caseId: z.string().uuid(),
   expiresHours: z.coerce.number().int().min(1).max(336).default(72),
-  entries: z.array(clientBulkInviteEntrySchema).min(1).max(5)
+  entries: z.array(clientBulkInviteEntrySchema).min(1)
 });
 
 const resendInvitationSchema = z.object({
@@ -2036,15 +2036,7 @@ export async function createClientDirectInvitationAction(formData: FormData) {
   redirect(`/clients?invite=${encodeURIComponent(token)}`);
 }
 
-// 의뢰인 대량 초대를 생성한다.
-export async function createClientBulkInvitationAction(formData: FormData) {
-  const parsed = clientStructuredBulkInviteSchema.parse({
-    organizationId: formData.get('organizationId'),
-    caseId: formData.get('caseId'),
-    expiresHours: formData.get('expiresHours') || 72,
-    entries: parseJsonEntries<z.infer<typeof clientBulkInviteEntrySchema>>(formData, 'entries')
-  });
-
+async function createClientInvitationBatch(parsed: z.infer<typeof clientStructuredBulkInviteSchema>) {
   const { auth } = await requireOrganizationUserManagementAccess(parsed.organizationId, '조직 관리자만 의뢰인을 초대할 수 있습니다.');
   const supabase = await createSupabaseServerClient();
   const created: Array<{ name: string; email: string; relationLabel: string | null; caseClientId: string; url: string }> = [];
@@ -2163,15 +2155,84 @@ export async function createClientBulkInvitationAction(formData: FormData) {
     throw new Error(failed[0]?.reason || '의뢰인 초대 링크를 생성하지 못했습니다.');
   }
 
+  return {
+    caseId: parsed.caseId,
+    caseTitle: caseRow.title ?? '연결 사건',
+    created,
+    failed,
+    expiresHours: parsed.expiresHours
+  };
+}
+
+export type ClientInvitationBatchResult = {
+  ok: true;
+  caseId: string;
+  caseTitle: string;
+  expiresHours: number;
+  created: Array<{ name: string; email: string; relationLabel: string | null; caseClientId: string; url: string }>;
+  failed: Array<{ name: string; email: string; reason: string }>;
+} | {
+  ok: false;
+  message: string;
+};
+
+export async function createClientBulkInvitationBatchAction(input: {
+  organizationId: string;
+  caseId: string;
+  expiresHours?: number;
+  entries: Array<z.infer<typeof clientBulkInviteEntrySchema>>;
+}): Promise<ClientInvitationBatchResult> {
+  try {
+    const parsed = clientStructuredBulkInviteSchema.parse({
+      organizationId: input.organizationId,
+      caseId: input.caseId,
+      expiresHours: input.expiresHours ?? 72,
+      entries: input.entries
+    });
+    const result = await createClientInvitationBatch(parsed);
+    revalidatePath('/clients');
+
+    return {
+      ok: true,
+      caseId: result.caseId,
+      caseTitle: result.caseTitle,
+      expiresHours: result.expiresHours,
+      created: result.created,
+      failed: result.failed
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: getActionErrorMessage(error, '의뢰인 초대 링크를 생성하지 못했습니다.')
+    };
+  }
+}
+
+// 의뢰인 대량 초대를 생성한다.
+export async function createClientBulkInvitationAction(formData: FormData) {
+  const parsed = clientStructuredBulkInviteSchema.parse({
+    organizationId: formData.get('organizationId'),
+    caseId: formData.get('caseId'),
+    expiresHours: formData.get('expiresHours') || 72,
+    entries: parseJsonEntries<z.infer<typeof clientBulkInviteEntrySchema>>(formData, 'entries')
+  });
+
+  const result = await createClientInvitationBatch(parsed);
+  const previewCreated = result.created.slice(0, 20);
+  const previewFailed = result.failed.slice(0, 20);
+
   const cookieStore = await cookies();
   cookieStore.set(
     '_vs_client_invite_summary',
     encodeURIComponent(JSON.stringify({
-      caseId: parsed.caseId,
-      caseTitle: caseRow.title ?? '연결 사건',
-      created,
-      failed,
-      expiresHours: parsed.expiresHours
+      caseId: result.caseId,
+      caseTitle: result.caseTitle,
+      created: previewCreated,
+      createdTotal: result.created.length,
+      failed: previewFailed,
+      failedTotal: result.failed.length,
+      expiresHours: result.expiresHours,
+      previewOnly: result.created.length > previewCreated.length || result.failed.length > previewFailed.length
     })),
     {
       maxAge: 300,
@@ -2182,7 +2243,7 @@ export async function createClientBulkInvitationAction(formData: FormData) {
   );
 
   revalidatePath('/clients');
-  redirect(`/clients?clientInviteBatch=${created.length}&clientInviteFailed=${failed.length}`);
+  redirect(`/clients?clientInviteBatch=${result.created.length}&clientInviteFailed=${result.failed.length}`);
 }
 
 // 사전 등록 의뢰인 초대를 생성한다.

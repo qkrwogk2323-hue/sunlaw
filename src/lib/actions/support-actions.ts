@@ -2,17 +2,178 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
+import { getEffectiveOrganizationId, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { supportRequestSchema } from '@/lib/validators';
+import { platformSupportTicketReviewSchema, platformSupportTicketSchema, supportRequestSchema } from '@/lib/validators';
 import { clearSupportSessionCookie, writeSupportSessionCookie } from '@/lib/support-cookie';
+import { createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 
 async function notifyProfiles(rows: Array<Record<string, unknown>>) {
   if (!rows.length) return;
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) throw error;
+}
+
+async function listPlatformAdminRecipients() {
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from('organization_memberships')
+    .select('profile_id, organization_id, role, organization:organizations(id, kind, is_platform_root)')
+    .eq('status', 'active')
+    .in('role', ['org_owner', 'org_manager']);
+
+  return (data ?? [])
+    .filter((row: any) => isPlatformManagementOrganization(Array.isArray(row.organization) ? row.organization[0] : row.organization))
+    .map((row: any) => ({ profileId: row.profile_id as string, organizationId: row.organization_id as string }));
+}
+
+// 일반 사용자가 플랫폼 운영팀에 문의·요청·의견을 보낸다.
+export async function createPlatformSupportTicketAction(formData: FormData) {
+  const auth = await requireAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
+
+  let parsed;
+  try {
+    parsed = platformSupportTicketSchema.parse({
+      category: formData.get('category'),
+      title: formData.get('title'),
+      body: formData.get('body')
+    });
+  } catch (error) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'PLATFORM_SUPPORT_TICKET_INVALID',
+      blocked: '고객센터 문의 내용을 다시 확인해 주세요.',
+      cause: error instanceof Error ? error.message : '필수 항목이 누락되었거나 형식이 올바르지 않습니다.',
+      resolution: '구분, 제목, 내용을 다시 확인한 뒤 다시 제출해 주세요.'
+    }));
+  }
+
+  const organizationId = getEffectiveOrganizationId(auth);
+  const organizationName = auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? null;
+  const { data: ticket, error } = await supabase
+    .from('platform_support_tickets')
+    .insert({
+      organization_id: organizationId,
+      requester_profile_id: auth.user.id,
+      requester_name_snapshot: auth.profile.full_name,
+      requester_email_snapshot: auth.user.email ?? auth.profile.email,
+      organization_name_snapshot: organizationName,
+      category: parsed.category,
+      title: parsed.title,
+      body: parsed.body,
+      status: 'received'
+    })
+    .select('id')
+    .single();
+
+  if (error || !ticket) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PLATFORM_SUPPORT_TICKET_CREATE_FAILED',
+      blocked: '고객센터 문의를 저장하지 못했습니다.',
+      cause: error?.message ?? '접수 번호를 만들지 못했습니다.',
+      resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    }));
+  }
+
+  const recipients = await listPlatformAdminRecipients();
+  await notifyProfiles(
+    recipients.map((recipient) => ({
+      organization_id: recipient.organizationId,
+      recipient_profile_id: recipient.profileId,
+      kind: 'generic',
+      title: `고객센터 ${parsed.category === 'bug' ? '오류 신고' : parsed.category === 'opinion' ? '의견' : parsed.category === 'request' ? '요청' : '문의'} 접수`,
+      body: `${auth.profile.full_name} 사용자가 "${parsed.title}" 내용을 보냈습니다.`,
+      requires_action: true,
+      action_label: '고객센터 확인',
+      action_href: '/admin/support',
+      destination_type: 'internal_route',
+      destination_url: '/admin/support',
+      action_entity_type: 'platform_support_ticket',
+      action_target_id: ticket.id
+    }))
+  );
+
+  void admin.from('audit_logs').insert({
+    actor_id: auth.user.id,
+    action: 'platform_support_ticket.created',
+    resource_type: 'platform_support_ticket',
+    resource_id: ticket.id,
+    organization_id: organizationId,
+    meta: {
+      category: parsed.category,
+      title: parsed.title
+    }
+  });
+
+  revalidatePath('/support');
+  revalidatePath('/admin/support');
+}
+
+// 플랫폼 운영팀이 고객센터 문의 상태와 답변을 관리한다.
+export async function updatePlatformSupportTicketAction(formData: FormData) {
+  const auth = await requirePlatformAdminAction('플랫폼 관리자만 고객센터 문의를 처리할 수 있습니다.');
+  const supabase = await createSupabaseServerClient();
+
+  let parsed;
+  try {
+    parsed = platformSupportTicketReviewSchema.parse({
+      ticketId: formData.get('ticketId'),
+      status: formData.get('status'),
+      handledNote: formData.get('handledNote')
+    });
+  } catch (error) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'PLATFORM_SUPPORT_TICKET_REVIEW_INVALID',
+      blocked: '고객센터 처리 정보를 다시 확인해 주세요.',
+      cause: error instanceof Error ? error.message : '처리 상태 또는 답변 메모 형식이 올바르지 않습니다.',
+      resolution: '상태와 답변 메모를 다시 입력한 뒤 시도해 주세요.'
+    }));
+  }
+
+  const { data: updated, error } = await supabase
+    .from('platform_support_tickets')
+    .update({
+      status: parsed.status,
+      handled_note: parsed.handledNote || null,
+      handled_by_profile_id: auth.user.id,
+      handled_by_name: auth.profile.full_name,
+      handled_at: new Date().toISOString()
+    })
+    .eq('id', parsed.ticketId)
+    .select('id, requester_profile_id, title, organization_id')
+    .single();
+
+  if (error || !updated) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'PLATFORM_SUPPORT_TICKET_REVIEW_FAILED',
+      blocked: '고객센터 문의 상태를 바꾸지 못했습니다.',
+      cause: error?.message ?? '처리 대상 문의를 찾지 못했습니다.',
+      resolution: '목록을 새로고침한 뒤 다시 시도해 주세요.'
+    }));
+  }
+
+  await notifyProfiles([
+    {
+      organization_id: updated.organization_id,
+      recipient_profile_id: updated.requester_profile_id,
+      kind: 'generic',
+      title: '고객센터 처리 상태가 갱신되었습니다.',
+      body: `"${updated.title}" 문의가 ${parsed.status === 'in_review' ? '검토 중' : parsed.status === 'answered' ? '답변 완료' : '종료'} 상태로 변경되었습니다.`,
+      action_label: '고객센터 보기',
+      action_href: '/support',
+      destination_type: 'internal_route',
+      destination_url: '/support',
+      action_entity_type: 'platform_support_ticket',
+      action_target_id: updated.id
+    }
+  ]);
+
+  revalidatePath('/support');
+  revalidatePath('/admin/support');
 }
 
 // 고객센터 문의를 생성하고 담당자에게 알린다.

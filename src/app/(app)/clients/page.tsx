@@ -111,10 +111,12 @@ export default async function ClientsPage({
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">의뢰인 관리</h1>
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+        </div>
+        <div className="flex flex-wrap gap-3 text-sm">
           <Link href={'/admin/audit?tab=general&table=client_profiles' as Route} className="font-medium text-sky-700 underline underline-offset-4">
             의뢰인 정보 변경 기록 보기
           </Link>
@@ -123,37 +125,6 @@ export default async function ClientsPage({
           </Link>
         </div>
       </div>
-
-      <section className="grid gap-3 md:grid-cols-4">
-        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
-          <CardContent className="px-4 py-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">문맥</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">사건 먼저</p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">의뢰인 초대는 사건 문맥을 먼저 고정하고 시작합니다. 연결 없는 초대는 표준 흐름에서 허용하지 않습니다.</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
-          <CardContent className="px-4 py-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">입력</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">신원과 연락처</p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">이름, 연락 이메일 또는 휴대폰, 보조 연락처를 입력하고 관계를 명시합니다.</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
-          <CardContent className="px-4 py-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">연결</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">상태로 확인</p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">연결 완료, 해제 대기, 검토 중, 해제 상태를 배지로 확인하고 다음 조치를 판단합니다.</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
-          <CardContent className="px-4 py-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">완료</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">결과 카드</p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">생성 여부, 사건 연결, 안내 준비, 실패 사유를 완료 카드에서 즉시 확인합니다.</p>
-          </CardContent>
-        </Card>
-      </section>
 
       {inviteToken ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
@@ -174,162 +145,158 @@ export default async function ClientsPage({
         </div>
       ) : null}
 
-      {clientInviteSummary?.created?.length ? (
-        <Card className="border-emerald-200 bg-emerald-50/70">
-          <CardHeader>
-            <CardTitle>의뢰인 초대 완료</CardTitle>
-            <div className="grid gap-2 text-sm text-emerald-900 md:grid-cols-4">
-              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
-                <p className="text-xs text-emerald-700">생성 여부</p>
-                <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건 완료</p>
-              </div>
-              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
-                <p className="text-xs text-emerald-700">연결 여부</p>
-                <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건 사건 연결</p>
-              </div>
-              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
-                <p className="text-xs text-emerald-700">발송 여부</p>
-                <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건 안내 준비</p>
-              </div>
-              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
-                <p className="text-xs text-emerald-700">실패 사유</p>
-                <p className="mt-1 font-semibold">{clientInviteSummary.failed.length}건</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-xl border border-emerald-200 bg-white p-3 text-sm">
-              <p className="font-medium text-slate-900">연결 사건</p>
-              <p className="mt-1 text-slate-600">{clientInviteSummary.caseTitle}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={`/cases/${clientInviteSummary.caseId}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-lg px-3 text-xs' })}>
-                  사건으로 이동
-                </Link>
-                <Link href={`/case-hubs?caseId=${clientInviteSummary.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-lg px-3 text-xs' })}>
-                  허브 확인
-                </Link>
-              </div>
-            </div>
-            {clientInviteSummary.created.map((item) => (
-              <div key={`${item.email}:${item.url}`} className="rounded-xl border border-emerald-200 bg-white p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-900">{item.name}</p>
-                    <p className="text-sm text-slate-500">{item.email}</p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.38fr)_380px]">
+        <div className="space-y-6">
+          {clientInviteSummary?.created?.length ? (
+            <Card className="border-emerald-200 bg-emerald-50/70">
+              <CardHeader>
+                <CardTitle>최근 초대 결과</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-2 text-sm md:grid-cols-4">
+                  <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                    <p className="text-xs text-emerald-700">완료</p>
+                    <p className="mt-1 font-semibold">{clientInviteSummary.created.length}건</p>
                   </div>
-                  <Badge tone="blue">{item.relationLabel ?? '의뢰인'}</Badge>
+                  <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                    <p className="text-xs text-emerald-700">실패</p>
+                    <p className="mt-1 font-semibold">{clientInviteSummary.failed.length}건</p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                    <p className="text-xs text-emerald-700">연결 사건</p>
+                    <p className="mt-1 font-semibold">{clientInviteSummary.caseTitle}</p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                    <p className="text-xs text-emerald-700">바로가기</p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      <Link href={`/cases/${clientInviteSummary.caseId}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-2 text-[11px]' })}>
+                        사건
+                      </Link>
+                      <Link href={`/case-hubs?caseId=${clientInviteSummary.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-2 text-[11px]' })}>
+                        허브
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                  <code className="select-all text-xs text-slate-800">{item.url}</code>
-                </div>
-              </div>
-            ))}
-            {clientInviteSummary.failed.length ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                <p className="mb-2 font-semibold">실패 사유</p>
-                {clientInviteSummary.failed.map((item) => (
-                  <p key={`${item.email}:${item.reason}`}>{item.name} · {item.email} · {item.reason}</p>
-                ))}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
+                {clientInviteSummary.failed.length ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    <p className="mb-2 font-semibold">실패 사유</p>
+                    {clientInviteSummary.failed.map((item) => (
+                      <p key={`${item.email}:${item.reason}`}>{item.name} · {item.email} · {item.reason}</p>
+                    ))}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
 
-      {canManage ? (
-        <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">문맥 → 입력 → 연결 → 완료</p>
-                <p className="mt-2 text-sm text-slate-700">의뢰인 초대는 사건 문맥을 먼저 고정하고, 연결 검토를 거친 뒤 완료 카드에서 결과를 확인합니다.</p>
-              </div>
-              <Card className="vs-mesh-card">
-                <CardHeader><CardTitle>기본 의뢰인 초대</CardTitle></CardHeader>
-                <CardContent>
-                  <ClientStructuredInviteForm
-                    organizationId={organizationId!}
-                    cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">고급/예외 경로</p>
-                <p className="mt-1 text-sm text-slate-500">비밀번호 직접 전달이 필요한 예외 상황에서만 임시 계정 직접 발급을 사용합니다.</p>
-              </div>
-              <Card>
-                <CardHeader><CardTitle>임시 계정 직접 발급</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
           <Card>
-            <CardHeader>
-              <CardTitle>CSV 일괄 등록</CardTitle>
-              <p className="text-sm font-medium text-slate-900">대량 등록은 CSV 양식에 맞춰 올려 주세요.</p>
-              <p className="text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 의뢰인은 양식을 내려받아 그대로 작성한 뒤 한 번에 등록하세요.</p>
-            </CardHeader>
-            <CardContent>
-              <BulkUploadPanel
-                mode="clients"
-                organizationId={organizationId!}
-                action={bulkUploadClientsAction}
+            <CardHeader><CardTitle>의뢰인 목록</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <UnifiedListSearch
+                action="/clients"
+                defaultValue={queryFilter}
+                placeholder="의뢰인 이름, 이메일, 연락처 검색"
+                ariaLabel="의뢰인 목록 검색"
+                hiddenFields={{
+                  invite: inviteToken ?? '',
+                  issuedClientLoginId: issuedClientLoginId ?? '',
+                  issuedOrgName: issuedOrgName ?? ''
+                }}
               />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>초대 링크 재발송</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {roster.filter((item: any) => item.source === 'invite' && item.invitationId).slice(0, 5).map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
-                  <div className="text-sm">
-                    <p className="font-medium text-slate-900">{item.name}</p>
-                    <p className="text-slate-500">{item.email ?? '-'}</p>
-                  </div>
-                  <ResendInvitationForm invitationId={item.invitationId} compact />
+              {filteredRoster.length ? (
+                <CollapsibleList
+                  label="의뢰인"
+                  totalCount={filteredRoster.length}
+                  visibleContent={filteredRoster.slice(0, 7).map(renderRosterCard)}
+                  hiddenContent={filteredRoster.slice(7).map(renderRosterCard)}
+                />
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                  <p className="text-sm font-medium text-slate-700">의뢰인 데이터가 없습니다.</p>
+                  <p className="mt-2 text-sm text-slate-500">우측 작업영역에서 기본 초대, 임시 계정 발급, CSV 등록 중 필요한 방식으로 첫 의뢰인을 등록해 주세요.</p>
                 </div>
-              ))}
-              {!roster.some((item: any) => item.source === 'invite' && item.invitationId) ? (
-                <p className="text-sm text-slate-500">재발송 가능한 초대가 없습니다.</p>
-              ) : null}
+              )}
             </CardContent>
           </Card>
         </div>
-      ) : null}
 
-      <Card>
-        <CardHeader><CardTitle>의뢰인 목록</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <UnifiedListSearch
-            action="/clients"
-            defaultValue={queryFilter}
-            placeholder="의뢰인 이름, 이메일, 연락처 검색"
-            ariaLabel="의뢰인 목록 검색"
-            hiddenFields={{
-              invite: inviteToken ?? '',
-              issuedClientLoginId: issuedClientLoginId ?? '',
-              issuedOrgName: issuedOrgName ?? ''
-            }}
-          />
-          {filteredRoster.length ? (
-            <CollapsibleList
-              label="의뢰인"
-              totalCount={filteredRoster.length}
-              visibleContent={filteredRoster.slice(0, 7).map(renderRosterCard)}
-              hiddenContent={filteredRoster.slice(7).map(renderRosterCard)}
-            />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-              <p className="text-sm font-medium text-slate-700">의뢰인 데이터가 없습니다.</p>
-              <p className="mt-2 text-sm text-slate-500">기본 의뢰인 초대 또는 임시 계정 직접 발급으로 첫 의뢰인을 등록한 뒤, 사건 연결 상태를 확인해 주세요.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {canManage ? (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>빠른 작업</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-700">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="font-medium text-slate-900">기본 원칙</p>
+                  <p className="mt-1 text-slate-600">사건을 먼저 고정하고, 의뢰인을 연결합니다. 설명은 접어서 두고 실제 목록과 작업을 먼저 보게 구성합니다.</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="font-medium text-slate-900">재발송 가능 초대</p>
+                  <p className="mt-1 text-slate-600">{roster.filter((item: any) => item.source === 'invite' && item.invitationId).length}건</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <details className="group rounded-2xl border border-slate-200 bg-white" open>
+              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
+                기본 의뢰인 초대
+              </summary>
+              <div className="border-t border-slate-200 p-5">
+                <ClientStructuredInviteForm
+                  organizationId={organizationId!}
+                  cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
+                />
+              </div>
+            </details>
+
+            <details className="group rounded-2xl border border-slate-200 bg-white">
+              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
+                CSV 일괄 등록
+              </summary>
+              <div className="space-y-3 border-t border-slate-200 p-5">
+                <p className="text-sm text-slate-600">대량 등록은 CSV 양식에 맞춰 올려 주세요. 명수 제한 없이 불러올 수 있습니다.</p>
+                <BulkUploadPanel
+                  mode="clients"
+                  organizationId={organizationId!}
+                  action={bulkUploadClientsAction}
+                />
+              </div>
+            </details>
+
+            <details className="group rounded-2xl border border-slate-200 bg-white">
+              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
+                임시 계정 직접 발급
+              </summary>
+              <div className="space-y-3 border-t border-slate-200 p-5">
+                <p className="text-sm text-slate-600">비밀번호 직접 전달이 필요한 예외 상황에서만 사용합니다.</p>
+                <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
+              </div>
+            </details>
+
+            <details className="group rounded-2xl border border-slate-200 bg-white">
+              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
+                초대 링크 재발송
+              </summary>
+              <div className="space-y-2 border-t border-slate-200 p-5">
+                {roster.filter((item: any) => item.source === 'invite' && item.invitationId).slice(0, 5).map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                    <div className="text-sm">
+                      <p className="font-medium text-slate-900">{item.name}</p>
+                      <p className="text-slate-500">{item.email ?? '-'}</p>
+                    </div>
+                    <ResendInvitationForm invitationId={item.invitationId} compact />
+                  </div>
+                ))}
+                {!roster.some((item: any) => item.source === 'invite' && item.invitationId) ? (
+                  <p className="text-sm text-slate-500">재발송 가능한 초대가 없습니다.</p>
+                ) : null}
+              </div>
+            </details>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -86,9 +86,7 @@ export const clientSignupSchema = z.object({
   privacyConsent: z.literal(true, {
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),
-  serviceConsent: z.literal(true, {
-    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
-  })
+  serviceConsent: z.boolean().optional().default(true)
 });
 
 export const generalSignupSchema = z.object({
@@ -106,9 +104,7 @@ export const generalSignupSchema = z.object({
   privacyConsent: z.literal(true, {
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),
-  serviceConsent: z.literal(true, {
-    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
-  })
+  serviceConsent: z.boolean().optional().default(true)
 });
 
 export const lightAccountSignupSchema = z.object({
@@ -243,6 +239,18 @@ export const supportRequestSchema = z.object({
   targetEmail: z.string().trim().email(),
   reason: z.string().trim().min(10).max(1000),
   expiresHours: z.coerce.number().int().min(1).max(72).default(4)
+});
+
+export const platformSupportTicketSchema = z.object({
+  category: z.enum(['question', 'request', 'bug', 'opinion']).default('question'),
+  title: z.string().trim().min(2, '제목을 입력해 주세요.').max(120),
+  body: z.string().trim().min(10, '문의 내용을 10자 이상 입력해 주세요.').max(4000)
+});
+
+export const platformSupportTicketReviewSchema = z.object({
+  ticketId: z.string().uuid(),
+  status: z.enum(['in_review', 'answered', 'closed']),
+  handledNote: z.string().trim().max(2000).optional().or(z.literal(''))
 });
 
 export const invitationCreateSchema = z.object({
