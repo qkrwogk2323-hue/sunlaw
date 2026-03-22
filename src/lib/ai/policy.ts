@@ -1,8 +1,8 @@
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
-import { guardAccessDeniedResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
+import { guardAccessDeniedResponse } from '@/lib/api-guard-response';
 import { getAiFeaturePolicy, type AiAnswerType } from '@/lib/ai/feature-catalog';
 import type { AiFeatureId } from '@/lib/ai/guardrails';
-import { containsSensitiveData, sanitizeAiText, RESIDENT_RE, CARD_RE, ACCOUNT_RE, TOKEN_RE, API_KEY_RE, SESSION_RE } from '@/lib/ai/guardrails';
+import { sanitizeAiText, RESIDENT_RE, CARD_RE, ACCOUNT_RE, TOKEN_RE, API_KEY_RE, SESSION_RE } from '@/lib/ai/guardrails';
 
 export type AiAccessContext = {
   auth: NonNullable<Awaited<ReturnType<typeof getCurrentAuth>>>;
@@ -110,18 +110,6 @@ export function isAiFeatureBlocked(feature: AiFeatureId) {
 export function getAiBlockedReason(feature: AiFeatureId) {
   return getAiFeaturePolicy(feature).blockedReason ?? null;
 }
-
-const SANITIZE_ONLY_FEATURES = new Set<AiFeatureId>([
-  'home_ai_assistant',
-  'ai_summary_card',
-  'next_action_recommendation',
-  'draft_assist',
-  'anomaly_alert',
-  'admin_copilot',
-  'client_profile_comment',
-  'note_destination_recommender',
-  'case_hub_conversation',
-]);
 
 export function prepareAiTextForFeature(feature: AiFeatureId, value: string) {
   const trimmed = String(value || '').trim();

@@ -123,7 +123,6 @@ export async function generateClientAiCommentAction(formData: FormData) {
   const latestActivities = detail.activities.slice(0, 8).map((item, index) => `${index + 1}. [${item.type}] ${item.title}\n${item.body}`).join('\n\n');
   const prompt = [
     `의뢰인 이름: ${detail.name}`,
-    `연락처/이메일: ${detail.contactPhone ?? '-'} / ${detail.email ?? '-'}`,
     `연결 사건: ${detail.caseTitle ?? '미연결'}`,
     '최근 누적 이력:',
     latestActivities || '없음',

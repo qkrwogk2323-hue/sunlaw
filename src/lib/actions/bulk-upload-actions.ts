@@ -3,7 +3,25 @@
 import { revalidatePath } from 'next/cache';
 import { requireOrganizationActionAccess } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { buildTaskPlan } from '@/lib/ai/task-planner';
+
+// ─── 특이사항 저장 위치 추천 (rules-first, LLM 불필요) ─────────────────────────
+
+function classifySpecialNote(note: string, clientName: string): string {
+  const text = note.toLowerCase();
+  if (/비용|수임료|보수|미납|입금|지급|결제|청구|정산/.test(text)) {
+    return `"${note}" — ${clientName} 의뢰인의 비용 탭 또는 수금 관리에 기록하는 것을 권장합니다.`;
+  }
+  if (/연락|전화|문자|카톡|부재|수신거부|응답/.test(text)) {
+    return `"${note}" — ${clientName} 의뢰인의 연락 이력 탭에 기록하는 것을 권장합니다.`;
+  }
+  if (/사건|소송|판결|기일|법원|제출|서류|서면|항소|상고/.test(text)) {
+    return `"${note}" — 해당 사건 페이지의 메모 또는 활동 기록에 기록하는 것을 권장합니다.`;
+  }
+  if (/주소|이사|이전|변경|업데이트/.test(text)) {
+    return `"${note}" — ${clientName} 의뢰인의 기본 정보 탭에 주소를 업데이트하는 것을 권장합니다.`;
+  }
+  return `"${note}" — ${clientName} 의뢰인 상세 페이지의 특이사항 탭에 저장하는 것을 권장합니다.`;
+}
 
 // ─── CSV 파싱 헬퍼 ────────────────────────────────────────────────────────────
 
@@ -136,22 +154,9 @@ export async function bulkUploadClientsAction(
 
     created++;
 
-    // 특이사항이 있으면 AI 제안 생성
+    // 특이사항이 있으면 rules-first 분류 (LLM 불필요)
     if (specialNote) {
-      try {
-        const plan = await buildTaskPlan(
-          `의뢰인 "${name}"에 대한 메모가 있습니다: "${specialNote}"\n` +
-          `이 내용을 어디에 기록하면 좋을지 한 문장으로 안내해주세요. (예: 의뢰인 특이사항, 비용 메모, 사건 요약 등)`,
-          caseId ? [{ id: caseId, title: caseTitle ?? '연결 사건' }] : []
-        );
-        aiSuggestions.push({ name, suggestion: plan.summary });
-      } catch {
-        // AI 실패 시 기본 제안
-        aiSuggestions.push({
-          name,
-          suggestion: `"${specialNote}" — 의뢰인 상세 페이지의 특이사항 탭에 저장하는 것을 권장합니다.`
-        });
-      }
+      aiSuggestions.push({ name, suggestion: classifySpecialNote(specialNote, name) });
     }
   }
 
