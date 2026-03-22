@@ -199,12 +199,6 @@ export default async function NotificationsPage({
       href: '#immediate'
     },
     {
-      label: '검토 필요',
-      value: queueView.categories.confirm.length,
-      tone: 'blue' as const,
-      href: '#confirm'
-    },
-    {
       label: '미팅 알림',
       value: queueView.categories.meeting.length,
       tone: 'green' as const,
@@ -215,12 +209,6 @@ export default async function NotificationsPage({
       value: queueView.categories.other.length,
       tone: 'slate' as const,
       href: '#other'
-    },
-    {
-      label: '보관함',
-      value: notificationCenter.summary.trashCount,
-      tone: 'slate' as const,
-      href: buildFilterHref({ nextState: 'archived' })
     }
   ];
 
@@ -238,21 +226,17 @@ export default async function NotificationsPage({
                 알림 기록 보기
               </Link>
             </div>
-            <div className="grid min-w-[248px] grid-cols-2 gap-3">
-            <Link href={buildFilterHref({ nextState: 'active' }) as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
-              <p className="mt-1 text-center text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
-            </Link>
-            <Link href={buildFilterHref({ nextState: 'archived' }) as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">보관함</p>
-              <p className="mt-1 text-center text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
-            </Link>
-          </div>
+            <div className="min-w-[124px]">
+              <Link href={buildFilterHref({ nextState: 'active' }) as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
+                <p className="mt-1 text-center text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
           <Link key={card.label} href={card.href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>

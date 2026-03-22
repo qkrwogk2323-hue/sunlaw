@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { AlertTriangle, CalendarCheck2, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, ScrollText, Sparkles, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, ScrollText, Sparkles, ThumbsDown } from 'lucide-react';
 import { addScheduleAction, updateScheduleAction, updateScheduleCompletionAction, updateScheduleCancellationAction } from '@/lib/actions/case-actions';
 import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
@@ -405,7 +405,6 @@ export function CalendarBoardClient({
   caseOptions: CaseOption[];
   briefing?: ScheduleBriefing;
 }) {
-  const [rangeFilter, setRangeFilter] = useState<'today' | 'week' | 'month' | 'year'>('today');
   const [kindFilter, setKindFilter] = useState<'all' | 'work' | 'meeting' | 'other'>('all');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [createCaseId, setCreateCaseId] = useState(caseOptions[0]?.id ?? '');
@@ -525,38 +524,22 @@ export function CalendarBoardClient({
 
   const scheduleEntriesOnly = useMemo(() => entries.filter((entry) => entry.source === 'schedule'), [entries]);
   const todayTasks = useMemo(() => scheduleEntriesOnly.filter((entry) => toLocalDateKey(entry.when) === todayKey), [scheduleEntriesOnly, todayKey]);
-  const weekTasks = useMemo(() => scheduleEntriesOnly.filter((entry) => isWithinRange(entry.when, startOfToday, endOfWeek)), [endOfWeek, scheduleEntriesOnly, startOfToday]);
-  const monthTasks = useMemo(() => scheduleEntriesOnly.filter((entry) => isWithinRange(entry.when, startOfMonth, endOfMonth)), [endOfMonth, scheduleEntriesOnly, startOfMonth]);
-  const yearSchedules = useMemo(() => scheduleEntriesOnly.filter((entry) => isSameYear(entry.when, currentMoment.getFullYear())), [currentMoment, scheduleEntriesOnly]);
-
-  const rangeCards = [
-    { key: 'today' as const, label: '오늘', value: todayTasks.length, helper: '오늘 처리할 일정', icon: Clock3 },
-    { key: 'week' as const, label: '금주', value: weekTasks.length, helper: '이번 주 일정', icon: CalendarDays },
-    { key: 'month' as const, label: '금번달', value: monthTasks.length, helper: '이번 달 일정', icon: CalendarCheck2 },
-    { key: 'year' as const, label: '금년', value: yearSchedules.length, helper: '올해 일정', icon: CalendarRange }
-  ];
-  const rangeEntries = useMemo(() => {
-    if (rangeFilter === 'today') return todayTasks;
-    if (rangeFilter === 'week') return weekTasks;
-    if (rangeFilter === 'month') return monthTasks;
-    return yearSchedules;
-  }, [monthTasks, rangeFilter, todayTasks, weekTasks, yearSchedules]);
-  const filteredScheduleEntries = useMemo(() => rangeEntries.filter((entry) => {
+  const filteredScheduleEntries = useMemo(() => todayTasks.filter((entry) => {
     const kind = entry.raw?.schedule_kind ?? 'other';
     if (kindFilter === 'meeting') return kind === 'meeting';
     if (kindFilter === 'other') return kind === 'other';
     if (kindFilter === 'work') return kind !== 'meeting' && kind !== 'other';
     return true;
-  }), [kindFilter, rangeEntries]);
+  }), [kindFilter, todayTasks]);
   const kindSummaryCount = useMemo(() => {
-    if (kindFilter === 'meeting') return rangeEntries.filter((entry) => (entry.raw?.schedule_kind ?? 'other') === 'meeting').length;
-    if (kindFilter === 'other') return rangeEntries.filter((entry) => (entry.raw?.schedule_kind ?? 'other') === 'other').length;
-    if (kindFilter === 'work') return rangeEntries.filter((entry) => {
+    if (kindFilter === 'meeting') return todayTasks.filter((entry) => (entry.raw?.schedule_kind ?? 'other') === 'meeting').length;
+    if (kindFilter === 'other') return todayTasks.filter((entry) => (entry.raw?.schedule_kind ?? 'other') === 'other').length;
+    if (kindFilter === 'work') return todayTasks.filter((entry) => {
       const kind = entry.raw?.schedule_kind ?? 'other';
       return kind !== 'meeting' && kind !== 'other';
     }).length;
-    return rangeEntries.length;
-  }, [kindFilter, rangeEntries]);
+    return todayTasks.length;
+  }, [kindFilter, todayTasks]);
 
   return (
     <div className="space-y-6">
@@ -616,29 +599,11 @@ export function CalendarBoardClient({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {rangeCards.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => setRangeFilter(item.key)}
-            className={`flex min-h-28 flex-col rounded-2xl border p-4 text-left transition ${rangeFilter === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
-          >
-            <p className={`flex items-center gap-1.5 text-xs font-semibold tracking-[0.18em] ${rangeFilter === item.key ? 'text-slate-200' : 'text-slate-500'}`}>
-              <item.icon className="size-4 shrink-0" />
-              {item.label}
-            </p>
-            <p className="mt-2 text-3xl font-semibold leading-none">{item.value}</p>
-            <p className={`mt-auto pt-3 text-xs ${rangeFilter === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.helper}</p>
-          </button>
-        ))}
-      </div>
-
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>{rangeFilter === 'today' ? '오늘 일정' : rangeFilter === 'week' ? '금주 일정' : rangeFilter === 'month' ? '금번달 일정' : '금년 일정'}</CardTitle>
+              <CardTitle>오늘 일정</CardTitle>
             </div>
             <div className="flex items-center gap-3">
               <div className="min-w-[92px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">

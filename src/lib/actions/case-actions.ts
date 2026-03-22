@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { isManagementRole, requireOrganizationActionAccess } from '@/lib/auth';
-import { buildCaseReference, makeSlug } from '@/lib/format';
+import { buildCaseReference, formatCurrency, makeSlug } from '@/lib/format';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
@@ -116,7 +116,9 @@ async function notifyBillingStakeholders({
   actorId,
   title,
   body,
-  payload
+  payload,
+  notificationType = 'billing_notice',
+  priority = 'normal'
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   organizationId: string;
@@ -125,6 +127,8 @@ async function notifyBillingStakeholders({
   title: string;
   body: string;
   payload: Record<string, unknown>;
+  notificationType?: string;
+  priority?: 'urgent' | 'normal' | 'low';
 }) {
   const { data: memberships, error: membershipError } = await supabase
     .from('organization_memberships')
@@ -151,6 +155,12 @@ async function notifyBillingStakeholders({
       case_id: caseId,
       recipient_profile_id: recipientProfileId,
       kind: 'generic',
+      notification_type: notificationType,
+      entity_type: 'case',
+      entity_id: caseId,
+      priority,
+      status: 'active',
+      requires_action: true,
       title,
       body,
       action_label: '비용 관리 보기',
@@ -177,7 +187,9 @@ async function createBillingFollowUp({
   notificationTitle,
   notificationBody,
   payload,
-  scheduleKind = 'deadline'
+  scheduleKind = 'deadline',
+  notificationType = 'billing_notice',
+  priority = 'normal'
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   organizationId: string;
@@ -192,6 +204,8 @@ async function createBillingFollowUp({
   notificationBody: string;
   payload: Record<string, unknown>;
   scheduleKind?: 'deadline' | 'meeting' | 'hearing' | 'reminder' | 'collection_visit' | 'other';
+  notificationType?: string;
+  priority?: 'urgent' | 'normal' | 'low';
 }) {
   const scheduleAt = asDueDateTime(dueAt);
 
@@ -222,6 +236,8 @@ async function createBillingFollowUp({
     actorId,
     title: notificationTitle,
     body: notificationBody,
+    notificationType,
+    priority,
     payload: {
       ...payload,
       due_at: scheduleAt
@@ -711,6 +727,15 @@ export async function addDocumentAction(caseId: string, formData: FormData) {
     if (error) {
       throw error;
     }
+
+    await logCaseAudit({
+      actorId: auth.user.id,
+      organizationId: caseRecord.organization_id,
+      resourceType: 'case_document',
+      resourceId: `${caseRecord.id}:${parsed.title}`,
+      action: 'document.created',
+      meta: { case_id: caseRecord.id, title: parsed.title, document_kind: parsed.documentKind }
+    });
   } catch (error) {
     if (storagePath) {
       await supabase.storage.from(bucket).remove([storagePath]);
@@ -719,6 +744,88 @@ export async function addDocumentAction(caseId: string, formData: FormData) {
   }
 
   revalidatePath(`/cases/${caseId}`);
+}
+
+// 업로드 문서 메뉴에서 사건 문서를 등록한다.
+export async function addDocumentFromLibraryAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  if (!caseId) {
+    throw new Error('문서를 연결할 사건을 선택해 주세요.');
+  }
+
+  await addDocumentAction(caseId, formData);
+  revalidatePath('/documents');
+}
+
+// 업로드 문서를 삭제한다.
+export async function deleteDocumentAction(formData: FormData) {
+  const documentId = `${formData.get('documentId') ?? ''}`.trim();
+  if (!documentId) {
+    throw new Error('삭제할 문서를 확인할 수 없습니다.');
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: document, error: readError } = await supabase
+    .from('case_documents')
+    .select('id, case_id, organization_id, title, storage_path')
+    .eq('id', documentId)
+    .single();
+
+  if (readError || !document) {
+    throw readError ?? new Error('문서를 찾을 수 없습니다.');
+  }
+
+  const { auth } = await requireOrganizationActionAccess(document.organization_id, {
+    permission: 'document_create',
+    errorMessage: '문서를 삭제할 권한이 없습니다.'
+  });
+
+  if (document.storage_path) {
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'case-files';
+    const { error: storageError } = await supabase.storage.from(bucket).remove([document.storage_path]);
+    if (storageError) {
+      throw storageError;
+    }
+  }
+
+  const { error: deleteError } = await supabase.from('case_documents').delete().eq('id', documentId);
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: document.organization_id,
+    resourceType: 'case_document',
+    resourceId: document.id,
+    action: 'document.deleted',
+    meta: { case_id: document.case_id, title: document.title }
+  });
+
+  if (document.case_id) {
+    revalidatePath(`/cases/${document.case_id}`);
+  }
+  revalidatePath('/documents');
+}
+
+// 선택한 업로드 문서를 한 번에 삭제한다.
+export async function deleteSelectedDocumentsAction(formData: FormData) {
+  const documentIds = formData
+    .getAll('documentIds')
+    .map((value) => `${value}`.trim())
+    .filter(Boolean);
+
+  if (!documentIds.length) {
+    throw new Error('삭제할 문서를 먼저 선택해 주세요.');
+  }
+
+  for (const documentId of documentIds) {
+    const deleteForm = new FormData();
+    deleteForm.set('documentId', documentId);
+    await deleteDocumentAction(deleteForm);
+  }
+
+  revalidatePath('/documents');
 }
 
 // 문서를 검토 요청 상태로 전환한다.
@@ -1513,6 +1620,8 @@ export async function addBillingEntryAction(caseId: string, formData: FormData) 
     notificationBody: parsed.dueOn
       ? `${caseRecord.title} 사건에 ${parsed.title} 항목이 등록되었습니다. ${parsed.dueOn}까지 비용 확인과 청구 준비가 필요합니다.`
       : `${caseRecord.title} 사건에 ${parsed.title} 항목이 등록되었습니다. 비용 처리 메뉴와 사건 Billing 탭에서 확인해 주세요.`,
+    notificationType: 'billing_entry_created',
+    priority: parsed.dueOn ? 'urgent' : 'normal',
     payload: {
       source: 'billing_entry_created',
       entry_title: parsed.title,
@@ -1641,6 +1750,7 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
     notificationBody: parsed.effectiveTo || parsed.effectiveFrom
       ? `${caseRecord.title} 사건에 ${parsed.title} 약정이 등록되었습니다. ${parsed.effectiveTo || parsed.effectiveFrom} 기준으로 약정 확인이 필요합니다.`
       : `${caseRecord.title} 사건에 ${parsed.title} 약정이 등록되었습니다. 비용 메뉴와 사건 Billing 탭에서 확인해 주세요.`,
+    notificationType: 'fee_agreement_created',
     payload: {
       source: 'fee_agreement_created',
       agreement_title: parsed.title,
@@ -1957,7 +2067,27 @@ export async function recordPaymentAction(caseId: string, formData: FormData) {
 
   if (error) throw error;
 
+  await notifyBillingStakeholders({
+    supabase,
+    organizationId: caseRecord.organization_id,
+    caseId,
+    actorId: auth.user.id,
+    title: `입금 확인: ${parsed.referenceText || '입금 기록'}`,
+    body: `${caseRecord.title} 사건에 ${formatCurrency(parsed.amount)} 입금이 확인되었습니다. 비용 관리와 사건 Billing 탭에서 반영 상태를 확인해 주세요.`,
+    notificationType: 'payment_recorded',
+    payload: {
+      source: 'payment_recorded',
+      amount: parsed.amount,
+      payment_method: parsed.paymentMethod,
+      received_at: parsed.receivedAt,
+      reference_text: parsed.referenceText || null
+    }
+  });
+
   revalidatePath(`/cases/${caseId}`);
+  revalidatePath('/dashboard');
+  revalidatePath('/notifications');
+  revalidatePath('/billing');
 }
 
 // 분납 부족분을 다음 청구에 합산 발행한다.
@@ -2039,9 +2169,34 @@ export async function issueInstallmentShortageBillingAction(formData: FormData) 
     .update({ terms_json: nextTerms, updated_by: auth.user.id })
     .eq('id', agreement.id);
 
+  await createBillingFollowUp({
+    supabase,
+    organizationId: caseRecord.organization_id,
+    caseId,
+    actorId: auth.user.id,
+    actorName: auth.profile.full_name,
+    title: `[분납 부족분] ${agreement.title}`,
+    notes: `부족분 ${formatCurrency(shortageAmount)}을 다음 청구에 합산했습니다.`,
+    dueAt: new Date().toISOString().slice(0, 10),
+    isImportant: true,
+    scheduleKind: 'reminder',
+    notificationTitle: `분납 부족분 합산 청구: ${agreement.title}`,
+    notificationBody: `${caseRecord.title} 사건에서 분납 부족분 ${formatCurrency(shortageAmount)}을 다음 청구로 합산했습니다.`,
+    notificationType: 'installment_shortage_merged',
+    priority: 'normal',
+    payload: {
+      source: 'installment_shortage_merged',
+      agreement_id: agreement.id,
+      shortage_amount: shortageAmount
+    }
+  });
+
   revalidatePath('/billing');
   revalidatePath('/contracts');
   revalidatePath(`/cases/${caseId}`);
+  revalidatePath('/dashboard');
+  revalidatePath('/calendar');
+  revalidatePath('/notifications');
 }
 
 // 분납 부족분을 회차 연장으로 기록한다.
@@ -2103,9 +2258,36 @@ export async function extendInstallmentPlanAction(formData: FormData) {
 
   if (updateError) throw updateError;
 
+  await createBillingFollowUp({
+    supabase,
+    organizationId: caseRecord.organization_id,
+    caseId: parsed.caseId,
+    actorId: auth.user.id,
+    actorName: auth.profile.full_name,
+    title: `[분납 회차 조정] ${agreement.title}`,
+    notes: `추가 ${parsed.additionalRounds}회 · 다음 기준일 ${parsed.nextDueOn}`,
+    dueAt: parsed.nextDueOn,
+    isImportant: true,
+    scheduleKind: 'reminder',
+    notificationTitle: `분납 회차 조정: ${agreement.title}`,
+    notificationBody: `${caseRecord.title} 사건의 분납 회차를 ${parsed.additionalRounds}회 늘렸습니다. 다음 기준일은 ${parsed.nextDueOn}입니다.`,
+    notificationType: 'installment_rounds_extended',
+    priority: 'normal',
+    payload: {
+      source: 'installment_rounds_extended',
+      agreement_id: agreement.id,
+      additional_rounds: parsed.additionalRounds,
+      next_due_on: parsed.nextDueOn,
+      shortage_amount: shortageAmount
+    }
+  });
+
   revalidatePath('/billing');
   revalidatePath('/contracts');
   revalidatePath(`/cases/${parsed.caseId}`);
+  revalidatePath('/dashboard');
+  revalidatePath('/calendar');
+  revalidatePath('/notifications');
 }
 
 // 사건을 삭제함으로 이동한다.

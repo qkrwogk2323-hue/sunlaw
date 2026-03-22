@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
-import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, Sparkles, ThumbsDown } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, ThumbsDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1018,35 +1018,6 @@ export function DashboardHubClient({
     };
   });
 
-  const summaryCards = [
-    {
-      label: '중요 알림',
-      value: todayCaseFocus.length,
-      helper: '오늘 바로 확인할 사건 기준',
-      detail: '알림센터에서 즉시 처리 항목을 먼저 엽니다.',
-      href: '/notifications?priority=urgent',
-      className: 'border-rose-200 bg-rose-50/80',
-      valueClassName: 'text-rose-950'
-    },
-    {
-      label: '승인 요청',
-      value: pendingClientAccessCount,
-      helper: '검토 대기 중인 신규 요청',
-      detail: '승인 또는 반려 후 연결 상태를 바로 갱신합니다.',
-      href: '/notifications?section=immediate',
-      className: 'border-emerald-200 bg-emerald-50/80',
-      valueClassName: 'text-emerald-950'
-    },
-    {
-      label: '후속 처리',
-      value: approvedClientAccessCount,
-      helper: '연결 이후 처리할 항목',
-      detail: '허브, 사건, 비용 흐름으로 다음 작업을 이어갑니다.',
-      href: '/notifications?section=confirm',
-      className: 'border-violet-200 bg-violet-50/80',
-      valueClassName: 'text-violet-950'
-    }
-  ];
   const plannerSourceLabel = plannerSource?.dataType ?? '-';
   const plannerSourceTimeLabel = plannerSource?.generatedAt ? formatDateTime(plannerSource.generatedAt) : '-';
   const coordinationSourceLabel = coordinationSource?.dataType ?? '-';
@@ -1261,35 +1232,6 @@ export function DashboardHubClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f6f9fc)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700">
-              <Sparkles className="size-3.5 text-sky-700" />
-              업무 허브
-            </div>
-          </div>
-          <div className="grid items-stretch gap-2 sm:grid-cols-3">
-            {summaryCards.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href as Route}
-                className={`flex h-full min-h-40 min-w-32 flex-col rounded-[1.35rem] border px-4 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.10)] ${item.className}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">{item.label}</p>
-                  <ChevronRight className="size-4 shrink-0 text-slate-400" />
-                </div>
-                <p className={`my-4 flex flex-1 items-center justify-center text-3xl font-bold tabular-nums whitespace-nowrap ${item.valueClassName}`}>{item.value}</p>
-                <p className="mt-3 text-xs font-medium text-slate-700">{item.helper}</p>
-                <p className="mt-auto pt-3 text-xs leading-5 text-slate-500">{item.detail}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-      </div>
-
       {/* 알림-일정 연동 요약 스트립 */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Link href={'/notifications?section=immediate' as Route} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center transition hover:bg-rose-100" aria-label={`즉시필요 알림 ${immediateNotifications.length}건`}>
