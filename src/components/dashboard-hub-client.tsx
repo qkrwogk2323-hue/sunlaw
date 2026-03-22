@@ -1694,21 +1694,11 @@ export function DashboardHubClient({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* AI 문서 분석 업로드 */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-slate-700">
-                <Bot className="mr-1 inline size-3.5 text-sky-600" aria-hidden="true" />
-                AI 문서 분석 — 파일을 올리면 문서 종류와 다음 처리 방법을 바로 알려드립니다.
-              </p>
-              <label
-                htmlFor="dashboard-doc-upload"
-                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-sky-200 bg-sky-50/40 px-4 py-5 text-center transition hover:border-sky-400 hover:bg-sky-50"
-              >
-                <Upload className="size-5 text-sky-500" aria-hidden="true" />
-                <span className="text-sm font-medium text-sky-700">
-                  {docFile ? docFile.name : '파일 클릭 또는 드래그하여 업로드'}
-                </span>
-                <span className="text-xs text-slate-500">법원 문서, 계약서, 주민등록초본 등 업무 관련 문서를 올리세요</span>
+            {/* AI 문서 분석 */}
+            <div className="flex items-center gap-3">
+              <label htmlFor="dashboard-doc-upload" className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100">
+                <Upload className="size-3.5" aria-hidden="true" />
+                {docFile ? docFile.name.substring(0, 20) + (docFile.name.length > 20 ? '...' : '') : '문서 분석'}
                 <input
                   id="dashboard-doc-upload"
                   type="file"
@@ -1722,28 +1712,36 @@ export function DashboardHubClient({
                   }}
                 />
               </label>
-              {docAnalyzing ? (
-                <p className="text-xs text-sky-600 animate-pulse">AI가 문서를 분석 중입니다...</p>
+              {docFile ? (
+                <button
+                  type="button"
+                  onClick={() => { setDocFile(null); setDocAnalysis(null); }}
+                  className="text-xs text-slate-400 hover:text-rose-600"
+                  aria-label="선택 문서 삭제"
+                >
+                  ✕ 선택 취소
+                </button>
               ) : null}
-              {docAnalysis ? (
-                <div className="rounded-xl border border-sky-200 bg-white p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Bot className="size-4 text-sky-600 shrink-0" aria-hidden="true" />
-                    <span className="text-xs font-semibold text-sky-700">AI 분석 결과</span>
-                    <Badge tone="blue">{docAnalysis.label}</Badge>
-                  </div>
-                  <p className="text-sm text-slate-800">{docAnalysis.description}</p>
-                  {docAnalysis.clientHint ? (
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                      <span className="font-semibold">의뢰인 서류 안내 방법: </span>{docAnalysis.clientHint}
-                    </div>
-                  ) : null}
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                    <span className="font-semibold">문서 업데이트: </span>{docAnalysis.updateHint}
-                  </div>
-                </div>
-              ) : null}
+              {docAnalyzing ? <span className="text-xs text-sky-500">분석 중...</span> : null}
             </div>
+            {docAnalysis ? (
+              <div className="rounded-xl border border-sky-200 bg-white p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Bot className="size-4 text-sky-600 shrink-0" aria-hidden="true" />
+                  <span className="text-xs font-semibold text-sky-700">AI 분석 결과</span>
+                  <Badge tone="blue">{docAnalysis.label}</Badge>
+                </div>
+                <p className="text-sm text-slate-800">{docAnalysis.description}</p>
+                {docAnalysis.clientHint ? (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    <span className="font-semibold">의뢰인 서류 안내 방법: </span>{docAnalysis.clientHint}
+                  </div>
+                ) : null}
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                  <span className="font-semibold">문서 업데이트: </span>{docAnalysis.updateHint}
+                </div>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <p className="text-xs text-slate-500">

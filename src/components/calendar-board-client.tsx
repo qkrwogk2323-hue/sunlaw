@@ -549,7 +549,7 @@ export function CalendarBoardClient({
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">일정 확인</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">일정확인</p>
           </div>
           <div className="grid w-full gap-3 sm:max-w-[34rem] sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -603,7 +603,7 @@ export function CalendarBoardClient({
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>오늘 일정</CardTitle>
+              <CardTitle>일정확인</CardTitle>
             </div>
             <div className="flex items-center gap-3">
               <div className="min-w-[92px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">

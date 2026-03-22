@@ -16,9 +16,7 @@ import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { HubContextStrip } from '@/components/hub-context-strip';
-import { PremiumInfoPanel } from '@/components/premium-info-panel';
-import { HubMetricBadge } from '@/components/hub-metric-badge';
-import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
+import { CasesBulkConnectPanel } from '@/components/cases-bulk-connect-panel';
 import { BulkUploadPanel } from '@/components/bulk-upload-panel';
 import { bulkUploadCasesAction } from '@/lib/actions/bulk-upload-actions';
 import { buttonStyles } from '@/components/ui/button';
@@ -107,10 +105,10 @@ export default async function CasesPage({
               <p className="mt-1 text-sm text-slate-500">{item.reference_no ?? '-'} · {item.case_type}</p>
             </div>
             <div className="flex items-center gap-1.5">
-              <Badge tone={caseClientLinkedMap[item.id] ? 'blue' : 'slate'}>
+              <Badge tone={caseClientLinkedMap[item.id] ? 'green' : 'slate'}>
                 {caseClientLinkedMap[item.id] ? '의뢰인 연동' : '의뢰인 미연동'}
               </Badge>
-              <Badge tone="slate">
+              <Badge tone={hubRegistrations[item.id]?.sharedHubId ? 'green' : 'slate'}>
                 {hubRegistrations[item.id]?.sharedHubId ? '허브 연결' : '허브 미연결'}
               </Badge>
             </div>
@@ -209,56 +207,6 @@ export default async function CasesPage({
     <div className="space-y-6">
       <HubContextStrip hubs={hubList.slice(0, 4)} currentLabel="사건 목록" />
 
-      <div className="grid gap-6 xl:grid-cols-[8fr_4fr]">
-        <div className="vs-brand-panel overflow-hidden rounded-[1.8rem] p-6 text-white shadow-[0_24px_54px_rgba(8,47,73,0.26)]">
-          <div className="grid gap-3 md:grid-cols-3">
-            {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
-              const count = key === 'active' ? activeCases.length : key === 'completed' ? completedCases.length : deletedCases.length;
-              const isActive = key === bucket;
-              const href = `/cases?bucket=${key}${queryFilter ? `&q=${encodeURIComponent(queryFilter)}` : ''}` as Route;
-              return (
-                <Link
-                  key={key}
-                  href={href}
-                  className={`rounded-2xl border p-4 text-center backdrop-blur-sm transition ${
-                    isActive
-                      ? 'border-sky-100/70 bg-white/18'
-                      : 'border-white/10 bg-white/8 hover:border-sky-100/40'
-                  }`}
-                >
-                  <p className="text-xs uppercase tracking-[0.24em] text-sky-100/75">{BUCKET_META[key].label}</p>
-                  <p className="mt-3 text-4xl font-semibold text-white tabular-nums">{count}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-200/82">{BUCKET_META[key].cardDescription}</p>
-                  <p className="mt-3 text-xs font-semibold text-sky-100/88">해당 목록 열기</p>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-        <PremiumInfoPanel
-          title="사건허브 요약"
-          description="사건목록에서도 최근 사용한 사건허브를 바로 다시 열 수 있습니다."
-        >
-          {hubList.length ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <HubMetricBadge label="협업" value={`${hubList[0].collaboratorCount}/${hubList[0].collaboratorLimit}`} tone="blue" />
-                <HubMetricBadge label="열람" value={`${hubList[0].viewerCount}/${hubList[0].viewerLimit}`} tone="violet" />
-                <HubMetricBadge label="미읽음" value={`${hubList[0].unreadCount}`} tone="amber" />
-                <HubMetricBadge label="최근 활동" value={formatHubRelativeActivity(hubList[0].lastActivityAt)} tone="slate" />
-              </div>
-              <p className="text-sm font-semibold text-slate-900">{hubList[0].title ?? hubList[0].caseTitle ?? '사건허브'}</p>
-              <p className="text-sm text-slate-500">최근 사용한 허브를 기준으로 바로 허브 화면으로 이어집니다.</p>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-5 text-center">
-              <p className="text-sm font-medium text-slate-700">아직 연결된 사건허브가 없습니다.</p>
-              <p className="mt-1 text-sm text-slate-500">사건 카드의 허브 연동 버튼으로 첫 허브를 열어 보세요.</p>
-            </div>
-          )}
-        </PremiumInfoPanel>
-      </div>
-
       <div className="space-y-3">
         <CollapsibleSettingsSection
           title="사건 등록하기"
@@ -293,37 +241,70 @@ export default async function CasesPage({
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-            <span>사건목록</span>
-            <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
-              <span>{BUCKET_META[bucket].helper}</span>
+      {bucket === 'active' ? (
+        <CasesBulkConnectPanel
+          organizationId={currentOrganizationId}
+          unlinkedClientCaseIds={activeCases.filter((c: { id: string }) => !caseClientLinkedMap[c.id]).map((c: { id: string }) => c.id)}
+          unlinkedHubCaseIds={activeCases.filter((c: { id: string }) => !hubRegistrations[c.id]?.sharedHubId).map((c: { id: string }) => c.id)}
+        />
+      ) : null}
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_200px]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center justify-between gap-2">
+              <span>사건목록</span>
+              <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
+                <span>{BUCKET_META[bucket].helper}</span>
+                <Link
+                  href={'/cases/history' as Route}
+                  className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                >
+                  사건 변경 이력 보기
+                </Link>
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {filteredCases.length ? (
+              <CollapsibleList
+                label="사건"
+                totalCount={filteredCases.length}
+                visibleContent={filteredCases.slice(0, 7).map(renderCaseCard)}
+                hiddenContent={filteredCases.slice(7).map(renderCaseCard)}
+              />
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-6 text-center">
+                <BriefcaseBusiness className="mx-auto size-8 text-slate-400" />
+                <p className="mt-3 text-sm text-slate-500">표시할 사건이 없습니다.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 우측 작은 박스: 사건 분류 탐색 */}
+        <div className="space-y-2">
+          {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
+            const count = key === 'active' ? activeCases.length : key === 'completed' ? completedCases.length : deletedCases.length;
+            const isActive = key === bucket;
+            const href = `/cases?bucket=${key}${queryFilter ? `&q=${encodeURIComponent(queryFilter)}` : ''}` as Route;
+            return (
               <Link
-                href={'/cases/history' as Route}
-                className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                key={key}
+                href={href}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${
+                  isActive
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                }`}
               >
-                사건 변경 이력 보기
+                <span>{BUCKET_META[key].label}</span>
+                <span className={`font-semibold tabular-nums ${isActive ? 'text-white' : 'text-slate-900'}`}>{count}</span>
               </Link>
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {filteredCases.length ? (
-            <CollapsibleList
-              label="사건"
-              totalCount={filteredCases.length}
-              visibleContent={filteredCases.slice(0, 7).map(renderCaseCard)}
-              hiddenContent={filteredCases.slice(7).map(renderCaseCard)}
-            />
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-6 text-center">
-              <BriefcaseBusiness className="mx-auto size-8 text-slate-400" />
-              <p className="mt-3 text-sm text-slate-500">표시할 사건이 없습니다.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
