@@ -260,6 +260,48 @@ async function loadCaseOrThrow(caseId: string) {
   return { supabase, caseRecord };
 }
 
+async function loadBillingEntryForMutation(entryId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: entry, error } = await supabase
+    .from('billing_entries')
+    .select('id, title, case_id')
+    .eq('id', entryId)
+    .single();
+
+  if (error || !entry?.case_id) {
+    throw error ?? new Error('청구 항목을 찾을 수 없습니다.');
+  }
+
+  const { caseRecord } = await loadCaseOrThrow(entry.case_id);
+  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'billing_manage',
+    errorMessage: '청구/입금 관리 권한이 없습니다.'
+  });
+
+  return { supabase, auth, caseRecord, entry };
+}
+
+async function loadFeeAgreementForMutation(agreementId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: agreement, error } = await supabase
+    .from('fee_agreements')
+    .select('id, title, case_id')
+    .eq('id', agreementId)
+    .single();
+
+  if (error || !agreement?.case_id) {
+    throw error ?? new Error('약정 항목을 찾을 수 없습니다.');
+  }
+
+  const { caseRecord } = await loadCaseOrThrow(agreement.case_id);
+  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'billing_manage',
+    errorMessage: '약정 관리 권한이 없습니다.'
+  });
+
+  return { supabase, auth, caseRecord, agreement };
+}
+
 function parseCreateCaseInput(formData: FormData) {
   const clientName = `${formData.get('clientName') ?? ''}`.trim();
   const clientRole = `${formData.get('clientRole') ?? ''}`.trim();
@@ -1639,6 +1681,93 @@ export async function addBillingEntryAction(caseId: string, formData: FormData) 
   revalidatePath('/notifications');
 }
 
+export async function addOrganizationBillingEntryAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  if (!caseId) {
+    throw new Error('사건을 먼저 선택해 주세요.');
+  }
+  return addBillingEntryAction(caseId, formData);
+}
+
+export async function updateBillingEntryAction(entryId: string, formData: FormData) {
+  const { supabase, auth, caseRecord, entry } = await loadBillingEntryForMutation(entryId);
+
+  const parsed = billingEntrySchema.parse({
+    billToPartyKind: formData.get('billToPartyKind') || 'case_client',
+    billToCaseClientId: formData.get('billToCaseClientId'),
+    billToCaseOrganizationId: formData.get('billToCaseOrganizationId'),
+    entryType: formData.get('entryType'),
+    title: formData.get('title'),
+    amount: formData.get('amount') || 0,
+    taxAmount: formData.get('taxAmount') || 0,
+    dueOn: formData.get('dueOn'),
+    notes: formData.get('notes')
+  });
+
+  const { error } = await supabase
+    .from('billing_entries')
+    .update({
+      bill_to_party_kind: parsed.billToPartyKind,
+      bill_to_case_client_id: parsed.billToCaseClientId || null,
+      bill_to_case_organization_id: parsed.billToCaseOrganizationId || null,
+      entry_kind: parsed.entryType,
+      title: parsed.title,
+      amount: parsed.amount,
+      tax_amount: parsed.taxAmount,
+      total_amount: Number(parsed.amount) + Number(parsed.taxAmount ?? 0),
+      due_on: parsed.dueOn || null,
+      notes: parsed.notes || null,
+      updated_by: auth.user.id
+    })
+    .eq('id', entryId);
+
+  if (error) throw error;
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: caseRecord.organization_id,
+    resourceType: 'billing_entry',
+    resourceId: entryId,
+    action: 'billing_entry_updated',
+    meta: {
+      before_title: entry.title,
+      after_title: parsed.title,
+      case_id: caseRecord.id
+    }
+  });
+
+  revalidatePath(`/cases/${caseRecord.id}`);
+  revalidatePath('/billing');
+  revalidatePath('/billing/history');
+  revalidatePath('/notifications');
+}
+
+export async function deleteBillingEntryAction(formData: FormData) {
+  const entryId = `${formData.get('entryId') ?? ''}`.trim();
+  if (!entryId) throw new Error('삭제할 청구 항목을 찾을 수 없습니다.');
+
+  const { supabase, auth, caseRecord, entry } = await loadBillingEntryForMutation(entryId);
+  const { error } = await supabase.from('billing_entries').delete().eq('id', entryId);
+  if (error) throw error;
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: caseRecord.organization_id,
+    resourceType: 'billing_entry',
+    resourceId: entryId,
+    action: 'billing_entry_deleted',
+    meta: {
+      title: entry.title,
+      case_id: caseRecord.id
+    }
+  });
+
+  revalidatePath(`/cases/${caseRecord.id}`);
+  revalidatePath('/billing');
+  revalidatePath('/billing/history');
+  revalidatePath('/notifications');
+}
+
 
 // 사건에 참여 조직을 추가한다.
 export async function addCaseOrganizationAction(caseId: string, formData: FormData) {
@@ -1700,6 +1829,7 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
     title: formData.get('title'),
     description: formData.get('description'),
     fixedAmount: formData.get('fixedAmount') || undefined,
+    taxAmount: formData.get('taxAmount') || undefined,
     rate: formData.get('rate') || undefined,
     effectiveFrom: formData.get('effectiveFrom'),
     effectiveTo: formData.get('effectiveTo'),
@@ -1714,7 +1844,10 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
     .eq('role', 'managing_org')
     .maybeSingle();
 
-  const termsJson = parsed.termsJson ? JSON.parse(parsed.termsJson || '{}') : {};
+  const termsJson = {
+    ...(parsed.termsJson ? JSON.parse(parsed.termsJson || '{}') : {}),
+    tax_amount: parsed.taxAmount ?? 0
+  };
 
   const { error } = await supabase.from('fee_agreements').insert({
     case_id: caseRecord.id,
@@ -1743,7 +1876,7 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
     actorId: auth.user.id,
     actorName: auth.profile.full_name,
     title: `[약정] ${parsed.title}`,
-    notes: `${parsed.title} · ${parsed.agreementType}${parsed.fixedAmount != null ? ` · 고정금액 ${parsed.fixedAmount}` : ''}${parsed.rate != null ? ` · 비율 ${parsed.rate}%` : ''}${parsed.description ? `\n${parsed.description}` : ''}`,
+    notes: `${parsed.title} · ${parsed.agreementType}${parsed.fixedAmount != null ? ` · 고정금액 ${parsed.fixedAmount}` : ''}${parsed.taxAmount != null ? ` · 세액 ${parsed.taxAmount}` : ''}${parsed.rate != null ? ` · 비율 ${parsed.rate}%` : ''}${parsed.description ? `\n${parsed.description}` : ''}`,
     dueAt: parsed.effectiveTo || parsed.effectiveFrom || null,
     isImportant: Boolean(parsed.effectiveTo),
     notificationTitle: `비용 약정 등록: ${parsed.title}`,
@@ -1756,6 +1889,7 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
       agreement_title: parsed.title,
       agreement_type: parsed.agreementType,
       fixed_amount: parsed.fixedAmount ?? null,
+      tax_amount: parsed.taxAmount ?? 0,
       rate: parsed.rate ?? null,
       effective_from: parsed.effectiveFrom || null,
       effective_to: parsed.effectiveTo || null
@@ -1767,6 +1901,103 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
   revalidatePath('/dashboard');
   revalidatePath('/calendar');
   revalidatePath('/billing');
+  revalidatePath('/contracts');
+  revalidatePath('/notifications');
+}
+
+export async function addOrganizationFeeAgreementAction(formData: FormData) {
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  if (!caseId) {
+    throw new Error('사건을 먼저 선택해 주세요.');
+  }
+  return addFeeAgreementAction(caseId, formData);
+}
+
+export async function updateFeeAgreementAction(agreementId: string, formData: FormData) {
+  const { supabase, auth, caseRecord, agreement } = await loadFeeAgreementForMutation(agreementId);
+
+  const parsed = feeAgreementSchema.parse({
+    billToPartyKind: formData.get('billToPartyKind'),
+    billToCaseClientId: formData.get('billToCaseClientId'),
+    billToCaseOrganizationId: formData.get('billToCaseOrganizationId'),
+    agreementType: formData.get('agreementType'),
+    title: formData.get('title'),
+    description: formData.get('description'),
+    fixedAmount: formData.get('fixedAmount') || undefined,
+    taxAmount: formData.get('taxAmount') || undefined,
+    rate: formData.get('rate') || undefined,
+    effectiveFrom: formData.get('effectiveFrom'),
+    effectiveTo: formData.get('effectiveTo'),
+    termsJson: formData.get('termsJson')
+  });
+
+  const termsJson = {
+    ...(parsed.termsJson ? JSON.parse(parsed.termsJson || '{}') : {}),
+    tax_amount: parsed.taxAmount ?? 0
+  };
+  const { error } = await supabase
+    .from('fee_agreements')
+    .update({
+      bill_to_party_kind: parsed.billToPartyKind,
+      bill_to_case_client_id: parsed.billToCaseClientId || null,
+      bill_to_case_organization_id: parsed.billToCaseOrganizationId || null,
+      agreement_type: parsed.agreementType,
+      title: parsed.title,
+      description: parsed.description || null,
+      fixed_amount: parsed.fixedAmount ?? null,
+      rate: parsed.rate ?? null,
+      effective_from: parsed.effectiveFrom || null,
+      effective_to: parsed.effectiveTo || null,
+      terms_json: termsJson,
+      updated_by: auth.user.id
+    })
+    .eq('id', agreementId);
+
+  if (error) throw error;
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: caseRecord.organization_id,
+    resourceType: 'fee_agreement',
+    resourceId: agreementId,
+    action: 'fee_agreement_updated',
+    meta: {
+      before_title: agreement.title,
+      after_title: parsed.title,
+      case_id: caseRecord.id
+    }
+  });
+
+  revalidatePath(`/cases/${caseRecord.id}`);
+  revalidatePath('/billing');
+  revalidatePath('/billing/history');
+  revalidatePath('/contracts');
+  revalidatePath('/notifications');
+}
+
+export async function deleteFeeAgreementAction(formData: FormData) {
+  const agreementId = `${formData.get('agreementId') ?? ''}`.trim();
+  if (!agreementId) throw new Error('삭제할 약정 항목을 찾을 수 없습니다.');
+
+  const { supabase, auth, caseRecord, agreement } = await loadFeeAgreementForMutation(agreementId);
+  const { error } = await supabase.from('fee_agreements').delete().eq('id', agreementId);
+  if (error) throw error;
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: caseRecord.organization_id,
+    resourceType: 'fee_agreement',
+    resourceId: agreementId,
+    action: 'fee_agreement_deleted',
+    meta: {
+      title: agreement.title,
+      case_id: caseRecord.id
+    }
+  });
+
+  revalidatePath(`/cases/${caseRecord.id}`);
+  revalidatePath('/billing');
+  revalidatePath('/billing/history');
   revalidatePath('/contracts');
   revalidatePath('/notifications');
 }

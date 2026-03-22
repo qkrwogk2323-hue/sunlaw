@@ -1,51 +1,31 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BillingEntrySectionPanel } from '@/components/forms/billing-entry-section-panel';
+import { InstallmentAgreementSectionPanel } from '@/components/forms/installment-agreement-section-panel';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { formatCurrency, formatDate } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
-import { InstallmentFollowUpActions } from '@/components/forms/installment-follow-up-actions';
-
-function badgeTone(status: string) {
-  if (status === 'overdue' || status === 'locked_hard') return 'red';
-  if (status === 'upcoming' || status === 'past_due') return 'amber';
-  if (status === 'issued' || status === 'partial' || status === 'trialing') return 'blue';
-  if (status === 'draft' || status === 'cancelled') return 'slate';
-  return 'green';
-}
-
-function billingStatusLabel(status: string) {
-  if (status === 'draft') return '초안';
-  if (status === 'issued') return '발행';
-  if (status === 'partial') return '일부 입금';
-  if (status === 'paid') return '입금 완료';
-  if (status === 'overdue') return '연체';
-  if (status === 'cancelled') return '취소';
-  return status;
-}
-
-function dueStatusLabel(status: string) {
-  if (status === 'overdue') return '기한 지남';
-  if (status === 'upcoming') return '기한 예정';
-  return '기한 없음';
-}
-
-function agreementLabel(type: string) {
-  if (type === 'installment_plan') return '분납 약정';
-  if (type === 'retainer') return '착수금';
-  if (type === 'flat_fee') return '정액';
-  if (type === 'success_fee') return '성공보수';
-  if (type === 'expense_reimbursement') return '실비';
-  if (type === 'internal_settlement') return '내부정산';
-  return type;
-}
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  const billing = await getBillingHubSnapshot(organizationId);
+  const supabase = await createSupabaseServerClient();
+  const [billing, { data: caseRows }, { data: caseClientRows }] = await Promise.all([
+    getBillingHubSnapshot(organizationId),
+    supabase
+      .from('cases')
+      .select('id, title')
+      .eq('organization_id', organizationId)
+      .order('updated_at', { ascending: false })
+      .limit(150),
+    supabase
+      .from('case_clients')
+      .select('id, case_id, client_name')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(400)
+  ]);
 
   const openStatuses = new Set(['draft', 'issued', 'partial']);
   const clientVisibleEntries = billing.entries.filter((entry: any) => Boolean(entry.bill_to_case_client_id));
@@ -53,6 +33,38 @@ export default async function BillingPage() {
   const remunerationEntries = billing.entries.filter((entry: any) => ['retainer_fee', 'flat_fee', 'success_fee', 'service_fee', 'adjustment', 'discount'].includes(entry.entry_kind));
   const publicChargeEntries = billing.entries.filter((entry: any) => ['expense', 'court_fee'].includes(entry.entry_kind));
   const installmentAgreements = billing.agreements.filter((agreement: any) => agreement.agreement_type === 'installment_plan' && agreement.is_active);
+  const { data: realCaseOrganizationRows } = await supabase
+    .from('case_organizations')
+    .select('id, case_id, organization:organizations(name)')
+    .in('case_id', (caseRows ?? []).map((item: any) => item.id));
+
+  const caseOptions = (caseRows ?? []).map((item: any) => ({
+    id: item.id,
+    title: item.title,
+    clients: (caseClientRows ?? [])
+      .filter((client: any) => client.case_id === item.id)
+      .map((client: any) => ({ id: client.id, name: client.client_name })),
+    organizations: (realCaseOrganizationRows ?? [])
+      .filter((row: any) => row.case_id === item.id)
+      .map((row: any) => ({ id: row.id, name: row.organization?.name ?? '참여 조직' }))
+  }));
+
+  const remunerationTypeOptions = [
+    { value: 'retainer_fee', label: '착수금' },
+    { value: 'flat_fee', label: '정액 보수' },
+    { value: 'success_fee', label: '성공보수' },
+    { value: 'service_fee', label: '서비스 수수료' },
+    { value: 'adjustment', label: '조정' },
+    { value: 'discount', label: '할인' }
+  ];
+  const publicChargeTypeOptions = [
+    { value: 'expense', label: '실비' },
+    { value: 'court_fee', label: '인지대/송달료' }
+  ];
+  const outstandingTypeOptions = [
+    ...remunerationTypeOptions,
+    ...publicChargeTypeOptions
+  ];
   const topCards = [
     {
       label: '보수',
@@ -106,170 +118,30 @@ export default async function BillingPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <Card id="remuneration">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>보수</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {remunerationEntries.length ? remunerationEntries.slice(0, 10).map((entry: any) => (
-              <div key={`remuneration-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-900">{entry.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge tone={badgeTone(entry.status)}>{billingStatusLabel(entry.status)}</Badge>
-                    <Badge tone={badgeTone(entry.dueStatus)}>{dueStatusLabel(entry.dueStatus)}</Badge>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                  <p>공급가액 {formatCurrency(entry.amount)} · 부가세 {formatCurrency(entry.tax_amount ?? 0)}</p>
-                  <p>합계 {formatCurrency(entry.totalAmount)} · 기한 {formatDate(entry.due_on)}</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link href={`/cases/${entry.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
-                  {entry.hub?.id ? (
-                    <Link href={`/inbox/${entry.hub.id}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>허브에서 보기</Link>
-                  ) : null}
-                  {entry.bill_to_case_client_id ? (
-                    <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>의뢰인 화면 보기</Link>
-                  ) : null}
-                </div>
-              </div>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                현재 등록된 보수 항목이 없습니다.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card id="public-charges">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>공과금</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {publicChargeEntries.length ? publicChargeEntries.slice(0, 10).map((entry: any) => (
-              <div key={`public-charge-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-900">{entry.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge tone={badgeTone(entry.status)}>{billingStatusLabel(entry.status)}</Badge>
-                    <Badge tone={badgeTone(entry.dueStatus)}>{dueStatusLabel(entry.dueStatus)}</Badge>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                  <p>공급가액 {formatCurrency(entry.amount)} · 부가세 {formatCurrency(entry.tax_amount ?? 0)}</p>
-                  <p>합계 {formatCurrency(entry.totalAmount)} · 기한 {formatDate(entry.due_on)}</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link href={`/cases/${entry.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
-                  {entry.hub?.id ? (
-                    <Link href={`/inbox/${entry.hub.id}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>허브에서 보기</Link>
-                  ) : null}
-                </div>
-              </div>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                현재 등록된 공과금 항목이 없습니다.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card id="installment-agreements">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>분할납부약정금액</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {installmentAgreements.length ? installmentAgreements.slice(0, 10).map((agreement: any) => (
-              <div key={`agreement-${agreement.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-900">{agreement.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{agreement.cases?.title ?? '사건'} · {agreement.targetLabel}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge tone={agreement.shortageAmount > 0 ? 'amber' : 'blue'}>
-                      {agreement.shortageAmount > 0 ? '후속 필요' : '진행중'}
-                    </Badge>
-                    <Badge tone="blue">{agreementLabel(agreement.agreement_type)}</Badge>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                  <p>약정금액 {formatCurrency(agreement.fixed_amount ?? 0)} · 현재 입금 {formatCurrency(agreement.paidAmount ?? 0)}</p>
-                  <p>부족 {formatCurrency(agreement.shortageAmount ?? 0)} · 적용 {formatDate(agreement.effective_from)}</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link href={`/cases/${agreement.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
-                  {agreement.hub?.id ? (
-                    <Link href={`/inbox/${agreement.hub.id}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>허브에서 보기</Link>
-                  ) : null}
-                  {agreement.bill_to_case_client_id ? (
-                    <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>의뢰인 화면 보기</Link>
-                  ) : null}
-                </div>
-                {(agreement.shortageAmount ?? 0) > 0 ? (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <InstallmentFollowUpActions agreementId={agreement.id} caseId={agreement.case_id} />
-                  </div>
-                ) : null}
-              </div>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                현재 등록된 분할납부 약정이 없습니다.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <BillingEntrySectionPanel
+          title="보수"
+          createLabel="보수 추가"
+          caseOptions={caseOptions}
+          items={remunerationEntries}
+          entryTypeOptions={remunerationTypeOptions}
+        />
+        <BillingEntrySectionPanel
+          title="공과금"
+          createLabel="공과금 추가"
+          caseOptions={caseOptions}
+          items={publicChargeEntries}
+          entryTypeOptions={publicChargeTypeOptions}
+        />
+        <InstallmentAgreementSectionPanel caseOptions={caseOptions} items={installmentAgreements} />
+        <BillingEntrySectionPanel
+          title="미납 금액"
+          createLabel="미납 항목 추가"
+          caseOptions={caseOptions}
+          items={clientAttentionEntries}
+          entryTypeOptions={outstandingTypeOptions}
+          forceClientTarget
+        />
       </section>
-
-      <Card id="outstanding-amounts">
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle>미납 금액</CardTitle>
-            <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>포털 청구 보기</Link>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {clientAttentionEntries.length ? clientAttentionEntries.map((entry: any) => (
-              <div key={`client-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-900">{entry.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge tone={badgeTone(entry.status)}>{billingStatusLabel(entry.status)}</Badge>
-                    <Badge tone={badgeTone(entry.dueStatus)}>{dueStatusLabel(entry.dueStatus)}</Badge>
-                  </div>
-                </div>
-              <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                <p>금액 {formatCurrency(entry.totalAmount)}</p>
-                <p>기한 {formatDate(entry.due_on)}</p>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={`/cases/${entry.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
-                <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>포털 청구 보기</Link>
-              </div>
-            </div>
-          )) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-              현재 의뢰인에게 열려 있는 청구 항목이 없습니다.
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

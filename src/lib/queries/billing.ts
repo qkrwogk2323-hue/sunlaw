@@ -91,11 +91,13 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
 
   const normalizedAgreements = (agreements ?? []).map((item: any) => ({
     ...item,
+    taxAmount: Number(item.terms_json?.tax_amount ?? 0),
+    totalAmount: Number(item.fixed_amount ?? 0) + Number(item.terms_json?.tax_amount ?? 0),
     hub: item.case_id ? (hubMap.get(item.case_id) ?? null) : null,
     paidAmount: paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.amount ?? 0,
     recentPaymentAt: paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.latestAt ?? null,
     shortageAmount: Math.max(
-      Number(item.fixed_amount ?? 0)
+      (Number(item.fixed_amount ?? 0) + Number(item.terms_json?.tax_amount ?? 0))
       - (paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.amount ?? 0),
       0
     ),

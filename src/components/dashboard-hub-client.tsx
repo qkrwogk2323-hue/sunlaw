@@ -1822,31 +1822,15 @@ export function DashboardHubClient({
                 </div>
                 <Badge tone="green">초안</Badge>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-[180px_1fr]">
-                <div className="space-y-2">
-                  <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
-                  <select
-                    id="draft-kind"
-                    value={draftKind}
-                    onChange={(event) => setDraftKind(event.target.value as typeof draftKind)}
-                    className="h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm text-slate-900"
-                  >
-                    <option value="client_invite">의뢰인 초대</option>
-                    <option value="staff_invite">구성원 초대</option>
-                    <option value="hub_message">허브 안내</option>
-                    <option value="organization_message">조직 공지</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
-                  <Input
-                    id="draft-context"
-                    value={draftContextTitle}
-                    onChange={(event) => setDraftContextTitle(event.target.value)}
-                    placeholder="예: 베인 사건 보정 안내"
-                    className="h-11 bg-white"
-                  />
-                </div>
+              <div className="mt-4 space-y-2">
+                <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
+                <Input
+                  id="draft-context"
+                  value={draftContextTitle}
+                  onChange={(event) => setDraftContextTitle(event.target.value)}
+                  placeholder="예: 베인 사건 보정 안내"
+                  className="h-11 bg-white"
+                />
               </div>
               <div className="mt-3 space-y-2">
                 <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">초안 요청</label>

@@ -330,6 +330,7 @@ export const feeAgreementSchema = z.object({
   title: z.string().trim().min(2).max(200),
   description: z.string().trim().max(1000).optional().or(z.literal('')),
   fixedAmount: z.coerce.number().min(0).optional(),
+  taxAmount: z.coerce.number().min(0).optional(),
   rate: z.coerce.number().min(0).max(100).optional(),
   effectiveFrom: z.string().optional().or(z.literal('')),
   effectiveTo: z.string().optional().or(z.literal('')),
