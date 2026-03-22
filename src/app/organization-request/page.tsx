@@ -81,7 +81,13 @@ export default async function OrganizationRequestPage({ searchParams }: { search
       requests = await listMySignupRequests();
     } catch (error) {
       requestHistoryUnavailable = true;
-      console.error('Failed to render organization signup request history', error);
+      console.error('Failed to render organization signup request history', {
+        userId: auth.user.id,
+        userEmail: auth.user.email ?? null,
+        route: '/organization-request',
+        stage: 'listMySignupRequests',
+        error
+      });
     }
   }
 

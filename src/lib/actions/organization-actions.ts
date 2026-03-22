@@ -216,31 +216,61 @@ function getAllowedOrganizationSignupDocumentExtensionsByType(type: Organization
 
 async function validateOrganizationSignupDocument(file: File) {
   if (file.size <= 0) {
-    throw new Error('사업자등록증 파일을 업로드해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_DOCUMENT_MISSING',
+      blocked: '사업자등록증 파일이 없어 신청을 접수할 수 없습니다.',
+      cause: '업로드된 사업자등록증 파일이 없거나 비어 있습니다.',
+      resolution: 'PDF, PNG, JPG 형식의 사업자등록증 파일을 다시 선택해 주세요.'
+    }));
   }
 
   if (file.size > maxOrganizationSignupDocumentSize) {
-    throw new Error('사업자등록증 파일은 10MB 이하만 업로드할 수 있습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_DOCUMENT_TOO_LARGE',
+      blocked: '사업자등록증 파일 크기 제한으로 차단되었습니다.',
+      cause: '업로드한 파일이 10MB를 초과했습니다.',
+      resolution: '10MB 이하 파일로 줄이거나 다시 저장한 뒤 업로드해 주세요.'
+    }));
   }
 
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (!allowedOrganizationSignupDocumentExtensions.has(extension)) {
-    throw new Error('사업자등록증은 PDF, PNG, JPG 파일만 업로드할 수 있습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_DOCUMENT_EXTENSION_INVALID',
+      blocked: '지원하지 않는 사업자등록증 파일 형식입니다.',
+      cause: '파일 확장자가 PDF, PNG, JPG, JPEG 중 하나가 아닙니다.',
+      resolution: 'PDF, PNG, JPG 형식으로 다시 저장한 파일을 업로드해 주세요.'
+    }));
   }
 
   const signature = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   const detectedType = detectOrganizationSignupDocumentType(signature);
   if (!detectedType) {
-    throw new Error('실제 파일 형식을 확인할 수 없습니다. PDF, PNG, JPG 파일만 업로드해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_DOCUMENT_TYPE_UNREADABLE',
+      blocked: '파일 실제 형식을 확인하지 못해 차단되었습니다.',
+      cause: '실제 파일 형식을 확인할 수 없습니다. PDF, PNG, JPG 파일만 업로드해 주세요.',
+      resolution: '정상적인 원본 파일인지 확인하고 다시 업로드해 주세요.'
+    }));
   }
 
   if (!getAllowedOrganizationSignupDocumentExtensionsByType(detectedType).has(extension)) {
-    throw new Error('파일 확장자와 실제 파일 형식이 일치하지 않습니다. 파일을 다시 확인해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_DOCUMENT_EXTENSION_MISMATCH',
+      blocked: '파일 확장자와 실제 형식이 일치하지 않습니다.',
+      cause: '파일 확장자와 실제 파일 형식이 일치하지 않습니다. 파일을 다시 확인해 주세요.',
+      resolution: '파일 형식에 맞는 확장자로 다시 저장하거나 원본 파일을 다시 선택해 주세요.'
+    }));
   }
 
   const mimeType = file.type.toLowerCase();
   if (mimeType && (!allowedOrganizationSignupDocumentMimeTypes.has(mimeType) || mimeType !== detectedType)) {
-    throw new Error('파일 정보와 실제 파일 형식이 일치하지 않습니다. 다른 파일로 다시 시도해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SIGNUP_DOCUMENT_MIME_MISMATCH',
+      blocked: '파일 정보와 실제 형식이 일치하지 않아 차단되었습니다.',
+      cause: '파일 정보와 실제 파일 형식이 일치하지 않습니다. 다른 파일로 다시 시도해 주세요.',
+      resolution: '다른 파일로 다시 시도하거나 원본 파일을 다시 업로드해 주세요.'
+    }));
   }
 
   return detectedType;
@@ -450,7 +480,12 @@ async function createOrganizationCore({
         throw organizationError;
       }
     } else if (!createdOrganization) {
-      throw new Error('Failed to create organization');
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'ORGANIZATION_CREATE_EMPTY_RESULT',
+        blocked: '조직 생성을 완료하지 못했습니다.',
+        cause: '조직 생성 요청은 성공한 것처럼 보였지만 생성된 조직 정보를 돌려받지 못했습니다.',
+        resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 신청 시간과 조직명을 함께 전달해 주세요.'
+      }));
     } else {
       organization = createdOrganization;
     }
@@ -522,7 +557,12 @@ async function generateUniqueTempLoginId(admin: ReturnType<typeof createSupabase
       .maybeSingle();
     if (!data?.profile_id) return candidate;
   }
-  throw new Error('임시 아이디를 생성하지 못했습니다. 다시 시도해 주세요.');
+  throwGuardFeedback(createConditionFailedFeedback({
+    code: 'STAFF_TEMP_LOGIN_ID_EXHAUSTED',
+    blocked: '직원 임시 아이디를 만들 수 없어 초대를 진행하지 못했습니다.',
+    cause: '중복되지 않는 임시 아이디를 정해진 횟수 안에 만들지 못했습니다.',
+    resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+  }));
 }
 
 async function generateUniqueClientTempLoginId(admin: ReturnType<typeof createSupabaseAdminClient>) {
@@ -535,7 +575,12 @@ async function generateUniqueClientTempLoginId(admin: ReturnType<typeof createSu
       .maybeSingle();
     if (!data?.profile_id) return candidate;
   }
-  throw new Error('의뢰인 임시 아이디를 생성하지 못했습니다. 다시 시도해 주세요.');
+  throwGuardFeedback(createConditionFailedFeedback({
+    code: 'CLIENT_TEMP_LOGIN_ID_EXHAUSTED',
+    blocked: '의뢰인 임시 아이디를 만들 수 없어 초대를 진행하지 못했습니다.',
+    cause: '중복되지 않는 의뢰인 임시 아이디를 정해진 횟수 안에 만들지 못했습니다.',
+    resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+  }));
 }
 
 function generateTempPassword() {

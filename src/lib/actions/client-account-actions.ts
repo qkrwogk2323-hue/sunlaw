@@ -216,7 +216,12 @@ export async function createClientServiceRequestAction(formData: FormData) {
       body: formData.get('body')
     });
   } catch (error) {
-    throw new Error(getActionErrorMessage(error, '문의 내용을 확인해 주세요. 필수 항목이 누락되었거나 형식이 올바르지 않습니다.'));
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_SERVICE_REQUEST_INPUT_INVALID',
+      blocked: '문의 내용을 확인해 주세요.',
+      cause: getActionErrorMessage(error, '필수 항목이 누락되었거나 형식이 올바르지 않습니다.'),
+      resolution: '문의 제목과 내용을 다시 확인한 뒤 다시 제출해 주세요.'
+    }));
   }
 
   const { data: created, error: insertError } = await supabase
@@ -234,7 +239,14 @@ export async function createClientServiceRequestAction(formData: FormData) {
     .select('id')
     .single();
 
-  if (insertError || !created) throw insertError ?? new Error('문의 접수에 실패했습니다.');
+  if (insertError || !created) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_SERVICE_REQUEST_CREATE_FAILED',
+      blocked: '문의 접수 저장에 실패했습니다.',
+      cause: insertError?.message ?? '문의 요청을 저장했지만 접수 번호를 돌려받지 못했습니다.',
+      resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
+    }));
+  }
 
   const recipientIds = new Set<string>();
   (await listActivePlatformAdminIds()).forEach((id) => recipientIds.add(id));
@@ -273,7 +285,14 @@ export async function createClientServiceRequestAction(formData: FormData) {
 
   if (notifications.length) {
     const { error: notificationError } = await admin.from('notifications').insert(notifications);
-    if (notificationError) throw notificationError;
+    if (notificationError) {
+      throwGuardFeedback(createConditionFailedFeedback({
+        code: 'CLIENT_SERVICE_REQUEST_NOTIFICATION_FAILED',
+        blocked: '문의 알림 생성에 실패했습니다.',
+        cause: notificationError.message,
+        resolution: '문의 자체는 접수되었을 수 있으니 대기 상태 화면에서 다시 확인해 주세요.'
+      }));
+    }
   }
 
   revalidatePath('/start/pending');
