@@ -1,10 +1,54 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAuth, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
-import { answerDashboardAssistant } from '@/lib/ai/dashboard-home';
+import { answerDashboardAssistant, type BillingGuidanceSnapshot } from '@/lib/ai/dashboard-home';
 import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
 import { sanitizeAiText } from '@/lib/ai/guardrails';
 import { guardAccessDeniedResponse, guardServerErrorResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { getBillingHubSnapshot } from '@/lib/queries/billing';
+
+function buildBillingGuidanceSnapshot(billing: Awaited<ReturnType<typeof getBillingHubSnapshot>>): BillingGuidanceSnapshot {
+  const confirmedPayments = (billing.payments ?? []).filter((item: any) => item.payment_status === 'confirmed');
+  const records = (billing.agreements ?? [])
+    .filter((agreement: any) => Number(agreement.fixed_amount ?? 0) > 0)
+    .map((agreement: any) => {
+      const fixedAmount = Number(agreement.fixed_amount ?? 0);
+      const paidAmount = confirmedPayments
+        .filter((payment: any) => (
+          payment.case_id === agreement.case_id
+          && payment.payer_case_client_id === agreement.bill_to_case_client_id
+          && payment.payer_case_organization_id === agreement.bill_to_case_organization_id
+        ))
+        .reduce((sum: number, payment: any) => sum + Number(payment.amount ?? 0), 0);
+      const shortageAmount = Math.max(fixedAmount - paidAmount, 0);
+
+      return {
+        agreementId: agreement.id,
+        title: agreement.title,
+        caseId: agreement.case_id ?? null,
+        caseTitle: agreement.cases?.title ?? null,
+        targetLabel: agreement.targetLabel ?? '대상 미지정',
+        fixedAmount,
+        paidAmount,
+        shortageAmount,
+        isInstallmentPending: agreement.terms_json?.billing_intent === 'installment_pending',
+        installmentStartMode: agreement.terms_json?.installment_start_mode ?? null,
+        recentPaymentAt: confirmedPayments.find((payment: any) => (
+          payment.case_id === agreement.case_id
+          && payment.payer_case_client_id === agreement.bill_to_case_client_id
+          && payment.payer_case_organization_id === agreement.bill_to_case_organization_id
+        ))?.received_at ?? null
+      };
+    });
+
+  const installmentRecords = records.filter((record) => record.isInstallmentPending);
+  return {
+    records,
+    totalInstallmentPendingCount: installmentRecords.length,
+    totalInstallmentShortageCount: installmentRecords.filter((record) => record.shortageAmount > 0).length,
+    totalInstallmentShortageAmount: installmentRecords.reduce((sum, record) => sum + record.shortageAmount, 0)
+  };
+}
 
 export async function POST(request: Request) {
   const auth = await getCurrentAuth();
@@ -40,12 +84,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const snapshot = await getDashboardSnapshot(organizationId);
+    const [snapshot, billing] = await Promise.all([
+      getDashboardSnapshot(organizationId),
+      getBillingHubSnapshot(organizationId)
+    ]);
     const response = answerDashboardAssistant({
       organizationId,
       question,
       snapshot,
-      isPlatformAdmin
+      isPlatformAdmin,
+      billingGuidance: buildBillingGuidanceSnapshot(billing)
     });
 
     return NextResponse.json({

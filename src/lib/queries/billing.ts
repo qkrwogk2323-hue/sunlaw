@@ -27,7 +27,7 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
 
   let paymentsQuery = supabase
     .from('payments')
-    .select('id, amount, payment_status, payment_method, received_at, reference_text, case_id, cases(title, reference_no)')
+    .select('id, amount, payment_status, payment_method, received_at, reference_text, note, case_id, payer_case_client_id, payer_case_organization_id, cases(title, reference_no)')
     .order('received_at', { ascending: false })
     .limit(200);
 

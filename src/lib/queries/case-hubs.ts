@@ -234,7 +234,7 @@ export async function getCaseHubsForCases(
 // ────────────────────────────────────────────────────────────────────
 // getCaseHubList: 사건허브 목록 페이지용
 // ────────────────────────────────────────────────────────────────────
-export async function getCaseHubList(organizationId: string): Promise<CaseHubSummary[]> {
+export async function getCaseHubList(organizationId: string, limit?: number): Promise<CaseHubSummary[]> {
   const auth = await getCurrentAuth();
   if (!auth) return [];
   if (!auth.memberships.some((m) => m.organization_id === organizationId)) return [];
@@ -244,12 +244,16 @@ export async function getCaseHubList(organizationId: string): Promise<CaseHubSum
   const accessibleHubIds = await listAccessibleCaseHubIds(admin, organizationId);
   if (!accessibleHubIds.length) return [];
 
-  const { data: hubs, error } = await admin
+  let hubsQuery = admin
     .from('case_hubs')
     .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
     .eq('lifecycle_status', 'active')
     .in('id', accessibleHubIds)
     .order('updated_at', { ascending: false });
+
+  if (limit) hubsQuery = hubsQuery.limit(limit);
+
+  const { data: hubs, error } = await hubsQuery;
 
   if (error) { console.error('[getCaseHubList] query error:', error.message); return []; }
   if (!hubs?.length) return [];

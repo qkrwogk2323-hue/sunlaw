@@ -61,6 +61,27 @@ export type DashboardAiAssistantResponse = {
   questionDomain?: AiOperationDomainId;
 };
 
+type BillingGuidanceRecord = {
+  agreementId: string;
+  title: string;
+  caseId?: string | null;
+  caseTitle?: string | null;
+  targetLabel: string;
+  fixedAmount: number;
+  paidAmount: number;
+  shortageAmount: number;
+  isInstallmentPending: boolean;
+  installmentStartMode?: string | null;
+  recentPaymentAt?: string | null;
+};
+
+export type BillingGuidanceSnapshot = {
+  records: BillingGuidanceRecord[];
+  totalInstallmentPendingCount: number;
+  totalInstallmentShortageCount: number;
+  totalInstallmentShortageAmount: number;
+};
+
 export type DraftAssistResponse = {
   title: string;
   body: string;
@@ -218,10 +239,57 @@ function buildDomainAnswer(domain: AiOperationDomainId, snapshot: DashboardSnaps
   return `사건 질문으로 보고 답합니다. 진행 중 사건 ${snapshot.activeCases}건과 요청 대기 ${snapshot.pendingRequests}건을 먼저 정리하는 편이 맞습니다.`;
 }
 
-function buildBillingAssistantAnswer(question: string): { answer: string; actions: DashboardAiAction[] } | null {
+function findBillingGuidanceTarget(question: string, billingGuidance?: BillingGuidanceSnapshot | null) {
+  if (!billingGuidance?.records.length) return null;
   const normalized = question.toLowerCase();
+  const matched = billingGuidance.records.find((record) => {
+    const haystack = [
+      record.targetLabel,
+      record.title,
+      record.caseTitle ?? ''
+    ].join(' ').toLowerCase();
+    return haystack && normalized.split(/\s+/).some((token) => token.length >= 2 && haystack.includes(token));
+  });
+
+  if (matched) return matched;
+  return billingGuidance.records
+    .filter((record) => record.isInstallmentPending)
+    .sort((a, b) => b.shortageAmount - a.shortageAmount)[0] ?? billingGuidance.records[0] ?? null;
+}
+
+function buildBillingAssistantAnswer(
+  question: string,
+  billingGuidance?: BillingGuidanceSnapshot | null
+): { answer: string; actions: DashboardAiAction[] } | null {
+  const normalized = question.toLowerCase();
+  const target = findBillingGuidanceTarget(question, billingGuidance);
+  const targetCaseHref = target?.caseId ? `/cases/${target.caseId}` : '/cases';
 
   if (/비용입금.*되었|입금.*되었|입금.*확인/.test(normalized) && /분납|나머지/.test(normalized)) {
+    if (target) {
+      const remaining = Math.max(target.shortageAmount, 0);
+      return {
+        answer: `${target.targetLabel} 관련 약정 금액은 ${target.fixedAmount.toLocaleString('ko-KR')}원이고, 현재 확인된 입금은 ${target.paidAmount.toLocaleString('ko-KR')}원입니다. 남은 금액 ${remaining.toLocaleString('ko-KR')}원을 기준으로 분납 계획을 이어서 잡을 수 있습니다. 지금 받은 금액을 먼저 확인하고, 남은 금액을 다음 회차로 둘지 바로 청구할지 정하면 됩니다.`,
+        actions: [
+          {
+            label: '비용 관리 열기',
+            href: '/billing',
+            reason: `${target.targetLabel}의 입금 기록과 남은 금액을 바로 확인할 수 있습니다.`
+          },
+          {
+            label: '계약 관리 열기',
+            href: '/contracts',
+            reason: '현재 약정 금액과 분납 기준을 다시 확인할 수 있습니다.'
+          },
+          {
+            label: '해당 사건 열기',
+            href: targetCaseHref,
+            reason: '사건 화면에서 비용 후속 조치를 바로 이어서 정리할 수 있습니다.'
+          }
+        ]
+      };
+    }
+
     return {
       answer: '입금이 확인되면 비용 관리에서 받은 금액으로 먼저 기록하고, 남은 금액은 분납 계획으로 이어서 볼 수 있습니다. 아래 화면에서 받은 금액 처리와 남은 회차 계획을 함께 확인하세요.',
       actions: [
@@ -240,6 +308,30 @@ function buildBillingAssistantAnswer(question: string): { answer: string; action
   }
 
   if (/분납.*부족|약정.*부족|분납.*어긋|부족합니다|회차.*늘릴/.test(normalized)) {
+    if (target) {
+      const shortage = Math.max(target.shortageAmount, 0);
+      return {
+        answer: `${target.targetLabel}의 분납 약정 기준 금액은 ${target.fixedAmount.toLocaleString('ko-KR')}원인데, 현재 기준으로 ${shortage.toLocaleString('ko-KR')}원이 부족합니다. 이 경우 남은 금액을 다음 청구에 합산할지, 회차를 늘려서 나눌지 먼저 정하는 편이 맞습니다.`,
+        actions: [
+          {
+            label: '비용 관리에서 합산 청구 보기',
+            href: '/billing',
+            reason: '부족분을 다음 청구에 합칠지 바로 판단할 수 있습니다.'
+          },
+          {
+            label: '계약 관리에서 회차 기준 확인',
+            href: '/contracts',
+            reason: '현재 분납 약정 기준과 시작 시점을 다시 확인할 수 있습니다.'
+          },
+          {
+            label: '해당 사건 열기',
+            href: targetCaseHref,
+            reason: '사건 화면에서 의뢰인 안내와 후속 요청을 바로 이어갈 수 있습니다.'
+          }
+        ]
+      };
+    }
+
     return {
       answer: '분납 약정보다 적게 들어온 경우에는 비용 관리에서 부족 금액을 다음 청구에 합칠지, 회차를 늘릴지 먼저 정해야 합니다. 아래 화면에서 미입금 분납 계약과 연체 항목을 같이 보면서 조정하세요.',
       actions: [
@@ -258,6 +350,31 @@ function buildBillingAssistantAnswer(question: string): { answer: string; action
   }
 
   if (/분납.*계획|플랜.*세울|청구할까요/.test(normalized)) {
+    if (target) {
+      const shortage = Math.max(target.shortageAmount, 0);
+      const startModeLabel = target.installmentStartMode === 'first_due' ? '나중에 받는 회차부터 시작' : '오늘부터 바로 시작';
+      return {
+        answer: `${target.targetLabel}의 현재 약정은 ${startModeLabel} 기준으로 잡혀 있습니다. 남은 금액 ${shortage.toLocaleString('ko-KR')}원을 기준으로 새 회차를 잡거나, 다음 청구에 합산하는 두 방향으로 정리할 수 있습니다. 어느 쪽으로 갈지 정하면 비용 관리와 계약 관리에서 바로 이어서 맞출 수 있습니다.`,
+        actions: [
+          {
+            label: '계약 관리 열기',
+            href: '/contracts',
+            reason: '현재 약정 원문과 시작 기준을 다시 확인할 수 있습니다.'
+          },
+          {
+            label: '비용 관리 열기',
+            href: '/billing',
+            reason: '남은 금액과 미입금 계약을 기준으로 실제 계획을 잡을 수 있습니다.'
+          },
+          {
+            label: '해당 사건 열기',
+            href: targetCaseHref,
+            reason: '사건 화면에서 의뢰인 설명과 후속 작업을 바로 연결할 수 있습니다.'
+          }
+        ]
+      };
+    }
+
     return {
       answer: '분납 계획을 새로 세우거나 조정할 때는 계약 금액, 이미 받은 금액, 남은 회차를 먼저 확인해야 합니다. 아래 화면에서 계약 약정과 비용 현황을 같이 열어 두고 결정하는 편이 안전합니다.',
       actions: [
@@ -506,6 +623,7 @@ export function answerDashboardAssistant(input: {
   question: string;
   snapshot: DashboardSnapshot;
   isPlatformAdmin: boolean;
+  billingGuidance?: BillingGuidanceSnapshot | null;
 }): DashboardAiAssistantResponse {
   const question = sanitizeAiText(input.question);
   const featurePolicy = getAiFeaturePolicy('home_ai_assistant');
@@ -556,7 +674,7 @@ export function answerDashboardAssistant(input: {
       })
     };
   }
-  const billingAnswer = buildBillingAssistantAnswer(question);
+  const billingAnswer = buildBillingAssistantAnswer(question, input.billingGuidance);
   if (billingAnswer) {
     return {
       answer: billingAnswer.answer,

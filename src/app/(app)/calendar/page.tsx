@@ -1,7 +1,7 @@
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { getCalendarBoardSnapshot } from '@/lib/queries/calendar';
-import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { getCaseOptionsForCalendar } from '@/lib/queries/dashboard';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { CalendarBoardClient } from '@/components/calendar-board-client';
 import { HubContextStrip } from '@/components/hub-context-strip';
@@ -25,10 +25,12 @@ export default async function CalendarPage({
     )
   );
 
-  const [calendarSnapshot, dashboardSnapshot, hubs] = await Promise.all([
+  // getCaseOptionsForCalendar: 단일 쿼리 (20 rows) — getDashboardSnapshot 전체 (~16 queries) 대체
+  // getCaseHubList limit 4: HubContextStrip에 4개만 필요
+  const [calendarSnapshot, caseOptions, hubs] = await Promise.all([
     getCalendarBoardSnapshot(organizationId, month),
-    getDashboardSnapshot(organizationId),
-    getCaseHubList(organizationId)
+    getCaseOptionsForCalendar(organizationId),
+    organizationId ? getCaseHubList(organizationId, 4) : Promise.resolve([])
   ]);
 
   const briefing = buildScheduleBriefing(
@@ -39,13 +41,13 @@ export default async function CalendarPage({
 
   return (
     <div className="space-y-6">
-      <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="일정 확인" />
+      <HubContextStrip hubs={hubs} currentLabel="일정 확인" />
       <CalendarBoardClient
         organizationId={organizationId}
         currentUserId={auth.user.id}
         canManage={canManage}
         snapshot={calendarSnapshot}
-        caseOptions={dashboardSnapshot.caseOptions}
+        caseOptions={caseOptions}
         briefing={briefing}
       />
     </div>

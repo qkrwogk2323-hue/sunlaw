@@ -398,3 +398,20 @@ export async function getDashboardSnapshot(organizationId?: string | null) {
     ...sections.secondary
   };
 }
+
+/**
+ * 캘린더 페이지 전용 — 사건 선택 드롭다운에 필요한 cases 목록만 반환.
+ * getDashboardSnapshot() 전체(~16 queries)를 실행하지 않고 단일 쿼리로 처리.
+ */
+export async function getCaseOptionsForCalendar(organizationId?: string | null): Promise<Array<{ id: string; title: string; reference_no: string | null; case_status: string | null }>> {
+  if (!organizationId) return [];
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('cases')
+    .select('id, title, reference_no, case_status')
+    .eq('organization_id', organizationId)
+    .neq('lifecycle_status', 'soft_deleted')
+    .order('updated_at', { ascending: false })
+    .limit(20);
+  return data ?? [];
+}
