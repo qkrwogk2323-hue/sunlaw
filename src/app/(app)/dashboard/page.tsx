@@ -6,10 +6,10 @@ import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 
 export default async function DashboardPage() {
   const auth = await requireAuthenticatedUser();
-  if (getDefaultAppRoute(auth) !== '/dashboard') {
-    redirect(getDefaultAppRoute(auth));
-  }
   const organizationId = getEffectiveOrganizationId(auth);
+  if (getDefaultAppRoute(auth, organizationId) !== '/dashboard') {
+    redirect(getDefaultAppRoute(auth, organizationId));
+  }
   const data = await getDashboardSnapshot(organizationId);
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
   const currentMembership = auth.memberships.find((membership) => membership.organization_id === organizationId) ?? null;

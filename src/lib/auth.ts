@@ -309,16 +309,33 @@ export function isPlatformOperator(auth: AuthContext) {
   return hasPlatformManagementMembership(auth);
 }
 
-export function getDefaultAppRoute(auth: AuthContext) {
-  return isPlatformOperator(auth) ? '/product-home' : '/dashboard';
+export function hasPlatformViewForOrganization(auth: AuthContext, organizationId?: string | null) {
+  const effectiveOrganizationId = organizationId ?? getEffectiveOrganizationId(auth);
+  if (!effectiveOrganizationId) return false;
+
+  const membership = auth.memberships.find((item) => item.organization_id === effectiveOrganizationId) ?? null;
+  return Boolean(
+    membership
+    && isPlatformManagementOrganization(membership.organization)
+    && isManagementRole(membership.role)
+  );
 }
 
-export function getTopLevelAppRoutes(auth: AuthContext): Route[] {
-  if (isPlatformOperator(auth)) {
+export function getDefaultAppRoute(auth: AuthContext, organizationId?: string | null) {
+  return hasPlatformViewForOrganization(auth, organizationId) ? '/product-home' : '/dashboard';
+}
+
+export function getTopLevelAppRoutes(auth: AuthContext, organizationId?: string | null): Route[] {
+  if (hasPlatformViewForOrganization(auth, organizationId)) {
     return ['/product-home', '/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
   }
 
   return ['/dashboard', '/inbox', '/cases', '/clients', '/organizations', '/collections', '/documents', '/notifications', '/calendar', '/reports', '/settings'];
+}
+
+export function isPathAllowedForOrganization(auth: AuthContext, pathname: string, organizationId?: string | null) {
+  const topLevelRoutes = getTopLevelAppRoutes(auth, organizationId);
+  return topLevelRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
 export function hasStaffMembership(auth: AuthContext, organizationId: string) {

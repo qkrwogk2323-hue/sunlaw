@@ -49,6 +49,7 @@ export function OrganizationSwitchSheet({
     if (event.target === dialogRef.current) onClose();
   };
   const currentPathWithSearch = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
+  const refreshTarget = `/switch-organization?next=${encodeURIComponent(currentPathWithSearch)}`;
 
   return (
     <dialog
@@ -78,7 +79,7 @@ export function OrganizationSwitchSheet({
         successTitle="조직이 전환되었습니다."
         onSuccess={() => {
           onClose();
-          window.location.assign(currentPathWithSearch);
+          window.location.assign(refreshTarget);
         }}
         className="space-y-4 px-5 py-5"
       >

@@ -43,7 +43,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const effectiveOrganizationId = getEffectiveOrganizationId(auth);
-  const defaultAppRoute = getDefaultAppRoute(auth) as Route;
+  const defaultAppRoute = getDefaultAppRoute(auth, effectiveOrganizationId) as Route;
 
   const [supportSession, subscriptionSnapshot] = await Promise.all([
     readSupportSessionCookie(),
@@ -78,7 +78,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex justify-center">
             <BrandBanner href={defaultAppRoute} className="mx-auto max-w-5xl" theme="light" />
           </div>
-          <PageBackButton fallbackHref={defaultAppRoute} topLevelRoutes={getTopLevelAppRoutes(auth)} />
+          <PageBackButton fallbackHref={defaultAppRoute} topLevelRoutes={getTopLevelAppRoutes(auth, effectiveOrganizationId)} />
           {supportSession ? (
             <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

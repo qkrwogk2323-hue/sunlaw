@@ -55,6 +55,7 @@ export function OrganizationSwitcher({
   }
 
   const currentPathWithSearch = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
+  const refreshTarget = `/switch-organization?next=${encodeURIComponent(currentPathWithSearch)}`;
 
   if (compact) {
     return (
@@ -80,7 +81,7 @@ export function OrganizationSwitcher({
               successTitle="조직이 전환되었습니다."
               onSuccess={() => {
                 setIsOpen(false);
-                window.location.assign(currentPathWithSearch);
+                window.location.assign(refreshTarget);
               }}
               className="rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
             >
@@ -121,7 +122,7 @@ export function OrganizationSwitcher({
       action={switchDefaultOrganizationAction}
       successTitle="조직이 전환되었습니다."
       onSuccess={() => {
-        window.location.assign(currentPathWithSearch);
+        window.location.assign(refreshTarget);
       }}
       className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm"
     >
