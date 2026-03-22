@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
-import { MessageSquareText, Bell, LogOut, Sparkles, FolderOpen } from 'lucide-react';
+import { MessageSquareText, Bell, LogOut, Sparkles, FolderOpen, Receipt, UserCheck } from 'lucide-react';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { signOutAction } from '@/lib/actions/auth-actions';
@@ -64,16 +64,40 @@ export default async function PortalLayout({ children }: { children: ReactNode }
             <p className="mt-4 text-sm text-slate-200/80">사건 진행, 문서, 요청, 알림을 의뢰인 시점에서 명확하게 확인할 수 있습니다.</p>
           </div>
           <nav className="rounded-[1.4rem] border border-slate-200/80 bg-white/88 p-3 shadow-[0_18px_36px_rgba(15,23,42,0.08)] backdrop-blur-sm">
-            <div className="space-y-2">
-              <Link href="/portal" className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
-                <FolderOpen className="size-4 text-sky-700" /> 내 사건 보기
-              </Link>
-              <Link href="/portal" className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
-                <MessageSquareText className="size-4 text-sky-700" /> 사건 소통
-              </Link>
-              <Link href="/portal" className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
-                <Bell className="size-4 text-sky-700" /> 알림 확인
-              </Link>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="px-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">공통 메뉴</p>
+                <Link href={"/portal" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                  <FolderOpen className="size-4 text-sky-700" /> 포털 홈
+                </Link>
+                <Link href={"/portal/notifications" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                  <Bell className="size-4 text-sky-700" /> 알림 확인
+                </Link>
+              </div>
+
+              <div className="space-y-2">
+                <p className="px-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">사건 메뉴</p>
+                <Link href={"/portal/cases" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                  <FolderOpen className="size-4 text-sky-700" /> 내 사건
+                </Link>
+                <Link href={"/portal/messages" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                  <MessageSquareText className="size-4 text-sky-700" /> 사건 소통 · 요청
+                </Link>
+              </div>
+
+              <div className="space-y-2">
+                <p className="px-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">비용 메뉴</p>
+                <Link href={"/portal/billing" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                  <Receipt className="size-4 text-sky-700" /> 청구 · 납부
+                </Link>
+              </div>
+
+              <div className="space-y-2">
+                <p className="px-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">계정 메뉴</p>
+                <Link href={"/portal/account" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                  <UserCheck className="size-4 text-sky-700" /> 내 정보 · 연결 상태
+                </Link>
+              </div>
             </div>
           </nav>
           <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다.">
