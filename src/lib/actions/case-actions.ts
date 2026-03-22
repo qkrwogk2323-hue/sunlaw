@@ -977,6 +977,77 @@ export async function updateScheduleAction(scheduleId: string, formData: FormDat
   revalidatePath('/dashboard');
 }
 
+export async function updateScheduleCompletionAction(scheduleId: string, formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const { data: scheduleRow, error: scheduleError } = await supabase
+    .from('case_schedules')
+    .select('id, case_id, organization_id, title, scheduled_start, completed_at')
+    .eq('id', scheduleId)
+    .single();
+
+  if (scheduleError || !scheduleRow) {
+    throw scheduleError ?? new Error('일정을 찾을 수 없습니다.');
+  }
+
+  const { auth } = await requireOrganizationActionAccess(scheduleRow.organization_id, {
+    permission: 'schedule_edit',
+    errorMessage: '일정 완료 상태를 변경할 권한이 없습니다.'
+  });
+
+  const shouldComplete = `${formData.get('completed') ?? ''}` === 'true';
+  const completedAt = shouldComplete ? new Date().toISOString() : null;
+
+  const { error } = await supabase
+    .from('case_schedules')
+    .update({
+      completed_at: completedAt,
+      completed_by: shouldComplete ? auth.user.id : null,
+      completed_by_name: shouldComplete ? auth.profile.full_name : null,
+      updated_by: auth.user.id
+    })
+    .eq('id', scheduleId);
+
+  if (error) throw error;
+
+  const actionType = shouldComplete ? 'completed' : 'reopened';
+  const actionLabel = shouldComplete ? '완료 처리' : '완료 해제';
+  const summary = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일 ${auth.profile.full_name}이(가) "${scheduleRow.title}" 일을 ${actionLabel}했습니다.`;
+
+  const { error: logError } = await supabase
+    .from('case_schedule_activity_logs')
+    .insert({
+      organization_id: scheduleRow.organization_id,
+      case_id: scheduleRow.case_id,
+      case_schedule_id: scheduleRow.id,
+      actor_profile_id: auth.user.id,
+      actor_name: auth.profile.full_name,
+      action_type: actionType,
+      summary,
+      schedule_title: scheduleRow.title,
+      schedule_scheduled_start: scheduleRow.scheduled_start
+    });
+
+  if (logError) throw logError;
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: scheduleRow.organization_id,
+    resourceType: 'case_schedule',
+    resourceId: scheduleId,
+    action: shouldComplete ? 'schedule.completed' : 'schedule.reopened',
+    meta: {
+      case_id: scheduleRow.case_id,
+      title: scheduleRow.title,
+      completed_at: completedAt
+    }
+  });
+
+  revalidatePath(`/cases/${scheduleRow.case_id}`);
+  revalidatePath('/calendar');
+  revalidatePath('/calendar/worklog');
+  revalidatePath('/dashboard');
+}
+
 export async function addRecoveryActivityAction(caseId: string, formData: FormData) {
   const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
   const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {

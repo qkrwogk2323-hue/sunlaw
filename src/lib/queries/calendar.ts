@@ -23,7 +23,7 @@ export async function listCalendarEntries(organizationId?: string | null) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from('case_schedules')
-    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, created_by, created_at, updated_at, cases(title)')
+    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, created_by, created_at, updated_at, cases(title)')
     .order('scheduled_start', { ascending: true })
     .limit(50);
 
@@ -51,11 +51,17 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
 
   let schedulesQuery = supabase
     .from('case_schedules')
-    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, created_by, created_by_name, created_at, updated_at, cases(title)')
+    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, created_by, created_by_name, created_at, updated_at, cases(title)')
     .gte('scheduled_start', yearStart.toISOString())
     .lte('scheduled_start', yearEnd.toISOString())
     .order('scheduled_start', { ascending: true })
     .limit(500);
+
+  let workLogsQuery = supabase
+    .from('case_schedule_activity_logs')
+    .select('id, case_id, case_schedule_id, actor_name, action_type, summary, schedule_title, schedule_scheduled_start, created_at')
+    .order('created_at', { ascending: false })
+    .limit(40);
 
   let requestsQuery = supabase
     .from('case_requests')
@@ -79,12 +85,14 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     schedulesQuery = schedulesQuery.eq('organization_id', organizationId);
     requestsQuery = requestsQuery.eq('organization_id', organizationId);
     billingQuery = billingQuery.eq('organization_id', organizationId);
+    workLogsQuery = workLogsQuery.eq('organization_id', organizationId);
   }
 
-  const [{ data: schedules }, { data: requests }, { data: billingEntries }] = await Promise.all([
+  const [{ data: schedules }, { data: requests }, { data: billingEntries }, { data: workLogs }] = await Promise.all([
     schedulesQuery,
     requestsQuery,
-    billingQuery
+    billingQuery,
+    workLogsQuery
   ]);
 
   return {
@@ -99,6 +107,24 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     weekEnd: weekEnd.toISOString(),
     schedules: schedules ?? [],
     requests: requests ?? [],
-    billingEntries: billingEntries ?? []
+    billingEntries: billingEntries ?? [],
+    workLogs: workLogs ?? []
   };
+}
+
+export async function getCalendarWorklogSnapshot(organizationId?: string | null) {
+  const supabase = await createSupabaseServerClient();
+
+  let query = supabase
+    .from('case_schedule_activity_logs')
+    .select('id, case_id, case_schedule_id, actor_name, action_type, summary, schedule_title, schedule_scheduled_start, created_at, cases(title)')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data } = await query;
+  return data ?? [];
 }
