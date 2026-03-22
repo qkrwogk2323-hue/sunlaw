@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { buttonStyles } from '@/components/ui/button';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -62,11 +63,11 @@ export default async function OrganizationDetailPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{workspace.organization.name}</h1>
           <p className="mt-2 text-sm text-slate-600">슬러그: {workspace.organization.slug}</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href={`/admin/audit?tab=general&table=organizations&resource=${organizationId}` as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link href={`/admin/audit?tab=general&table=organizations&resource=${organizationId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               이 조직 변경 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               협업 제안 기록 보기
             </Link>
           </div>

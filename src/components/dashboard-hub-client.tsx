@@ -1617,8 +1617,8 @@ export function DashboardHubClient({
             <CardHeader className="border-amber-200/70">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <CardTitle>이상 징후 알림</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">평소보다 급증하거나 쌓인 항목을 홈에서 먼저 경고합니다.</p>
+                  <CardTitle>주의할 변화 알림</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">평소보다 급증하거나 누락된 흐름을 먼저 보여 줍니다.</p>
                 </div>
                 <Badge tone="amber">{initialAiOverview.anomalies.length}</Badge>
               </div>
@@ -1645,12 +1645,12 @@ export function DashboardHubClient({
                 variant="ghost"
                 size="sm"
                 className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
-                aria-label="AI 이상 징후 감지가 잘못됐나요? 피드백 보내기"
+                aria-label="AI 변화 알림이 잘못됐나요? 피드백 보내기"
                 onClick={() => {
                   reportAiIssue({
                     aiFeature: 'anomaly_alert',
-                    question: '이상 징후 알림',
-                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '이상 징후 없음',
+                    question: '주의할 변화 알림',
+                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '주의할 변화 없음',
                     rationale: initialAiOverview.anomalies.map((item) => item.detail).join(' / '),
                     modelVersion: 'rules',
                     requestId: `anomaly:${initialAiOverview.summary.source.generatedAt}`

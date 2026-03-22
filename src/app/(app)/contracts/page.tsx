@@ -44,11 +44,11 @@ export default async function ContractsPage({
           <p className="mt-2 text-sm text-slate-600">
             사건별 비용 약정, 적용 기간, 청구 대상을 한 곳에서 확인합니다. 허브와 사건 화면에서 연결된 계약은 이 페이지에서 다시 검토할 수 있습니다.
           </p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               계약 변경 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=delete&table=billing_agreements' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=delete&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               계약 삭제·보관 기록 보기
             </Link>
           </div>

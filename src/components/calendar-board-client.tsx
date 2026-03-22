@@ -9,7 +9,7 @@ import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { billingStatusLabel, labelFrom } from '@/lib/status-labels';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
@@ -888,7 +888,14 @@ export function CalendarBoardClient({
                     <div className="flex flex-wrap items-center gap-2">
                       {entry.source === 'schedule' ? <ScheduleCompletionCheckbox entry={entry} /> : null}
                       <Badge tone={entry.ownerScope === 'personal' ? 'blue' : 'slate'}>{entry.ownerScope === 'personal' ? '내 일정' : '조직 일정'}</Badge>
-                      {entry.caseId ? <Link href={`/cases/${entry.caseId}` as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">사건 보기</Link> : null}
+                      {entry.caseId ? (
+                        <Link
+                          href={`/cases/${entry.caseId}` as Route}
+                          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs' })}
+                        >
+                          사건 보기
+                        </Link>
+                      ) : null}
                       {editable ? (
                         <button type="button" onClick={() => setEditingScheduleId((current) => current === entry.id ? null : entry.id)} className="text-sm font-medium text-slate-700 underline underline-offset-4">
                           {editingScheduleId === entry.id ? '편집 닫기' : '관리자 편집'}

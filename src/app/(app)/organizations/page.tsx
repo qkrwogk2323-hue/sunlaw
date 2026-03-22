@@ -48,11 +48,11 @@ export default async function OrganizationsPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
           <p className="mt-2 text-sm text-slate-600">협업할 상대 조직을 찾고, 제안 현황과 승인된 업무 허브까지 한 번에 관리합니다.</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href={'/admin/audit?tab=general&table=organizations' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link href={'/admin/audit?tab=general&table=organizations' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               조직 정보 변경 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               협업 제안 기록 보기
             </Link>
           </div>

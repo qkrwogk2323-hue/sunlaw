@@ -275,24 +275,23 @@ export default async function NotificationsPage({
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
             <p className="mt-2 text-sm text-slate-500">알림을 보는 곳이 아니라 사건/일정/의뢰인/협업 업무를 처리하는 큐입니다.</p>
             <p className="mt-1 text-xs text-amber-700">카카오톡 가입자는 중요 알림을 카카오톡으로 받을 수 있습니다. 아래 수신 설정에서 알림 유형을 선택하세요.</p>
-            <div className="mt-3 flex flex-wrap gap-3 text-sm">
-              <Link href={'/admin/audit?tab=general&table=notifications' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              <Link href={'/admin/audit?tab=general&table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
                 알림 생성·상태 변경 기록 보기
               </Link>
-              <Link href={'/admin/audit?tab=delete&table=notifications' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+              <Link href={'/admin/audit?tab=delete&table=notifications' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
                 알림 보관·삭제 기록 보기
               </Link>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+          <div className="grid min-w-[248px] grid-cols-2 gap-3">
+            <div className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
             </div>
-            <Link href={'/notifications#trash' as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
+            <Link href={'/notifications#trash' as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">보관함</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
-              <p className="mt-1 text-xs text-slate-500">보관된 알림 보기</p>
             </Link>
           </div>
         </div>

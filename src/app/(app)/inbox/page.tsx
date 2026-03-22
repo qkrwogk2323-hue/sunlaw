@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { ClipboardList, MessageSquareText, Users } from 'lucide-react';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
@@ -52,11 +53,11 @@ export default async function InboxPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+      <div className="flex flex-wrap gap-2 text-sm">
+        <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
           협업 제안 기록 보기
         </Link>
-        <Link href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <Link href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
           허브 대화 기록 보기
         </Link>
       </div>

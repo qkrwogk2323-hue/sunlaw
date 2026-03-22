@@ -16,6 +16,7 @@ import { formatDateTime } from '@/lib/format';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { buttonStyles } from '@/components/ui/button';
 
 export default async function CollaborationHubPage({
   params,
@@ -91,10 +92,16 @@ export default async function CollaborationHubPage({
       </div>
 
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <Link
+          href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route}
+          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+        >
           허브 메시지 기록 보기
         </Link>
-        <Link href={'/admin/audit?tab=general&table=organization_collaboration_case_shares' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <Link
+          href={'/admin/audit?tab=general&table=organization_collaboration_case_shares' as Route}
+          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+        >
           허브 사건 공유 기록 보기
         </Link>
       </div>

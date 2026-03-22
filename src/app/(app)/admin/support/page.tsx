@@ -11,6 +11,7 @@ import { listPlatformSupportTickets, listSupportRequests } from '@/lib/queries/s
 import { beginSupportSessionAction, decideSupportRequestAction } from '@/lib/actions/support-actions';
 import { formatDateTime } from '@/lib/format';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 
 export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
@@ -90,12 +91,12 @@ export default async function SupportPage() {
       ) : null}
 
       {isPlatformAdmin ? (
-        <Card>
-          <CardHeader><CardTitle>지원 접속 요청 생성</CardTitle></CardHeader>
-          <CardContent>
+        <CollapsibleSettingsSection
+          title="지원 접속 요청 생성"
+          description="플랫폼이 조직 화면에 한시적으로 들어가야 할 때만 열어서 요청을 만듭니다."
+        >
             <SupportRequestForm organizations={organizations.map((organization: any) => ({ id: organization.id, name: organization.name }))} />
-          </CardContent>
-        </Card>
+        </CollapsibleSettingsSection>
       ) : null}
 
       <Card>

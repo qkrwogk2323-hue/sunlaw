@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
@@ -20,11 +21,11 @@ export default async function DocumentsPage() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-slate-900">문서 목록</h2>
         <p className="mt-2 text-sm text-slate-600">사건별 문서 상태와 최근 변경 흐름을 한곳에서 확인합니다.</p>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
-          <Link href={'/admin/audit?tab=general&table=case_documents' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <Link href={'/admin/audit?tab=general&table=case_documents' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             문서 등록·수정 기록 보기
           </Link>
-          <Link href={'/admin/audit?tab=general&table=case_document_reviews' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <Link href={'/admin/audit?tab=general&table=case_document_reviews' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             문서 검토·승인 기록 보기
           </Link>
         </div>

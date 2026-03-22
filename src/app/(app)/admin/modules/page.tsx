@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { moduleCatalog } from '@/lib/module-catalog';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import { buttonStyles } from '@/components/ui/button';
 
 const toneClasses = {
   blue: 'border-sky-200 bg-sky-50 text-sky-700',
@@ -82,7 +83,10 @@ export default async function AdminModulesPage() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>운영 기준</CardTitle>
-            <Link href={'/admin/audit?tab=general&table=organization_module_overrides' as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+            <Link
+              href={'/admin/audit?tab=general&table=organization_module_overrides' as Route}
+              className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+            >
               설정 이력 보기
             </Link>
           </div>
@@ -138,7 +142,7 @@ export default async function AdminModulesPage() {
                       </p>
                       {entry.route ? (
                         <p>
-                          <span className="font-medium text-slate-900">대표 경로</span> · <Link href={entry.route as Route} className="font-medium text-sky-700 underline underline-offset-4">{entry.route}</Link>
+                          <span className="font-medium text-slate-900">대표 경로</span> · <Link href={entry.route as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'ml-2 h-8 rounded-lg px-2 text-[11px]' })}>{entry.route}</Link>
                         </p>
                       ) : null}
                     </div>
@@ -174,7 +178,10 @@ export default async function AdminModulesPage() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>활용 가이드</CardTitle>
-            <Link href={'/admin/audit?tab=general&table=organization_module_overrides' as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+            <Link
+              href={'/admin/audit?tab=general&table=organization_module_overrides' as Route}
+              className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+            >
               감사로그에서 확인
             </Link>
           </div>

@@ -8,6 +8,7 @@ import { ClientStructuredInviteForm } from '@/components/forms/client-structured
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { BulkUploadPanel } from '@/components/bulk-upload-panel';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { listCases } from '@/lib/queries/cases';
@@ -116,11 +117,11 @@ export default async function ClientsPage({
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">의뢰인 관리</h1>
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
         </div>
-        <div className="flex flex-wrap gap-3 text-sm">
-          <Link href={'/admin/audit?tab=general&table=client_profiles' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Link href={'/admin/audit?tab=general&table=client_profiles' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 정보 변경 기록 보기
           </Link>
-          <Link href={'/admin/audit?tab=general&table=client_access_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <Link href={'/admin/audit?tab=general&table=client_access_requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 연결 요청 기록 보기
           </Link>
         </div>
@@ -239,23 +240,21 @@ export default async function ClientsPage({
               </CardContent>
             </Card>
 
-            <details className="group rounded-2xl border border-slate-200 bg-white" open>
-              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
-                기본 의뢰인 초대
-              </summary>
-              <div className="border-t border-slate-200 p-5">
+            <CollapsibleSettingsSection
+              title="기본 의뢰인 초대"
+              description="의뢰인 초대 링크를 만들거나 CSV로 여러 명을 한 번에 준비합니다."
+            >
                 <ClientStructuredInviteForm
                   organizationId={organizationId!}
                   cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
                 />
-              </div>
-            </details>
+            </CollapsibleSettingsSection>
 
-            <details className="group rounded-2xl border border-slate-200 bg-white">
-              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
-                CSV 일괄 등록
-              </summary>
-              <div className="space-y-3 border-t border-slate-200 p-5">
+            <CollapsibleSettingsSection
+              title="CSV 일괄 등록"
+              description="양식에 맞춘 CSV 파일로 의뢰인 정보를 한 번에 올립니다."
+            >
+              <div className="space-y-3">
                 <p className="text-sm text-slate-600">대량 등록은 CSV 양식에 맞춰 올려 주세요. 명수 제한 없이 불러올 수 있습니다.</p>
                 <BulkUploadPanel
                   mode="clients"
@@ -263,23 +262,23 @@ export default async function ClientsPage({
                   action={bulkUploadClientsAction}
                 />
               </div>
-            </details>
+            </CollapsibleSettingsSection>
 
-            <details className="group rounded-2xl border border-slate-200 bg-white">
-              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
-                임시 계정 직접 발급
-              </summary>
-              <div className="space-y-3 border-t border-slate-200 p-5">
+            <CollapsibleSettingsSection
+              title="임시 계정 직접 발급"
+              description="예외적으로 직접 계정을 만들어 바로 전달해야 할 때 사용합니다."
+            >
+              <div className="space-y-3">
                 <p className="text-sm text-slate-600">비밀번호 직접 전달이 필요한 예외 상황에서만 사용합니다.</p>
                 <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
               </div>
-            </details>
+            </CollapsibleSettingsSection>
 
-            <details className="group rounded-2xl border border-slate-200 bg-white">
-              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
-                초대 링크 재발송
-              </summary>
-              <div className="space-y-2 border-t border-slate-200 p-5">
+            <CollapsibleSettingsSection
+              title="초대 링크 재발송"
+              description="이미 만든 초대 링크를 다시 전달해야 할 때 이 목록에서 재발송합니다."
+            >
+              <div className="space-y-2">
                 {roster.filter((item: any) => item.source === 'invite' && item.invitationId).slice(0, 5).map((item: any) => (
                   <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
                     <div className="text-sm">
@@ -293,7 +292,7 @@ export default async function ClientsPage({
                   <p className="text-sm text-slate-500">재발송 가능한 초대가 없습니다.</p>
                 ) : null}
               </div>
-            </details>
+            </CollapsibleSettingsSection>
           </div>
         ) : null}
       </div>

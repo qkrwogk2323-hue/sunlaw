@@ -46,7 +46,10 @@ export default async function CalendarWorklogPage() {
               <p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-700">{log.summary}</p>
               {log.case_id ? (
                 <div className="mt-3">
-                  <Link href={`/cases/${log.case_id}?tab=schedule` as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+                  <Link
+                    href={`/cases/${log.case_id}?tab=schedule` as Route}
+                    className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                  >
                     사건 일정으로 열기
                   </Link>
                 </div>

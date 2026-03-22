@@ -12,6 +12,8 @@ import { getOrganizationSubscriptionSnapshot } from '@/lib/subscription-lock';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { listAccessibleOrganizations } from '@/lib/queries/organizations';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
+import { buttonStyles } from '@/components/ui/button';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 
 type SearchParams = Promise<{ locked?: string; org?: string }>;
 
@@ -72,9 +74,11 @@ export default async function SubscriptionSettingsPage({
       <SettingsNav currentPath="/settings/subscription" canViewPlatformControls={canViewPlatformControls} />
 
       {canViewPlatformControls && organizationOptions.length ? (
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>조직별 구독 권한 조정</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
+        <CollapsibleSettingsSection
+          title="조직별 구독 권한 조정"
+          description="대상 조직을 고르거나 구독 상태를 바꿀 때만 열어서 사용합니다."
+        >
+          <div className="space-y-3">
             <form action="/settings/subscription" className="flex flex-wrap items-end gap-3">
               <label className="space-y-2 text-sm text-slate-600">
                 <span className="font-medium text-slate-800">대상 조직</span>
@@ -87,8 +91,8 @@ export default async function SubscriptionSettingsPage({
               <SubmitButton variant="secondary" pendingLabel="불러오는 중...">대상 변경</SubmitButton>
             </form>
             <p className="text-xs text-slate-500">플랫폼 조직은 여기서 각 조직의 이용 권한을 부여하거나 제한할 수 있습니다.</p>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleSettingsSection>
       ) : null}
 
       {resolved?.locked ? (
@@ -155,9 +159,10 @@ export default async function SubscriptionSettingsPage({
       </Card>
 
       {canAdjustSubscription ? (
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle>플랫폼 조직 관리자 조정</CardTitle></CardHeader>
-          <CardContent>
+        <CollapsibleSettingsSection
+          title="플랫폼 조직 관리자 조정"
+          description="구독 상태를 실제로 바꿔야 할 때만 열어서 저장합니다."
+        >
             <ClientActionForm action={updateOrganizationSubscriptionStateAction} successTitle="구독 상태가 반영되었습니다." className="space-y-4">
               <input type="hidden" name="organizationId" value={selectedOrganizationId ?? ''} />
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -218,15 +223,17 @@ export default async function SubscriptionSettingsPage({
                 </SubmitButton>
               </div>
             </ClientActionForm>
-          </CardContent>
-        </Card>
+        </CollapsibleSettingsSection>
       ) : null}
 
       <Card className="vs-mesh-card">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>구독 변경 기록</CardTitle>
-            <Link href={'/admin/audit?tab=general&table=organization_subscription_states' as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+            <Link
+              href={'/admin/audit?tab=general&table=organization_subscription_states' as Route}
+              className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+            >
               감사로그 보기
             </Link>
           </div>

@@ -21,6 +21,8 @@ import { HubMetricBadge } from '@/components/hub-metric-badge';
 import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
 import { BulkUploadPanel } from '@/components/bulk-upload-panel';
 import { bulkUploadCasesAction } from '@/lib/actions/bulk-upload-actions';
+import { buttonStyles } from '@/components/ui/button';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
@@ -258,27 +260,21 @@ export default async function CasesPage({
       </div>
 
       <div className="space-y-3">
-        <details id="case-create" className="group rounded-xl border border-slate-200 bg-white px-2 py-2">
-          <summary className="list-none">
-            <span className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-sky-200 bg-sky-50 px-4 text-sm font-semibold text-sky-800 group-open:bg-sky-100">
-              사건 등록하기
-            </span>
-          </summary>
-          <div className="mt-3">
-            <Card className="vs-mesh-card">
-              <CardContent className="pt-5">
-                <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
-              </CardContent>
-            </Card>
-          </div>
-        </details>
-        <details className="group rounded-xl border border-slate-200 bg-white px-2 py-2">
-          <summary className="list-none">
-            <span className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 group-open:bg-emerald-100">
-              CSV 일괄 등록
-            </span>
-          </summary>
-          <div className="mt-3 px-2 pb-4">
+        <CollapsibleSettingsSection
+          title="사건 등록하기"
+          description="새 사건을 직접 등록할 때만 열어서 사용합니다."
+        >
+          <Card className="vs-mesh-card">
+            <CardContent className="pt-5">
+              <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
+            </CardContent>
+          </Card>
+        </CollapsibleSettingsSection>
+        <CollapsibleSettingsSection
+          title="CSV 일괄 등록"
+          description="양식에 맞춘 CSV 파일로 여러 사건을 한 번에 등록합니다."
+        >
+          <div>
             <p className="mb-1 text-sm font-medium text-slate-900">대량 등록은 CSV 양식에 맞춰 올려 주세요.</p>
             <p className="mb-3 text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 사건은 양식을 내려받아 그대로 작성한 뒤 한 번에 등록하세요.</p>
             <BulkUploadPanel
@@ -287,7 +283,7 @@ export default async function CasesPage({
               action={bulkUploadCasesAction}
             />
           </div>
-        </details>
+        </CollapsibleSettingsSection>
         <UnifiedListSearch
           action="/cases"
           defaultValue={queryFilter}
@@ -303,7 +299,10 @@ export default async function CasesPage({
             <span>사건목록</span>
             <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
               <span>{BUCKET_META[bucket].helper}</span>
-              <Link href={'/admin/audit?tab=general&table=cases' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+              <Link
+                href={'/admin/audit?tab=general&table=cases' as Route}
+                className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+              >
                 사건 변경 이력 보기
               </Link>
             </span>

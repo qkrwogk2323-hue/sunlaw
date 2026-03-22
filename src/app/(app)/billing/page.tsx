@@ -214,14 +214,14 @@ export default async function BillingPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">비용 관리</h1>
           <p className="mt-2 text-sm text-slate-600">의뢰인과의 계약, 청구, 분납 약속, 입금 현황을 사건 기준으로 묶어 봅니다. 회사 구독료는 회사 관리의 구독 관리에서 별도로 다룹니다.</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               청구 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=general&table=billing_payments' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=general&table=billing_payments' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               입금 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=general&table=billing_agreements' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               분납·약정 기록 보기
             </Link>
           </div>

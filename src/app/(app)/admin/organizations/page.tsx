@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { deactivateOrganizationAction, deleteOrganizationAction } from '@/lib/actions/settings-actions';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 
 function getLifecycleTone(status: string | null | undefined) {
   if (status === 'active') return 'green';
@@ -171,14 +172,12 @@ export default async function AdminOrganizationsPage({
             </CardContent>
           </Card>
 
-          <details className="group rounded-2xl border border-slate-200 bg-white">
-            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900">
-              직접 조직 생성 열기
-            </summary>
-            <div className="border-t border-slate-200 p-5">
-              <OrganizationCreateForm />
-            </div>
-          </details>
+          <CollapsibleSettingsSection
+            title="직접 조직 생성"
+            description="플랫폼에서 바로 새 조직을 만들어야 할 때만 열어서 사용합니다."
+          >
+            <OrganizationCreateForm />
+          </CollapsibleSettingsSection>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { Network } from 'lucide-react';
+import { buttonStyles } from '@/components/ui/button';
 import { requireAuthenticatedUser, getEffectiveOrganizationId } from '@/lib/auth';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { CaseHubListClient } from '@/components/case-hub-list-client';
@@ -44,11 +45,11 @@ export default async function CaseHubsPage({
         )}
       />
 
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href={'/admin/audit?tab=general&table=case_hubs' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+      <div className="flex flex-wrap gap-2 text-sm">
+        <Link href={'/admin/audit?tab=general&table=case_hubs' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
           허브 생성·상태 변경 기록 보기
         </Link>
-        <Link href={'/admin/audit?tab=general&table=case_hub_organizations' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <Link href={'/admin/audit?tab=general&table=case_hub_organizations' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
           허브 참여 조직 기록 보기
         </Link>
       </div>

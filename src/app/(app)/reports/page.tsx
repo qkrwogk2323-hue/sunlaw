@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
@@ -31,14 +32,14 @@ export default async function ReportsPage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">핵심 수치 요약</h2>
           <p className="mt-2 text-sm text-slate-600">현재 버전에서는 핵심 운영 수치를 먼저 보여 주고 이후 상세 리포트로 확장합니다.</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href={'/admin/audit?tab=general&table=cases' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link href={'/admin/audit?tab=general&table=cases' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               사건 원본 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=general&table=billing_entries' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               비용 원본 기록 보기
             </Link>
-            <Link href={'/admin/audit?tab=general&table=collection_performance_daily' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            <Link href={'/admin/audit?tab=general&table=collection_performance_daily' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
               추심 실적 원본 기록 보기
             </Link>
           </div>

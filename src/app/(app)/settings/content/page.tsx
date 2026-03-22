@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
 import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
@@ -31,11 +32,11 @@ export default async function ContentResourcesPage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">문구 관리</h1>
         <p className="mt-2 text-sm text-slate-600">랜딩 카피, 포털 문구, 이메일 제목, 조직별 용어를 관리합니다.</p>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
-          <Link href={'/admin/audit?tab=general&table=content_resources' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <Link href={'/admin/audit?tab=general&table=content_resources' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             문구 변경 기록 보기
           </Link>
-          <Link href={'/admin/audit?tab=general&table=setting_change_logs' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <Link href={'/admin/audit?tab=general&table=setting_change_logs' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             설정 변경 사유 기록 보기
           </Link>
         </div>

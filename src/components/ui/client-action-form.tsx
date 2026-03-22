@@ -78,6 +78,7 @@ export function ClientActionForm({
       try {
         setInlineError(null);
         await action(formData);
+        formEl.dispatchEvent(new CustomEvent('vs:action-form-success', { bubbles: true }));
         success(successTitle, { message: successMessage });
         onSuccess?.();
       } catch (err) {
