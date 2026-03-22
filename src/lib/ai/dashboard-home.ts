@@ -1,5 +1,5 @@
 import { buildAiSourceMeta, sanitizeAiText, type AiResponseSourceMeta } from '@/lib/ai/guardrails';
-import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
+import { getAiFeaturePolicy, getAiOperationDomainSpec, type AiOperationDomainId } from '@/lib/ai/feature-catalog';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 type DashboardSnapshot = {
@@ -58,6 +58,7 @@ export type DashboardAiAssistantResponse = {
   source: AiResponseSourceMeta;
   provider: 'rules';
   allowedAnswerTypes?: string[];
+  questionDomain?: AiOperationDomainId;
 };
 
 export type DraftAssistResponse = {
@@ -86,6 +87,136 @@ export type AdminCopilotResponse = {
 };
 
 const PLATFORM_AI_BLOCK_PATTERN = /(플랫폼|구독|조직\s*(승인|신청|삭제|비활성화|정지|해지)|운영\s*(권한|승인|삭제|정지)|감사\s*로그|고객센터|지원\s*접속)/;
+
+export function classifyDashboardQuestionDomain(question: string): AiOperationDomainId {
+  const normalized = question.toLowerCase();
+  if (PLATFORM_AI_BLOCK_PATTERN.test(normalized)) return 'platform';
+  if (/비용|청구|분납|납부|입금|계약|서명|약정|회차/.test(normalized)) return 'billing_contract';
+  if (/일정|기한|마감|기일|오늘 할 일|스케줄|캘린더/.test(normalized)) return 'schedule';
+  if (/문서|서류|업로드|계약서|제출자료|체크리스트/.test(normalized)) return 'document';
+  if (/허브|대화|소통|협업|메시지|인박스/.test(normalized)) return 'hub';
+  if (/의뢰인|초대|연결|포털/.test(normalized)) return 'client';
+  return 'case';
+}
+
+function buildDomainActions(domain: AiOperationDomainId, snapshot: DashboardSnapshot): DashboardAiAction[] {
+  if (domain === 'billing_contract') {
+    return [
+      {
+        label: '비용 관리 열기',
+        href: '/billing',
+        reason: `현재 비용 대기 ${snapshot.pendingBillingCount}건과 분납·입금 흐름을 먼저 확인할 수 있습니다.`
+      },
+      {
+        label: '계약 관리 열기',
+        href: '/contracts',
+        reason: '계약 원문, 체결 상태, 금액 약정을 같이 확인할 수 있습니다.'
+      },
+      {
+        label: '사건 목록 열기',
+        href: '/cases',
+        reason: '특정 사건의 비용 탭으로 바로 이어서 들어갈 수 있습니다.'
+      }
+    ];
+  }
+
+  if (domain === 'schedule') {
+    return [
+      {
+        label: '일정 확인',
+        href: '/calendar',
+        reason: `가까운 중요 일정 ${snapshot.urgentSchedules.length}건과 오늘 할 일을 먼저 볼 수 있습니다.`
+      },
+      {
+        label: '업무일지 보기',
+        href: '/calendar/worklog',
+        reason: '완료한 일정과 체크 기록을 시간순으로 다시 확인할 수 있습니다.'
+      }
+    ];
+  }
+
+  if (domain === 'document') {
+    return [
+      {
+        label: '문서 화면 열기',
+        href: '/documents',
+        reason: '문서 등록, 검토, 공유 상태를 바로 확인할 수 있습니다.'
+      },
+      {
+        label: '사건 목록 열기',
+        href: '/cases',
+        reason: '특정 사건 문서와 요청 흐름으로 이어서 확인할 수 있습니다.'
+      }
+    ];
+  }
+
+  if (domain === 'hub') {
+    return [
+      {
+        label: '사건허브 보기',
+        href: '/case-hubs',
+        reason: '허브별 상태와 최근 공유 흐름을 먼저 확인할 수 있습니다.'
+      },
+      {
+        label: '조직 협업 열기',
+        href: '/inbox',
+        reason: '대화와 협업 요청을 한 번에 이어서 처리할 수 있습니다.'
+      }
+    ];
+  }
+
+  if (domain === 'client') {
+    return [
+      {
+        label: '의뢰인 관리 열기',
+        href: '/clients',
+        reason: '초대, 연결, 포털 상태를 같은 화면에서 확인할 수 있습니다.'
+      },
+      {
+        label: '사건 목록 열기',
+        href: '/cases',
+        reason: '의뢰인이 연결된 사건과 후속 작업을 이어서 볼 수 있습니다.'
+      }
+    ];
+  }
+
+  return [
+    {
+      label: '사건 목록 열기',
+      href: '/cases',
+      reason: `진행 중 사건 ${snapshot.activeCases}건과 요청 대기 ${snapshot.pendingRequests}건을 먼저 정리할 수 있습니다.`
+    },
+    {
+      label: '알림 센터 열기',
+      href: '/notifications?section=immediate',
+      reason: '바로 처리할 알림과 후속 요청을 함께 확인할 수 있습니다.'
+    },
+    {
+      label: '문서 화면 열기',
+      href: '/documents',
+      reason: '사건과 연결된 문서 흐름까지 이어서 점검할 수 있습니다.'
+    }
+  ];
+}
+
+function buildDomainAnswer(domain: AiOperationDomainId, snapshot: DashboardSnapshot): string {
+  if (domain === 'billing_contract') {
+    return `비용·계약 질문으로 보고 답합니다. 현재 비용 대기 ${snapshot.pendingBillingCount}건을 기준으로 계약과 분납 흐름을 먼저 확인하는 편이 맞습니다.`;
+  }
+  if (domain === 'schedule') {
+    return `일정 질문으로 보고 답합니다. 가까운 중요 일정 ${snapshot.urgentSchedules.length}건과 오늘 할 일을 먼저 확인하세요.`;
+  }
+  if (domain === 'document') {
+    return `문서 질문으로 보고 답합니다. 문서 등록, 검토, 제출 흐름을 문서 화면과 사건 화면에서 함께 확인하는 편이 맞습니다.`;
+  }
+  if (domain === 'hub') {
+    return '허브·협업 질문으로 보고 답합니다. 사건허브와 조직 협업 화면에서 대화와 공유 흐름을 같이 확인하세요.';
+  }
+  if (domain === 'client') {
+    return '의뢰인 질문으로 보고 답합니다. 의뢰인 관리에서 초대·연결 상태를 확인하고, 필요하면 사건 화면으로 이어서 확인하세요.';
+  }
+  return `사건 질문으로 보고 답합니다. 진행 중 사건 ${snapshot.activeCases}건과 요청 대기 ${snapshot.pendingRequests}건을 먼저 정리하는 편이 맞습니다.`;
+}
 
 function buildBillingAssistantAnswer(question: string): { answer: string; actions: DashboardAiAction[] } | null {
   const normalized = question.toLowerCase();
@@ -378,7 +509,8 @@ export function answerDashboardAssistant(input: {
 }): DashboardAiAssistantResponse {
   const question = sanitizeAiText(input.question);
   const featurePolicy = getAiFeaturePolicy('home_ai_assistant');
-  if (PLATFORM_AI_BLOCK_PATTERN.test(question)) {
+  const questionDomain = classifyDashboardQuestionDomain(question);
+  if (questionDomain === 'platform') {
     return {
       answer: input.isPlatformAdmin
         ? '플랫폼 운영 관련 질문은 AI가 답하지 않습니다. 아래 운영 메뉴에서 직접 확인해 주세요.'
@@ -415,6 +547,7 @@ export function answerDashboardAssistant(input: {
           ],
       provider: 'rules',
       allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
+      questionDomain,
       source: buildAiSourceMeta({
         feature: 'home_ai_assistant',
         dataType: 'platform_ai_block',
@@ -430,6 +563,7 @@ export function answerDashboardAssistant(input: {
       actions: billingAnswer.actions,
       provider: 'rules',
       allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
+      questionDomain,
       source: buildAiSourceMeta({
         feature: 'home_ai_assistant',
         dataType: 'billing_follow_up',
@@ -438,14 +572,16 @@ export function answerDashboardAssistant(input: {
       })
     };
   }
-  const actions = buildRouteSuggestion(question, input.snapshot, input.isPlatformAdmin);
-  const answer = `${actions[0]?.reason ?? '관련 화면으로 이동해 확인하세요.'} ${actions.length > 1 ? '필요하면 아래 관련 화면도 함께 확인하세요.' : ''}`.trim();
+  const domainSpec = getAiOperationDomainSpec(questionDomain);
+  const actions = buildDomainActions(questionDomain, input.snapshot).filter((action) => domainSpec.allowedRoutes.includes(action.href)).slice(0, 3);
+  const answer = buildDomainAnswer(questionDomain, input.snapshot);
 
   return {
     answer,
     actions,
     provider: 'rules',
-    allowedAnswerTypes: featurePolicy.allowedAnswerTypes,
+    allowedAnswerTypes: domainSpec.allowedAnswerTypes,
+    questionDomain,
     source: buildAiSourceMeta({
       feature: 'home_ai_assistant',
       dataType: 'dashboard_snapshot',

@@ -29,6 +29,25 @@ export type AiAreaSpec = {
   description: string;
 };
 
+export const AI_OPERATION_DOMAIN_IDS = [
+  'billing_contract',
+  'schedule',
+  'document',
+  'hub',
+  'client',
+  'case',
+  'platform'
+] as const;
+
+export type AiOperationDomainId = (typeof AI_OPERATION_DOMAIN_IDS)[number];
+
+export type AiOperationDomainSpec = {
+  id: AiOperationDomainId;
+  label: string;
+  allowedAnswerTypes: AiAnswerType[];
+  allowedRoutes: string[];
+};
+
 export type AiFeaturePolicy = {
   feature: AiFeatureId;
   areaId: AiAreaId;
@@ -160,10 +179,59 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
   }
 };
 
+export const AI_OPERATION_DOMAIN_CATALOG: Record<AiOperationDomainId, AiOperationDomainSpec> = {
+  billing_contract: {
+    id: 'billing_contract',
+    label: '비용·계약',
+    allowedAnswerTypes: ['menu_link', 'status_summary', 'next_action'],
+    allowedRoutes: ['/billing', '/contracts', '/cases']
+  },
+  schedule: {
+    id: 'schedule',
+    label: '일정',
+    allowedAnswerTypes: ['menu_link', 'status_summary', 'checklist'],
+    allowedRoutes: ['/calendar', '/calendar/worklog']
+  },
+  document: {
+    id: 'document',
+    label: '문서',
+    allowedAnswerTypes: ['menu_link', 'status_summary', 'checklist'],
+    allowedRoutes: ['/documents', '/cases']
+  },
+  hub: {
+    id: 'hub',
+    label: '허브·협업',
+    allowedAnswerTypes: ['menu_link', 'status_summary', 'next_action'],
+    allowedRoutes: ['/case-hubs', '/inbox']
+  },
+  client: {
+    id: 'client',
+    label: '의뢰인',
+    allowedAnswerTypes: ['menu_link', 'status_summary', 'next_action'],
+    allowedRoutes: ['/clients', '/cases']
+  },
+  case: {
+    id: 'case',
+    label: '사건',
+    allowedAnswerTypes: ['menu_link', 'status_summary', 'next_action'],
+    allowedRoutes: ['/cases', '/calendar', '/documents']
+  },
+  platform: {
+    id: 'platform',
+    label: '플랫폼 운영',
+    allowedAnswerTypes: [],
+    allowedRoutes: ['/admin/organization-requests', '/admin/organizations', '/admin/support', '/settings/subscription']
+  }
+};
+
 export function getAiFeaturePolicy(feature: AiFeatureId) {
   return AI_FEATURE_POLICY[feature];
 }
 
 export function getAiAreaSpec(areaId: AiAreaId) {
   return AI_AREA_CATALOG[areaId];
+}
+
+export function getAiOperationDomainSpec(domainId: AiOperationDomainId) {
+  return AI_OPERATION_DOMAIN_CATALOG[domainId];
 }
