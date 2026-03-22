@@ -161,6 +161,20 @@ export default async function CollaborationHubPage({
                           {message.caseTitle ? <span>연결 사건: {message.caseTitle}</span> : null}
                         </div>
                         <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{message.body}</p>
+                        {message.uploadedDocument ? (
+                          <div className={`mt-3 rounded-xl border px-3 py-3 text-sm ${mine ? 'border-white/20 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-slate-800'}`}>
+                            <p className="font-medium">{message.uploadedDocument.title}</p>
+                            <p className={`mt-1 text-xs ${mine ? 'text-slate-200' : 'text-slate-500'}`}>
+                              {message.uploadedDocument.fileName ?? '첨부 문서'}{message.uploadedDocument.fileSize ? ` · ${(message.uploadedDocument.fileSize / 1024 / 1024).toFixed(1)}MB` : ''}
+                            </p>
+                            <Link
+                              href={`/api/documents/${message.uploadedDocument.id}/download` as Route}
+                              className={`mt-3 inline-flex text-xs font-medium ${mine ? 'text-sky-200' : 'text-sky-700'}`}
+                            >
+                              업로드 문서 열기
+                            </Link>
+                          </div>
+                        ) : null}
                         {message.caseId ? (
                           <Link href={`/cases/${message.caseId}` as Route} className={`mt-3 inline-flex text-xs font-medium ${mine ? 'text-sky-200' : 'text-sky-700'}`}>
                             사건 상세 열기

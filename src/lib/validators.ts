@@ -289,7 +289,8 @@ export const collaborationRequestReviewSchema = z.object({
 export const collaborationHubMessageSchema = z.object({
   hubId: z.string().uuid(),
   organizationId: z.string().uuid(),
-  body: z.string().trim().min(1).max(5000),
+  body: z.string().trim().max(5000).optional().or(z.literal('')),
+  documentTitle: z.string().trim().max(200).optional().or(z.literal('')),
   caseId: z.string().uuid().optional().or(z.literal('')),
   returnPath: z.string().trim().optional().or(z.literal(''))
 });

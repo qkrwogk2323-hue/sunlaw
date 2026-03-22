@@ -163,6 +163,7 @@ function getOrganizationSections({
     organizationItems.push(
       { href: '/cases', label: '사건 목록', icon: FileText },
       { href: '/clients', label: '의뢰인 관리', icon: Users },
+      { href: '/documents', label: '업로드 문서', icon: FileText },
       { href: '/billing', label: '비용 관리', icon: Receipt }
     );
     }

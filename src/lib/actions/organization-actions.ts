@@ -55,6 +55,7 @@ import { captureNotificationFailure } from '@/lib/notification-failure';
 
 const organizationSignupDocumentBucket = 'organization-signup-documents';
 const maxOrganizationSignupDocumentSize = 10 * 1024 * 1024;
+const maxCollaborationDocumentSize = 15 * 1024 * 1024;
 const allowedOrganizationSignupDocumentMimeTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 const allowedOrganizationSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg', 'jpeg']);
 
@@ -83,6 +84,12 @@ function resolveRequesterEmail(auth: { user: { email?: string | null }; profile:
   }
 
   return email;
+}
+
+function buildCollaborationDocumentStoragePath(organizationId: string, hubId: string, originalName: string) {
+  const sanitized = makeSlug(originalName.replace(/\.[^.]+$/, '')) || 'document';
+  const ext = originalName.includes('.') ? originalName.slice(originalName.lastIndexOf('.')) : '';
+  return `org/${organizationId}/collaboration-hubs/${hubId}/${Date.now()}-${sanitized}${ext}`;
 }
 
 function getActionErrorMessage(error: unknown, fallback: string) {
@@ -2957,6 +2964,7 @@ export async function postCollaborationHubMessageAction(formData: FormData) {
     hubId: formData.get('hubId'),
     organizationId: formData.get('organizationId'),
     body: formData.get('body'),
+    documentTitle: formData.get('documentTitle'),
     caseId: formData.get('caseId'),
     returnPath: formData.get('returnPath')
   });
@@ -2982,6 +2990,13 @@ export async function postCollaborationHubMessageAction(formData: FormData) {
     throw new Error('현재 조직은 이 업무 허브에 참여하고 있지 않습니다.');
   }
 
+  const upload = formData.get('documentFile');
+  const hasMessageBody = Boolean(parsed.body?.trim());
+  const hasUpload = upload instanceof File && upload.size > 0;
+  if (!hasMessageBody && !hasUpload) {
+    throw new Error('메시지 또는 공유 문서 중 하나는 반드시 입력해 주세요.');
+  }
+
   let linkedCaseTitle: string | null = null;
   if (parsed.caseId) {
     const { data: caseRow, error: caseError } = await adminClient
@@ -2997,16 +3012,101 @@ export async function postCollaborationHubMessageAction(formData: FormData) {
     linkedCaseTitle = caseRow.title ?? '사건';
   }
 
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'case-files';
+  let uploadedDocument:
+    | {
+        id: string;
+        title: string;
+        fileName: string;
+        fileSize: number;
+      }
+    | null = null;
+  let uploadedStoragePath: string | null = null;
+
+  if (hasUpload && upload instanceof File) {
+    if (upload.size > maxCollaborationDocumentSize) {
+      throw new Error('공유 문서는 15MB 이하 파일만 업로드할 수 있습니다.');
+    }
+
+    uploadedStoragePath = buildCollaborationDocumentStoragePath(parsed.organizationId, parsed.hubId, upload.name);
+    const { error: uploadError } = await adminClient.storage.from(bucket).upload(uploadedStoragePath, upload, {
+      contentType: upload.type,
+      upsert: false
+    });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const documentTitle = parsed.documentTitle?.trim() || upload.name.replace(/\.[^.]+$/, '') || '허브 공유 문서';
+    const { data: documentRow, error: documentError } = await adminClient
+      .from('case_documents')
+      .insert({
+        organization_id: parsed.organizationId,
+        case_id: parsed.caseId || null,
+        title: documentTitle,
+        document_kind: 'other',
+        approval_status: 'draft',
+        client_visibility: 'internal_only',
+        storage_path: uploadedStoragePath,
+        mime_type: upload.type || null,
+        file_size: upload.size,
+        summary: hasMessageBody ? parsed.body?.trim() || null : '조직 협업 허브에서 공유된 문서입니다.',
+        created_by: auth.user.id,
+        created_by_name: auth.profile.full_name,
+        updated_by: auth.user.id
+      })
+      .select('id, title, file_size')
+      .single();
+
+    if (documentError || !documentRow) {
+      if (uploadedStoragePath) {
+        await adminClient.storage.from(bucket).remove([uploadedStoragePath]).catch(() => undefined);
+      }
+      throw documentError ?? new Error('업로드 문서를 등록하지 못했습니다.');
+    }
+
+    uploadedDocument = {
+      id: documentRow.id,
+      title: documentRow.title ?? documentTitle,
+      fileName: upload.name,
+      fileSize: documentRow.file_size ?? upload.size
+    };
+  }
+
+  const messageBody = hasMessageBody
+    ? parsed.body!.trim()
+    : uploadedDocument
+      ? `${uploadedDocument.title} 문서를 공유했습니다.`
+      : '';
+
   const { error: insertError } = await adminClient.from('organization_collaboration_messages').insert({
     hub_id: parsed.hubId,
     organization_id: parsed.organizationId,
     sender_profile_id: auth.user.id,
     case_id: parsed.caseId || null,
-    body: parsed.body,
-    metadata: parsed.caseId ? { linked_case_id: parsed.caseId } : {}
+    body: messageBody,
+    metadata: {
+      ...(parsed.caseId ? { linked_case_id: parsed.caseId } : {}),
+      ...(uploadedDocument
+        ? {
+            uploaded_document: {
+              id: uploadedDocument.id,
+              title: uploadedDocument.title,
+              file_name: uploadedDocument.fileName,
+              file_size: uploadedDocument.fileSize
+            }
+          }
+        : {})
+    }
   });
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    if (uploadedStoragePath) {
+      await adminClient.storage.from(bucket).remove([uploadedStoragePath]).catch(() => undefined);
+    }
+    throw insertError;
+  }
 
   const partnerOrganizationId = hubRow.primary_organization_id === parsed.organizationId
     ? hubRow.partner_organization_id
@@ -3021,8 +3121,12 @@ export async function postCollaborationHubMessageAction(formData: FormData) {
         kind: 'generic',
         entity_type: 'collaboration',
         title: `${senderOrganizationName}에서 업무 허브 메시지가 도착했습니다.`,
-        body: linkedCaseTitle ? `${parsed.body} · 연결 사건: ${linkedCaseTitle}` : parsed.body,
-        payload: { hub_id: parsed.hubId, case_id: parsed.caseId || null },
+        body: linkedCaseTitle ? `${messageBody} · 연결 사건: ${linkedCaseTitle}` : messageBody,
+        payload: {
+          hub_id: parsed.hubId,
+          case_id: parsed.caseId || null,
+          uploaded_document_id: uploadedDocument?.id ?? null
+        },
         action_label: '업무 허브 열기',
         action_href: `/inbox/${parsed.hubId}`,
         destination_type: 'internal_route',

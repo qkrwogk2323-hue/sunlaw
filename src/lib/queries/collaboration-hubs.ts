@@ -58,6 +58,12 @@ export type CollaborationHubMessage = {
   senderName: string;
   caseId: string | null;
   caseTitle: string | null;
+  uploadedDocument: {
+    id: string;
+    title: string;
+    fileName: string | null;
+    fileSize: number | null;
+  } | null;
 };
 
 export type CollaborationHubCase = {
@@ -294,7 +300,7 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
     admin.from('organizations').select('id, name, slug').in('id', [currentOrganizationId, partnerOrganizationId]),
     admin
       .from('organization_collaboration_messages')
-      .select('id, organization_id, sender_profile_id, body, case_id, created_at')
+      .select('id, organization_id, sender_profile_id, body, case_id, created_at, metadata')
       .eq('hub_id', hubId)
       .order('created_at', { ascending: false })
       .limit(80),
@@ -370,7 +376,15 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
       senderProfileId: row.sender_profile_id,
       senderName: senderNameById[row.sender_profile_id] ?? '구성원',
       caseId: row.case_id ?? null,
-      caseTitle: row.case_id ? messageCaseTitleById[row.case_id] ?? null : null
+      caseTitle: row.case_id ? messageCaseTitleById[row.case_id] ?? null : null,
+      uploadedDocument: row.metadata?.uploaded_document
+        ? {
+            id: row.metadata.uploaded_document.id,
+            title: row.metadata.uploaded_document.title ?? '공유 문서',
+            fileName: row.metadata.uploaded_document.file_name ?? null,
+            fileSize: row.metadata.uploaded_document.file_size ?? null
+          }
+        : null
     })),
     relatedCases: baseCases.filter((item) => {
       if (!normalizedQuery) return true;
