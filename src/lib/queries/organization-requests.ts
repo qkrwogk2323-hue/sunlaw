@@ -1,7 +1,18 @@
+import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+async function createOrganizationRequestReader() {
+  const auth = await getCurrentAuth();
+  const canUseAdminClient = auth
+    ? await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth))
+    : false;
+
+  return canUseAdminClient ? createSupabaseAdminClient() : await createSupabaseServerClient();
+}
+
 export async function listOrganizationSignupRequests() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createOrganizationRequestReader();
   const { data } = await supabase
     .from('organization_signup_requests')
     .select('*, requester:profiles(id, full_name, email), reviewer:profiles(id, full_name, email), approvedOrganization:organizations(id, name, slug)')
@@ -11,7 +22,7 @@ export async function listOrganizationSignupRequests() {
 }
 
 export async function listOrganizationExitRequests() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createOrganizationRequestReader();
   const { data } = await supabase
     .from('organization_exit_requests')
     .select('*, organization:organizations(id, name, slug), requester:profiles(id, full_name, email), reviewer:profiles(id, full_name, email)')
