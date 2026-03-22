@@ -50,6 +50,19 @@ export default async function BankruptcyPage({ params }: Props) {
     .limit(1)
     .maybeSingle();
 
+  // 담보물 목록 (별제권부 M04)
+  const { data: collaterals } = await supabase
+    .from('insolvency_collaterals')
+    .select('id, creditor_id, collateral_type, estimated_value, secured_claim_amount, real_estate_address, vehicle_model')
+    .eq('case_id', caseId)
+    .neq('lifecycle_status', 'soft_deleted');
+
+  // 법적 한도 상수
+  const { data: rulesetConstants } = await supabase
+    .from('insolvency_ruleset_constants')
+    .select('ruleset_key, display_name, value_amount, value_pct')
+    .order('effective_from', { ascending: false });
+
   return (
     <BankruptcyModuleClient
       caseId={caseId}
@@ -59,6 +72,8 @@ export default async function BankruptcyPage({ params }: Props) {
       creditors={creditors ?? []}
       latestPlan={latestPlan}
       memberRole={membership.role}
+      collaterals={collaterals ?? []}
+      rulesetConstants={rulesetConstants ?? []}
     />
   );
 }

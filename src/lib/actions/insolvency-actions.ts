@@ -135,7 +135,96 @@ export async function softDeleteCreditor(creditorId: string, organizationId: str
   return { ok: true as const };
 }
 
-// ─── 변제계획 생성/저장 ───────────────────────────────────────────────────────
+// ─── 변제계획 생성/저장 (allocations 포함 전체 버전) ──────────────────────────
+
+export async function saveRepaymentPlanFull(input: {
+  organizationId: string;
+  caseId: string;
+  insolvencySubtype: string;
+  repaymentMonths: 36 | 60;
+  monthlyIncome: number;
+  monthlyLivingCost: number;
+  planStartDate: string;
+  totalSecuredClaim: number;
+  totalPriorityClaim: number;
+  totalGeneralClaim: number;
+  totalRepaymentAmount: number;
+  generalRepaymentPool: number;
+  generalRepaymentRatePct: number;
+  allocations: Array<{
+    creditorId: string;
+    creditorName: string;
+    claimClass: 'secured' | 'priority' | 'general';
+    originalAmount: number;
+    allocatedAmount: number;
+    allocationRatePct: number;
+  }>;
+}) {
+  const { auth } = await requireOrganizationActionAccess(input.organizationId, { permission: 'case_edit' });
+  const supabase = await createSupabaseServerClient();
+
+  const { count } = await supabase
+    .from('insolvency_repayment_plans')
+    .select('id', { count: 'exact', head: true })
+    .eq('case_id', input.caseId);
+
+  const versionNumber = (count ?? 0) + 1;
+
+  const startDate = new Date(input.planStartDate);
+  const endDate = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + input.repaymentMonths);
+
+  const { data: plan, error: planError } = await supabase
+    .from('insolvency_repayment_plans')
+    .insert({
+      organization_id: input.organizationId,
+      case_id: input.caseId,
+      version_number: versionNumber,
+      status: 'draft',
+      insolvency_subtype: input.insolvencySubtype,
+      repayment_months: input.repaymentMonths,
+      plan_start_date: input.planStartDate,
+      plan_end_date: endDate.toISOString().split('T')[0],
+      monthly_income: input.monthlyIncome,
+      monthly_living_cost: input.monthlyLivingCost,
+      total_secured_claim: input.totalSecuredClaim,
+      total_priority_claim: input.totalPriorityClaim,
+      total_general_claim: input.totalGeneralClaim,
+      total_repayment_amount: input.totalRepaymentAmount,
+      general_repayment_pool: input.generalRepaymentPool,
+      general_repayment_rate_pct: input.generalRepaymentRatePct,
+      created_by: auth.user.id,
+      updated_by: auth.user.id
+    })
+    .select('id')
+    .single();
+
+  if (planError || !plan) {
+    return { ok: false as const, code: 'DB_ERROR', userMessage: '변제계획 저장에 실패했습니다.' };
+  }
+
+  if (input.allocations.length > 0) {
+    const allocRows = input.allocations.map((a, idx) => ({
+      plan_id: plan.id,
+      creditor_id: a.creditorId,
+      creditor_name: a.creditorName,
+      claim_class: a.claimClass,
+      original_amount: Math.round(a.originalAmount),
+      allocated_amount: Math.round(a.allocatedAmount),
+      allocation_rate_pct: Math.round(a.allocationRatePct * 10000) / 10000,
+      allocation_order: idx + 1
+    }));
+    const { error: allocError } = await supabase.from('insolvency_repayment_allocations').insert(allocRows);
+    if (allocError) {
+      return { ok: false as const, code: 'DB_ERROR', userMessage: '안분비례 저장에 실패했습니다.' };
+    }
+  }
+
+  revalidatePath(`/cases/${input.caseId}/bankruptcy`);
+  return { ok: true as const, planId: plan.id, versionNumber };
+}
+
+// ─── 변제계획 생성/저장 (기본 버전) ───────────────────────────────────────────
 
 export async function saveRepaymentPlan(input: {
   organizationId: string;
