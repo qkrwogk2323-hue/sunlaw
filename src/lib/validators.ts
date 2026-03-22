@@ -335,6 +335,27 @@ export const feeAgreementSchema = z.object({
   termsJson: z.string().trim().optional().or(z.literal(''))
 });
 
+export const contractRegistrationSchema = z.object({
+  caseId: z.string().uuid(),
+  billToPartyKind: z.enum(['case_client', 'case_organization']).default('case_client'),
+  billToCaseClientId: z.string().uuid().optional().or(z.literal('')),
+  billToCaseOrganizationId: z.string().uuid().optional().or(z.literal('')),
+  agreementType: z.enum(['retainer', 'flat_fee', 'success_fee', 'expense_reimbursement', 'installment_plan', 'internal_settlement']),
+  title: z.string().trim().min(2).max(200),
+  documentTitle: z.string().trim().min(2).max(200),
+  summary: z.string().trim().max(2000).optional().or(z.literal('')),
+  description: z.string().trim().max(1000).optional().or(z.literal('')),
+  fixedAmount: z.coerce.number().min(0).optional(),
+  rate: z.coerce.number().min(0).max(100).optional(),
+  effectiveFrom: z.string().optional().or(z.literal('')),
+  effectiveTo: z.string().optional().or(z.literal('')),
+  sendToClient: z.boolean().default(false),
+  requestClientSignature: z.boolean().default(false),
+  signatureMethod: z.enum(['platform_checkbox', 'electronic_signature', 'kakao_confirmation', 'signed_document_upload']).default('platform_checkbox'),
+  clientVisibility: z.enum(['internal_only', 'client_visible']).default('internal_only'),
+  scanProvider: z.string().trim().max(80).optional().or(z.literal(''))
+});
+
 export const billingEntrySchema = z.object({
   billToPartyKind: z.enum(['case_client', 'case_organization']).default('case_client'),
   billToCaseClientId: z.string().uuid().optional().or(z.literal('')),

@@ -1027,6 +1027,50 @@ undo('보관함으로 이동됨 — 8초 내 취소 가능', {
 
 ---
 
+### 3-22. 동일 열 카드 등고 & 숫자 중앙정렬 규칙 (Equal-Row Card Height & Number Centering)
+
+**강제 규칙:**
+
+같은 행(row) 또는 같은 그리드 열(column)에 배치된 카드·박스는 **동일한 높이**여야 한다.
+
+**카드 등고 필수 조건:**
+- 그리드 컨테이너에 `items-stretch` 적용 (CSS Grid 기본값 확인)
+- 카드 자체에 `h-full` 적용 → 그리드 셀 높이에 맞춤
+- 카드 내부 콘텐츠가 가변적이면 `flex flex-col` + 내용 영역에 `flex-1` 적용
+
+**숫자 표시 박스 중앙정렬 필수 조건:**
+- 숫자만 표시하는 박스(KPI 카드, 요약 수치 박스 등)는 `flex items-center justify-center` 적용
+- `text-center` 단독 사용은 수직 중앙정렬을 보장하지 않으므로 금지
+- 숫자가 잘리거나 overflow 발생 금지 — `min-w-0`, `tabular-nums`, `whitespace-nowrap` 적용
+
+**위반 사례:**
+```tsx
+// ❌ 금지 — 동일 행 카드 높이 불일치
+<div className="grid grid-cols-3">
+  <Card className="min-h-36">...</Card>     {/* 콘텐츠 적음 */}
+  <Card className="min-h-36">...</Card>     {/* 콘텐츠 많음 → 더 큰 높이 */}
+</div>
+
+// ❌ 금지 — 숫자 좌측 정렬
+<p className="text-3xl font-bold">{count}</p>
+```
+
+**올바른 사례:**
+```tsx
+// ✅ 필수 — items-stretch + h-full
+<div className="grid grid-cols-3 items-stretch gap-2">
+  <Card className="flex h-full flex-col">
+    <CardContent className="flex flex-1 flex-col">
+      <p className="flex flex-1 items-center justify-center text-3xl font-bold tabular-nums whitespace-nowrap">
+        {count}
+      </p>
+    </CardContent>
+  </Card>
+</div>
+```
+
+---
+
 ## 💬 카테고리 4: 메시지 체계 규칙
 
 ### 4-1. 토스트 문구 형식
@@ -1561,3 +1605,5 @@ src/components/mode-switcher.tsx
 29. 신청/요청/승인/반려/삭제/복구/보관/세션강제종료 UI에 로그 진입 링크가 있는가.
 30. 로그 링크가 실제 엔터티 필터(`table`, `actor`, `tab`, `entity id`)를 포함하는가.
 31. 플랫폼 전용 로그만 있을 때 조직 운영자 화면에서 필요한 로그 접근 경로를 별도로 제공했는가.
+32. 동일 행/열 카드가 등고인지 확인 (h-full + items-stretch).
+33. 숫자 표시 박스에 `flex items-center justify-center`를 적용했는가.

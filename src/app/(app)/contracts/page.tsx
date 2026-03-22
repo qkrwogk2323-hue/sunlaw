@@ -2,7 +2,10 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ContractUpdatePanel } from '@/components/forms/contract-update-panel';
+import { ServiceDocsToggle } from '@/components/contracts/service-docs-toggle';
 import {
   PLATFORM_CONTRACT_SUMMARY,
   PLATFORM_CONTRACT_VERSION,
@@ -27,7 +30,6 @@ export default async function ContractsPage({
   const caseId = `${resolved?.caseId ?? ''}`.trim() || null;
   const billing = await getBillingHubSnapshot(organizationId);
   const agreements = caseId ? billing.agreements.filter((item: any) => item.case_id === caseId) : billing.agreements;
-  const activeAgreements = agreements.filter((item: any) => item.is_active);
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -35,6 +37,84 @@ export default async function ContractsPage({
   const privacyConsentRecordedAt = typeof metadata.privacy_consent_recorded_at === 'string' ? metadata.privacy_consent_recorded_at : null;
   const privacyConsentVersion = typeof metadata.privacy_consent_version === 'string' ? metadata.privacy_consent_version : PLATFORM_PRIVACY_POLICY_VERSION;
   const serviceConsentVersion = typeof metadata.service_consent_version === 'string' ? metadata.service_consent_version : PLATFORM_TERMS_VERSION;
+  const agreementCaseIds = [...new Set(agreements.map((item: any) => item.case_id).filter(Boolean))];
+  const [{ data: caseRows }, { data: caseClientRows }, { data: contractDocumentRows }] = await Promise.all([
+    supabase
+      .from('cases')
+      .select('id, title')
+      .eq('organization_id', organizationId)
+      .order('updated_at', { ascending: false })
+      .limit(120),
+    supabase
+      .from('case_clients')
+      .select('id, case_id, client_name')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(300),
+    agreementCaseIds.length
+      ? supabase
+          .from('case_documents')
+          .select('id, case_id, title, created_at, client_visibility, summary')
+          .in('case_id', agreementCaseIds)
+          .eq('document_kind', 'contract')
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] as any[] })
+  ]);
+
+  const contractDocumentMap = new Map<string, any>();
+  const contractDocumentIdMap = new Map<string, any>();
+  for (const item of contractDocumentRows ?? []) {
+    contractDocumentIdMap.set(item.id, item);
+    if (!contractDocumentMap.has(item.case_id)) {
+      contractDocumentMap.set(item.case_id, item);
+    }
+  }
+
+  const caseOptions = (caseRows ?? []).map((item: any) => ({
+    id: item.id,
+    title: item.title,
+    clients: (caseClientRows ?? [])
+      .filter((client: any) => client.case_id === item.id)
+      .map((client: any) => ({
+        id: client.id,
+        name: client.client_name
+      }))
+  }));
+
+  const contractExecutionItems = agreements.filter((item: any) => {
+    const terms = item.terms_json ?? {};
+    return Boolean(terms.sent_to_client || terms.signature_request);
+  });
+
+  function agreementLabel(type: string) {
+    switch (type) {
+      case 'flat_fee':
+        return '정액 보수';
+      case 'success_fee':
+        return '성공보수';
+      case 'expense_reimbursement':
+        return '실비 정산';
+      case 'installment_plan':
+        return '분납 약정';
+      case 'internal_settlement':
+        return '내부 정산';
+      default:
+        return '착수금';
+    }
+  }
+
+  function signatureMethodLabel(method?: string | null) {
+    switch (method) {
+      case 'electronic_signature':
+        return '전자서명';
+      case 'kakao_confirmation':
+        return '카카오 확인';
+      case 'signed_document_upload':
+        return '서명본 업로드';
+      default:
+        return '플랫폼 확인 체크';
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -53,76 +133,15 @@ export default async function ContractsPage({
             </Link>
           </div>
         </div>
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-          계약 내용은 이 화면에서 따로 모아 보고, 청구나 입금 진행 상황은 비용 관리에서 이어서 확인할 수 있습니다.
-        </div>
+        <ServiceDocsToggle
+          privacyConsentRecordedAtLabel={privacyConsentRecordedAt ? `최근 동의 기록 ${formatDate(privacyConsentRecordedAt)}` : '아직 기록된 동의 이력이 없습니다.'}
+          privacyLabel={PLATFORM_PRIVACY_CONSENT_LABEL}
+          privacyVersion={privacyConsentVersion}
+          termsVersion={serviceConsentVersion}
+          contractVersion={PLATFORM_CONTRACT_VERSION}
+          contractSummary={PLATFORM_CONTRACT_SUMMARY}
+        />
       </div>
-
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-[1.6rem] border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#f0fbf6)] md:col-span-3">
-          <CardHeader className="pb-2">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <CardTitle className="text-xl text-slate-900">서비스 문서와 동의 이력</CardTitle>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  플랫폼 문서 버전과 가입 시 기록된 동의 이력을 이 화면에서 함께 확인합니다. 사건 비용 계약은 아래 목록에서 계속 관리합니다.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-sm text-emerald-900">
-                {privacyConsentRecordedAt ? `최근 동의 기록 ${formatDate(privacyConsentRecordedAt)}` : '아직 기록된 동의 이력이 없습니다.'}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Privacy</p>
-              <p className="mt-2 font-semibold text-slate-900">{PLATFORM_PRIVACY_CONSENT_LABEL}</p>
-              <p className="mt-2 text-sm text-slate-600">현재 버전 {privacyConsentVersion}</p>
-              <div className="mt-4">
-                <Link href={'/privacy-policy' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
-                  자세히 보기
-                </Link>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">Terms</p>
-              <p className="mt-2 font-semibold text-slate-900">서비스 이용약관</p>
-              <p className="mt-2 text-sm text-slate-600">현재 버전 {serviceConsentVersion}</p>
-              <div className="mt-4">
-                <Link href={'/terms' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
-                  자세히 보기
-                </Link>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-700">Contract</p>
-              <p className="mt-2 font-semibold text-slate-900">플랫폼-조직 계약 기준</p>
-              <p className="mt-2 text-sm text-slate-600">현재 버전 {PLATFORM_CONTRACT_VERSION}</p>
-              <div className="mt-4 space-y-2 text-sm leading-7 text-slate-600">
-                {PLATFORM_CONTRACT_SUMMARY.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">활성 계약</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-semibold text-slate-900">{activeAgreements.length}</p></CardContent>
-        </Card>
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">전체 계약</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-semibold text-slate-900">{agreements.length}</p></CardContent>
-        </Card>
-        <Card className="vs-mesh-card">
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">고정금액 합계</CardTitle></CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold text-slate-900">
-              {formatCurrency(activeAgreements.reduce((sum: number, item: any) => sum + Number(item.fixed_amount ?? 0), 0))}
-            </p>
-          </CardContent>
-        </Card>
-      </section>
 
       <div className="flex flex-wrap gap-2">
         <Link href="/billing" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
@@ -136,33 +155,55 @@ export default async function ContractsPage({
       <Card className="vs-mesh-card">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>계약 목록</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle>계약 목록</CardTitle>
+              <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
+                {agreements.length}건
+              </div>
+            </div>
             {caseId ? <Badge tone="blue">선택 사건만 표시</Badge> : <Badge tone="slate">전체 사건</Badge>}
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {agreements.length ? agreements.map((agreement: any) => (
-            <Link
-              key={agreement.id}
-              href={`/cases/${agreement.case_id}?tab=billing`}
-              className="block rounded-2xl border border-slate-200 bg-white/90 p-4 transition hover:border-slate-900"
-            >
-              <div className="flex items-center justify-between gap-3">
+            <div key={agreement.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+              {(() => {
+                const terms = agreement.terms_json ?? {};
+                const linkedDocument = (terms.contract_document_id && contractDocumentIdMap.get(terms.contract_document_id)) || contractDocumentMap.get(agreement.case_id);
+                return (
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="font-medium text-slate-900">{agreement.title}</p>
                   <p className="mt-1 text-sm text-slate-500">{agreement.cases?.title ?? '사건'} · {agreement.targetLabel}</p>
+                  <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                    <p>{agreement.fixed_amount != null ? `고정금액 ${formatCurrency(agreement.fixed_amount)}` : '고정금액 없음'}</p>
+                    <p>{agreement.rate != null ? `비율 ${agreement.rate}%` : '비율 미지정'}</p>
+                    <p>적용 {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone={agreement.is_active ? 'green' : 'slate'}>{agreement.is_active ? '활성' : '비활성'}</Badge>
-                  <Badge tone="blue">{agreement.agreement_type}</Badge>
+                <div className="flex flex-col items-start gap-2 lg:items-end">
+                  <div className="flex items-center gap-2">
+                    <Badge tone={agreement.is_active ? 'green' : 'slate'}>{agreement.is_active ? '활성' : '비활성'}</Badge>
+                    <Badge tone="blue">{agreementLabel(agreement.agreement_type)}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/cases/${agreement.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                      사건 비용 탭
+                    </Link>
+                    {linkedDocument ? (
+                      <Link
+                        href={`/api/documents/${linkedDocument.id}/download` as Route}
+                        className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                      >
+                        계약서 다운받기
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-              <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
-                <p>{agreement.fixed_amount != null ? `고정금액 ${formatCurrency(agreement.fixed_amount)}` : '고정금액 없음'}</p>
-                <p>{agreement.rate != null ? `비율 ${agreement.rate}%` : '비율 미지정'}</p>
-                <p>적용 {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
-              </div>
-            </Link>
+                );
+              })()}
+            </div>
           )) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
               표시할 계약이 없습니다. 사건 화면의 비용 탭에서 비용 약정을 먼저 등록해 주세요.
@@ -170,6 +211,65 @@ export default async function ContractsPage({
           )}
         </CardContent>
       </Card>
+
+      <Card className="vs-mesh-card">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <CardTitle>계약 체결 현황</CardTitle>
+              <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
+                {contractExecutionItems.length}건
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {contractExecutionItems.length ? contractExecutionItems.map((agreement: any) => {
+            const terms = agreement.terms_json ?? {};
+            const contractDocument = (terms.contract_document_id && contractDocumentIdMap.get(terms.contract_document_id)) || contractDocumentMap.get(agreement.case_id);
+            return (
+              <div key={`${agreement.id}:execution`} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="font-medium text-slate-900">{agreement.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{agreement.cases?.title ?? '사건'} · {agreement.targetLabel}</p>
+                    <div className="mt-3 space-y-1 text-sm text-slate-600">
+                      <p>계약서 · {terms.contract_document_title ?? contractDocument?.title ?? '등록된 계약서'}</p>
+                      <p>공유 상태 · {terms.sent_to_client ? '의뢰인 공유' : '내부 보관'}</p>
+                      <p>동의 방법 · {signatureMethodLabel(terms.signature_method)}</p>
+                      <p>서명 요청 · {terms.signature_request ? '보냄' : '없음'}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {contractDocument ? (
+                      <Link
+                        href={`/api/documents/${contractDocument.id}/download` as Route}
+                        className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
+                      >
+                        계약서 다운받기
+                      </Link>
+                    ) : null}
+                    <Link href={`/portal/cases/${agreement.case_id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                      의뢰인 화면 보기
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          }) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+              아직 의뢰인에게 공유되었거나 서명 요청이 걸린 계약이 없습니다.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <CollapsibleSettingsSection
+        title="계약서 업데이트하기"
+        description="새 계약서를 올리고 AI 스캔으로 내용을 채운 뒤 계약 목록과 계약 체결 현황에 함께 등록합니다."
+      >
+        <ContractUpdatePanel cases={caseOptions} />
+      </CollapsibleSettingsSection>
     </div>
   );
 }

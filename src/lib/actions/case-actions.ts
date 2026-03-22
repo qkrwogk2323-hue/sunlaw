@@ -22,6 +22,7 @@ import {
   caseRequestSchema,
   documentReviewSchema,
   feeAgreementSchema,
+  contractRegistrationSchema,
   paymentRecordSchema,
   recoveryActivitySchema,
   scheduleCreateSchema
@@ -31,6 +32,19 @@ function buildStoragePath(organizationId: string, caseId: string, originalName: 
   const sanitized = makeSlug(originalName.replace(/\.[^.]+$/, '')) || 'document';
   const ext = originalName.includes('.') ? originalName.slice(originalName.lastIndexOf('.')) : '';
   return `org/${organizationId}/cases/${caseId}/${Date.now()}-${sanitized}${ext}`;
+}
+
+function signatureMethodLabel(method: string) {
+  switch (method) {
+    case 'electronic_signature':
+      return '전자서명';
+    case 'kakao_confirmation':
+      return '카카오 확인';
+    case 'signed_document_upload':
+      return '서명본 업로드';
+    default:
+      return '플랫폼 확인 체크';
+  }
 }
 
 async function notifyProfiles(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, rows: Array<Record<string, unknown>>) {
@@ -1550,6 +1564,168 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
   revalidatePath('/billing');
   revalidatePath('/contracts');
   revalidatePath('/notifications');
+}
+
+// 계약서 업로드와 비용 약정을 함께 등록한다.
+export async function registerContractPacketAction(formData: FormData) {
+  const parsed = contractRegistrationSchema.parse({
+    caseId: formData.get('caseId'),
+    billToPartyKind: formData.get('billToPartyKind'),
+    billToCaseClientId: formData.get('billToCaseClientId'),
+    billToCaseOrganizationId: formData.get('billToCaseOrganizationId'),
+    agreementType: formData.get('agreementType'),
+    title: formData.get('title'),
+    documentTitle: formData.get('documentTitle'),
+    summary: formData.get('summary'),
+    description: formData.get('description'),
+    fixedAmount: formData.get('fixedAmount') || undefined,
+    rate: formData.get('rate') || undefined,
+    effectiveFrom: formData.get('effectiveFrom'),
+    effectiveTo: formData.get('effectiveTo'),
+    sendToClient: formData.get('sendToClient') === 'on',
+    requestClientSignature: formData.get('requestClientSignature') === 'on',
+    signatureMethod: formData.get('signatureMethod'),
+    clientVisibility: formData.get('clientVisibility'),
+    scanProvider: formData.get('scanProvider')
+  });
+
+  const upload = formData.get('file');
+  if (!(upload instanceof File) || upload.size <= 0) {
+    throw new Error('계약서 파일을 업로드해 주세요.');
+  }
+
+  const { supabase, caseRecord } = await loadCaseOrThrow(parsed.caseId);
+  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'billing_manage',
+    errorMessage: '계약을 등록할 권한이 없습니다.'
+  });
+  await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'document_create',
+    errorMessage: '계약서 문서를 등록할 권한이 없습니다.'
+  });
+
+  if ((parsed.sendToClient || parsed.requestClientSignature) && parsed.billToPartyKind !== 'case_client') {
+    throw new Error('의뢰인에게 보낼 계약은 청구 대상을 의뢰인으로 선택해 주세요.');
+  }
+
+  if ((parsed.sendToClient || parsed.requestClientSignature) && !parsed.billToCaseClientId) {
+    throw new Error('의뢰인에게 보낼 계약은 대상 의뢰인을 선택해 주세요.');
+  }
+
+  const { data: billingOwner } = await supabase
+    .from('case_organizations')
+    .select('id')
+    .eq('case_id', caseRecord.id)
+    .eq('organization_id', caseRecord.organization_id)
+    .eq('role', 'managing_org')
+    .maybeSingle();
+
+  let storagePath: string | null = null;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'case-files';
+  const now = new Date().toISOString();
+
+  try {
+    storagePath = buildStoragePath(caseRecord.organization_id, caseRecord.id, upload.name);
+    const { error: uploadError } = await supabase.storage.from(bucket).upload(storagePath, upload, {
+      contentType: upload.type,
+      upsert: false
+    });
+    if (uploadError) throw uploadError;
+
+    const { data: documentRow, error: documentError } = await supabase
+      .from('case_documents')
+      .insert({
+        organization_id: caseRecord.organization_id,
+        case_id: caseRecord.id,
+        title: parsed.documentTitle,
+        document_kind: 'contract',
+        approval_status: 'draft',
+        client_visibility: parsed.sendToClient ? 'client_visible' : parsed.clientVisibility,
+        storage_path: storagePath,
+        mime_type: upload.type || null,
+        file_size: upload.size,
+        summary: parsed.summary || null,
+        content_markdown: parsed.description || null,
+        created_by: auth.user.id,
+        created_by_name: auth.profile.full_name,
+        updated_by: auth.user.id
+      })
+      .select('id')
+      .single();
+
+    if (documentError || !documentRow) {
+      throw documentError ?? new Error('계약서 문서를 저장하지 못했습니다.');
+    }
+
+    const termsJson = {
+      contract_document_id: documentRow.id,
+      contract_document_title: parsed.documentTitle,
+      contract_summary: parsed.summary || null,
+      scan_provider: parsed.scanProvider || null,
+      sent_to_client: parsed.sendToClient,
+      sent_to_client_at: parsed.sendToClient ? now : null,
+      signature_request: parsed.requestClientSignature,
+      signature_method: parsed.signatureMethod,
+      delivery_status: parsed.requestClientSignature ? 'sent_for_signature' : parsed.sendToClient ? 'shared_with_client' : 'internal_registered'
+    };
+
+    const { data: agreementRow, error: agreementError } = await supabase
+      .from('fee_agreements')
+      .insert({
+        case_id: caseRecord.id,
+        billing_owner_case_organization_id: billingOwner?.id,
+        bill_to_party_kind: parsed.billToPartyKind,
+        bill_to_case_client_id: parsed.billToCaseClientId || null,
+        bill_to_case_organization_id: parsed.billToCaseOrganizationId || null,
+        agreement_type: parsed.agreementType,
+        title: parsed.title,
+        description: parsed.description || null,
+        fixed_amount: parsed.fixedAmount ?? null,
+        rate: parsed.rate ?? null,
+        effective_from: parsed.effectiveFrom || null,
+        effective_to: parsed.effectiveTo || null,
+        terms_json: termsJson,
+        created_by: auth.user.id,
+        updated_by: auth.user.id
+      })
+      .select('id')
+      .single();
+
+    if (agreementError || !agreementRow) {
+      throw agreementError ?? new Error('계약 약정을 저장하지 못했습니다.');
+    }
+
+    if (parsed.requestClientSignature) {
+      const signatureBody = [
+        `${parsed.documentTitle} 계약서를 확인하고 ${signatureMethodLabel(parsed.signatureMethod)} 방식으로 동의를 남겨 주세요.`,
+        parsed.summary ? `계약 요약: ${parsed.summary}` : null
+      ].filter(Boolean).join('\n');
+
+      const { error: requestError } = await supabase.from('case_requests').insert({
+        organization_id: caseRecord.organization_id,
+        case_id: caseRecord.id,
+        created_by: auth.user.id,
+        request_kind: 'signature_request',
+        title: `[계약] ${parsed.title} 서명 요청`,
+        body: signatureBody,
+        due_at: parsed.effectiveTo || null,
+        client_visible: true
+      });
+
+      if (requestError) throw requestError;
+    }
+
+    revalidatePath(`/cases/${caseRecord.id}`);
+    revalidatePath(`/portal/cases/${caseRecord.id}`);
+    revalidatePath('/billing');
+    revalidatePath('/contracts');
+    revalidatePath('/notifications');
+  } catch (error) {
+    if (storagePath) {
+      await supabase.storage.from(bucket).remove([storagePath]).catch(() => undefined);
+    }
+    throw error;
+  }
 }
 
 // 사건 입금 내역을 기록한다.

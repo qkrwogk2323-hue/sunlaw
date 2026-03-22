@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { BellRing, Bot, ChevronRight, Link2, Search, ShieldAlert, Sparkles, ThumbsDown, Wallet } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, ShieldAlert, Sparkles, ThumbsDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -281,6 +281,12 @@ function recommendationTone(priority: 'high' | 'medium' | 'low') {
 
 function anomalyTone(severity: 'warning' | 'notice') {
   return severity === 'warning' ? 'amber' : 'blue';
+}
+
+function priorityLabel(priority: CoordinationChecklistItem['priority']) {
+  if (priority === 'high') return '높음';
+  if (priority === 'medium') return '중간';
+  return '낮음';
 }
 
 function providerLabel(provider: 'openai' | 'gemini' | 'rules') {
@@ -1103,6 +1109,10 @@ export function DashboardHubClient({
   const [archiveQuery, setArchiveQuery] = useState('');
   const [archiveAiHint, setArchiveAiHint] = useState<string | null>(null);
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(true);
+  const [todoOpen, setTodoOpen] = useState(true);
+  const [draftOpen, setDraftOpen] = useState(true);
+  const [adminCopilotOpen, setAdminCopilotOpen] = useState(true);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -1294,18 +1304,18 @@ export function DashboardHubClient({
             <h1 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">오늘 바로 처리할 일</h1>
             <p className="text-sm text-slate-600">중요 알림, 승인 요청, 후속 처리 항목을 같은 흐름에서 정리합니다.</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid items-stretch gap-2 sm:grid-cols-3">
             {summaryCards.map((item) => (
               <Link
                 key={item.label}
                 href={item.href as Route}
-                className={`flex min-h-36 min-w-32 flex-col rounded-[1.35rem] border px-4 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.10)] ${item.className}`}
+                className={`flex h-full min-h-40 min-w-32 flex-col rounded-[1.35rem] border px-4 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.10)] ${item.className}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">{item.label}</p>
                   <ChevronRight className="size-4 shrink-0 text-slate-400" />
                 </div>
-                <p className={`mt-4 text-3xl font-bold leading-none tabular-nums ${item.valueClassName}`}>{item.value}</p>
+                <p className={`my-4 flex flex-1 items-center justify-center text-3xl font-bold tabular-nums whitespace-nowrap ${item.valueClassName}`}>{item.value}</p>
                 <p className="mt-3 text-xs font-medium text-slate-700">{item.helper}</p>
                 <p className="mt-auto pt-3 text-xs leading-5 text-slate-500">{item.detail}</p>
               </Link>
