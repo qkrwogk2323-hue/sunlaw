@@ -87,7 +87,10 @@ export const clientSignupSchema = z.object({
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),
   serviceConsent: z.literal(true, {
-    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
+    errorMap: () => ({ message: '서비스 이용약관 동의가 필요합니다.' })
+  }),
+  aiPolicyConsent: z.literal(true, {
+    errorMap: () => ({ message: 'AI 이용 및 권리보호 안내 동의가 필요합니다.' })
   })
 });
 
@@ -107,7 +110,10 @@ export const generalSignupSchema = z.object({
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),
   serviceConsent: z.literal(true, {
-    errorMap: () => ({ message: '시스템 이용 동의가 필요합니다.' })
+    errorMap: () => ({ message: '서비스 이용약관 동의가 필요합니다.' })
+  }),
+  aiPolicyConsent: z.literal(true, {
+    errorMap: () => ({ message: 'AI 이용 및 권리보호 안내 동의가 필요합니다.' })
   })
 });
 
