@@ -83,6 +83,8 @@ export function CredentialLoginForm() {
   const [tempPassword, setTempPassword] = useState('');
   const [error, setError] = useState<LoginErrorFeedback | null>(null);
   const [loading, setLoading] = useState(false);
+  const hasEmailModeError = Boolean(error && mode === 'email');
+  const hasTempModeError = Boolean(error && mode === 'temp');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -108,7 +110,7 @@ export function CredentialLoginForm() {
         const response = await fetch('/api/auth/temp-login/resolve', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ organizationKey: organizationKey.trim(), loginId: resolvedEmail })
+          body: JSON.stringify({ organizationKey: organizationKey.trim().toLowerCase(), loginId: resolvedEmail })
         });
 
         const payload = await response.json().catch(() => ({}));
@@ -128,8 +130,7 @@ export function CredentialLoginForm() {
         throw signInError;
       }
 
-      router.replace('/login');
-      router.refresh();
+      window.location.href = '/login';
     } catch (submitError) {
       setError(toLoginErrorFeedback(submitError, mode));
     } finally {
@@ -181,6 +182,7 @@ export function CredentialLoginForm() {
               name="email"
               type="email"
               required
+              error={hasEmailModeError}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="가입한 이메일을 입력해 주세요"
@@ -193,6 +195,7 @@ export function CredentialLoginForm() {
               type="password"
               required
               minLength={8}
+              error={hasEmailModeError}
               value={emailPassword}
               onChange={(event) => setEmailPassword(event.target.value)}
               placeholder="비밀번호를 입력해 주세요"
@@ -206,8 +209,10 @@ export function CredentialLoginForm() {
             <Input
               value={organizationKey}
               onChange={(event) => setOrganizationKey(event.target.value)}
+              onBlur={() => setOrganizationKey((prev) => prev.trim().toLowerCase())}
               placeholder="예: sunlaw-seoul"
               required
+              error={hasTempModeError}
             />
             <p className="text-xs leading-5 text-slate-500">조직에서 안내받은 식별값을 입력해 주세요.</p>
           </label>
@@ -217,6 +222,7 @@ export function CredentialLoginForm() {
               name="loginId"
               type="text"
               required
+              error={hasTempModeError}
               value={loginId}
               onChange={(event) => setLoginId(event.target.value)}
               placeholder="예: staff-temp-001"
@@ -230,6 +236,7 @@ export function CredentialLoginForm() {
               type="password"
               required
               minLength={8}
+              error={hasTempModeError}
               value={tempPassword}
               onChange={(event) => setTempPassword(event.target.value)}
               placeholder="비밀번호를 입력해 주세요"
@@ -256,7 +263,7 @@ export function CredentialLoginForm() {
           비밀번호를 잊으셨나요?
         </Link>
         <Link href={'/support' as Route} className="font-medium text-sky-700 hover:text-sky-800">
-          {mode === 'email' ? '이메일 인증이나 로그인 문제가 있나요?' : '임시 아이디 안내를 받지 못하셨나요?'}
+          {mode === 'email' ? '이메일 인증이 완료되지 않았나요?' : '임시 아이디 안내를 받지 못하셨나요?'}
         </Link>
       </div>
     </form>
