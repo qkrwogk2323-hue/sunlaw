@@ -1102,7 +1102,7 @@ export function DashboardHubClient({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveQuery, setArchiveQuery] = useState('');
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
-  const [activeAiPanels, setActiveAiPanels] = useState<Array<'assistant' | 'todo' | 'draft'>>(['assistant']);
+  const [activeAiPanels, setActiveAiPanels] = useState<Array<'assistant' | 'todo'>>(['assistant']);
   const [conversationExpanded, setConversationExpanded] = useState(false);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
@@ -1134,7 +1134,7 @@ export function DashboardHubClient({
     [data.teamMembers, effectiveCurrentUserId]
   );
   const canOpenArchive = Boolean(currentViewerMembership && isManagementRole(currentViewerMembership.role));
-  const toggleAiPanel = (panel: 'assistant' | 'todo' | 'draft') => {
+  const toggleAiPanel = (panel: 'assistant' | 'todo') => {
     setActiveAiPanels((current) => (
       current.includes(panel)
         ? current.filter((item) => item !== panel)
@@ -1263,132 +1263,6 @@ export function DashboardHubClient({
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 xl:grid-cols-2">
-          {/* 운영 큐 */}
-          <div className="rounded-[1.6rem] border border-rose-200 bg-[linear-gradient(180deg,#fffafb,#fff1f4)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">운영 큐</p>
-                <p className="mt-1 text-xs text-slate-500">알림 큐와 승인 요청을 같은 우선순위 기준으로 확인합니다.</p>
-              </div>
-              <Badge tone="red">우선순위</Badge>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <BellRing className="size-4" />
-                    조치 필요 알림
-                  </div>
-                  <Badge tone="blue">{data.actionableNotifications.length}</Badge>
-                </div>
-                {data.actionableNotifications.length ? (
-                  data.actionableNotifications.slice(0, 3).map((item) => (
-                    <Link
-                      key={item.id}
-                      href={toNotificationOpenHref(item)}
-                      className="block rounded-2xl border border-rose-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50/40"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-slate-900">{item.title}</p>
-                          <p className="mt-1 line-clamp-2 text-xs leading-6 text-slate-600">{item.body}</p>
-                          <p className="mt-2 text-[11px] font-medium text-rose-700">열면 관련 화면에서 바로 처리할 수 있습니다.</p>
-                        </div>
-                        <ChevronRight className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                      </div>
-                      <p className="mt-2 text-xs font-medium text-rose-700">{notificationActionLabel(item)}</p>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-rose-200 bg-white px-3 py-6 text-sm text-slate-500">즉시 처리할 알림이 없습니다.</div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <Link2 className="size-4" />
-                    승인 및 연결 대기
-                  </div>
-                  <Badge tone="amber">{data.clientAccessQueue.length}</Badge>
-                </div>
-                {data.clientAccessQueue.length ? (
-                  data.clientAccessQueue.slice(0, 3).map((item) => {
-                    const organization = organizationRecord(item.organization);
-
-                    return (
-                      <Link
-                        key={item.id}
-                        href={'/clients' as Route}
-                        className="block rounded-2xl border border-amber-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/40"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-medium text-slate-900">{item.requester_name}</p>
-                          <Badge tone={item.status === 'pending' ? 'amber' : 'blue'}>{clientAccessStatusLabel(item.status ?? 'unknown')}</Badge>
-                        </div>
-                        <p className="mt-1 text-xs text-slate-500">{organization?.name ?? '현재 조직'} · {formatDateTime(item.created_at)}</p>
-                        {item.request_note ? <p className="mt-2 line-clamp-2 text-xs leading-6 text-slate-600">{item.request_note}</p> : null}
-                        <p className="mt-2 text-[11px] font-medium text-amber-700">열면 승인 또는 연결 후속 작업으로 이어집니다.</p>
-                      </Link>
-                    );
-                  })
-                ) : (
-                  <div className="rounded-2xl border border-amber-200 bg-white px-3 py-6 text-sm text-slate-500">검토 중인 의뢰인 요청이 없습니다.</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 주의할 변화 알림 */}
-          <div className="rounded-[1.6rem] border border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff5dd)] p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">주의할 변화 알림</p>
-                <p className="mt-1 text-xs text-slate-500">평소보다 갑자기 늘었거나 한곳에 몰린 항목을 먼저 보여 줍니다.</p>
-              </div>
-              <Badge tone="amber">{initialAiOverview.anomalies.length}</Badge>
-            </div>
-            <div className="mt-3 space-y-2">
-              {initialAiOverview.anomalies.length ? (
-                initialAiOverview.anomalies.map((item) => (
-                  <Link
-                    key={`${item.href}:${item.title}`}
-                    href={item.href as Route}
-                    className="block rounded-2xl border border-amber-200 bg-white px-3 py-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-amber-300"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium text-slate-900">{item.title}</p>
-                      <Badge tone={anomalyTone(item.severity)}>{item.severity === 'warning' ? '경고' : '주의'}</Badge>
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-slate-600">{item.detail}</p>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-amber-200 bg-white px-3 py-5 text-sm text-slate-600">지금은 눈에 띄는 급증이나 누락 흐름이 보이지 않습니다.</div>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
-                aria-label="AI 변화 알림이 잘못됐나요? 피드백 보내기"
-                onClick={() => {
-                  reportAiIssue({
-                    aiFeature: 'anomaly_alert',
-                    question: '주의할 변화 알림',
-                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '특별히 늘어난 항목 없음',
-                    rationale: initialAiOverview.anomalies.map((item) => item.detail).join(' / '),
-                    modelVersion: 'rules',
-                    requestId: `anomaly:${initialAiOverview.summary.source.generatedAt}`
-                  });
-                }}
-              >
-                <ThumbsDown className="size-3.5" />
-                AI 결과가 틀렸나요?
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <Card>
@@ -1649,11 +1523,10 @@ export function DashboardHubClient({
       ) : null}
 
       <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {[
-            { key: 'assistant' as const, title: 'AI 업무도우미', desc: '질문하면 바로 갈 화면과 이유를 안내합니다.', tone: 'border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]', badge: '홈' },
-            { key: 'todo' as const, title: '지금 해야 할 항목', desc: '현재 대기 흐름 기준으로 우선순위를 제안합니다.', tone: 'border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]', badge: String(initialAiOverview.recommendations.length) },
-            { key: 'draft' as const, title: '작성보조', desc: '초대, 허브 안내, 공지 초안을 빠르게 만듭니다.', tone: 'border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]', badge: '초안' }
+            { key: 'assistant' as const, title: '업무관련 질의', desc: '질문 답변과 초안 작성을 한 곳에서 처리합니다.', tone: 'border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]', badge: '질의' },
+            { key: 'todo' as const, title: 'AI 스케줄도우미', desc: '업무 우선순위와 다음 처리 순서를 제안합니다.', tone: 'border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]', badge: String(initialAiOverview.recommendations.length) }
           ].map((panel) => {
             const active = activeAiPanels.includes(panel.key);
             return (
@@ -1685,8 +1558,8 @@ export function DashboardHubClient({
         <Card className="border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
           <CardHeader className="border-sky-200/70">
             <div>
-              <CardTitle>AI 업무도우미</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">질문을 적으면 지금 어느 화면으로 가야 하는지 바로 안내합니다.</p>
+              <CardTitle>업무관련 질의</CardTitle>
+              <p className="mt-1 text-sm text-slate-500">질문 답변과 초안 작성이 한 번에 이어집니다.</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1694,9 +1567,7 @@ export function DashboardHubClient({
               <p className="text-xs text-slate-500">
                 <span className="text-red-500" aria-hidden="true">*</span> 질문을 입력하면 바로 이동할 화면과 이유를 함께 알려드립니다.
               </p>
-              <label htmlFor="dashboard-ai-question" className="text-sm font-medium text-slate-700">
-                질문 <span className="text-red-500" aria-hidden="true">*</span>
-              </label>
+              <label htmlFor="dashboard-ai-question" className="text-sm font-medium text-slate-700">질문</label>
               <div className="flex flex-col gap-2 lg:flex-row">
                 <Input
                   id="dashboard-ai-question"
@@ -1760,6 +1631,85 @@ export function DashboardHubClient({
                 ))}
               </div>
             </div>
+            <div className="rounded-[1.4rem] border border-emerald-200 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">초안 작성</p>
+                  <p className="mt-1 text-sm text-slate-500">초대, 허브 안내, 조직 공지 초안을 바로 만듭니다.</p>
+                </div>
+                <Badge tone="green">초안</Badge>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-[180px_1fr]">
+                <div className="space-y-2">
+                  <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
+                  <select
+                    id="draft-kind"
+                    value={draftKind}
+                    onChange={(event) => setDraftKind(event.target.value as typeof draftKind)}
+                    className="h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm text-slate-900"
+                  >
+                    <option value="client_invite">의뢰인 초대</option>
+                    <option value="staff_invite">구성원 초대</option>
+                    <option value="hub_message">허브 안내</option>
+                    <option value="organization_message">조직 공지</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
+                  <Input
+                    id="draft-context"
+                    value={draftContextTitle}
+                    onChange={(event) => setDraftContextTitle(event.target.value)}
+                    placeholder="예: 베인 사건 보정 안내"
+                    className="h-11 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">초안 요청</label>
+                <Textarea
+                  id="draft-prompt"
+                  value={draftPrompt}
+                  onChange={(event) => setDraftPrompt(event.target.value)}
+                  placeholder="예: 보정기한이 이번 주 금요일이고, 재산관계 확인 서류를 꼭 보내 달라는 안내문을 부드럽게 작성해 줘"
+                  className="min-h-28 border-emerald-200 bg-white"
+                />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button onClick={runDraftAssist} disabled={draftPending || !draftPrompt.trim() || !organizationId}>
+                  {draftPending ? '초안 만드는 중...' : '초안 만들기'}
+                </Button>
+                {draftResult ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      reportAiIssue({
+                        aiFeature: 'draft_assist',
+                        question: draftPrompt,
+                        answer: `${draftResult.title}\n${draftResult.body}`,
+                        rationale: draftResult.shortBody,
+                        modelVersion: draftResult.provider,
+                        requestId: draftRequestId ?? undefined
+                      });
+                    }}
+                  >
+                    AI 결과가 틀렸나요?
+                  </Button>
+                ) : null}
+              </div>
+              {draftResult ? (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-900">{draftResult.title}</p>
+                    <Badge tone="green">{providerLabel(draftResult.provider)}</Badge>
+                  </div>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draftResult.body}</p>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                    짧은 문구 · {draftResult.shortBody}
+                  </div>
+                </div>
+              ) : null}
+            </div>
             {assistantResult ? (
               <div className="rounded-[1.4rem] border border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#f3fff8)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
                 <div className="flex items-center justify-between gap-3">
@@ -1819,8 +1769,8 @@ export function DashboardHubClient({
           <CardHeader className="border-violet-200/70">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle>지금 해야 할 항목</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">역할과 현재 대기 흐름을 기준으로 우선순위를 제안합니다.</p>
+                <CardTitle>AI 스케줄도우미</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">업무 우선순위와 다음 처리 순서를 정리합니다.</p>
               </div>
               <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
             </div>
@@ -1847,7 +1797,7 @@ export function DashboardHubClient({
                 onClick={() => {
                   reportAiIssue({
                     aiFeature: 'next_action_recommendation',
-                    question: '지금 해야 할 항목',
+                    question: 'AI 스케줄도우미',
                     answer: initialAiOverview.recommendations.map((item) => item.title).join(' / '),
                     rationale: initialAiOverview.recommendations.map((item) => item.detail).join(' / '),
                     modelVersion: 'rules',
@@ -1862,97 +1812,6 @@ export function DashboardHubClient({
         </Card>
         ) : null}
 
-        {activeAiPanels.includes('draft') ? (
-        <Card className="border-emerald-200 bg-[linear-gradient(180deg,#fbfffd,#eefdf5)]">
-          <CardHeader className="border-emerald-200/70">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle>작성보조</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">초대 문구, 허브 안내, 조직 공지 초안을 빠르게 만듭니다.</p>
-              </div>
-              <Badge tone="green">초안</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-              <p className="text-xs text-slate-500">
-                <span className="text-red-500" aria-hidden="true">*</span> 작성 종류와 요청 내용을 입력하면 바로 초안이 만들어집니다.
-              </p>
-              <div className="grid gap-3 md:grid-cols-[180px_1fr]">
-                <div className="space-y-2">
-                  <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
-                  <select
-                    id="draft-kind"
-                    value={draftKind}
-                    onChange={(event) => setDraftKind(event.target.value as typeof draftKind)}
-                    className="h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm text-slate-900"
-                  >
-                    <option value="client_invite">의뢰인 초대</option>
-                    <option value="staff_invite">구성원 초대</option>
-                    <option value="hub_message">허브 안내</option>
-                    <option value="organization_message">조직 공지</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="draft-context" className="text-sm font-medium text-slate-700">관련 제목</label>
-                  <Input
-                    id="draft-context"
-                    value={draftContextTitle}
-                    onChange={(event) => setDraftContextTitle(event.target.value)}
-                    placeholder="예: 베인 사건 보정 안내"
-                    className="h-11 bg-white"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">
-                  초안 요청 <span className="text-red-500" aria-hidden="true">*</span>
-                </label>
-                <Textarea
-                  id="draft-prompt"
-                  value={draftPrompt}
-                  onChange={(event) => setDraftPrompt(event.target.value)}
-                  aria-required="true"
-                  placeholder="예: 보정기한이 이번 주 금요일이고, 재산관계 확인 서류를 꼭 보내 달라는 안내문을 부드럽게 작성해 줘"
-                  className="min-h-28 border-emerald-200 bg-white"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={runDraftAssist} disabled={draftPending || !draftPrompt.trim() || !organizationId}>
-                  {draftPending ? '초안 만드는 중...' : '초안 만들기'}
-                </Button>
-                {draftResult ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      reportAiIssue({
-                        aiFeature: 'draft_assist',
-                        question: draftPrompt,
-                        answer: `${draftResult.title}\n${draftResult.body}`,
-                        rationale: draftResult.shortBody,
-                        modelVersion: draftResult.provider,
-                        requestId: draftRequestId ?? undefined
-                      });
-                    }}
-                  >
-                    AI 결과가 틀렸나요?
-                  </Button>
-                ) : null}
-              </div>
-              {draftResult ? (
-                <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-slate-900">{draftResult.title}</p>
-                    <Badge tone="green">{providerLabel(draftResult.provider)}</Badge>
-                  </div>
-                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draftResult.body}</p>
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                    짧은 문구 · {draftResult.shortBody}
-                  </div>
-                </div>
-              ) : null}
-          </CardContent>
-        </Card>
-        ) : null}
       </div>
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
