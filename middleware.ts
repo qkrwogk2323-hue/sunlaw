@@ -20,10 +20,13 @@ const AUTH_REQUIRED_PREFIXES = [
 
 // Rate limiting: 슬라이딩 윈도우 (per-edge-isolate)
 // 멀티 인스턴스 환경에서는 Upstash Redis(@upstash/ratelimit) 도입 필요
-const rateLimitStore = new Map<string, number[]>();
+const globalRateLimitStore = globalThis as typeof globalThis & {
+  __veinRateLimitStore?: Map<string, number[]>;
+};
+const rateLimitStore = globalRateLimitStore.__veinRateLimitStore ?? new Map<string, number[]>();
+globalRateLimitStore.__veinRateLimitStore = rateLimitStore;
 
 const RATE_LIMIT_RULES: Record<string, { windowMs: number; max: number }> = {
-  '/api/auth/general-signup':          { windowMs: 60_000, max: 5 },
   '/api/auth/temp-login/resolve':      { windowMs: 60_000, max: 10 },
   '/api/auth/temp-login/resolve-client': { windowMs: 60_000, max: 10 },
   '/api/dashboard-ai/commit':          { windowMs: 60_000, max: 20 },
@@ -97,7 +100,10 @@ export async function middleware(request: NextRequest) {
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
       request.headers.get('x-real-ip') ??
       'unknown';
-    if (!checkRateLimit(ip, request.nextUrl.pathname)) {
+    const rateLimitIdentity = ip === 'unknown'
+      ? `ua:${request.headers.get('user-agent') ?? 'unknown'}`
+      : ip;
+    if (!checkRateLimit(rateLimitIdentity, request.nextUrl.pathname)) {
       return NextResponse.json(
         { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
         { status: 429, headers: { 'Retry-After': '60' } }

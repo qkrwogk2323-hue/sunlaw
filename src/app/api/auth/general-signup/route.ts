@@ -6,30 +6,37 @@ import { generalSignupSchema } from '@/lib/validators';
 
 const SIGNUP_RATE_LIMIT_WINDOW_MS = 60_000;
 const SIGNUP_RATE_LIMIT_MAX = 5;
-const signupAttempts = new Map<string, number[]>();
+const globalSignupAttempts = globalThis as typeof globalThis & {
+  __veinGeneralSignupAttempts?: Map<string, number[]>;
+};
+const signupAttempts = globalSignupAttempts.__veinGeneralSignupAttempts ?? new Map<string, number[]>();
+globalSignupAttempts.__veinGeneralSignupAttempts = signupAttempts;
 
-function getSignupRateLimitKey(request: Request) {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const realIp = request.headers.get('x-real-ip')?.trim();
-  return forwarded || realIp || 'unknown';
-}
-
-function isRateLimited(request: Request) {
-  const key = getSignupRateLimitKey(request);
+function isSignupRateLimited(identity: string): boolean {
   const now = Date.now();
-  const windowStart = now - SIGNUP_RATE_LIMIT_WINDOW_MS;
-  const attempts = (signupAttempts.get(key) ?? []).filter((timestamp) => timestamp > windowStart);
+  const attempts = (signupAttempts.get(identity) ?? []).filter((timestamp) => now - timestamp < SIGNUP_RATE_LIMIT_WINDOW_MS);
+  if (attempts.length >= SIGNUP_RATE_LIMIT_MAX) {
+    signupAttempts.set(identity, attempts);
+    return true;
+  }
   attempts.push(now);
-  signupAttempts.set(key, attempts);
-  return attempts.length > SIGNUP_RATE_LIMIT_MAX;
+  signupAttempts.set(identity, attempts);
+  return false;
 }
 
 export async function POST(request: Request) {
   try {
-    if (isRateLimited(request)) {
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown';
+    const identity = ip === 'unknown'
+      ? `ua:${request.headers.get('user-agent') ?? 'unknown'}`
+      : ip;
+    if (isSignupRateLimited(identity)) {
       return NextResponse.json(
-        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' },
-        { status: 429 }
+        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
       );
     }
 
@@ -46,9 +53,11 @@ export async function POST(request: Request) {
         full_name: parsed.legalName,
         signup_method: 'credential',
         privacy_consent_recorded_at: consentRecordedAt,
-        privacy_consent_placeholder: true,
+        privacy_consent_placeholder: false,
+        privacy_consent_version: 'v2026-03-21',
         service_consent_recorded_at: consentRecordedAt,
-        service_consent_placeholder: true
+        service_consent_placeholder: false,
+        service_consent_version: 'v2026-03-21'
       }
     });
 

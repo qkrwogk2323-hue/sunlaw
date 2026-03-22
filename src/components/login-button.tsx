@@ -4,29 +4,14 @@ import { useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
 import {
-  resolveCanonicalAuthOrigin,
   resolveSupabaseCookieDomain
 } from '@/lib/supabase/cookie-options';
 
 const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
 
 function resolveAuthOrigin() {
-  const currentOrigin = window.location.origin;
-
-  const canonicalOrigin = resolveCanonicalAuthOrigin();
-  if (!canonicalOrigin) {
-    return currentOrigin;
-  }
-
-  const currentHost = window.location.hostname.replace(/^www\./, '');
-  const canonicalHost = new URL(canonicalOrigin).hostname.replace(/^www\./, '');
-
-  // Keep PKCE flow on the same origin that started login to avoid missing code verifier/state.
-  if (currentHost === canonicalHost) {
-    return currentOrigin;
-  }
-
-  return canonicalOrigin;
+  // PKCE code verifier/state cookie is origin-bound, so callback must stay on the same origin.
+  return window.location.origin;
 }
 
 function writePostAuthNextCookie(next?: string) {

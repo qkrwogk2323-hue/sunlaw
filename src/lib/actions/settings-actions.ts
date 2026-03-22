@@ -74,6 +74,55 @@ function parseJson(value: string) {
   }
 }
 
+function normalizeSettingValueByType(value: unknown, valueType: string, key: string) {
+  if (valueType === 'string') {
+    if (typeof value !== 'string') throw new Error(`설정 키(${key})의 롤백 값 타입이 string이 아닙니다.`);
+    return value;
+  }
+
+  if (valueType === 'integer') {
+    if (typeof value !== 'number' || !Number.isInteger(value)) throw new Error(`설정 키(${key})의 롤백 값 타입이 integer가 아닙니다.`);
+    return value;
+  }
+
+  if (valueType === 'decimal') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`설정 키(${key})의 롤백 값 타입이 decimal이 아닙니다.`);
+    return value;
+  }
+
+  if (valueType === 'boolean') {
+    if (typeof value !== 'boolean') throw new Error(`설정 키(${key})의 롤백 값 타입이 boolean이 아닙니다.`);
+    return value;
+  }
+
+  if (valueType === 'string_array') {
+    if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+      throw new Error(`설정 키(${key})의 롤백 값 타입이 string_array가 아닙니다.`);
+    }
+    return value;
+  }
+
+  if (valueType === 'json') {
+    if (value == null || typeof value !== 'object') throw new Error(`설정 키(${key})의 롤백 값 타입이 json이 아닙니다.`);
+    return value;
+  }
+
+  throw new Error(`설정 키(${key})의 타입(${valueType})을 확인할 수 없습니다.`);
+}
+
+async function getSettingCatalogValueType(admin: ReturnType<typeof createSupabaseAdminClient>, key: string) {
+  const { data: catalogRow, error: catalogError } = await admin
+    .from('setting_catalog')
+    .select('value_type')
+    .eq('key', key)
+    .maybeSingle();
+  if (catalogError) throw catalogError;
+  if (!catalogRow?.value_type) {
+    throw new Error(`설정 카탈로그에서 키(${key})를 찾을 수 없습니다.`);
+  }
+  return catalogRow.value_type as string;
+}
+
 async function assertOrgAdmin(organizationId: string) {
   const { auth } = await requireOrganizationActionAccess(organizationId, {
     requireManager: true,
@@ -294,9 +343,11 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
       // Compensating delete: setting rows use row absence as the canonical rollback state.
       await admin.from('platform_settings').delete().eq('key', logRow.target_key);
     } else {
+      const valueType = await getSettingCatalogValueType(admin, logRow.target_key);
+      const normalizedValueJson = normalizeSettingValueByType(logRow.old_value_json, valueType, logRow.target_key);
       await admin.from('platform_settings').upsert({
         key: logRow.target_key,
-        value_json: logRow.old_value_json,
+        value_json: normalizedValueJson,
         updated_by: auth.user.id,
         updated_at: new Date().toISOString()
       });
@@ -310,10 +361,12 @@ export async function rollbackLatestSettingChangeAction(formData: FormData) {
         .eq('organization_id', logRow.organization_id)
         .eq('key', logRow.target_key);
     } else {
+      const valueType = await getSettingCatalogValueType(admin, logRow.target_key);
+      const normalizedValueJson = normalizeSettingValueByType(logRow.old_value_json, valueType, logRow.target_key);
       await admin.from('organization_settings').upsert({
         organization_id: logRow.organization_id,
         key: logRow.target_key,
-        value_json: logRow.old_value_json,
+        value_json: normalizedValueJson,
         updated_by: auth.user.id,
         updated_at: new Date().toISOString()
       }, { onConflict: 'organization_id,key' });

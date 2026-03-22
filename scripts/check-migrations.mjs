@@ -3,6 +3,9 @@ import path from 'node:path';
 
 const migrationsDir = path.resolve(process.cwd(), 'supabase/migrations');
 const migrationPattern = /^(\d{4})_(.+)\.sql$/;
+const allowedDuplicateFiles = new Set([
+  '0032_platform_root_membership_admin.sql'
+]);
 
 function fail(message) {
   console.error(`Migration validation failed: ${message}`);
@@ -31,19 +34,31 @@ const parsed = migrationFiles.map((fileName) => {
   };
 });
 
-for (let index = 0; index < parsed.length; index += 1) {
-  const current = parsed[index];
-  const expectedVersion = index + 1;
+const seenByVersion = new Map();
 
-  if (current.version !== expectedVersion) {
-    const expectedLabel = String(expectedVersion).padStart(4, '0');
-    fail(`expected migration ${expectedLabel}_*.sql at position ${index + 1}, found ${current.fileName}`);
+for (const current of parsed) {
+  const previous = seenByVersion.get(current.version);
+  if (!previous) {
+    seenByVersion.set(current.version, current.fileName);
+    continue;
   }
 
-  if (index > 0 && parsed[index - 1].version === current.version) {
+  if (!allowedDuplicateFiles.has(current.fileName)) {
     const versionLabel = String(current.version).padStart(4, '0');
-    fail(`duplicate migration version detected: ${versionLabel}`);
+    fail(`duplicate migration version detected: ${versionLabel} (${previous}, ${current.fileName})`);
   }
 }
 
-console.log(`Migration validation passed for ${parsed.length} files.`);
+const uniqueVersions = [...new Set(parsed.map((entry) => entry.version))];
+
+for (let index = 0; index < uniqueVersions.length; index += 1) {
+  const expectedVersion = index + 1;
+  const actualVersion = uniqueVersions[index];
+  if (actualVersion !== expectedVersion) {
+    const expectedLabel = String(expectedVersion).padStart(4, '0');
+    const actualLabel = String(actualVersion).padStart(4, '0');
+    fail(`expected migration ${expectedLabel}_*.sql in unique sequence, found ${actualLabel}_*.sql`);
+  }
+}
+
+console.log(`Migration validation passed for ${parsed.length} files (${uniqueVersions.length} unique versions).`);

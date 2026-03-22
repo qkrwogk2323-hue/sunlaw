@@ -7,8 +7,12 @@ drop index if exists public.idx_case_clients_last_linked_hub_id;
 drop index if exists public.idx_case_hubs_primary_case_client_id;
 
 alter table public.case_clients
-  drop column if exists case_link_status,
-  drop column if exists orphan_review_deadline,
+  drop column if exists link_status,
+  drop column if exists orphan_reason,
+  drop column if exists relink_policy,
+  drop column if exists detached_at,
+  drop column if exists orphaned_at,
+  drop column if exists review_deadline,
   drop column if exists last_linked_hub_id;
 
 alter table public.case_hubs

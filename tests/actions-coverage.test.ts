@@ -66,8 +66,20 @@ function fd(fields: Record<string, string>) {
   return f;
 }
 
-function makeSupabase(overrides: Record<string, unknown> = {}) {
-  const chain = { select: vi.fn(), eq: vi.fn(), in: vi.fn(), update: vi.fn(), insert: vi.fn(), single: vi.fn(), data: null, error: null };
+function makeSupabase(overrides: Record<string, unknown> = {}): any {
+  const chain: Record<string, any> = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    in: vi.fn(),
+    update: vi.fn(),
+    insert: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    single: vi.fn(),
+    maybeSingle: vi.fn(),
+    data: null,
+    error: null
+  };
   Object.assign(chain, overrides);
   // chain each method to return itself for fluent calls
   chain.select.mockReturnValue(chain);
@@ -75,7 +87,10 @@ function makeSupabase(overrides: Record<string, unknown> = {}) {
   chain.in.mockReturnValue(chain);
   chain.update.mockReturnValue(chain);
   chain.insert.mockReturnValue(chain);
+  chain.upsert.mockReturnValue(chain);
+  chain.delete.mockReturnValue(chain);
   chain.single.mockReturnValue(chain);
+  chain.maybeSingle.mockReturnValue(chain);
   return {
     from: vi.fn(() => chain),
     auth: { admin: { signOut: vi.fn().mockResolvedValue({ error: null }) } },
