@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import type { Route } from 'next';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +118,14 @@ export default async function TeamSettingsPage({
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">구성원 관리</h1>
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 보고 가입/초대/활성 상태를 운영합니다.</p>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <Link href={'/admin/audit?tab=general&table=organization_memberships' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            구성원 권한 변경 기록 보기
+          </Link>
+          <Link href={'/admin/audit?tab=violation&table=organization_memberships' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            구성원 권한 위반 기록 보기
+          </Link>
+        </div>
       </div>
 
       {currentMembership ? (

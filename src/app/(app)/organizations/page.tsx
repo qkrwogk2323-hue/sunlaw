@@ -48,6 +48,14 @@ export default async function OrganizationsPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직 찾기</h1>
           <p className="mt-2 text-sm text-slate-600">협업할 상대 조직을 찾고, 제안 현황과 승인된 업무 허브까지 한 번에 관리합니다.</p>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            <Link href={'/admin/audit?tab=general&table=organizations' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+              조직 정보 변경 기록 보기
+            </Link>
+            <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+              협업 제안 기록 보기
+            </Link>
+          </div>
         </div>
         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
           조직을 찾았다면 제안을 보내고, 승인되면 열린 업무 허브로 바로 넘어가 실제 협업을 시작합니다.

@@ -90,6 +90,15 @@ export default async function CollaborationHubPage({
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-3 text-sm">
+        <Link href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          허브 메시지 기록 보기
+        </Link>
+        <Link href={'/admin/audit?tab=general&table=organization_collaboration_case_shares' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          허브 사건 공유 기록 보기
+        </Link>
+      </div>
+
       {query?.invite ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           생성된 초대 링크 토큰: <span className="font-mono">{query.invite}</span>

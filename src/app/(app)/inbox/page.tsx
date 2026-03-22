@@ -52,6 +52,15 @@ export default async function InboxPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-3 text-sm">
+        <Link href={'/admin/audit?tab=general&table=organization_collaboration_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          협업 제안 기록 보기
+        </Link>
+        <Link href={'/admin/audit?tab=general&table=organization_collaboration_messages' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          허브 대화 기록 보기
+        </Link>
+      </div>
+
       <section className="grid gap-6">
         <Card className="vs-interactive vs-mesh-card">
           <CardHeader><CardTitle>열린 사건허브</CardTitle></CardHeader>

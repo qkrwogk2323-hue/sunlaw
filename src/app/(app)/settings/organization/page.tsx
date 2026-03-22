@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
@@ -91,6 +92,17 @@ export default async function OrganizationSettingsPage({
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직설정</h1>
         <p className="mt-2 text-sm text-slate-600">회사소개, 회사정보, 환경설정을 클릭하면 각각 바로 수정할 수 있습니다.</p>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <Link href={'/admin/audit?tab=general&table=organization_settings' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            조직 환경설정 변경 기록 보기
+          </Link>
+          <Link href={'/admin/audit?tab=general&table=organizations' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            조직 정보 변경 기록 보기
+          </Link>
+          <Link href={'/admin/audit?tab=general&table=organization_exit_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            조직 탈퇴 신청 기록 보기
+          </Link>
+        </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
