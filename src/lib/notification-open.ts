@@ -2,9 +2,10 @@ import 'server-only';
 
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { createAccessDeniedFeedback, createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { notifyPlatformBugAlert } from '@/lib/platform-alerts';
 
 function revalidateNotificationViews() {
   revalidatePath('/notifications');
@@ -13,6 +14,13 @@ function revalidateNotificationViews() {
 
 function normalizeRelativeHref(value: string) {
   return value.startsWith('/') ? value : '/notifications';
+}
+
+function isPlatformOnlyHref(value: string) {
+  return value === '/product-home'
+    || value.startsWith('/admin')
+    || value.startsWith('/settings/platform')
+    || value.startsWith('/settings/features');
 }
 
 async function getOwnedNotification(notificationId: string) {
@@ -60,6 +68,33 @@ export async function resolveNotificationOpenTarget({
   const resolvedOrganizationId = `${nextOrganizationId ?? ''}`.trim();
   const resolvedHref = `${submittedHref ?? ''}`.trim();
   const { auth, supabase, notification } = await getOwnedNotification(id);
+  const targetHref = normalizeRelativeHref(notification.destination_url ?? notification.action_href ?? resolvedHref);
+  const hasPlatformAccess = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
+
+  if (isPlatformOnlyHref(targetHref) && !hasPlatformAccess) {
+    await notifyPlatformBugAlert({
+      actorId: auth.user.id,
+      organizationId: auth.profile.default_organization_id,
+      title: '플랫폼 전용 알림이 일반 조직 화면에 노출되었습니다.',
+      body: `플랫폼 전용 경로 ${targetHref} 를 일반 조직 화면에서 열려고 한 흔적이 감지되었습니다.`,
+      actionHref: '/admin/audit?tab=general&table=notifications',
+      actionLabel: '플랫폼 알림 기록 확인',
+      resourceType: 'notification',
+      resourceId: notification.id,
+      meta: {
+        notificationId: notification.id,
+        targetHref,
+        code: 'PLATFORM_NOTIFICATION_LEAK'
+      }
+    });
+
+    throwGuardFeedback(createAccessDeniedFeedback({
+      code: 'PLATFORM_NOTIFICATION_LEAK',
+      blocked: '플랫폼 전용 알림은 현재 조직에서 열 수 없습니다.',
+      cause: '플랫폼 관리자 화면 전용 알림이 일반 조직 알림센터에 섞여 들어온 버그가 감지되었습니다.',
+      resolution: '이 알림은 열지 않고 알림센터로 돌아갑니다. 운영팀에 자동 기록되었습니다.'
+    }));
+  }
 
   if (resolvedOrganizationId && resolvedOrganizationId !== auth.profile.default_organization_id) {
     const hasMembership = auth.memberships.some((membership) => membership.organization_id === resolvedOrganizationId);
@@ -112,5 +147,5 @@ export async function resolveNotificationOpenTarget({
     revalidatePath('/admin/support');
   }
 
-  return normalizeRelativeHref(notification.destination_url ?? notification.action_href ?? resolvedHref) as Route;
+  return targetHref as Route;
 }

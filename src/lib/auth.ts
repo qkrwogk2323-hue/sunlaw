@@ -9,6 +9,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, normalizeActiveViewMode } from '@/lib/view-mode';
+import { notifyPlatformBugAlert } from '@/lib/platform-alerts';
 
 type CoreProfile = Pick<
   Profile,
@@ -282,7 +283,23 @@ export async function requirePlatformAdmin(organizationId?: string | null) {
 export async function requirePlatformAdminAction(errorMessage = '플랫폼 관리자만 접근할 수 있습니다.', organizationId?: string | null) {
   const auth = await requireAuthenticatedUser();
   const platformOrganizationId = organizationId ?? getPlatformOrganizationContextId(auth);
-  assertPlatformAdminAccess(await hasActivePlatformAdminView(auth, platformOrganizationId), errorMessage);
+  const canAccess = await hasActivePlatformAdminView(auth, platformOrganizationId);
+  if (!canAccess) {
+    await notifyPlatformBugAlert({
+      actorId: auth.user.id,
+      organizationId: getEffectiveOrganizationId(auth),
+      title: '일반 조직에서 플랫폼 전용 기능 실행이 시도되었습니다.',
+      body: errorMessage,
+      actionHref: '/admin/audit',
+      actionLabel: '권한 오류 기록 확인',
+      resourceType: 'platform_access_violation',
+      meta: {
+        requestedPlatformOrganizationId: platformOrganizationId,
+        currentOrganizationId: getEffectiveOrganizationId(auth)
+      }
+    });
+  }
+  assertPlatformAdminAccess(canAccess, errorMessage);
   return auth;
 }
 

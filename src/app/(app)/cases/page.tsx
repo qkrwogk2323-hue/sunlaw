@@ -237,7 +237,7 @@ export default async function CasesPage({
         </div>
         <PremiumInfoPanel
           title="사건허브 요약"
-          description="사건목록에서도 허브 상태를 잃지 않도록 최근 허브의 협업률과 활동 상태를 함께 고정합니다."
+          description="사건목록에서도 최근 사용한 사건허브를 바로 다시 열 수 있습니다."
         >
           {hubList.length ? (
             <div className="space-y-3">
@@ -248,7 +248,7 @@ export default async function CasesPage({
                 <HubMetricBadge label="최근 활동" value={formatHubRelativeActivity(hubList[0].lastActivityAt)} tone="slate" />
               </div>
               <p className="text-sm font-semibold text-slate-900">{hubList[0].title ?? hubList[0].caseTitle ?? '사건허브'}</p>
-              <p className="text-sm text-slate-500">최근 허브를 기준으로 사건목록에서 바로 허브 입장과 허브 연동을 이어갑니다.</p>
+              <p className="text-sm text-slate-500">최근 사용한 허브를 기준으로 바로 허브 화면으로 이어집니다.</p>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-5 text-center">

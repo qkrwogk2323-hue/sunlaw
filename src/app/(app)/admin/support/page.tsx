@@ -12,6 +12,7 @@ import { beginSupportSessionAction, decideSupportRequestAction } from '@/lib/act
 import { formatDateTime } from '@/lib/format';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
+import Link from 'next/link';
 
 export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
@@ -45,8 +46,18 @@ export default async function SupportPage() {
       {isPlatformAdmin ? (
         <Card>
           <CardHeader>
-            <CardTitle>고객센터 접수함</CardTitle>
-            <p className="text-sm text-slate-600">사용자조직과 의뢰인이 플랫폼 운영팀에 보낸 문의, 요청, 의견, 오류 신고를 이 화면에서 처리합니다.</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle>고객센터 접수함</CardTitle>
+                <p className="mt-1 text-sm text-slate-600">사용자조직과 의뢰인이 플랫폼 운영팀에 보낸 문의, 요청, 의견, 오류 신고를 이 화면에서 처리합니다.</p>
+              </div>
+              <Link
+                href="/admin/audit?tab=general&table=platform_support_tickets"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                고객센터 기록 보기
+              </Link>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {tickets.length ? tickets.map((ticket: any) => (
@@ -100,7 +111,17 @@ export default async function SupportPage() {
       ) : null}
 
       <Card>
-        <CardHeader><CardTitle>지원 접속 요청 목록</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>지원 접속 요청 목록</CardTitle>
+            <Link
+              href="/admin/audit?tab=general&table=support_requests"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              지원 요청 기록 보기
+            </Link>
+          </div>
+        </CardHeader>
         <CardContent className="space-y-4">
           {requests.length ? requests.map((request: any) => {
             const membership = auth.memberships.find((item) => item.organization_id === request.organization_id) ?? null;

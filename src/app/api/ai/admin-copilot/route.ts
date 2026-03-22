@@ -1,8 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getCurrentAuth, getPlatformOrganizationContextId, hasActivePlatformAdminView } from '@/lib/auth';
-import { runAdminCopilot } from '@/lib/ai/dashboard-home';
 import { sanitizeAiText } from '@/lib/ai/guardrails';
-import { guardAccessDeniedResponse, guardServerErrorResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
+import { guardAccessDeniedResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
 
 export async function POST(request: Request) {
   const auth = await getCurrentAuth();
@@ -34,14 +32,11 @@ export async function POST(request: Request) {
     });
   }
 
-  try {
-    const response = await runAdminCopilot({ question });
-    return NextResponse.json({
-      ok: true,
-      requestId: `admin-copilot:${Date.now()}`,
-      ...response
-    });
-  } catch {
-    return guardServerErrorResponse(500, '운영 도우미 답변을 만들지 못했습니다.');
-  }
+  void question;
+  return guardAccessDeniedResponse(403, {
+    code: 'PLATFORM_AI_DISABLED',
+    blocked: '플랫폼 운영 관련 AI 답변은 제공하지 않습니다.',
+    cause: '조직 승인, 구독 조정, 운영 판단 같은 플랫폼 업무는 AI가 답하거나 제안하지 않습니다.',
+    resolution: '플랫폼 운영 메뉴에서 직접 확인해 주세요.'
+  });
 }

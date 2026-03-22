@@ -4,19 +4,14 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { BellRing, Bot, ChevronRight, Link2, Search, Sparkles, ThumbsDown, Wallet } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, Search, ShieldAlert, Sparkles, ThumbsDown, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast-provider';
-import type {
-  AdminCopilotResponse,
-  DashboardAiAssistantResponse,
-  DashboardAiOverview,
-  DraftAssistResponse
-} from '@/lib/ai/dashboard-home';
+import type { DashboardAiAssistantResponse, DashboardAiOverview, DraftAssistResponse } from '@/lib/ai/dashboard-home';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 
@@ -1104,10 +1099,6 @@ export function DashboardHubClient({
   const [draftPending, setDraftPending] = useState(false);
   const [draftResult, setDraftResult] = useState<DraftAssistResponse | null>(null);
   const [draftRequestId, setDraftRequestId] = useState<string | null>(null);
-  const [adminQuestion, setAdminQuestion] = useState('이번 주 조직별 참여율 비교');
-  const [adminPending, setAdminPending] = useState(false);
-  const [adminResult, setAdminResult] = useState<AdminCopilotResponse | null>(null);
-  const [adminRequestId, setAdminRequestId] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveQuery, setArchiveQuery] = useState('');
   const [archiveAiHint, setArchiveAiHint] = useState<string | null>(null);
@@ -1288,36 +1279,6 @@ export function DashboardHubClient({
       toastError('작성 보조 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
     } finally {
       setDraftPending(false);
-    }
-  };
-
-  const runAdminCopilot = async () => {
-    const question = adminQuestion.trim();
-    if (!question) return;
-    setAdminPending(true);
-    try {
-      const response = await fetch('/api/ai/admin-copilot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question })
-      });
-      const payload = await response.json().catch(() => null) as ({ answer?: string; table?: AdminCopilotResponse['table']; actions?: AdminCopilotResponse['actions']; source?: AdminCopilotResponse['source']; provider?: 'rules'; requestId?: string; cause?: string; resolution?: string } | null);
-      if (!response.ok || !payload?.answer || !payload.table || !payload.actions || !payload.source || !payload.provider) {
-        toastError('운영 코파일럿 응답 실패', { message: payload?.resolution ?? payload?.cause ?? '잠시 후 다시 시도해 주세요.' });
-        return;
-      }
-      setAdminResult({
-        answer: payload.answer,
-        table: payload.table,
-        actions: payload.actions,
-        source: payload.source,
-        provider: payload.provider
-      });
-      setAdminRequestId(payload.requestId ?? null);
-    } catch {
-      toastError('운영 코파일럿 응답 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
-    } finally {
-      setAdminPending(false);
     }
   };
 
@@ -1617,8 +1578,8 @@ export function DashboardHubClient({
             <CardHeader className="border-amber-200/70">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <CardTitle>주의할 변화 알림</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">평소보다 급증하거나 누락된 흐름을 먼저 보여 줍니다.</p>
+                  <CardTitle>갑자기 늘어난 항목 안내</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">평소보다 갑자기 늘었거나 한곳에 몰린 항목을 먼저 보여 줍니다.</p>
                 </div>
                 <Badge tone="amber">{initialAiOverview.anomalies.length}</Badge>
               </div>
@@ -1649,8 +1610,8 @@ export function DashboardHubClient({
                 onClick={() => {
                   reportAiIssue({
                     aiFeature: 'anomaly_alert',
-                    question: '주의할 변화 알림',
-                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '주의할 변화 없음',
+                    question: '갑자기 늘어난 항목 안내',
+                    answer: initialAiOverview.anomalies.map((item) => item.title).join(' / ') || '특별히 늘어난 항목 없음',
                     rationale: initialAiOverview.anomalies.map((item) => item.detail).join(' / '),
                     modelVersion: 'rules',
                     requestId: `anomaly:${initialAiOverview.summary.source.generatedAt}`
@@ -1761,94 +1722,49 @@ export function DashboardHubClient({
             <CardHeader className="border-slate-200/70">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <CardTitle>관리자용 운영 코파일럿</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">조직별 참여 흐름이나 운영 대기 상황을 바로 비교합니다.</p>
+                  <CardTitle>플랫폼 운영 직접 확인</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">플랫폼 운영 판단과 조정은 AI가 답하지 않습니다. 아래 운영 메뉴에서 직접 확인해 주세요.</p>
                 </div>
-                <Badge tone="slate">운영자</Badge>
+                <Badge tone="amber">직접 확인</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-xs text-slate-500">
-                <span className="text-red-500" aria-hidden="true">*</span> 운영 질문을 입력하면 최근 흐름을 비교해 보여줍니다.
-              </p>
-              <div className="flex flex-col gap-2 lg:flex-row">
-                <Input
-                  value={adminQuestion}
-                  onChange={(event) => setAdminQuestion(event.target.value)}
-                  aria-required="true"
-                  placeholder="예: 이번 주 조직별 참여율 비교"
-                  className="h-11 bg-white"
-                />
-                <Button onClick={runAdminCopilot} disabled={adminPending || !adminQuestion.trim()}>
-                  {adminPending ? '분석 중...' : '운영 질의'}
-                </Button>
-              </div>
-
-              {adminResult ? (
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">운영 답변</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{adminResult.answer}</p>
-                    </div>
-                    <Badge tone="blue">{providerLabel(adminResult.provider)}</Badge>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+                    <ShieldAlert className="size-4" aria-hidden="true" />
                   </div>
-                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                    <table className="min-w-full divide-y divide-slate-200 text-sm">
-                      <thead className="bg-slate-50 text-slate-600">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-semibold">조직</th>
-                          <th className="px-3 py-2 text-left font-semibold">참여율</th>
-                          <th className="px-3 py-2 text-left font-semibold">최근 메시지</th>
-                          <th className="px-3 py-2 text-left font-semibold">대기 요청</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {adminResult.table.map((row) => (
-                          <tr key={row.organizationId}>
-                            <td className="px-3 py-2 text-slate-900">{row.organizationName}</td>
-                            <td className="px-3 py-2 text-slate-700">{row.participationRate}%</td>
-                            <td className="px-3 py-2 text-slate-700">{row.recentMessages}건</td>
-                            <td className="px-3 py-2 text-slate-700">{row.pendingRequests}건</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {adminResult.actions.map((action) => (
-                      <Link
-                        key={`${action.href}:${action.label}`}
-                        href={action.href as Route}
-                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-100"
-                      >
-                        {action.label}
-                      </Link>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
-                      aria-label="AI 운영 분석이 잘못됐나요? 피드백 보내기"
-                      onClick={() => {
-                        reportAiIssue({
-                          aiFeature: 'admin_copilot',
-                          question: adminQuestion,
-                          answer: adminResult.answer,
-                          rationale: adminResult.table.map((item) => `${item.organizationName} ${item.participationRate}%`).join(' / '),
-                          modelVersion: adminResult.provider,
-                          requestId: adminRequestId ?? undefined
-                        });
-                      }}
-                    >
-                      <ThumbsDown className="size-3.5" />
-                      AI 결과가 틀렸나요?
-                    </Button>
+                  <div className="space-y-1">
+                    <p className="font-semibold">플랫폼 운영 질문은 AI가 답하지 않습니다.</p>
+                    <p className="leading-6 text-amber-900">
+                      조직 승인, 구독 조정, 조직 삭제, 운영 권한, 감사로그 판단 같은 항목은 AI 제안 없이 직접 확인하고 처리해야 합니다.
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600">운영 질문을 입력하면 최근 1주일 기준 조직별 흐름을 바로 비교해 줍니다.</div>
-              )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <Link
+                  href={'/admin/organization-requests' as Route}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
+                >
+                  <p className="font-semibold text-slate-900">조직 신청 관리</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">신청, 승인, 반려와 최근 기록을 직접 확인합니다.</p>
+                </Link>
+                <Link
+                  href={'/admin/organizations' as Route}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
+                >
+                  <p className="font-semibold text-slate-900">조직 관리</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">조직 상태 변경, 비활성화, 삭제, 로그를 직접 확인합니다.</p>
+                </Link>
+                <Link
+                  href={'/settings/subscription' as Route}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
+                >
+                  <p className="font-semibold text-slate-900">구독 관리</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">구독 상태와 제한, 변경 기록을 직접 확인합니다.</p>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         ) : null}

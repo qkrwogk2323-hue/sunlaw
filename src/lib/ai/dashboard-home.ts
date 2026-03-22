@@ -81,6 +81,8 @@ export type AdminCopilotResponse = {
   provider: 'rules';
 };
 
+const PLATFORM_AI_BLOCK_PATTERN = /(플랫폼|구독|조직\s*(승인|신청|삭제|비활성화|정지|해지)|운영\s*(권한|승인|삭제|정지)|감사\s*로그|고객센터|지원\s*접속)/;
+
 function pushRecommendation(
   rows: DashboardAiRecommendation[],
   recommendation: DashboardAiRecommendation
@@ -311,6 +313,50 @@ export function answerDashboardAssistant(input: {
   isPlatformAdmin: boolean;
 }): DashboardAiAssistantResponse {
   const question = sanitizeAiText(input.question);
+  if (PLATFORM_AI_BLOCK_PATTERN.test(question)) {
+    return {
+      answer: input.isPlatformAdmin
+        ? '플랫폼 운영 관련 질문은 AI가 답하지 않습니다. 아래 운영 메뉴에서 직접 확인해 주세요.'
+        : '플랫폼 운영 관련 질문은 AI가 답하지 않습니다. 필요한 경우 고객센터로 문의해 주세요.',
+      actions: input.isPlatformAdmin
+        ? [
+            {
+              label: '조직 신청 관리',
+              href: '/admin/organization-requests',
+              reason: '조직 신청, 승인, 탈퇴 요청은 이 화면에서 직접 확인합니다.'
+            },
+            {
+              label: '조직 관리',
+              href: '/admin/organizations',
+              reason: '조직 비활성화, 삭제, 상태 변경은 이 화면에서 직접 처리합니다.'
+            },
+            {
+              label: '고객센터',
+              href: '/admin/support',
+              reason: '문의, 오류, 지원 요청은 고객센터 화면에서 직접 확인합니다.'
+            }
+          ]
+        : [
+            {
+              label: '고객센터',
+              href: '/support',
+              reason: '플랫폼 운영 관련 문의는 고객센터로 전달해 주세요.'
+            },
+            {
+              label: '알림 센터',
+              href: '/notifications',
+              reason: '현재 계정에서 처리할 일반 알림과 요청은 여기서 확인합니다.'
+            }
+          ],
+      provider: 'rules',
+      source: buildAiSourceMeta({
+        feature: 'home_ai_assistant',
+        dataType: 'platform_ai_block',
+        scope: { organizationId: input.organizationId },
+        filters: { question }
+      })
+    };
+  }
   const actions = buildRouteSuggestion(question, input.snapshot, input.isPlatformAdmin);
   const answer = `${actions[0]?.reason ?? '관련 화면으로 이동해 확인하세요.'} ${actions.length > 1 ? '필요하면 아래 관련 화면도 함께 확인하세요.' : ''}`.trim();
 
@@ -351,6 +397,37 @@ export function buildDraftAssist(input: {
 export async function runAdminCopilot(input: {
   question: string;
 }): Promise<AdminCopilotResponse> {
+  if (PLATFORM_AI_BLOCK_PATTERN.test(sanitizeAiText(input.question))) {
+    return {
+      answer: '플랫폼 운영 관련 판단과 조정은 AI가 답하지 않습니다. 운영 메뉴에서 직접 확인해 주세요.',
+      table: [],
+      actions: [
+        {
+          label: '조직 신청 관리',
+          href: '/admin/organization-requests',
+          reason: '신청, 승인, 반려는 이 화면에서 직접 확인합니다.'
+        },
+        {
+          label: '조직 관리',
+          href: '/admin/organizations',
+          reason: '조직 상태 변경은 이 화면에서 직접 처리합니다.'
+        },
+        {
+          label: '구독 관리',
+          href: '/settings/subscription',
+          reason: '구독 상태는 AI가 아니라 이 화면에서 직접 확인합니다.'
+        }
+      ],
+      provider: 'rules',
+      source: buildAiSourceMeta({
+        feature: 'admin_copilot',
+        dataType: 'platform_ai_block',
+        scope: { window: 'none', organizationCount: 0 },
+        filters: { question: sanitizeAiText(input.question) }
+      })
+    };
+  }
+
   const admin = createSupabaseAdminClient();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 

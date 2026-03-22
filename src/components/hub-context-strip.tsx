@@ -23,8 +23,8 @@ export function HubContextStrip({
               <Network className="size-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">허브 컨텍스트</p>
-              <p className="text-sm text-slate-700">{currentLabel}에서도 사건허브 상태를 잃지 않도록 최근 허브를 고정합니다.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">최근 허브</p>
+              <p className="text-sm text-slate-700">{currentLabel} 화면에서도 최근 사용한 허브를 바로 다시 열 수 있습니다.</p>
             </div>
           </div>
           {primary ? (

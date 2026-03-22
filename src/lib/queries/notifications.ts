@@ -1,6 +1,7 @@
 import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getPortalCases } from '@/lib/queries/portal';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 
 const TRASH_RETENTION_DAYS = 30;
 const legacyNotificationSelect = 'id, title, body, kind, created_at, read_at, organization_id, case_id, payload, organization:organizations(id, name, slug)';
@@ -392,11 +393,21 @@ export async function getNotificationCenter(limit = 20) {
   const currentOrganizationId = getEffectiveOrganizationId(auth);
   const currentOrganizationMembership = auth.memberships.find((membership) => membership.organization_id === currentOrganizationId) ?? auth.memberships[0] ?? null;
   const currentOrganizationName = currentOrganizationMembership?.organization?.name ?? null;
+  const currentOrganizationIsPlatform = isPlatformManagementOrganization(currentOrganizationMembership?.organization);
+  const visibleNotifications = activeNotifications.filter((notification) => {
+    if (!notification.organization_id) return true;
+    const targetMembership = auth.memberships.find((membership) => membership.organization_id === notification.organization_id) ?? null;
+    const targetIsPlatform = isPlatformManagementOrganization(targetMembership?.organization);
+    if (targetIsPlatform && !currentOrganizationIsPlatform) {
+      return false;
+    }
+    return true;
+  });
 
-  const currentOrganizationNotifications = activeNotifications.filter((notification) => notification.organization_id === currentOrganizationId || notification.organization_id === null);
+  const currentOrganizationNotifications = visibleNotifications.filter((notification) => notification.organization_id === currentOrganizationId || notification.organization_id === null);
 
   const otherOrganizationGroups = Object.values(
-    activeNotifications
+    visibleNotifications
       .filter((notification) => notification.organization_id && notification.organization_id !== currentOrganizationId)
       .reduce<Record<string, { organizationId: string; organizationName: string; organizationSlug: string | null; items: NotificationItem[]; latestCreatedAt: string }>>((groups, notification) => {
         const organizationId = notification.organization_id ?? 'unknown';
@@ -423,8 +434,8 @@ export async function getNotificationCenter(limit = 20) {
       }, {})
   ).sort((left, right) => new Date(right.latestCreatedAt).getTime() - new Date(left.latestCreatedAt).getTime());
 
-  const unreadCount = activeNotifications.filter((notification) => !notification.read_at).length;
-  const actionRequiredCount = activeNotifications.filter((notification) => notification.requires_action && !notification.resolved_at).length;
+  const unreadCount = visibleNotifications.filter((notification) => !notification.read_at).length;
+  const actionRequiredCount = visibleNotifications.filter((notification) => notification.requires_action && !notification.resolved_at).length;
 
   return {
     currentOrganizationId,
@@ -438,7 +449,7 @@ export async function getNotificationCenter(limit = 20) {
       unreadCount,
       actionRequiredCount,
       trashCount: trashedNotifications.length,
-      activeCount: activeNotifications.length
+      activeCount: visibleNotifications.length
     }
   };
 }
