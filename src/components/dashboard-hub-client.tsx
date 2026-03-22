@@ -288,6 +288,11 @@ function anomalyTone(severity: 'warning' | 'notice') {
   return severity === 'warning' ? 'amber' : 'blue';
 }
 
+function providerLabel(provider: 'openai' | 'gemini' | 'rules') {
+  if (provider === 'rules') return '기준 안내';
+  return 'AI 응답';
+}
+
 function clientAccessStatusLabel(status: string) {
   if (status === 'pending') return '승인 대기';
   if (status === 'approved') return '사건 연결 대기';
@@ -1205,6 +1210,24 @@ export function DashboardHubClient({
     );
   };
 
+  const summaryRows = [
+    {
+      label: '알림',
+      detail: `읽지 않은 알림 ${data.unreadNotifications}건, 즉시 처리 ${data.actionableNotifications.length}건`,
+      href: '/notifications?section=immediate' as Route
+    },
+    {
+      label: '사건',
+      detail: `진행 중 사건 ${data.activeCases}건, 요청 대기 ${data.pendingRequests}건`,
+      href: '/cases' as Route
+    },
+    {
+      label: '비용',
+      detail: `납부 확인 필요 ${data.pendingBillingCount}건`,
+      href: '/billing' as Route
+    }
+  ];
+
   const runAssistant = async () => {
     const question = assistantQuestion.trim();
     if (!question || !organizationId) return;
@@ -1420,12 +1443,18 @@ export function DashboardHubClient({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="dashboard-ai-question" className="text-sm font-medium text-slate-700">질문</label>
+              <p className="text-xs text-slate-500">
+                <span className="text-red-500" aria-hidden="true">*</span> 질문을 입력하면 바로 이동할 화면과 이유를 함께 알려드립니다.
+              </p>
+              <label htmlFor="dashboard-ai-question" className="text-sm font-medium text-slate-700">
+                질문 <span className="text-red-500" aria-hidden="true">*</span>
+              </label>
               <div className="flex flex-col gap-2 lg:flex-row">
                 <Input
                   id="dashboard-ai-question"
                   value={assistantQuestion}
                   onChange={(event) => setAssistantQuestion(event.target.value)}
+                  aria-required="true"
                   placeholder="예: 오늘 미읽음 많은 허브 보여줘 / 의뢰인 초대 어디서 해?"
                   className="h-11 bg-white"
                 />
@@ -1438,7 +1467,7 @@ export function DashboardHubClient({
             <div className="rounded-[1.4rem] border border-sky-200 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">오늘의 AI 요약</p>
+                  <p className="text-sm font-semibold text-slate-900">오늘의 첫 확인</p>
                   <p className="mt-1 text-sm text-slate-600">{initialAiOverview.summary.headline}</p>
                 </div>
                 <Button
@@ -1458,10 +1487,15 @@ export function DashboardHubClient({
                 </Button>
               </div>
               <div className="mt-3 grid gap-2">
-                {initialAiOverview.summary.bullets.map((item) => (
-                  <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                    {item}
-                  </div>
+                {summaryRows.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                  >
+                    <p className="font-semibold text-slate-900">{item.label}</p>
+                    <p className="mt-1">{item.detail}</p>
+                  </Link>
                 ))}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1484,7 +1518,7 @@ export function DashboardHubClient({
                     <p className="text-sm font-semibold text-slate-900">질문 답변</p>
                     <p className="mt-1 text-sm text-slate-600">{assistantResult.answer}</p>
                   </div>
-                  <Badge tone="green">{assistantResult.provider}</Badge>
+                  <Badge tone="green">{providerLabel(assistantResult.provider)}</Badge>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   {assistantResult.actions.map((action) => (
@@ -1531,7 +1565,7 @@ export function DashboardHubClient({
             <CardHeader className="border-violet-200/70">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <CardTitle>지금 해야 할 3가지</CardTitle>
+                  <CardTitle>지금 해야 할 항목</CardTitle>
                   <p className="mt-1 text-sm text-slate-500">역할과 현재 대기 흐름을 기준으로 우선순위를 제안합니다.</p>
                 </div>
                 <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
@@ -1556,7 +1590,7 @@ export function DashboardHubClient({
                 onClick={() => {
                   reportAiIssue({
                     aiFeature: 'next_action_recommendation',
-                    question: '지금 해야 할 3가지',
+                    question: '지금 해야 할 항목',
                     answer: initialAiOverview.recommendations.map((item) => item.title).join(' / '),
                     rationale: initialAiOverview.recommendations.map((item) => item.detail).join(' / '),
                     modelVersion: 'rules',
@@ -1629,6 +1663,9 @@ export function DashboardHubClient({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-xs text-slate-500">
+              <span className="text-red-500" aria-hidden="true">*</span> 작성 종류와 요청 내용을 입력하면 바로 초안이 만들어집니다.
+            </p>
             <div className="grid gap-3 md:grid-cols-[180px_1fr]">
               <div className="space-y-2">
                 <label htmlFor="draft-kind" className="text-sm font-medium text-slate-700">작성 종류</label>
@@ -1656,11 +1693,14 @@ export function DashboardHubClient({
               </div>
             </div>
             <div className="space-y-2">
-              <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">초안 요청</label>
+              <label htmlFor="draft-prompt" className="text-sm font-medium text-slate-700">
+                초안 요청 <span className="text-red-500" aria-hidden="true">*</span>
+              </label>
               <Textarea
                 id="draft-prompt"
                 value={draftPrompt}
                 onChange={(event) => setDraftPrompt(event.target.value)}
+                aria-required="true"
                 placeholder="예: 보정기한이 이번 주 금요일이고, 재산관계 확인 서류를 꼭 보내 달라는 안내문을 부드럽게 작성해 줘"
                 className="min-h-28 border-emerald-200 bg-white"
               />
@@ -1691,7 +1731,7 @@ export function DashboardHubClient({
               <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold text-slate-900">{draftResult.title}</p>
-                  <Badge tone="green">{draftResult.provider}</Badge>
+                  <Badge tone="green">{providerLabel(draftResult.provider)}</Badge>
                 </div>
                 <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draftResult.body}</p>
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
@@ -1714,10 +1754,14 @@ export function DashboardHubClient({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <p className="text-xs text-slate-500">
+                <span className="text-red-500" aria-hidden="true">*</span> 운영 질문을 입력하면 최근 흐름을 비교해 보여줍니다.
+              </p>
               <div className="flex flex-col gap-2 lg:flex-row">
                 <Input
                   value={adminQuestion}
                   onChange={(event) => setAdminQuestion(event.target.value)}
+                  aria-required="true"
                   placeholder="예: 이번 주 조직별 참여율 비교"
                   className="h-11 bg-white"
                 />
@@ -1733,7 +1777,7 @@ export function DashboardHubClient({
                       <p className="font-semibold text-slate-900">운영 답변</p>
                       <p className="mt-1 text-sm leading-6 text-slate-600">{adminResult.answer}</p>
                     </div>
-                    <Badge tone="blue">{adminResult.provider}</Badge>
+                    <Badge tone="blue">{providerLabel(adminResult.provider)}</Badge>
                   </div>
                   <div className="overflow-x-auto rounded-2xl border border-slate-200">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">

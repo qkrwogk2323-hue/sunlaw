@@ -262,7 +262,7 @@ export default async function ClientsPage({
           <Card>
             <CardHeader>
               <CardTitle>CSV 일괄 등록</CardTitle>
-              <p className="text-sm text-slate-500">10건 이상의 의뢰인을 한 번에 등록할 때 사용합니다. 양식을 다운로드해 작성 후 업로드하세요.</p>
+              <p className="text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 의뢰인은 양식을 내려받아 한 번에 등록하세요.</p>
             </CardHeader>
             <CardContent>
               <BulkUploadPanel

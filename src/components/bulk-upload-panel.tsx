@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast-provider';
 import type { BulkUploadResult } from '@/lib/actions/bulk-upload-actions';
 
@@ -71,16 +73,19 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
 
   return (
     <div className="space-y-4">
+      <p className="text-xs text-slate-500">
+        <span className="text-red-500" aria-hidden="true">*</span> 파일 선택 또는 CSV 내용 입력 중 하나는 반드시 필요합니다.
+      </p>
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={downloadTemplate}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
         >
-          📄 양식 다운로드
-        </button>
+          양식 다운로드
+        </Button>
         <label className="cursor-pointer rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800 hover:bg-blue-100">
-          📂 CSV 파일 선택
+          CSV 파일 선택
           <input
             ref={fileRef}
             type="file"
@@ -97,35 +102,41 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
         )}
       </div>
 
-      <p className="text-xs text-slate-500">또는 CSV 내용을 직접 붙여넣기</p>
-      <textarea
+      <div className="space-y-2">
+        <label htmlFor={`bulk-upload-${mode}`} className="text-sm font-medium text-slate-700">
+          CSV 내용 <span className="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <p className="text-xs text-slate-500">직접 입력은 최대 5건까지 권장하며, 그 이상은 파일 업로드로 진행해 주세요.</p>
+      </div>
+      <Textarea
+        id={`bulk-upload-${mode}`}
         value={csvText}
         onChange={(e) => setCsvText(e.target.value)}
         rows={5}
+        aria-required="true"
         placeholder={`헤더 포함 CSV 내용 붙여넣기\n예) ${template.split('\n')[0]}`}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+        className="min-h-32 text-xs font-mono"
         aria-label={`${label} CSV 직접 입력`}
       />
 
-      <button
-        type="button"
+      <Button
         onClick={handleSubmit}
-        disabled={isPending || !csvText.trim()}
+        isLoading={isPending}
+        disabled={!csvText.trim()}
         aria-label={`${label} CSV 일괄 등록 실행`}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isPending ? '처리 중...' : `${label} 일괄 등록`}
-      </button>
+        {`${label} 일괄 등록`}
+      </Button>
 
       {result?.ok && (
         <div className="space-y-3">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="font-semibold text-emerald-900">✅ {result.created}건 등록 완료{result.skipped > 0 ? ` / ${result.skipped}건 건너뜀` : ''}</p>
+            <p className="font-semibold text-emerald-900">{result.created}건 등록 완료{result.skipped > 0 ? ` / ${result.skipped}건 건너뜀` : ''}</p>
           </div>
 
           {result.errors.length > 0 && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="mb-2 text-sm font-semibold text-amber-900">⚠️ 처리 중 발생한 문제</p>
+              <p className="mb-2 text-sm font-semibold text-amber-900">처리 중 확인할 내용</p>
               <ul className="space-y-1">
                 {result.errors.map((e) => (
                   <li key={`${e.row}-${e.reason}`} className="text-xs text-amber-800">
@@ -138,7 +149,7 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
 
           {result.aiSuggestions.length > 0 && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <p className="mb-2 text-sm font-semibold text-blue-900">🤖 AI 도우미 제안</p>
+              <p className="mb-2 text-sm font-semibold text-blue-900">입력 참고 안내</p>
               <ul className="space-y-2">
                 {result.aiSuggestions.map((s) => (
                   <li key={s.name} className="text-xs text-blue-800">

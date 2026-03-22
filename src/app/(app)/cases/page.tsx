@@ -279,7 +279,7 @@ export default async function CasesPage({
             </span>
           </summary>
           <div className="mt-3 px-2 pb-4">
-            <p className="mb-3 text-sm text-slate-500">10건 이상의 사건을 한 번에 등록할 때 사용합니다. 양식을 다운로드해 작성 후 업로드하세요.</p>
+            <p className="mb-3 text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 사건은 양식을 내려받아 한 번에 등록하세요.</p>
             <BulkUploadPanel
               mode="cases"
               organizationId={currentOrganizationId ?? ''}
@@ -300,7 +300,12 @@ export default async function CasesPage({
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center justify-between gap-2">
             <span>사건목록</span>
-            <span className="text-sm font-normal text-slate-500">{BUCKET_META[bucket].helper}</span>
+            <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
+              <span>{BUCKET_META[bucket].helper}</span>
+              <Link href={'/admin/audit?tab=general&table=cases' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+                사건 변경 이력 보기
+              </Link>
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
