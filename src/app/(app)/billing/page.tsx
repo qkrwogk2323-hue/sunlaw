@@ -149,6 +149,8 @@ export default async function BillingPage({
 
   const orgName = auth.memberships.find((m) => m.organization_id === organizationId)?.organization?.name ?? '우리 사무소';
   const lawyerName: string | undefined = undefined;
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe here
+  const nowMs = Date.now();
 
   const bounds = getPeriodBounds(period);
   const previousBounds = getPreviousPeriodBounds(period, bounds.start);
@@ -360,7 +362,7 @@ export default async function BillingPage({
                 <h3 className="text-sm font-semibold text-slate-900">전체 연체 청구</h3>
                 {overdueEntries.slice(0, 8).map((entry: any) => {
                   const dueDate = entry.due_on ? new Date(`${entry.due_on}T00:00:00`) : null;
-                  const dueDaysAgo = dueDate ? Math.max(0, Math.floor((Date.now() - dueDate.getTime()) / 86400000)) : 0;
+                  const dueDaysAgo = dueDate ? Math.max(0, Math.floor((nowMs - dueDate.getTime()) / 86400000)) : 0;
                   return (
                     <div key={`overdue-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
                       <div className="flex items-center justify-between gap-2">

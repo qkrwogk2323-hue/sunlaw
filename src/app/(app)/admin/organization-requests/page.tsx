@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buttonStyles } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
@@ -97,10 +98,16 @@ export default async function OrganizationRequestsPage() {
           <p className="mt-2 text-sm text-slate-600">신청 목록과 탈퇴 요청을 먼저 보고, 기록과 검토 기준은 옆에서 확인하는 구조로 정리했습니다.</p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
-          <Link href={'/admin/audit?tab=general&table=organization_signup_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <Link
+            href={'/admin/audit?tab=general&table=organization_signup_requests' as Route}
+            className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4 text-sm' })}
+          >
             조직 신청 기록
           </Link>
-          <Link href={'/admin/audit?tab=general&table=organization_exit_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+          <Link
+            href={'/admin/audit?tab=general&table=organization_exit_requests' as Route}
+            className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4 text-sm' })}
+          >
             조직 탈퇴 기록
           </Link>
         </div>

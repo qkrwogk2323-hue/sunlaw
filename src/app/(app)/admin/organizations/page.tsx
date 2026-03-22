@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OrganizationCreateForm } from '@/components/forms/organization-create-form';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
@@ -36,7 +37,10 @@ function OrganizationListItem({ organization }: { organization: any }) {
         <Badge tone={getLifecycleTone(organization.lifecycle_status)}>{getLifecycleLabel(organization.lifecycle_status)}</Badge>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Link href={`/admin/audit?tab=general&table=organizations&resource=${organization.id}` as Route} className="text-xs font-medium text-sky-700 underline underline-offset-4">
+        <Link
+          href={`/admin/audit?tab=general&table=organizations&resource=${organization.id}` as Route}
+          className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs' })}
+        >
           감사로그 보기
         </Link>
       </div>
