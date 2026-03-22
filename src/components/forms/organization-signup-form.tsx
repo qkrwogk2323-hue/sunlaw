@@ -7,6 +7,9 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import Link from 'next/link';
+import type { Route } from 'next';
+import { PLATFORM_REQUIRED_CONSENTS } from '@/lib/legal-documents';
 
 const maxOrganizationSignupDocumentSize = 10 * 1024 * 1024;
 const allowedDocumentMimeTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
@@ -120,6 +123,7 @@ export function OrganizationSignupForm({
   const [organizationKind, setOrganizationKind] = useState(defaultValues?.kind ?? 'law_firm');
   const showIndustryInput = organizationKind === 'law_firm' || organizationKind === 'collection_company' || organizationKind === 'other';
   const formAction = isEditMode ? updateOrganizationSignupRequestAction : submitOrganizationSignupRequestAction;
+  const [consents, setConsents] = useState<Record<string, boolean>>({ privacyConsent: false, serviceConsent: false, aiPolicyConsent: false });
 
   const handleDocumentChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -244,8 +248,18 @@ export function OrganizationSignupForm({
         </p>
       </div>
       <Textarea name="note" placeholder="검토 메모 또는 초기 설정 요청사항" defaultValue={defaultValues?.note ?? ''} className="md:col-span-2" />
+      {!isEditMode ? (
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 md:col-span-2">
+          {PLATFORM_REQUIRED_CONSENTS.map((item) => (
+            <label key={item.key} className="flex items-start gap-3 rounded-2xl border border-white bg-white px-4 py-3">
+              <input type="checkbox" name={item.key} checked={consents[item.key]} onChange={(event) => setConsents((current) => ({ ...current, [item.key]: event.target.checked }))} className="mt-1 size-4 rounded border-slate-300" required />
+              <span><span className="block font-medium text-slate-900">{item.label} <span className="text-rose-500">*</span></span><span className="block text-xs leading-6 text-slate-500">{item.description}</span><Link href={item.href as Route} className="mt-2 inline-block text-xs font-medium text-sky-700 underline underline-offset-4">자세히 보기</Link></span>
+            </label>
+          ))}
+        </div>
+      ) : null}
       <div className="md:col-span-2">
-        <SubmitButton pendingLabel={isEditMode ? '수정 중...' : '신청 중...'} disabled={Boolean(documentError)}>{isEditMode ? '신청 내용 수정' : '조직 개설 신청'}</SubmitButton>
+        <SubmitButton pendingLabel={isEditMode ? '수정 중...' : '신청 중...'} disabled={Boolean(documentError) || (!isEditMode && Object.values(consents).some((value) => !value))}>{isEditMode ? '신청 내용 수정' : '조직 개설 신청'}</SubmitButton>
       </div>
     </ClientActionForm>
   );

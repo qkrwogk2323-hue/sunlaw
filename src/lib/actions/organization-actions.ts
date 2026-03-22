@@ -52,6 +52,7 @@ import {
 } from '@/lib/validators';
 
 import { captureNotificationFailure } from '@/lib/notification-failure';
+import { PLATFORM_AI_POLICY_VERSION, PLATFORM_PRIVACY_POLICY_VERSION, PLATFORM_TERMS_VERSION } from '@/lib/legal-documents';
 
 const organizationSignupDocumentBucket = 'organization-signup-documents';
 const maxOrganizationSignupDocumentSize = 10 * 1024 * 1024;
@@ -1134,6 +1135,26 @@ export async function submitOrganizationSignupRequestAction(formData: FormData) 
       note: formData.get('note')
     });
 
+    const consentRecordedAt = new Date().toISOString();
+    const privacyConsent = formData.get('privacyConsent') === 'on';
+    const serviceConsent = formData.get('serviceConsent') === 'on';
+    const aiPolicyConsent = formData.get('aiPolicyConsent') === 'on';
+    if (!privacyConsent || !serviceConsent || !aiPolicyConsent) {
+      throw new Error('필수 동의 항목을 모두 확인해 주세요.');
+    }
+
+    await admin.auth.admin.updateUserById(auth.user.id, {
+      user_metadata: {
+        ...(((await admin.auth.admin.getUserById(auth.user.id)).data.user?.user_metadata ?? {}) as Record<string, unknown>),
+        privacy_consent_recorded_at: consentRecordedAt,
+        privacy_consent_version: PLATFORM_PRIVACY_POLICY_VERSION,
+        service_consent_recorded_at: consentRecordedAt,
+        service_consent_version: PLATFORM_TERMS_VERSION,
+        ai_policy_consent_recorded_at: consentRecordedAt,
+        ai_policy_consent_version: PLATFORM_AI_POLICY_VERSION
+      }
+    });
+
     const detectedDocumentType = await validateOrganizationSignupDocument(parsed.businessRegistrationDocument);
 
     const requesterEmail = resolveRequesterEmail(auth);
@@ -1293,6 +1314,26 @@ export async function updateOrganizationSignupRequestAction(formData: FormData) 
       websiteUrl: formData.get('websiteUrl'),
       requestedModules: formData.getAll('requestedModules').map(String),
       note: formData.get('note')
+    });
+
+    const consentRecordedAt = new Date().toISOString();
+    const privacyConsent = formData.get('privacyConsent') === 'on';
+    const serviceConsent = formData.get('serviceConsent') === 'on';
+    const aiPolicyConsent = formData.get('aiPolicyConsent') === 'on';
+    if (!privacyConsent || !serviceConsent || !aiPolicyConsent) {
+      throw new Error('필수 동의 항목을 모두 확인해 주세요.');
+    }
+
+    await admin.auth.admin.updateUserById(auth.user.id, {
+      user_metadata: {
+        ...(((await admin.auth.admin.getUserById(auth.user.id)).data.user?.user_metadata ?? {}) as Record<string, unknown>),
+        privacy_consent_recorded_at: consentRecordedAt,
+        privacy_consent_version: PLATFORM_PRIVACY_POLICY_VERSION,
+        service_consent_recorded_at: consentRecordedAt,
+        service_consent_version: PLATFORM_TERMS_VERSION,
+        ai_policy_consent_recorded_at: consentRecordedAt,
+        ai_policy_consent_version: PLATFORM_AI_POLICY_VERSION
+      }
     });
 
     const requesterEmail = resolveRequesterEmail(auth);
@@ -3524,9 +3565,16 @@ export async function attachClientAccessRequestToCaseAction(formData: FormData) 
 }
 
 // 초대 토큰을 수락하고 멤버십 또는 계정 연결을 마무리한다.
-export async function acceptInvitationAction(token: string) {
+export async function acceptInvitationAction(token: string, formData: FormData) {
   const auth = await requireAuthenticatedUser();
   const { adminClient, invitation } = await loadPendingInvitationByToken(token);
+
+  const privacyConsent = formData.get('privacyConsent') === 'on';
+  const serviceConsent = formData.get('serviceConsent') === 'on';
+  const aiPolicyConsent = formData.get('aiPolicyConsent') === 'on';
+  if (!privacyConsent || !serviceConsent || !aiPolicyConsent) {
+    throw new Error('초대 수락 전 필수 동의를 모두 확인해 주세요.');
+  }
 
   validateInvitationAcceptance(invitation, auth.user.email ?? auth.profile.email);
 
@@ -3541,6 +3589,20 @@ export async function acceptInvitationAction(token: string) {
       profileEmail: auth.profile.email
     });
   }
+
+  const consentRecordedAt = new Date().toISOString();
+  const { data: authUser } = await adminClient.auth.admin.getUserById(auth.user.id);
+  await adminClient.auth.admin.updateUserById(auth.user.id, {
+    user_metadata: {
+      ...(((authUser.user?.user_metadata ?? {}) as Record<string, unknown>)),
+      privacy_consent_recorded_at: consentRecordedAt,
+      privacy_consent_version: PLATFORM_PRIVACY_POLICY_VERSION,
+      service_consent_recorded_at: consentRecordedAt,
+      service_consent_version: PLATFORM_TERMS_VERSION,
+      ai_policy_consent_recorded_at: consentRecordedAt,
+      ai_policy_consent_version: PLATFORM_AI_POLICY_VERSION
+    }
+  });
 
   await finalizeInvitationAcceptance(adminClient, invitation.id, auth.user.id);
   finalizeInvitationAcceptanceNavigation(invitation.kind);

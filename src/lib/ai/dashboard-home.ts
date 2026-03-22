@@ -107,7 +107,7 @@ export type AdminCopilotResponse = {
   allowedAnswerTypes?: string[];
 };
 
-const PLATFORM_AI_BLOCK_PATTERN = /(플랫폼|구독|조직\s*(승인|신청|삭제|비활성화|정지|해지)|운영\s*(권한|승인|삭제|정지)|감사\s*로그|고객센터|지원\s*접속)/;
+const PLATFORM_AI_BLOCK_PATTERN = /(플랫폼|구독|조직\s*(승인|신청|삭제|비활성화|정지|해지)|운영\s*(권한|승인|삭제|정지)|감사\s*로그|고객센터|지원\s*접속|코드번호|내부코드|시스템\s*코드|개발자|프롬프트|룰|정책\s*원문|보안\s*구조|system prompt|prompt rule)/i;
 
 export function classifyDashboardQuestionDomain(question: string): AiOperationDomainId {
   const normalized = question.toLowerCase();
@@ -631,8 +631,8 @@ export function answerDashboardAssistant(input: {
   if (questionDomain === 'platform') {
     return {
       answer: input.isPlatformAdmin
-        ? '플랫폼 운영 관련 질문은 AI가 답하지 않습니다. 아래 운영 메뉴에서 직접 확인해 주세요.'
-        : '플랫폼 운영 관련 질문은 AI가 답하지 않습니다. 필요한 경우 고객센터로 문의해 주세요.',
+        ? '이 문의는 운영 화면에서 직접 확인해 주세요.'
+        : '이 문의는 고객센터를 통해 확인해 주세요.',
       actions: input.isPlatformAdmin
         ? [
             {
@@ -655,7 +655,7 @@ export function answerDashboardAssistant(input: {
             {
               label: '고객센터',
               href: '/support',
-              reason: '플랫폼 운영 관련 문의는 고객센터로 전달해 주세요.'
+              reason: '운영 관련 문의는 고객센터를 통해 확인해 주세요.'
             },
             {
               label: '알림 센터',
@@ -738,7 +738,7 @@ export async function runAdminCopilot(input: {
   const featurePolicy = getAiFeaturePolicy('admin_copilot');
   if (PLATFORM_AI_BLOCK_PATTERN.test(sanitizeAiText(input.question))) {
     return {
-      answer: '플랫폼 운영 관련 판단과 조정은 AI가 답하지 않습니다. 운영 메뉴에서 직접 확인해 주세요.',
+      answer: '이 문의는 운영 메뉴에서 직접 확인해 주세요.',
       table: [],
       actions: [
         {

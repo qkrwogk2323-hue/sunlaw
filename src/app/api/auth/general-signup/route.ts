@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { formatResidentRegistrationNumberMasked } from '@/lib/format';
-import { PLATFORM_PRIVACY_POLICY_VERSION, PLATFORM_TERMS_VERSION } from '@/lib/legal-documents';
+import { PLATFORM_AI_POLICY_VERSION, PLATFORM_PRIVACY_POLICY_VERSION, PLATFORM_TERMS_VERSION } from '@/lib/legal-documents';
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { generalSignupSchema } from '@/lib/validators';
@@ -44,7 +44,8 @@ export async function POST(request: Request) {
     const payload = await request.json();
     const parsed = generalSignupSchema.parse({
       ...payload,
-      serviceConsent: payload?.serviceConsent ?? payload?.privacyConsent ?? true
+      serviceConsent: payload?.serviceConsent,
+      aiPolicyConsent: payload?.aiPolicyConsent
     });
     const admin = createSupabaseAdminClient();
     const consentRecordedAt = new Date().toISOString();
@@ -61,7 +62,9 @@ export async function POST(request: Request) {
         privacy_consent_version: PLATFORM_PRIVACY_POLICY_VERSION,
         service_consent_recorded_at: consentRecordedAt,
         service_consent_placeholder: false,
-        service_consent_version: PLATFORM_TERMS_VERSION
+        service_consent_version: PLATFORM_TERMS_VERSION,
+        ai_policy_consent_recorded_at: consentRecordedAt,
+        ai_policy_consent_version: PLATFORM_AI_POLICY_VERSION
       }
     });
 
