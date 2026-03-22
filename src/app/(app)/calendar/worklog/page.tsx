@@ -21,7 +21,7 @@ export default async function CalendarWorklogPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">업무일지</h1>
-          <p className="mt-2 text-sm text-slate-600">일정 확인 화면에서 완료 처리한 일이 자동으로 기록됩니다. 누가 언제 어떤 일을 체크했는지 시간순으로 확인합니다.</p>
+          <p className="mt-2 text-sm text-slate-600">일정 확인 화면에서 완료 처리하거나 취소한 일정이 자동으로 기록됩니다. 누가 언제 어떤 상태를 바꿨는지 시간순으로 확인합니다.</p>
         </div>
         <Link href={'/calendar' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
           일정 확인으로 돌아가기
@@ -29,7 +29,7 @@ export default async function CalendarWorklogPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>자동 기록 로그</CardTitle></CardHeader>
+        <CardHeader><CardTitle>일정 처리 기록</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {logs.length ? logs.map((log: any) => (
             <div key={log.id} className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -57,7 +57,7 @@ export default async function CalendarWorklogPage() {
             </div>
           )) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-              아직 자동 작성된 업무일지가 없습니다. 일정 확인 화면에서 완료 체크를 하면 여기에 기록됩니다.
+              아직 일정 처리 기록이 없습니다. 일정 확인 화면에서 완료 체크나 취소 처리를 하면 여기에 기록됩니다.
             </div>
           )}
         </CardContent>

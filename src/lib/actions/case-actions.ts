@@ -1035,7 +1035,7 @@ export async function updateScheduleCompletionAction(scheduleId: string, formDat
   const supabase = await createSupabaseServerClient();
   const { data: scheduleRow, error: scheduleError } = await supabase
     .from('case_schedules')
-    .select('id, case_id, organization_id, title, scheduled_start, completed_at')
+    .select('id, case_id, organization_id, title, scheduled_start, completed_at, canceled_at')
     .eq('id', scheduleId)
     .single();
 
@@ -1049,6 +1049,9 @@ export async function updateScheduleCompletionAction(scheduleId: string, formDat
   });
 
   const shouldComplete = `${formData.get('completed') ?? ''}` === 'true';
+  if (shouldComplete && scheduleRow.canceled_at) {
+    throw new Error('취소된 일정은 완료 처리할 수 없습니다. 먼저 취소를 해제해 주세요.');
+  }
   const completedAt = shouldComplete ? new Date().toISOString() : null;
 
   const { error } = await supabase
@@ -1093,6 +1096,84 @@ export async function updateScheduleCompletionAction(scheduleId: string, formDat
       case_id: scheduleRow.case_id,
       title: scheduleRow.title,
       completed_at: completedAt
+    }
+  });
+
+  revalidatePath(`/cases/${scheduleRow.case_id}`);
+  revalidatePath('/calendar');
+  revalidatePath('/calendar/worklog');
+  revalidatePath('/dashboard');
+}
+
+// 사건 일정의 취소 상태와 취소자를 갱신한다.
+export async function updateScheduleCancellationAction(scheduleId: string, formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const { data: scheduleRow, error: scheduleError } = await supabase
+    .from('case_schedules')
+    .select('id, case_id, organization_id, title, scheduled_start, canceled_at')
+    .eq('id', scheduleId)
+    .single();
+
+  if (scheduleError || !scheduleRow) {
+    throw scheduleError ?? new Error('일정을 찾을 수 없습니다.');
+  }
+
+  const { auth } = await requireOrganizationActionAccess(scheduleRow.organization_id, {
+    permission: 'schedule_edit',
+    errorMessage: '일정 취소 상태를 변경할 권한이 없습니다.'
+  });
+
+  const shouldCancel = `${formData.get('canceled') ?? ''}` === 'true';
+  const cancelReason = `${formData.get('reason') ?? ''}`.trim() || null;
+  const canceledAt = shouldCancel ? new Date().toISOString() : null;
+
+  const { error } = await supabase
+    .from('case_schedules')
+    .update({
+      canceled_at: canceledAt,
+      canceled_by: shouldCancel ? auth.user.id : null,
+      canceled_by_name: shouldCancel ? auth.profile.full_name : null,
+      canceled_reason: shouldCancel ? cancelReason : null,
+      completed_at: shouldCancel ? null : undefined,
+      completed_by: shouldCancel ? null : undefined,
+      completed_by_name: shouldCancel ? null : undefined,
+      updated_by: auth.user.id
+    })
+    .eq('id', scheduleId);
+
+  if (error) throw error;
+
+  const actionType = shouldCancel ? 'canceled' : 'cancel_reverted';
+  const actionLabel = shouldCancel ? '취소 처리' : '취소 해제';
+  const summary = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일 ${auth.profile.full_name}이(가) "${scheduleRow.title}" 일정을 ${actionLabel}했습니다.${shouldCancel && cancelReason ? ` 사유: ${cancelReason}` : ''}`;
+
+  const { error: logError } = await supabase
+    .from('case_schedule_activity_logs')
+    .insert({
+      organization_id: scheduleRow.organization_id,
+      case_id: scheduleRow.case_id,
+      case_schedule_id: scheduleRow.id,
+      actor_profile_id: auth.user.id,
+      actor_name: auth.profile.full_name,
+      action_type: actionType,
+      summary,
+      schedule_title: scheduleRow.title,
+      schedule_scheduled_start: scheduleRow.scheduled_start
+    });
+
+  if (logError) throw logError;
+
+  await logCaseAudit({
+    actorId: auth.user.id,
+    organizationId: scheduleRow.organization_id,
+    resourceType: 'case_schedule',
+    resourceId: scheduleId,
+    action: shouldCancel ? 'schedule.canceled' : 'schedule.cancel_reverted',
+    meta: {
+      case_id: scheduleRow.case_id,
+      title: scheduleRow.title,
+      canceled_at: canceledAt,
+      canceled_reason: cancelReason
     }
   });
 

@@ -30,7 +30,7 @@ export async function listCalendarEntries(organizationId?: string | null) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from('case_schedules')
-    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, created_by, created_at, updated_at, cases(title)')
+    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, canceled_at, canceled_by, canceled_by_name, canceled_reason, created_by, created_at, updated_at, cases(title)')
     .order('scheduled_start', { ascending: true })
     .limit(50);
 
@@ -60,7 +60,7 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
 
   let schedulesQuery = supabase
     .from('case_schedules')
-    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, created_by, created_by_name, created_at, updated_at, cases(title)')
+    .select('id, title, schedule_kind, scheduled_start, scheduled_end, location, notes, is_important, client_visibility, case_id, completed_at, completed_by, completed_by_name, canceled_at, canceled_by, canceled_by_name, canceled_reason, created_by, created_by_name, created_at, updated_at, cases(title)')
     .gte('scheduled_start', visibleGridStart.toISOString())
     .lte('scheduled_start', visibleGridEnd.toISOString())
     .order('scheduled_start', { ascending: true })

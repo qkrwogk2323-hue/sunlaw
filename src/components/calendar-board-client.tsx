@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { AlertTriangle, CalendarCheck2, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, ScrollText, Sparkles, ThumbsDown } from 'lucide-react';
-import { addScheduleAction, updateScheduleAction, updateScheduleCompletionAction } from '@/lib/actions/case-actions';
+import { addScheduleAction, updateScheduleAction, updateScheduleCompletionAction, updateScheduleCancellationAction } from '@/lib/actions/case-actions';
 import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { billingStatusLabel, labelFrom } from '@/lib/status-labels';
@@ -32,6 +32,10 @@ type ScheduleItem = {
   completed_at?: string | null;
   completed_by?: string | null;
   completed_by_name?: string | null;
+  canceled_at?: string | null;
+  canceled_by?: string | null;
+  canceled_by_name?: string | null;
+  canceled_reason?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   cases?: { title?: string | null } | Array<{ title?: string | null }> | null;
@@ -84,7 +88,7 @@ type WorkLogItem = {
   case_id?: string | null;
   case_schedule_id?: string | null;
   actor_name?: string | null;
-  action_type: 'completed' | 'reopened';
+  action_type: 'completed' | 'reopened' | 'canceled' | 'cancel_reverted';
   summary: string;
   schedule_title: string;
   schedule_scheduled_start?: string | null;
@@ -106,6 +110,9 @@ type UnifiedEntry = {
   ownerScope: 'personal' | 'organization';
   completedAt?: string | null;
   completedByName?: string | null;
+  canceledAt?: string | null;
+  canceledByName?: string | null;
+  canceledReason?: string | null;
   raw?: ScheduleItem;
 };
 
@@ -204,6 +211,12 @@ function completionLabel(entry: UnifiedEntry) {
   return `${entry.completedByName ?? '담당자'} · ${formatDateTime(entry.completedAt)}`;
 }
 
+function cancellationLabel(entry: UnifiedEntry) {
+  if (!entry.canceledAt) return null;
+  const reason = entry.canceledReason ? ` · 사유: ${entry.canceledReason}` : '';
+  return `${entry.canceledByName ?? '담당자'} · ${formatDateTime(entry.canceledAt)}${reason}`;
+}
+
 function ScheduleCompletionCheckbox({
   entry
 }: {
@@ -234,6 +247,32 @@ function ScheduleCompletionCheckbox({
       />
       <span className="text-xs text-slate-500">{checked ? '완료됨' : '미완료'}</span>
     </form>
+  );
+}
+
+function ScheduleCancellationButton({
+  entry
+}: {
+  entry: UnifiedEntry;
+}) {
+  if (entry.source !== 'schedule' || !entry.raw) return null;
+
+  const isCanceled = Boolean(entry.canceledAt);
+
+  return (
+    <ClientActionForm
+      action={updateScheduleCancellationAction.bind(null, entry.id)}
+      successTitle={isCanceled ? '일정 취소를 해제했습니다.' : '일정을 취소했습니다.'}
+      errorCause={isCanceled ? '일정 취소 해제에 실패했습니다.' : '일정 취소에 실패했습니다.'}
+      errorResolution="잠시 후 다시 시도해 주세요."
+      className="inline-flex"
+    >
+      <input type="hidden" name="canceled" value={isCanceled ? 'false' : 'true'} />
+      <input type="hidden" name="reason" value="일정 확인 화면에서 취소 처리" />
+      <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">
+        {isCanceled ? '취소 해제' : '취소'}
+      </SubmitButton>
+    </ClientActionForm>
   );
 }
 
@@ -403,6 +442,9 @@ export function CalendarBoardClient({
         ownerScope: item.created_by === currentUserId ? 'personal' as const : 'organization' as const,
         completedAt: item.completed_at ?? null,
         completedByName: item.completed_by_name ?? null,
+        canceledAt: item.canceled_at ?? null,
+        canceledByName: item.canceled_by_name ?? null,
+        canceledReason: item.canceled_reason ?? null,
         raw: item
       };
     });
@@ -559,6 +601,9 @@ export function CalendarBoardClient({
                 일정 기록
               </div>
               <div className="mt-3 grid gap-2">
+                <Link href={'/admin/audit?tab=general&table=case_schedules' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
+                  일정 변경 기록
+                </Link>
                 <Link href={'/calendar/worklog' as Route} className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl justify-center' })}>
                   일정 처리 기록
                 </Link>
@@ -639,24 +684,28 @@ export function CalendarBoardClient({
           {filteredScheduleEntries.length ? (
             filteredScheduleEntries.map((entry) => {
               const editable = canManage && entry.source === 'schedule' && entry.raw;
-              const urgent = !entry.completedAt && new Date(entry.when).getTime() <= endOfWeek.getTime();
+              const urgent = !entry.completedAt && !entry.canceledAt && new Date(entry.when).getTime() <= endOfWeek.getTime();
+              const canceled = Boolean(entry.canceledAt);
               return (
                 <div key={`${entry.source}-${entry.id}`} className={`rounded-2xl border bg-white p-4 shadow-sm ${urgent ? 'border-amber-200' : 'border-slate-200'}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className={`font-semibold text-slate-900 ${entry.completedAt ? 'line-through text-slate-400' : ''}`}>{entry.title}</p>
+                        <p className={`font-semibold ${canceled ? 'text-red-600 underline decoration-red-500 decoration-2 underline-offset-4' : entry.completedAt ? 'line-through text-slate-400' : 'text-slate-900'}`}>{entry.title}</p>
                         <Badge tone={entry.tone}>{entry.badge}</Badge>
                         {entry.isImportant ? <Badge tone="amber">중요</Badge> : null}
                         {entry.isNew ? <Badge tone="green">신규</Badge> : null}
                         {urgent ? <Badge tone="amber">임박</Badge> : null}
+                        {canceled ? <Badge tone="red">취소됨</Badge> : null}
                       </div>
                       <p className="mt-1 text-sm text-slate-500">{entry.caseTitle} · {formatDateTime(entry.when)}</p>
-                      <p className={`mt-2 text-sm leading-6 text-slate-600 ${entry.completedAt ? 'line-through text-slate-400' : ''}`}>{entry.detail}</p>
+                      <p className={`mt-2 text-sm leading-6 ${canceled ? 'text-red-600 underline decoration-red-400 underline-offset-4' : entry.completedAt ? 'line-through text-slate-400' : 'text-slate-600'}`}>{entry.detail}</p>
                       {completionLabel(entry) ? <p className="mt-2 text-xs text-slate-500">완료 체크 · {completionLabel(entry)}</p> : null}
+                      {cancellationLabel(entry) ? <p className="mt-2 text-xs text-red-600">취소 기록 · {cancellationLabel(entry)}</p> : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {entry.source === 'schedule' ? <ScheduleCompletionCheckbox entry={entry} /> : null}
+                      {entry.source === 'schedule' && !canceled ? <ScheduleCompletionCheckbox entry={entry} /> : null}
+                      {entry.source === 'schedule' ? <ScheduleCancellationButton entry={entry} /> : null}
                       <Badge tone={entry.ownerScope === 'personal' ? 'blue' : 'slate'}>{entry.ownerScope === 'personal' ? '내 일정' : '조직 일정'}</Badge>
                       {entry.caseId ? (
                         <Link
