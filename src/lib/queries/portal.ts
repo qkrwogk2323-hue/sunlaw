@@ -202,18 +202,56 @@ export async function getPortalCaseDetail(caseId: string) {
 
   const { data: caseRow } = await supabase
     .from('cases')
-    .select('id, title, reference_no, case_status, stage_key, summary, court_name, case_number, updated_at')
+    .select('id, title, reference_no, case_status, stage_key, summary, court_name, case_number, updated_at, case_type, insolvency_subtype')
     .eq('id', caseId)
     .maybeSingle();
   if (!caseRow) return null;
 
-  const [{ data: documents }, { data: schedules }, { data: messages }, { data: requests }, { data: billingEntries }, { data: handlers }] = await Promise.all([
+  const [
+    { data: documents },
+    { data: schedules },
+    { data: messages },
+    { data: requests },
+    { data: billingEntries },
+    { data: handlers },
+    { data: insolvencyCreditors },
+    { data: latestRepaymentPlan },
+    { data: latestCorrectionJob }
+  ] = await Promise.all([
     supabase.from('case_documents').select('id, title, document_kind, approval_status, updated_at').eq('case_id', caseId).eq('client_visibility', 'client_visible').order('updated_at', { ascending: false }),
     supabase.from('case_schedules').select('id, title, schedule_kind, scheduled_start, location').eq('case_id', caseId).eq('client_visibility', 'client_visible').order('scheduled_start', { ascending: true }),
     supabase.from('case_messages').select('id, body, created_at, sender_role, sender:profiles(full_name)').eq('case_id', caseId).eq('is_internal', false).order('created_at', { ascending: false }).limit(20),
     supabase.from('case_requests').select('id, request_kind, title, body, status, due_at, created_at').eq('case_id', caseId).eq('client_visible', true).order('created_at', { ascending: false }).limit(20),
     supabase.from('billing_entries').select('id, entry_kind, title, amount, status, due_on, paid_at, bill_to_case_client_id').eq('case_id', caseId).eq('bill_to_case_client_id', clientRow.id).order('created_at', { ascending: false }),
-    supabase.from('case_handlers').select('id, role, handler_name, created_at').eq('case_id', caseId).order('created_at', { ascending: true })
+    supabase.from('case_handlers').select('id, role, handler_name, created_at').eq('case_id', caseId).order('created_at', { ascending: true }),
+    caseRow.case_type === 'insolvency'
+      ? supabase
+          .from('insolvency_creditors')
+          .select('id, creditor_name, claim_class, total_claim_amount, is_confirmed')
+          .eq('case_id', caseId)
+          .neq('lifecycle_status', 'soft_deleted')
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as any[] }),
+    caseRow.case_type === 'insolvency'
+      ? supabase
+          .from('insolvency_repayment_plans')
+          .select('id, version_number, status, repayment_months, general_repayment_rate_pct, total_repayment_amount, plan_start_date, plan_end_date, created_at')
+          .eq('case_id', caseId)
+          .order('version_number', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null as any }),
+    caseRow.case_type === 'insolvency'
+      ? supabase
+          .from('document_ingestion_jobs')
+          .select('id, extracted_json, processing_completed_at')
+          .eq('case_id', caseId)
+          .in('document_type', ['correction_recommendation', 'correction_order'])
+          .eq('status', 'completed')
+          .order('processing_completed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null as any })
   ]);
 
   return {
@@ -223,6 +261,14 @@ export async function getPortalCaseDetail(caseId: string) {
     messages: messages ?? [],
     requests: requests ?? [],
     billingEntries: billingEntries ?? [],
-    handlers: handlers ?? []
+    handlers: handlers ?? [],
+    insolvency: caseRow.case_type === 'insolvency'
+      ? {
+          subtype: caseRow.insolvency_subtype ?? null,
+          creditors: insolvencyCreditors ?? [],
+          latestPlan: latestRepaymentPlan ?? null,
+          latestCorrectionNotice: (latestCorrectionJob?.extracted_json as any)?.correctionNoticeSummary ?? null
+        }
+      : null
   };
 }

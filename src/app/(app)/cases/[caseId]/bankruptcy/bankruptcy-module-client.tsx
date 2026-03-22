@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import { saveCreditorsFromExtraction, softDeleteCreditor } from '@/lib/actions/insolvency-actions';
 import { RepaymentPlanCalculator } from './repayment-plan-calculator';
 import { ClientActionPacketPanel } from './client-action-packet-panel';
-import type { ExtractionResult } from '@/lib/insolvency-types';
+import type { CorrectionNoticeSummaryRaw, ExtractionResult } from '@/lib/insolvency-types';
 
 type Creditor = {
   id: string;
@@ -98,7 +98,10 @@ interface Props {
     title: string;
     description: string | null;
     responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+    requestPurpose?: string | null;
+    sourcePageReference?: string | null;
   }>;
+  correctionNoticeSummaryFromAI: CorrectionNoticeSummaryRaw | null;
 }
 
 const CLAIM_CLASS_LABEL: Record<string, string> = {
@@ -131,7 +134,13 @@ function ConfidenceBadge({ score }: { score: number | null }) {
   return <span className={`text-xs font-medium ${color}`}>AI {pct}%</span>;
 }
 
-export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, insolvencySubtype, creditors: initialCreditors, latestPlan, memberRole, collaterals, rulesetConstants, packets, correctionItemsFromAI }: Props) {
+const RESPONSIBILITY_LABEL: Record<'client_self' | 'client_visit' | 'office_prepare', string> = {
+  client_self: '본인 준비',
+  client_visit: '직접 발급/방문',
+  office_prepare: '사무소 확인'
+};
+
+export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, insolvencySubtype, creditors: initialCreditors, latestPlan, memberRole, collaterals, rulesetConstants, packets, correctionItemsFromAI, correctionNoticeSummaryFromAI }: Props) {
   const { success, error: toastError, undo } = useToast();
   const [creditors, setCreditors] = useState<Creditor[]>(initialCreditors);
   const [uploading, setUploading] = useState(false);
@@ -164,7 +173,14 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
         return;
       }
       setExtractResult(json.result);
-      success('추출 완료', { message: `${json.result.creditors.length}개 채권자 감지됨` });
+      success(
+        '추출 완료',
+        {
+          message: json.result.documentType === 'debt_certificate'
+            ? `${json.result.creditors.length}개 채권자 감지됨`
+            : `${json.result.correctionItems.length}개 보정 요청 항목 감지됨`
+        }
+      );
     } catch (e) {
       toastError('네트워크 오류', { message: '파일 업로드 중 문제가 발생했습니다.' });
     } finally {
@@ -363,44 +379,89 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
               <div className="mt-4 rounded-lg bg-blue-50 p-4 ring-1 ring-blue-200">
                 <div className="mb-3 flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />
-                  <span className="text-sm font-medium text-blue-800">추출 완료 — {extractResult.creditors.length}개 채권자 감지</span>
+                  <span className="text-sm font-medium text-blue-800">
+                    {extractResult.documentType === 'debt_certificate'
+                      ? `추출 완료 — ${extractResult.creditors.length}개 채권자 감지`
+                      : `추출 완료 — ${extractResult.correctionItems.length}개 보정 요청 항목 감지`}
+                  </span>
                 </div>
                 <p className="mb-3 text-xs text-slate-600">{extractResult.rawSummary}</p>
+                {extractResult.correctionNoticeSummary ? (
+                  <div className="mb-3 rounded-lg border border-blue-200 bg-white/80 p-3 text-xs text-slate-700">
+                    <p className="font-semibold text-slate-900">보정도우미 요약</p>
+                    <div className="mt-2 flex flex-wrap gap-4">
+                      <span>송달일: {extractResult.correctionNoticeSummary.servedAt ?? '-'}</span>
+                      <span>보정기한: {extractResult.correctionNoticeSummary.correctionDeadline ?? '-'}</span>
+                    </div>
+                    {extractResult.correctionNoticeSummary.courtRequestSummary ? (
+                      <p className="mt-2">법원 요청 취지: {extractResult.correctionNoticeSummary.courtRequestSummary}</p>
+                    ) : null}
+                    {extractResult.correctionNoticeSummary.requestedDocuments.length ? (
+                      <ul className="mt-2 space-y-1">
+                        {extractResult.correctionNoticeSummary.requestedDocuments.map((item, index) => (
+                          <li key={`${item.title}-${index}`}>
+                            {index + 1}. {item.title}
+                            {item.purpose ? ` · ${item.purpose}` : ''}
+                            {item.sourcePageReference ? ` · ${item.sourcePageReference}` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="mb-3 max-h-48 overflow-y-auto">
-                  <table className="w-full text-xs" aria-label="AI 추출 채권자 미리보기">
-                    <thead>
-                      <tr className="text-left text-slate-500">
-                        <th className="pb-1 pr-3">채권자</th>
-                        <th className="pb-1 pr-3">구분</th>
-                        <th className="pb-1 pr-3 text-right">원금</th>
-                        <th className="pb-1 text-right">합계</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {extractResult.creditors.map((c, i) => (
-                        <tr key={i} className="border-t border-blue-100">
-                          <td className="py-1 pr-3 font-medium">{c.creditorName}</td>
-                          <td className="py-1 pr-3">
-                            <span className={`rounded px-1.5 py-0.5 text-xs ${CLAIM_CLASS_COLOR[c.claimClass]}`}>
-                              {CLAIM_CLASS_LABEL[c.claimClass]}
-                            </span>
-                          </td>
-                          <td className="py-1 pr-3 text-right">{formatCurrency(c.principalAmount)}</td>
-                          <td className="py-1 text-right">{formatCurrency(c.principalAmount + c.interestAmount + c.penaltyAmount)}</td>
+                  {extractResult.documentType === 'debt_certificate' ? (
+                    <table className="w-full text-xs" aria-label="AI 추출 채권자 미리보기">
+                      <thead>
+                        <tr className="text-left text-slate-500">
+                          <th className="pb-1 pr-3">채권자</th>
+                          <th className="pb-1 pr-3">구분</th>
+                          <th className="pb-1 pr-3 text-right">원금</th>
+                          <th className="pb-1 text-right">합계</th>
                         </tr>
+                      </thead>
+                      <tbody>
+                        {extractResult.creditors.map((c, i) => (
+                          <tr key={i} className="border-t border-blue-100">
+                            <td className="py-1 pr-3 font-medium">{c.creditorName}</td>
+                            <td className="py-1 pr-3">
+                              <span className={`rounded px-1.5 py-0.5 text-xs ${CLAIM_CLASS_COLOR[c.claimClass]}`}>
+                                {CLAIM_CLASS_LABEL[c.claimClass]}
+                              </span>
+                            </td>
+                            <td className="py-1 pr-3 text-right">{formatCurrency(c.principalAmount)}</td>
+                            <td className="py-1 text-right">{formatCurrency(c.principalAmount + c.interestAmount + c.penaltyAmount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="space-y-2">
+                      {extractResult.correctionItems.map((item, index) => (
+                        <div key={`${item.title}-${index}`} className="rounded-lg border border-blue-100 bg-white p-3">
+                          <p className="text-sm font-medium text-slate-900">{index + 1}. {item.title}</p>
+                          {item.requestPurpose ? <p className="mt-1 text-xs text-slate-600">의미: {item.requestPurpose}</p> : null}
+                          {item.description ? <p className="mt-1 text-xs text-slate-500">{item.description}</p> : null}
+                          <p className="mt-1 text-xs text-blue-700">
+                            담당: {RESPONSIBILITY_LABEL[item.responsibility]}
+                            {item.sourcePageReference ? ` · ${item.sourcePageReference}` : ''}
+                          </p>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleSaveExtracted}
-                    disabled={saving}
-                    aria-label="채권자 목록에 저장"
-                    className="text-sm"
-                  >
-                    {saving ? '저장 중...' : '채권자목록에 저장'}
-                  </Button>
+                  {extractResult.documentType === 'debt_certificate' ? (
+                    <Button
+                      onClick={handleSaveExtracted}
+                      disabled={saving}
+                      aria-label="채권자 목록에 저장"
+                      className="text-sm"
+                    >
+                      {saving ? '저장 중...' : '채권자목록에 저장'}
+                    </Button>
+                  ) : null}
                   <Button
                     onClick={() => setExtractResult(null)}
                     aria-label="추출 결과 취소"
@@ -553,6 +614,7 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
           organizationId={organizationId}
           packets={packets}
           correctionItemsFromAI={correctionItemsFromAI}
+          correctionNoticeSummaryFromAI={correctionNoticeSummaryFromAI}
         />
       )}
     </div>

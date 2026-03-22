@@ -46,10 +46,35 @@ const expertMindMap = [
   }
 ];
 
+type DashboardSnapshot = Awaited<ReturnType<typeof getDashboardSnapshot>>;
+
 function greetingLabel(fullName?: string | null) {
   const name = fullName?.trim() || '고객';
   return `${name} 님! 반갑습니다.`;
 }
+
+const emptyDashboardSnapshot: DashboardSnapshot = {
+  activeCases: 0,
+  pendingDocuments: 0,
+  pendingRequests: 0,
+  recentMessages: 0,
+  pendingBillingCount: 0,
+  unreadNotifications: 0,
+  urgentSchedules: [],
+  recentCases: [],
+  caseOptions: [],
+  recentRequests: [],
+  recentMessageItems: [],
+  monthlyHighlights: [],
+  upcomingBilling: [],
+  unreadNotificationItems: [],
+  clientAccessQueue: [],
+  actionableNotifications: [],
+  teamMembers: [],
+  clientContacts: [],
+  partnerContacts: [],
+  organizationConversations: []
+};
 
 export default async function MarketingPage({
   searchParams
@@ -72,7 +97,20 @@ export default async function MarketingPage({
   const auth = await getCurrentAuth();
   const startHref = (auth ? '/dashboard' : '/start') as Route;
   const organizationId = auth ? getEffectiveOrganizationId(auth) : null;
-  const dashboard = auth ? await getDashboardSnapshot(organizationId) : null;
+  let dashboard = auth ? emptyDashboardSnapshot : null;
+
+  if (auth) {
+    try {
+      dashboard = await getDashboardSnapshot(organizationId);
+    } catch (error) {
+      console.error('[home] getDashboardSnapshot failed', {
+        organizationId,
+        userId: auth.user.id,
+        error
+      });
+    }
+  }
+
   const caseAttentionCount = dashboard ? dashboard.pendingDocuments + dashboard.pendingRequests : 0;
   const heroSectionClassName = auth ? 'relative mx-auto max-w-7xl px-6 pt-20 pb-10 lg:pt-24 lg:pb-12' : 'relative mx-auto max-w-7xl px-6 py-20 lg:py-24';
 

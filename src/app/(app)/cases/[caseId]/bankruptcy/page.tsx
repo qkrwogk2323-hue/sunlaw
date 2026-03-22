@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { BankruptcyModuleClient } from './bankruptcy-module-client';
+import type { CorrectionChecklistItemRaw, CorrectionNoticeSummaryRaw } from '@/lib/insolvency-types';
 
 interface Props {
   params: Promise<{ caseId: string }>;
@@ -73,15 +74,20 @@ export default async function BankruptcyPage({ params }: Props) {
   // 최근 AI 추출된 보정항목 (correction_recommendation/order 문서에서 추출된 것)
   const { data: latestJob } = await supabase
     .from('document_ingestion_jobs')
-    .select('id, correction_items_raw')
+    .select('id, extracted_json, processing_completed_at')
     .eq('case_id', caseId)
     .in('document_type', ['correction_recommendation', 'correction_order'])
     .eq('status', 'completed')
-    .order('completed_at', { ascending: false })
+    .order('processing_completed_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const correctionItemsFromAI = latestJob?.correction_items_raw ?? [];
+  const extractedJson = (latestJob?.extracted_json ?? null) as {
+    correctionItems?: CorrectionChecklistItemRaw[];
+    correctionNoticeSummary?: CorrectionNoticeSummaryRaw | null;
+  } | null;
+  const correctionItemsFromAI = extractedJson?.correctionItems ?? [];
+  const correctionNoticeSummaryFromAI = extractedJson?.correctionNoticeSummary ?? null;
 
   return (
     <BankruptcyModuleClient
@@ -96,6 +102,7 @@ export default async function BankruptcyPage({ params }: Props) {
       rulesetConstants={rulesetConstants ?? []}
       packets={(packets ?? []).map((p) => ({ ...p, items: p.insolvency_client_action_items ?? [] }))}
       correctionItemsFromAI={correctionItemsFromAI}
+      correctionNoticeSummaryFromAI={correctionNoticeSummaryFromAI}
     />
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { guardAccessDeniedResponse, guardValidationFailedResponse, guardServerErrorResponse } from '@/lib/api-guard-response';
-import type { ExtractionResult, CreditorRaw, CorrectionChecklistItemRaw } from '@/lib/insolvency-types';
+import type { ExtractionResult, CreditorRaw, CorrectionChecklistItemRaw, CorrectionNoticeSummaryRaw } from '@/lib/insolvency-types';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
@@ -33,9 +33,24 @@ const EXTRACTION_PROMPT = `당신은 한국 개인회생·파산 전문 AI입니
     {
       "title": "필요 항목명",
       "description": "상세 설명" 또는 null,
-      "responsibility": "client_self" | "client_visit" | "office_prepare"
+      "responsibility": "client_self" | "client_visit" | "office_prepare",
+      "requestPurpose": "법원이 왜 이 서류를 요구하는지 의미" 또는 null,
+      "sourcePageReference": "페이지/행 참조" 또는 null
     }
-  ]
+  ],
+  "correctionNoticeSummary": {
+    "servedAt": "YYYY-MM-DD" 또는 null,
+    "correctionDeadline": "YYYY-MM-DD" 또는 null,
+    "courtRequestSummary": "법원이 이번 보정에서 확인하려는 핵심 취지" 또는 null,
+    "requestedDocuments": [
+      {
+        "title": "제출 요구 서류명",
+        "purpose": "요청 의미/확인 취지" 또는 null,
+        "responsibility": "client_self" | "client_visit" | "office_prepare",
+        "sourcePageReference": "페이지/행 참조" 또는 null
+      }
+    ]
+  }
 }
 
 claimClass 분류 기준:
@@ -43,7 +58,8 @@ claimClass 분류 기준:
 - priority: 세금, 4대보험, 미지급임금, 임차보증금, 양육비
 - general: 그 외 일반채권
 
-correctionItems는 보정권고서·보정명령서에서만 추출. 채권자 문서에서는 빈 배열.`;
+correctionItems와 correctionNoticeSummary는 보정권고서·보정명령서에서만 추출. 채권자 문서에서는 빈 배열/null.
+보정권고/보정명령 문서라면 가능하면 송달일(servedAt), 보정기한(correctionDeadline), 법원이 요구한 서류별 의미를 반드시 추출하세요.`;
 
 async function extractWithGemini(base64Data: string, mimeType: string): Promise<ExtractionResult> {
   if (!GEMINI_API_KEY) {
@@ -108,9 +124,29 @@ async function extractWithGemini(base64Data: string, mimeType: string): Promise<
         description: item.description ? String(item.description) : null,
         responsibility: ['client_self', 'client_visit', 'office_prepare'].includes(String(item.responsibility))
           ? (item.responsibility as CorrectionChecklistItemRaw['responsibility'])
-          : 'client_self'
+          : 'client_self',
+        requestPurpose: item.requestPurpose ? String(item.requestPurpose) : null,
+        sourcePageReference: item.sourcePageReference ? String(item.sourcePageReference) : null
       }))
     : [];
+
+  const correctionNoticeSummary: CorrectionNoticeSummaryRaw | null = parsed.correctionNoticeSummary
+    ? {
+        servedAt: parsed.correctionNoticeSummary.servedAt ? String(parsed.correctionNoticeSummary.servedAt) : null,
+        correctionDeadline: parsed.correctionNoticeSummary.correctionDeadline ? String(parsed.correctionNoticeSummary.correctionDeadline) : null,
+        courtRequestSummary: parsed.correctionNoticeSummary.courtRequestSummary ? String(parsed.correctionNoticeSummary.courtRequestSummary) : null,
+        requestedDocuments: Array.isArray(parsed.correctionNoticeSummary.requestedDocuments)
+          ? parsed.correctionNoticeSummary.requestedDocuments.map((item: Record<string, unknown>) => ({
+              title: String(item.title || ''),
+              purpose: item.purpose ? String(item.purpose) : null,
+              responsibility: ['client_self', 'client_visit', 'office_prepare'].includes(String(item.responsibility))
+                ? (item.responsibility as CorrectionNoticeSummaryRaw['requestedDocuments'][number]['responsibility'])
+                : 'client_self',
+              sourcePageReference: item.sourcePageReference ? String(item.sourcePageReference) : null
+            })).filter((item: CorrectionNoticeSummaryRaw['requestedDocuments'][number]) => item.title)
+          : []
+      }
+    : null;
 
   return {
     documentType: ['debt_certificate', 'correction_order', 'correction_recommendation', 'other'].includes(parsed.documentType)
@@ -118,6 +154,7 @@ async function extractWithGemini(base64Data: string, mimeType: string): Promise<
       : 'other',
     creditors,
     correctionItems,
+    correctionNoticeSummary,
     rawSummary: String(parsed.rawSummary || ''),
     aiModel: GEMINI_MODEL
   };

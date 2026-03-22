@@ -140,14 +140,13 @@ export function RepaymentPlanCalculator({
     const totalPool = disposable * months;
 
     // M04: 별제권부 — compare collateral value vs secured claim
-    let securedShortfallTotal = 0;
     const securedDetails = secured.map((c) => {
       const collVal = collateralValues[c.id] ?? 0;
       const shortfall = Math.max(0, c.total_claim_amount - collVal);
       const surplus = Math.max(0, collVal - c.total_claim_amount);
-      securedShortfallTotal += shortfall;
       return { ...c, collVal, shortfall, surplus, isCovered: collVal >= c.total_claim_amount };
     });
+    const securedShortfallTotal = securedDetails.reduce((sum, item) => sum + item.shortfall, 0);
 
     // M05: 우선변제채권 — must pay in full
     const totalPriority = priority.reduce((s, c) => s + c.total_claim_amount, 0);

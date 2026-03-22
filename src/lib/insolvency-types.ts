@@ -18,12 +18,27 @@ export type CorrectionChecklistItemRaw = {
   title: string;
   description: string | null;
   responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+  requestPurpose: string | null;
+  sourcePageReference: string | null;
+};
+
+export type CorrectionNoticeSummaryRaw = {
+  servedAt: string | null;
+  correctionDeadline: string | null;
+  courtRequestSummary: string | null;
+  requestedDocuments: Array<{
+    title: string;
+    purpose: string | null;
+    responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+    sourcePageReference: string | null;
+  }>;
 };
 
 export type ExtractionResult = {
   documentType: 'debt_certificate' | 'correction_order' | 'correction_recommendation' | 'other';
   creditors: CreditorRaw[];
   correctionItems: CorrectionChecklistItemRaw[];
+  correctionNoticeSummary: CorrectionNoticeSummaryRaw | null;
   rawSummary: string;
   aiModel: string;
 };

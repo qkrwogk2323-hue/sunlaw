@@ -5,6 +5,7 @@ import { ClipboardList, Plus, CheckCircle, Clock, User, Building2, MapPin, Chevr
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast-provider';
 import { createClientActionPacket, checkClientActionItem } from '@/lib/actions/insolvency-actions';
+import type { CorrectionNoticeSummaryRaw } from '@/lib/insolvency-types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,10 @@ interface Props {
     title: string;
     description: string | null;
     responsibility: 'client_self' | 'client_visit' | 'office_prepare';
+    requestPurpose?: string | null;
+    sourcePageReference?: string | null;
   }>;
+  correctionNoticeSummaryFromAI: CorrectionNoticeSummaryRaw | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -90,17 +94,19 @@ function NewPacketForm({
   caseId,
   organizationId,
   correctionItemsFromAI,
+  correctionNoticeSummaryFromAI,
   onCreated
 }: {
   caseId: string;
   organizationId: string;
   correctionItemsFromAI: Props['correctionItemsFromAI'];
+  correctionNoticeSummaryFromAI: Props['correctionNoticeSummaryFromAI'];
   onCreated: () => void;
 }) {
   const { success, error: toastError } = useToast();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState(correctionNoticeSummaryFromAI?.correctionDeadline ?? '');
   const [useAI, setUseAI] = useState(correctionItemsFromAI.length > 0);
   const [customItems, setCustomItems] = useState([
     { title: '', responsibility: 'client_self' as const, description: '' }
@@ -141,7 +147,7 @@ function NewPacketForm({
       success('패킷 생성 완료', { message: `${items.length}개 항목이 등록됐습니다.` });
       setOpen(false);
       setTitle('');
-      setDueDate('');
+      setDueDate(correctionNoticeSummaryFromAI?.correctionDeadline ?? '');
       onCreated();
     }
   };
@@ -403,7 +409,8 @@ export function ClientActionPacketPanel({
   caseId,
   organizationId,
   packets: initialPackets,
-  correctionItemsFromAI
+  correctionItemsFromAI,
+  correctionNoticeSummaryFromAI
 }: Props) {
   const [packets, setPackets] = useState<ActionPacket[]>(initialPackets);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -424,8 +431,22 @@ export function ClientActionPacketPanel({
         caseId={caseId}
         organizationId={organizationId}
         correctionItemsFromAI={correctionItemsFromAI}
+        correctionNoticeSummaryFromAI={correctionNoticeSummaryFromAI}
         onCreated={() => setRefreshKey((k) => k + 1)}
       />
+
+      {correctionNoticeSummaryFromAI ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-slate-900">보정도우미 요약</p>
+          <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-700">
+            <span>송달일: {correctionNoticeSummaryFromAI.servedAt ?? '-'}</span>
+            <span>보정기한: {correctionNoticeSummaryFromAI.correctionDeadline ?? '-'}</span>
+          </div>
+          {correctionNoticeSummaryFromAI.courtRequestSummary ? (
+            <p className="mt-2 text-sm text-slate-700">법원 요청 의미: {correctionNoticeSummaryFromAI.courtRequestSummary}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {packets.length === 0 ? (
         <div className="py-12 text-center text-slate-400">
