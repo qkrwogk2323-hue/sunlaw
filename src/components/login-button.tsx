@@ -11,7 +11,22 @@ import {
 const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
 
 function resolveAuthOrigin() {
-  return resolveCanonicalAuthOrigin() ?? window.location.origin;
+  const currentOrigin = window.location.origin;
+
+  const canonicalOrigin = resolveCanonicalAuthOrigin();
+  if (!canonicalOrigin) {
+    return currentOrigin;
+  }
+
+  const currentHost = window.location.hostname.replace(/^www\./, '');
+  const canonicalHost = new URL(canonicalOrigin).hostname.replace(/^www\./, '');
+
+  // Keep PKCE flow on the same origin that started login to avoid missing code verifier/state.
+  if (currentHost === canonicalHost) {
+    return currentOrigin;
+  }
+
+  return canonicalOrigin;
 }
 
 function writePostAuthNextCookie(next?: string) {

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { assertPlatformAdminAccess, evaluateOrganizationAccess } from '@/lib/access-control';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
@@ -73,6 +74,46 @@ function isMissingColumnError(error: { code?: string; message?: string } | null)
     || Boolean(error?.message?.includes('column'));
 }
 
+function resolveFallbackProfileName(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+}) {
+  const fullName = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
+  if (fullName) return fullName;
+
+  const name = typeof user.user_metadata?.name === 'string' ? user.user_metadata.name.trim() : '';
+  if (name) return name;
+
+  const emailPrefix = user.email?.split('@')[0]?.trim();
+  if (emailPrefix) return emailPrefix;
+
+  return '사용자';
+}
+
+async function ensureProfileExists(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+}) {
+  const email = user.email?.trim();
+  if (!email) {
+    return false;
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from('profiles').upsert({
+    id: user.id,
+    email,
+    full_name: resolveFallbackProfileName(user)
+  }, { onConflict: 'id' });
+
+  if (error) {
+    throw error;
+  }
+
+  return true;
+}
+
 async function getProfileWithScopedFields(userId: string): Promise<Profile | null> {
   const supabase = await createSupabaseServerClient();
 
@@ -128,7 +169,14 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
       return null;
     }
 
-    const profile = await withTimeoutRetry(() => getProfileWithScopedFields(user.id), 9000, 1);
+    let profile = await withTimeoutRetry(() => getProfileWithScopedFields(user.id), 9000, 1);
+
+    if (!profile) {
+      const recovered = await withTimeoutRetry(() => ensureProfileExists(user), 9000, 0);
+      if (recovered) {
+        profile = await withTimeoutRetry(() => getProfileWithScopedFields(user.id), 9000, 1);
+      }
+    }
 
     if (!profile || !profile.is_active) {
       return null;

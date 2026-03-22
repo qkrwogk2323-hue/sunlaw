@@ -51,6 +51,20 @@ test.describe('로그인 폼 UX', () => {
     expect(bodyText).not.toMatch(/"code"\s*:\s*"invalid_type"/);
     expect(bodyText).not.toMatch(/ZodError/);
   });
+
+  test('잘못된 자격증명 제출 시 영문 원문 대신 사용자 메시지를 보여준다', async ({ page }) => {
+    await page.goto('/login');
+
+    await page.locator('input[name="email"]').fill('unknown-user@example.com');
+    await page.locator('input[name="password"]').fill('wrong-password-1234');
+    await page.locator('button[type="submit"]').click();
+
+    await expect(page.getByText(/아이디 또는 비밀번호가 올바르지 않습니다.|로그인을 처리하지 못했습니다.|로그인 시도가 많아 잠시 제한되었습니다\./)).toBeVisible();
+
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).not.toMatch(/invalid login credentials/i);
+    expect(bodyText).not.toMatch(/email not confirmed/i);
+  });
 });
 
 // ─── 3. 회원가입 폼 UX ─────────────────────────────────────────────────────
