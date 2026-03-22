@@ -69,8 +69,29 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
         : '청구 대상 미지정'
   }));
 
+  const paymentGroupMap = new Map<string, { amount: number; latestAt: string | null }>();
+  (payments ?? []).forEach((payment: any) => {
+    if (payment.payment_status !== 'confirmed') return;
+    const key = `${payment.case_id ?? ''}:${payment.payer_case_client_id ?? ''}:${payment.payer_case_organization_id ?? ''}`;
+    const existing = paymentGroupMap.get(key) ?? { amount: 0, latestAt: null };
+    const latestAt = existing.latestAt && existing.latestAt > `${payment.received_at ?? ''}`
+      ? existing.latestAt
+      : (payment.received_at ?? null);
+    paymentGroupMap.set(key, {
+      amount: existing.amount + Number(payment.amount ?? 0),
+      latestAt
+    });
+  });
+
   const normalizedAgreements = (agreements ?? []).map((item: any) => ({
     ...item,
+    paidAmount: paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.amount ?? 0,
+    recentPaymentAt: paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.latestAt ?? null,
+    shortageAmount: Math.max(
+      Number(item.fixed_amount ?? 0)
+      - (paymentGroupMap.get(`${item.case_id ?? ''}:${item.bill_to_case_client_id ?? ''}:${item.bill_to_case_organization_id ?? ''}`)?.amount ?? 0),
+      0
+    ),
     targetLabel: item.bill_to_case_client_id
       ? clientMap.get(item.bill_to_case_client_id) ?? '의뢰인'
       : item.bill_to_case_organization_id

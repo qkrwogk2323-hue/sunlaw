@@ -7,6 +7,7 @@ import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
 import { OverdueDraftButton } from '@/components/overdue-draft-button';
+import { InstallmentFollowUpActions } from '@/components/forms/installment-follow-up-actions';
 
 type SearchParams = Promise<{ period?: string }>;
 
@@ -344,7 +345,7 @@ export default async function BillingPage({
           <CardHeader><CardTitle>비용입금 미확인 분납 계약</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {installmentPendingAgreements.length ? installmentPendingAgreements.map((agreement: any) => (
-              <Link key={`pending-${agreement.id}`} href={`/cases/${agreement.case_id}?tab=billing`} className="block rounded-2xl border border-amber-200 bg-amber-50/70 p-4 transition hover:border-amber-300">
+              <div key={`pending-${agreement.id}`} className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-slate-900">{agreement.title}</p>
@@ -357,10 +358,19 @@ export default async function BillingPage({
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
                   <p>{agreement.fixed_amount != null ? `약정금액 ${formatCurrency(agreement.fixed_amount)}` : '약정금액 미지정'}</p>
+                  <p>{`현재 입금 ${formatCurrency(agreement.paidAmount ?? 0)} · 부족 ${formatCurrency(agreement.shortageAmount ?? 0)}`}</p>
                   <p>기준 {agreement.terms_json?.installment_start_mode === 'first_due' ? '첫 납부일 기준' : '오늘부터 확인'}</p>
-                  <p>사건 비용 탭에서 분납 계획 조정</p>
+                  <Link href={`/cases/${agreement.case_id}?tab=billing`} className="font-medium text-sky-700 hover:text-sky-900">사건 비용 탭 열기</Link>
                 </div>
-              </Link>
+                {(agreement.shortageAmount ?? 0) > 0 ? (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-white/80 p-3">
+                    <p className="mb-3 text-sm text-slate-700">
+                      현재 부족 금액 {formatCurrency(agreement.shortageAmount ?? 0)}을 다음 청구에 합칠지, 우선 회차를 늘릴지 여기서 바로 정할 수 있습니다.
+                    </p>
+                    <InstallmentFollowUpActions agreementId={agreement.id} caseId={agreement.case_id} />
+                  </div>
+                ) : null}
+              </div>
             )) : (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
                 현재 따로 확인해야 할 분납 계약은 없습니다.
@@ -446,7 +456,13 @@ export default async function BillingPage({
                     {agreement.fixed_amount != null ? `약정금액 ${formatCurrency(agreement.fixed_amount)}` : '약정금액 미지정'}
                     {agreement.rate != null ? ` · 비율 ${agreement.rate}%` : ''}
                   </p>
+                  <p className="mt-2 text-xs text-slate-500">현재 입금 · {formatCurrency(agreement.paidAmount ?? 0)} / 부족 · {formatCurrency(agreement.shortageAmount ?? 0)}</p>
                   <p className="mt-2 text-xs text-slate-500">금액 분류 · {billingIntentLabel(agreement.terms_json?.billing_intent)}</p>
+                  {agreement.terms_json?.installment_follow_up?.mode ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      후속 결정 · {agreement.terms_json.installment_follow_up.mode === 'merged_charge' ? '부족분 합산 청구' : '회차 늘리기'}
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-xs text-slate-400">적용 {formatDate(agreement.effective_from)} ~ {formatDate(agreement.effective_to)}</p>
                 </Link>
               )) : <p className="text-sm text-slate-500">활성 계약이 없습니다.</p>}

@@ -1878,6 +1878,151 @@ export async function recordPaymentAction(caseId: string, formData: FormData) {
   revalidatePath(`/cases/${caseId}`);
 }
 
+// 분납 부족분을 다음 청구에 합산 발행한다.
+export async function issueInstallmentShortageBillingAction(formData: FormData) {
+  const agreementId = `${formData.get('agreementId') ?? ''}`.trim();
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  if (!agreementId || !caseId) {
+    throw new Error('분납 부족분 청구 정보가 올바르지 않습니다.');
+  }
+
+  const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
+  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'billing_manage',
+    errorMessage: '비용 조정 권한이 없습니다.'
+  });
+
+  const { data: agreement, error: agreementError } = await supabase
+    .from('fee_agreements')
+    .select('id, title, fixed_amount, bill_to_party_kind, bill_to_case_client_id, bill_to_case_organization_id, billing_owner_case_organization_id, terms_json')
+    .eq('id', agreementId)
+    .eq('case_id', caseId)
+    .maybeSingle();
+
+  if (agreementError || !agreement) throw agreementError ?? new Error('분납 계약 정보를 찾지 못했습니다.');
+
+  const { data: payments, error: paymentError } = await supabase
+    .from('payments')
+    .select('id, amount, payment_status')
+    .eq('case_id', caseId)
+    .eq('payer_party_kind', agreement.bill_to_party_kind)
+    .eq('payer_case_client_id', agreement.bill_to_case_client_id ?? null)
+    .eq('payer_case_organization_id', agreement.bill_to_case_organization_id ?? null);
+
+  if (paymentError) throw paymentError;
+
+  const paidAmount = (payments ?? [])
+    .filter((item: any) => item.payment_status === 'confirmed')
+    .reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
+  const fixedAmount = Number(agreement.fixed_amount ?? 0);
+  const shortageAmount = Math.max(fixedAmount - paidAmount, 0);
+
+  if (shortageAmount <= 0) {
+    throw new Error('현재 합산 청구가 필요한 부족 금액이 없습니다.');
+  }
+
+  const { error: entryError } = await supabase.from('billing_entries').insert({
+    organization_id: caseRecord.organization_id,
+    case_id: caseId,
+    billing_owner_case_organization_id: agreement.billing_owner_case_organization_id ?? null,
+    fee_agreement_id: agreement.id,
+    bill_to_party_kind: agreement.bill_to_party_kind,
+    bill_to_case_client_id: agreement.bill_to_case_client_id,
+    bill_to_case_organization_id: agreement.bill_to_case_organization_id,
+    entry_kind: 'service_fee',
+    title: `[분납 부족분] ${agreement.title}`,
+    amount: shortageAmount,
+    tax_amount: 0,
+    status: 'issued',
+    due_on: new Date().toISOString().slice(0, 10),
+    notes: '분납 약정 부족분을 다음 청구에 합산 발행함',
+    created_by: auth.user.id,
+    updated_by: auth.user.id
+  });
+
+  if (entryError) throw entryError;
+
+  const nextTerms = {
+    ...((agreement.terms_json as Record<string, unknown> | null) ?? {}),
+    installment_follow_up: {
+      mode: 'merged_charge',
+      shortage_amount: shortageAmount,
+      decided_at: new Date().toISOString(),
+      decided_by: auth.user.id
+    }
+  };
+
+  await supabase
+    .from('fee_agreements')
+    .update({ terms_json: nextTerms, updated_by: auth.user.id })
+    .eq('id', agreement.id);
+
+  revalidatePath('/billing');
+  revalidatePath('/contracts');
+  revalidatePath(`/cases/${caseId}`);
+}
+
+// 분납 부족분을 회차 연장으로 기록한다.
+export async function extendInstallmentPlanAction(formData: FormData) {
+  const agreementId = `${formData.get('agreementId') ?? ''}`.trim();
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  if (!agreementId || !caseId) {
+    throw new Error('회차 연장 정보가 올바르지 않습니다.');
+  }
+
+  const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
+  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+    permission: 'billing_manage',
+    errorMessage: '비용 조정 권한이 없습니다.'
+  });
+
+  const { data: agreement, error: agreementError } = await supabase
+    .from('fee_agreements')
+    .select('id, title, fixed_amount, bill_to_party_kind, bill_to_case_client_id, bill_to_case_organization_id, terms_json')
+    .eq('id', agreementId)
+    .eq('case_id', caseId)
+    .maybeSingle();
+
+  if (agreementError || !agreement) throw agreementError ?? new Error('분납 계약 정보를 찾지 못했습니다.');
+
+  const { data: payments, error: paymentError } = await supabase
+    .from('payments')
+    .select('id, amount, payment_status')
+    .eq('case_id', caseId)
+    .eq('payer_party_kind', agreement.bill_to_party_kind)
+    .eq('payer_case_client_id', agreement.bill_to_case_client_id ?? null)
+    .eq('payer_case_organization_id', agreement.bill_to_case_organization_id ?? null);
+
+  if (paymentError) throw paymentError;
+
+  const paidAmount = (payments ?? [])
+    .filter((item: any) => item.payment_status === 'confirmed')
+    .reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
+  const fixedAmount = Number(agreement.fixed_amount ?? 0);
+  const shortageAmount = Math.max(fixedAmount - paidAmount, 0);
+
+  const nextTerms = {
+    ...((agreement.terms_json as Record<string, unknown> | null) ?? {}),
+    installment_follow_up: {
+      mode: 'extend_rounds',
+      shortage_amount: shortageAmount,
+      decided_at: new Date().toISOString(),
+      decided_by: auth.user.id
+    }
+  };
+
+  const { error: updateError } = await supabase
+    .from('fee_agreements')
+    .update({ terms_json: nextTerms, updated_by: auth.user.id })
+    .eq('id', agreement.id);
+
+  if (updateError) throw updateError;
+
+  revalidatePath('/billing');
+  revalidatePath('/contracts');
+  revalidatePath(`/cases/${caseId}`);
+}
+
 // 사건을 삭제함으로 이동한다.
 export async function moveCaseToDeletedAction(formData: FormData) {
   const caseId = `${formData.get('caseId') ?? ''}`.trim();
