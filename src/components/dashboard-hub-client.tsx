@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
-import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, ThumbsDown } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, ThumbsDown, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -931,6 +931,95 @@ function classifyDocumentByName(name: string): DocClassification {
   return { kind: '미분류 문서', description: '이 문서의 종류를 자동으로 파악하지 못했습니다. 직접 종류를 지정해주세요.', guidance: '사건 페이지에서 서류를 업로드하고 종류를 수동으로 지정해주세요.', clientVisible: false };
 }
 
+// ─── AI 문서 분석 분류표 (상세 안내 포함) ─────────────────────────────────────
+type DocAnalysisResult = {
+  kind: string;
+  label: string;
+  description: string;
+  clientHint: string | null;
+  updateHint: string;
+};
+
+function classifyDocumentName(name: string): DocAnalysisResult {
+  if (/소장/.test(name)) return {
+    kind: 'court',
+    label: '소장',
+    description: '이 소장은 원고가 법원에 제출하는 최초 청구 문서입니다. 사건번호, 청구취지, 청구원인을 확인해야 합니다.',
+    clientHint: '의뢰인에게 소장 사본 전달 시, 법원 전자민원센터(ecf.scourt.go.kr)에서 사건 조회가 가능하다고 안내하세요.',
+    updateHint: '해당 사건의 문서 탭에 업로드하면 관련 기록과 함께 관리됩니다.'
+  };
+  if (/답변서/.test(name)) return {
+    kind: 'court',
+    label: '답변서',
+    description: '이 답변서는 피고가 소장에 대응하여 제출하는 문서입니다. 청구 인부(인정·부인)와 항변 사항을 포함합니다.',
+    clientHint: '의뢰인에게 답변서 제출 기한(통상 30일)과 전자소송 시스템(ecfs.scourt.go.kr) 이용 방법을 안내하세요.',
+    updateHint: '해당 사건 문서 탭에 업로드하여 소장과 함께 관리하세요.'
+  };
+  if (/준비서면/.test(name)) return {
+    kind: 'court',
+    label: '준비서면',
+    description: '이 준비서면은 변론 전 당사자가 주장과 증거를 미리 정리하여 제출하는 문서입니다.',
+    clientHint: null,
+    updateHint: '해당 사건 문서 탭에 업로드하고, 기일 일정과 연결하여 관리하세요.'
+  };
+  if (/결정문|판결문/.test(name)) return {
+    kind: 'court',
+    label: /결정문/.test(name) ? '결정문' : '판결문',
+    description: `이 ${/결정문/.test(name) ? '결정문' : '판결문'}은 법원이 발급한 공식 재판 결과 문서입니다. 주문, 이유, 선고일을 반드시 확인하세요.`,
+    clientHint: '의뢰인에게 판결 주문 내용과 항소 기한(판결 송달일로부터 2주)을 설명하세요.',
+    updateHint: '해당 사건 문서 탭에 업로드하고, 항소 여부 검토 일정을 캘린더에 등록하세요.'
+  };
+  if (/영장|구속/.test(name)) return {
+    kind: 'court',
+    label: '영장 / 구속 관련',
+    description: '영장 또는 구속 관련 법원 문서입니다. 발부 일시, 혐의 내용, 유효기간을 확인하세요.',
+    clientHint: null,
+    updateHint: '해당 사건 문서 탭에 즉시 업로드하세요.'
+  };
+  if (/호적|등록부|가족관계/.test(name)) return {
+    kind: 'registry',
+    label: '가족관계등록부',
+    description: '이 문서는 가족관계등록부(구 호적)로, 혼인·출생·사망 등 신분 관계를 확인하는 공식 서류입니다.',
+    clientHint: '의뢰인에게 정부24(gov.kr) → "가족관계증명서" 검색 후 온라인 발급 방법을 안내하세요.',
+    updateHint: '의뢰인 관리 또는 해당 사건 문서 탭에 업로드하세요.'
+  };
+  if (/초본|주민등록/.test(name)) return {
+    kind: 'registry',
+    label: '주민등록 초본',
+    description: '주민등록 초본은 주소 이력과 주민번호가 포함된 공식 신분 서류입니다.',
+    clientHint: '의뢰인에게 정부24(gov.kr) → "주민등록초본" 온라인 발급 방법을 안내하세요. 법원 제출용은 3개월 이내 발급본이어야 합니다.',
+    updateHint: '해당 사건 문서 탭에 업로드하고, 발급일을 확인하세요.'
+  };
+  if (/등기부|등기/.test(name)) return {
+    kind: 'registry',
+    label: '등기부 등본',
+    description: '등기부 등본은 부동산 소유권, 근저당, 전세권 등 물권 관계를 확인하는 문서입니다.',
+    clientHint: '의뢰인에게 대법원 인터넷등기소(iros.go.kr)에서 온라인 발급 방법을 안내하세요.',
+    updateHint: '해당 사건 문서 탭에 업로드하고, 근저당 설정일과 말소 여부를 확인하세요.'
+  };
+  if (/계약서/.test(name)) return {
+    kind: 'contract',
+    label: '계약서',
+    description: '계약서 문서입니다. 계약 당사자, 목적물, 금액, 특약 사항을 확인하세요.',
+    clientHint: null,
+    updateHint: '계약 관리 메뉴 또는 해당 사건 문서 탭에 업로드하세요.'
+  };
+  if (/진단서|소견서|의무기록/.test(name)) return {
+    kind: 'medical',
+    label: '의료 문서',
+    description: '진단서 또는 의무기록 관련 문서입니다. 진단명, 발급일, 발급 기관을 확인하세요.',
+    clientHint: null,
+    updateHint: '해당 사건 문서 탭에 업로드하고, 관련 일정과 연결하세요.'
+  };
+  return {
+    kind: 'unknown',
+    label: '문서',
+    description: '이 문서의 종류를 자동으로 분류하지 못했습니다. 파일명에 문서 종류를 포함하면 더 정확하게 안내할 수 있습니다.',
+    clientHint: null,
+    updateHint: '해당 사건 또는 의뢰인 문서 탭에 업로드하여 관리하세요.'
+  };
+}
+
 export function DashboardHubClient({
   organizationId,
   currentUserId,
@@ -1099,6 +1188,7 @@ export function DashboardHubClient({
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docAnalyzing, setDocAnalyzing] = useState(false);
   const [docResult, setDocResult] = useState<{ kind: string; description: string; guidance: string; clientVisible: boolean } | null>(null);
+  const [docAnalysis, setDocAnalysis] = useState<DocAnalysisResult | null>(null);
   const [draftKind, setDraftKind] = useState<'organization_message' | 'hub_message' | 'client_invite' | 'staff_invite'>('client_invite');
   const [draftPrompt, setDraftPrompt] = useState('');
   const [draftContextTitle, setDraftContextTitle] = useState(data.recentCases[0]?.title ?? '');
@@ -1231,16 +1321,18 @@ export function DashboardHubClient({
     }
   };
 
-  // 문서 업로드 AI 분류 — 하드코딩 분류표 기반
   const analyzeDocument = async (file: File) => {
     setDocAnalyzing(true);
     setDocResult(null);
+    setDocAnalysis(null);
     try {
       const name = file.name.toLowerCase();
       // 하드코딩 분류표 (향후 정부24/홈텍스 확장 예정)
       const classified = classifyDocumentByName(name);
+      const analysis = classifyDocumentName(name);
       await new Promise((resolve) => setTimeout(resolve, 600)); // UX 딜레이
       setDocResult(classified);
+      setDocAnalysis(analysis);
     } finally {
       setDocAnalyzing(false);
     }
@@ -1561,7 +1653,7 @@ export function DashboardHubClient({
       <div className="space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
           {[
-            { key: 'assistant' as const, title: '업무관련 질의', desc: '질문 답변과 초안 작성을 한 곳에서 처리합니다.', tone: 'border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]', badge: '질의' },
+            { key: 'assistant' as const, title: 'AI 업무질의', desc: '문서 분석·문서 안내·업무 질의를 한 곳에서 처리합니다.', tone: 'border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]', badge: '질의' },
             { key: 'todo' as const, title: 'AI 스케줄도우미', desc: '업무 우선순위와 다음 처리 순서를 제안합니다.', tone: 'border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]', badge: String(initialAiOverview.recommendations.length) }
           ].map((panel) => {
             const active = activeAiPanels.includes(panel.key);
@@ -1596,12 +1688,63 @@ export function DashboardHubClient({
             <div className="flex items-center gap-2">
               <Bot className="size-5 text-sky-600" />
               <div>
-                <CardTitle>AI 업무 질의</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">질문 답변, 문서 분류, 초안 작성이 한 번에 이어집니다.</p>
+                <CardTitle>AI 업무질의</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">문서를 올리거나 질문을 입력하면 바로 처리합니다.</p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* AI 문서 분석 업로드 */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-700">
+                <Bot className="mr-1 inline size-3.5 text-sky-600" aria-hidden="true" />
+                AI 문서 분석 — 파일을 올리면 문서 종류와 다음 처리 방법을 바로 알려드립니다.
+              </p>
+              <label
+                htmlFor="dashboard-doc-upload"
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-sky-200 bg-sky-50/40 px-4 py-5 text-center transition hover:border-sky-400 hover:bg-sky-50"
+              >
+                <Upload className="size-5 text-sky-500" aria-hidden="true" />
+                <span className="text-sm font-medium text-sky-700">
+                  {docFile ? docFile.name : '파일 클릭 또는 드래그하여 업로드'}
+                </span>
+                <span className="text-xs text-slate-500">법원 문서, 계약서, 주민등록초본 등 업무 관련 문서를 올리세요</span>
+                <input
+                  id="dashboard-doc-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg"
+                  aria-label="문서 파일 업로드"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setDocFile(file);
+                    if (file) void analyzeDocument(file);
+                  }}
+                />
+              </label>
+              {docAnalyzing ? (
+                <p className="text-xs text-sky-600 animate-pulse">AI가 문서를 분석 중입니다...</p>
+              ) : null}
+              {docAnalysis ? (
+                <div className="rounded-xl border border-sky-200 bg-white p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Bot className="size-4 text-sky-600 shrink-0" aria-hidden="true" />
+                    <span className="text-xs font-semibold text-sky-700">AI 분석 결과</span>
+                    <Badge tone="blue">{docAnalysis.label}</Badge>
+                  </div>
+                  <p className="text-sm text-slate-800">{docAnalysis.description}</p>
+                  {docAnalysis.clientHint ? (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                      <span className="font-semibold">의뢰인 서류 안내 방법: </span>{docAnalysis.clientHint}
+                    </div>
+                  ) : null}
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                    <span className="font-semibold">문서 업데이트: </span>{docAnalysis.updateHint}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <div className="space-y-2">
               <p className="text-xs text-slate-500">
                 <span className="text-red-500" aria-hidden="true">*</span> 질문을 입력하면 바로 이동할 화면과 이유를 함께 알려드립니다.
@@ -1620,6 +1763,57 @@ export function DashboardHubClient({
                   {assistantPending ? '정리 중...' : '바로 찾기'}
                 </Button>
               </div>
+            </div>
+
+            {/* AI 문서 분류 */}
+            <div className="rounded-[1.4rem] border border-amber-200 bg-amber-50/60 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              <div className="flex items-center gap-2">
+                <Bot className="size-4 text-amber-600" />
+                <p className="text-sm font-semibold text-slate-900">AI 문서 분류</p>
+                <Badge tone="amber">AI</Badge>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">법원 문서 또는 의뢰인이 가져온 서류를 올리면 문서 종류와 처리 방법을 안내합니다.</p>
+              <div className="mt-3">
+                <label
+                  htmlFor="doc-upload"
+                  className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-300 bg-white px-4 py-6 text-sm text-slate-600 transition hover:border-amber-400 hover:bg-amber-50"
+                  aria-label="문서 파일 업로드"
+                >
+                  <Search className="size-6 text-amber-500" />
+                  <span className="font-medium text-slate-700">여기에 문서를 올려주세요</span>
+                  <span className="text-xs text-slate-400">PDF, 이미지, Word 등 지원 · 클릭 또는 드래그</span>
+                  {docFile ? <span className="mt-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">{docFile.name}</span> : null}
+                  <input
+                    id="doc-upload"
+                    type="file"
+                    className="sr-only"
+                    accept=".pdf,.doc,.docx,.hwp,.hwpx,.png,.jpg,.jpeg,.gif,.webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setDocFile(file);
+                      if (file) { void analyzeDocument(file); }
+                    }}
+                  />
+                </label>
+              </div>
+              {docAnalyzing ? (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-500">
+                  <span className="inline-block animate-pulse">AI가 문서를 분석 중입니다...</span>
+                </div>
+              ) : null}
+              {docResult ? (
+                <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-white px-4 py-4">
+                  <div className="flex items-center gap-2">
+                    <Badge tone="amber">{docResult.kind}</Badge>
+                    {docResult.clientVisible ? <Badge tone="blue">의뢰인 공개 가능</Badge> : <Badge tone="slate">조직 내부</Badge>}
+                  </div>
+                  <p className="text-sm leading-6 text-slate-700">{docResult.description}</p>
+                  <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                    <span className="font-semibold">처리 방법 안내: </span>{docResult.guidance}
+                  </div>
+                  <p className="text-[10px] text-slate-400">* AI 자동 분류입니다. 사건 페이지에서 정확한 종류를 지정해주세요.</p>
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-[1.4rem] border border-emerald-200 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
