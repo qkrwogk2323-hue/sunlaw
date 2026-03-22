@@ -62,35 +62,6 @@ function getPeriodBounds(period: PeriodKey, now = new Date()) {
   return { start: startOfDay(start), end: endOfDay(end) };
 }
 
-function getPreviousPeriodBounds(period: PeriodKey, start: Date) {
-  if (period === 'week') {
-    const previousStart = new Date(start);
-    previousStart.setDate(start.getDate() - 7);
-    const previousEnd = new Date(start);
-    previousEnd.setDate(start.getDate() - 1);
-    return { start: startOfDay(previousStart), end: endOfDay(previousEnd) };
-  }
-
-  if (period === 'month') {
-    return {
-      start: startOfDay(new Date(start.getFullYear(), start.getMonth() - 1, 1)),
-      end: endOfDay(new Date(start.getFullYear(), start.getMonth(), 0))
-    };
-  }
-
-  if (period === 'quarter') {
-    return {
-      start: startOfDay(new Date(start.getFullYear(), start.getMonth() - 3, 1)),
-      end: endOfDay(new Date(start.getFullYear(), start.getMonth(), 0))
-    };
-  }
-
-  return {
-    start: startOfDay(new Date(start.getFullYear() - 1, 0, 1)),
-    end: endOfDay(new Date(start.getFullYear() - 1, 11, 31))
-  };
-}
-
 function parseDate(value?: string | null) {
   if (!value) return null;
   const date = value.includes('T') ? new Date(value) : new Date(`${value}T00:00:00`);
@@ -101,22 +72,6 @@ function isInRange(value: string | null | undefined, start: Date, end: Date) {
   const date = parseDate(value);
   if (!date) return false;
   return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
-}
-
-function changeLabel(current: number, previous: number, suffix = '') {
-  const delta = current - previous;
-  const tone = delta > 0 ? 'text-emerald-700' : delta < 0 ? 'text-red-600' : 'text-slate-500';
-  const sign = delta > 0 ? '+' : '';
-  return <span className={tone}>{`${sign}${suffix === '%' ? delta.toFixed(1) : delta.toLocaleString('ko-KR')}${suffix}`}</span>;
-}
-
-function ratioChange(current: number, previous: number) {
-  if (previous === 0) {
-    return current === 0 ? '0.0%' : '신규';
-  }
-  const ratio = ((current - previous) / previous) * 100;
-  const sign = ratio > 0 ? '+' : '';
-  return `${sign}${ratio.toFixed(1)}%`;
 }
 
 function badgeTone(status: string) {
@@ -161,20 +116,6 @@ export default async function BillingPage({
   const nowMs = Date.now();
 
   const bounds = getPeriodBounds(period);
-  const previousBounds = getPreviousPeriodBounds(period, bounds.start);
-
-  const currentDueEntries = billing.entries.filter((entry: any) => isInRange(entry.due_on, bounds.start, bounds.end));
-  const previousDueEntries = billing.entries.filter((entry: any) => isInRange(entry.due_on, previousBounds.start, previousBounds.end));
-  const currentPayments = billing.payments.filter((item: any) => isInRange(item.received_at, bounds.start, bounds.end));
-  const previousPayments = billing.payments.filter((item: any) => isInRange(item.received_at, previousBounds.start, previousBounds.end));
-  const currentAgreements = billing.agreements.filter((item: any) => isInRange(item.created_at ?? item.effective_from, bounds.start, bounds.end));
-  const previousAgreements = billing.agreements.filter((item: any) => isInRange(item.created_at ?? item.effective_from, previousBounds.start, previousBounds.end));
-
-  const currentBilledAmount = currentDueEntries.reduce((sum: number, item: any) => sum + Number(item.totalAmount ?? 0), 0);
-  const previousBilledAmount = previousDueEntries.reduce((sum: number, item: any) => sum + Number(item.totalAmount ?? 0), 0);
-  const currentReceivedAmount = currentPayments.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
-  const previousReceivedAmount = previousPayments.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
-
   const openStatuses = new Set(['draft', 'issued', 'partial']);
   const overdueEntries = billing.entries.filter((entry: any) => entry.dueStatus === 'overdue' && openStatuses.has(entry.status));
   const clientVisibleEntries = billing.entries.filter((entry: any) => Boolean(entry.bill_to_case_client_id));
@@ -192,33 +133,6 @@ export default async function BillingPage({
   const missedInstallmentAgreementKeys = new Set(missedInstallmentEntries.map((entry: any) => `${entry.case_id}:${entry.bill_to_case_client_id ?? ''}:${entry.bill_to_case_organization_id ?? ''}`));
   const installmentComplianceCount = Math.max(installmentAgreements.length - missedInstallmentAgreementKeys.size, 0);
 
-  const comparisonRows = [
-    {
-      label: '청구 예정/발행 금액',
-      current: formatCurrency(currentBilledAmount),
-      previous: formatCurrency(previousBilledAmount),
-      change: ratioChange(currentBilledAmount, previousBilledAmount)
-    },
-    {
-      label: '입금 확정 금액',
-      current: formatCurrency(currentReceivedAmount),
-      previous: formatCurrency(previousReceivedAmount),
-      change: ratioChange(currentReceivedAmount, previousReceivedAmount)
-    },
-    {
-      label: '새 약정 등록',
-      current: `${currentAgreements.length}건`,
-      previous: `${previousAgreements.length}건`,
-      change: ratioChange(currentAgreements.length, previousAgreements.length)
-    },
-    {
-      label: '분납 미이행',
-      current: `${missedInstallmentEntries.length}건`,
-      previous: `${previousDueEntries.filter((entry: any) => entry.dueStatus === 'overdue').length}건`,
-      change: ratioChange(missedInstallmentEntries.length, previousDueEntries.filter((entry: any) => entry.dueStatus === 'overdue').length)
-    }
-  ];
-
   const activeAgreements = billing.agreements.filter((item: any) => item.is_active);
   const caseLinkedEntries = billing.entries.filter((entry: any) => Boolean(entry.case_id));
   const contractLinkedCosts = activeAgreements.filter((agreement: any) => Boolean(agreement.case_id));
@@ -227,32 +141,27 @@ export default async function BillingPage({
     {
       label: '사건 연결 청구',
       value: caseLinkedEntries.length,
-      href: '/cases' as Route,
-      helper: '사건 비용 탭으로 이동'
+      href: '/cases' as Route
     },
     {
       label: '계약 연결 비용',
       value: contractLinkedCosts.length,
-      href: '/contracts' as Route,
-      helper: '계약 관리로 이동'
+      href: '/contracts' as Route
     },
     {
       label: '의뢰인 확인 필요',
       value: clientAttentionEntries.length,
-      href: '/portal/billing' as Route,
-      helper: '포털 청구 확인'
+      href: '/portal/billing' as Route
     },
     {
       label: '분납 후속 처리',
       value: installmentPendingAgreements.length + missedInstallmentEntries.length,
-      href: '/billing#installment-follow-up' as Route,
-      helper: '분납 조정 보기'
+      href: '/billing#installment-follow-up' as Route
     },
     {
       label: '입금 기록',
       value: paymentRecords.length,
-      href: '/billing#recent-payments' as Route,
-      helper: '최근 입금 보기'
+      href: '/billing#recent-payments' as Route
     }
   ];
 
@@ -310,8 +219,7 @@ export default async function BillingPage({
             className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-slate-300"
           >
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{card.label}</p>
-            <p className="mt-4 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
-            <p className="mt-4 text-center text-xs text-slate-500">{card.helper}</p>
+            <p className="mt-6 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
           </Link>
         ))}
       </section>
