@@ -1264,7 +1264,7 @@ type ActionResult =
 ### 5-7. 테스트 및 릴리즈 게이트 규칙
 
 **기본 게이트 (모든 PR 필수):**
-1. 머지 전 `typecheck`, `lint`, `test`, `build`, `check:migrations`, `check:test-coverage`를 모두 통과한다.
+1. 머지 전 `typecheck`, `lint`, `test`, `build`, `check:migrations`, `check:audit-traceability`, `check:test-coverage`를 모두 통과한다.
 2. TODO 또는 FIXME는 이슈 번호와 제거 조건 없이 머지하지 않는다.
 
 **기능 변경 시 테스트 동시 작성 강제 (Test-With-Feature Rule):**
@@ -1277,6 +1277,7 @@ type ActionResult =
 **검사 자동화:**
 8. `pnpm check:test-coverage` 스크립트(`scripts/check-test-coverage.mjs`)가 위 규칙 준수 여부를 자동으로 검사한다. CI에서 반드시 실행한다.
 9. 스크립트가 커버되지 않은 액션 파일을 발견하면 즉시 빌드 실패로 처리한다.
+10. `pnpm check:audit-traceability` 스크립트(`scripts/check-audit-traceability.mjs`)가 변경된 이력성 페이지의 감사로그 진입 링크 누락을 자동으로 검사한다. 누락 시 CI를 실패 처리한다.
 
 ### 5-8. 관측성(Observability) 규칙
 
@@ -1387,6 +1388,19 @@ ActivityFeedPanel
 5. 어느 단계라도 중간에 끊기면 해당 기능은 미완성으로 분류한다. "버튼이 있으면 구현됐다"는 틀린 판단이다.
 6. 사용자는 각 단계에서 **지금 어디 있어야 하는지, 다음엔 어디로 가야 하는지, 왜 그리로 가야 하는지, 못 가면 왜 못 가는지, 대신 어디로 가야 하는지**를 UI로 이해할 수 있어야 한다.
 7. 기능 검토는 반드시 `가야 할 곳 → 도착 여부 → 처리 가능 여부 → 완료 후 다음 단계 → 보관/삭제/복구/로그` 순서로 수행한다.
+
+### 5-19. 로그 추적성 집행 규칙 (Rule → Check → Execute) ★★
+
+감사/보관/승인 화면은 "기능 존재"가 아니라 "로그 역추적 가능"까지 완료되어야 한다.
+
+1. `신청/요청/승인/반려/삭제/복구/보관/세션강제종료`를 수행하는 UI는 반드시 로그 진입 링크를 제공해야 한다.
+2. 로그 진입 링크는 원칙적으로 `/admin/audit` 또는 조직 스코프 감사로그로 이동하고, 대상 엔터티 필터를 포함해야 한다.
+3. 링크 없는 승인/삭제/복구 화면은 미완성으로 분류하고 배포 차단 사유로 본다.
+4. PR 리뷰에서 아래 3단계를 강제한다.
+5. `Rule`: 해당 화면이 로그 추적 대상인지 분류한다.
+6. `Check`: 로그 링크 존재, 필터 정확성, 권한별 가시성을 확인한다.
+7. `Execute`: 누락 시 코드/문서/체크리스트를 같은 PR에서 보완한다.
+8. 플랫폼 관리자 전용 감사로그만 존재하는 경우, 조직 운영자용 로그 화면이 필요한 도메인은 별도 로그 뷰를 함께 구현해야 한다.
 
 ---
 
@@ -1526,3 +1540,6 @@ src/components/mode-switcher.tsx
 26. 조직 삭제·복구 흐름이 `05_organization_restore_package_matrix.csv`의 순서와 의존관계를 따르는가.
 27. 메뉴 검색 구현이 `06_menu_search_matrix.csv`의 범위·debounce·인덱스 전략과 일치하는가.
 28. 결제 잠금/재개 흐름이 `07_subscription_lock_matrix.csv`의 허용 경로와 상태 전이를 따르는가.
+29. 신청/요청/승인/반려/삭제/복구/보관/세션강제종료 UI에 로그 진입 링크가 있는가.
+30. 로그 링크가 실제 엔터티 필터(`table`, `actor`, `tab`, `entity id`)를 포함하는가.
+31. 플랫폼 전용 로그만 있을 때 조직 운영자 화면에서 필요한 로그 접근 경로를 별도로 제공했는가.
