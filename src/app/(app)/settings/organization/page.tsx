@@ -18,6 +18,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 
 const kindLabel: Record<string, string> = {
   platform_management: '플랫폼 관리조직',
@@ -238,20 +239,19 @@ export default async function OrganizationSettingsPage({
           ) : null}
         </div>
       </div>
-      <Card className="border-red-200">
-        <CardHeader>
-          <CardTitle>조직 탈퇴 신청</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-slate-600">조직 탈퇴는 플랫폼 관리자 승인 후 처리됩니다. 승인 전에는 상태가 유지됩니다.</p>
+      <CollapsibleSettingsSection
+        title="조직 탈퇴 신청"
+        description="조직 탈퇴는 플랫폼 관리자 승인 후 처리됩니다. 승인 전에는 상태가 유지됩니다."
+      >
+        <div className="space-y-4 px-5 pb-5">
           {latestExitRequest ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-900">최근 신청 상태</span>
-                    <Badge tone={latestExitRequest.status === 'pending' ? 'amber' : latestExitRequest.status === 'approved' ? 'green' : latestExitRequest.status === 'rejected' ? 'red' : 'slate'}>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-slate-900">최근 신청 상태</span>
+                <Badge tone={latestExitRequest.status === 'pending' ? 'amber' : latestExitRequest.status === 'approved' ? 'green' : latestExitRequest.status === 'rejected' ? 'red' : 'slate'}>
                   {organizationExitStatusLabel(latestExitRequest.status)}
-                    </Badge>
-                  </div>
+                </Badge>
+              </div>
               <p className="mt-2 text-slate-600">사유: {latestExitRequest.reason ?? '-'}</p>
               {latestExitRequest.reviewed_note ? <p className="mt-1 text-slate-600">검토 메모: {latestExitRequest.reviewed_note}</p> : null}
             </div>
@@ -281,14 +281,14 @@ export default async function OrganizationSettingsPage({
             </div>
             <SubmitButton variant="destructive" pendingLabel="신청 중...">플랫폼 관리자 승인 요청</SubmitButton>
           </ClientActionForm>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleSettingsSection>
 
-      <Card className="border-red-300">
-        <CardHeader>
-          <CardTitle>조직 비활성화 / 삭제</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+      <CollapsibleSettingsSection
+        title="조직 비활성화 / 삭제"
+        description="조직을 비활성화하거나 삭제합니다. 되돌리기 어려운 작업이므로 신중하게 진행해 주세요."
+      >
+        <div className="grid gap-4 px-5 pb-5 md:grid-cols-2">
           <ClientActionForm
             action={deactivateOrganizationAction}
             successTitle="조직이 비활성화되었습니다."
@@ -338,8 +338,8 @@ export default async function OrganizationSettingsPage({
             </label>
             <SubmitButton pendingLabel="삭제 처리 중..." variant="destructive">조직 삭제</SubmitButton>
           </ClientActionForm>
-        </CardContent>
-      </Card>
+        </div>
+      </CollapsibleSettingsSection>
     </div>
   );
 }

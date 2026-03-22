@@ -1,13 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
-import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { formatDateTime } from '@/lib/format';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listAuditChangeLog } from '@/lib/queries/audit';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
-type AuditTab = 'general' | 'delete' | 'violation' | 'restore';
+type AuditTab = 'general' | 'delete';
 
 const TAB_META: Record<AuditTab, { label: string; description: string; details: string[] }> = {
   general: {
@@ -27,29 +26,11 @@ const TAB_META: Record<AuditTab, { label: string; description: string; details: 
       '나중에 복구가 필요한지 판단해야 하는 항목을 먼저 모아 볼 때 사용합니다.',
       '중요 자료가 언제 어떤 이유로 사라졌는지 역추적할 때 확인합니다.'
     ]
-  },
-  violation: {
-    label: '위반 기록',
-    description: '권한 위반, 정책 위반, 차단된 시도처럼 즉시 확인해야 하는 기록입니다.',
-    details: [
-      '권한 밖 접근 시도, 차단된 요청, 정책에 걸려 수행되지 않은 작업이 보입니다.',
-      '실수인지, 오남용인지, 룰 누락인지 분리해서 봐야 하는 기록입니다.',
-      '보안 사고나 권한 설계 버그 후보를 찾을 때 가장 먼저 확인하는 탭입니다.'
-    ]
-  },
-  restore: {
-    label: '복구 기록',
-    description: '삭제함 복구, 보관 해제처럼 되돌린 이력을 모아 봅니다.',
-    details: [
-      '보관 해제, 삭제 복구, 상태 되돌리기처럼 이전 상태를 복원한 기록이 나옵니다.',
-      '누가 어떤 항목을 되살렸는지, 복구 판단이 적절했는지 검토할 때 사용합니다.',
-      '삭제 기록과 함께 보면 삭제 후 복구까지의 전체 흐름을 확인할 수 있습니다.'
-    ]
   }
 };
 
 function parseTab(value?: string): AuditTab {
-  if (value === 'delete' || value === 'violation' || value === 'restore') return value;
+  if (value === 'delete') return value;
   return 'general';
 }
 
@@ -73,13 +54,8 @@ export default async function AdminAuditPage({
 
   const resolved = searchParams ? await searchParams : undefined;
   const tab = parseTab(resolved?.tab);
-  const table = `${resolved?.table ?? ''}`.trim() || null;
-  const actor = `${resolved?.actor ?? ''}`.trim() || null;
   const logs = await listAuditChangeLog({
     limit: 150,
-    tableName: table,
-    actorUserId: actor,
-    actionPrefix: tab === 'violation' ? 'VIOLATION' : tab === 'restore' ? 'RESTORE' : null,
     actionIn: tab === 'delete' ? ['DELETE', 'SOFT_DELETE', 'ARCHIVE'] : null
   });
   const tabs = (Object.entries(TAB_META) as Array<[AuditTab, (typeof TAB_META)[AuditTab]]>).map(([key, meta]) => ({
@@ -100,7 +76,7 @@ export default async function AdminAuditPage({
             {tabs.map((item) => (
               <a
                 key={item.key}
-                href={`/admin/audit?tab=${item.key}${table ? `&table=${encodeURIComponent(table)}` : ''}${actor ? `&actor=${encodeURIComponent(actor)}` : ''}`}
+                href={`/admin/audit?tab=${item.key}`}
                 className={buttonStyles({ variant: item.key === tab ? 'primary' : 'secondary', size: 'sm' })}
               >
                 {item.label}
@@ -119,43 +95,6 @@ export default async function AdminAuditPage({
             </div>
           </div>
         </CardHeader>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>필터</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <UnifiedListSearch
-            action="/admin/audit"
-            placeholder="감사 로그 검색어는 선택 입력입니다."
-            defaultValue=""
-            ariaLabel="감사 로그 필터"
-            submitLabel="적용"
-            hiddenFields={{ tab }}
-          >
-            <label htmlFor="audit-table" className="flex flex-col gap-1 text-sm text-slate-600">
-              <span>테이블명</span>
-              <input
-                id="audit-table"
-                name="table"
-                defaultValue={table ?? ''}
-                placeholder="예: notifications"
-                className="h-10 w-52 rounded-lg border border-slate-200 px-3 text-sm text-slate-900"
-              />
-            </label>
-            <label htmlFor="audit-actor" className="flex flex-col gap-1 text-sm text-slate-600">
-              <span>행위자 ID</span>
-              <input
-                id="audit-actor"
-                name="actor"
-                defaultValue={actor ?? ''}
-                placeholder="프로필 UUID"
-                className="h-10 w-72 rounded-lg border border-slate-200 px-3 text-sm text-slate-900"
-              />
-            </label>
-          </UnifiedListSearch>
-        </CardContent>
       </Card>
 
       <Card>

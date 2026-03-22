@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { isManagementRole, requireOrganizationActionAccess } from '@/lib/auth';
+import { isManagementRole, requireAuthenticatedUser, requireOrganizationActionAccess, getEffectiveOrganizationId } from '@/lib/auth';
 import { buildCaseReference, formatCurrency, makeSlug } from '@/lib/format';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
@@ -711,6 +711,81 @@ export async function createClientInvitationAction(caseId: string, formData: For
 
   revalidatePath(`/cases/${caseId}`);
   redirect(`/cases/${caseId}?clientInvite=${encodeURIComponent(token)}`);
+}
+
+// 사건 연결 없이 조직 문서를 등록한다.
+export async function addOrganizationDocumentAction(formData: FormData) {
+  const auth = await requireAuthenticatedUser();
+  const organizationId = getEffectiveOrganizationId(auth);
+  if (!organizationId) throw new Error('소속 조직을 확인할 수 없습니다.');
+
+  await requireOrganizationActionAccess(organizationId, {
+    permission: 'document_create',
+    errorMessage: '문서 등록 권한이 없습니다.'
+  });
+
+  const parsed = caseDocumentSchema.parse({
+    title: formData.get('title'),
+    documentKind: formData.get('documentKind'),
+    clientVisibility: formData.get('clientVisibility'),
+    summary: formData.get('summary'),
+    contentMarkdown: formData.get('contentMarkdown')
+  });
+
+  const supabase = await createSupabaseServerClient();
+  let storagePath: string | null = null;
+  let mimeType: string | null = null;
+  let fileSize: number | null = null;
+  const upload = formData.get('file');
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'case-files';
+
+  try {
+    if (upload instanceof File && upload.size > 0) {
+      storagePath = buildStoragePath(organizationId, 'standalone', upload.name);
+      mimeType = upload.type || null;
+      fileSize = upload.size;
+      const { error: uploadError } = await supabase.storage.from(bucket).upload(storagePath, upload, {
+        contentType: upload.type,
+        upsert: false
+      });
+      if (uploadError) throw uploadError;
+    }
+
+    const { error } = await supabase.from('case_documents').insert({
+      organization_id: organizationId,
+      case_id: null,
+      title: parsed.title,
+      document_kind: parsed.documentKind,
+      approval_status: 'draft',
+      client_visibility: parsed.clientVisibility,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      file_size: fileSize,
+      summary: parsed.summary || null,
+      content_markdown: parsed.contentMarkdown || null,
+      created_by: auth.user.id,
+      created_by_name: auth.profile.full_name,
+      updated_by: auth.user.id
+    });
+
+    if (error) throw error;
+
+    await logCaseAudit({
+      actorId: auth.user.id,
+      organizationId,
+      resourceType: 'case_document',
+      resourceId: parsed.title,
+      action: 'document.created',
+      meta: { title: parsed.title, document_kind: parsed.documentKind }
+    });
+  } catch (err) {
+    if (storagePath) {
+      await supabase.storage.from(bucket).remove([storagePath]);
+    }
+    throw err;
+  }
+
+  revalidatePath('/documents');
 }
 
 // 사건 문서를 등록한다.

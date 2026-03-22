@@ -116,12 +116,7 @@ function getOrganizationSections({
   const organization = membership?.organization;
   const isPlatformManagementOrganizationView = isPlatformManagementOrganization(organization);
 
-  const commonItems = isPlatformManagementOrganizationView
-    ? uniqueItems([
-        { href: '/product-home', label: '운영 첫 화면', icon: LayoutDashboard },
-        { href: '/admin/audit', label: '감사 로그', icon: ShieldAlert }
-      ])
-    : mode === 'client_communication'
+  const commonItems = mode === 'client_communication'
     ? uniqueItems([
         { href: '/notifications', label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
         { href: '/support', label: '고객센터', icon: MessageSquareText }

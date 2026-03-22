@@ -22,8 +22,6 @@ import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { formatNotificationDate } from '@/lib/format';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { HubContextStrip } from '@/components/hub-context-strip';
-import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 
 type QueueEntityType = 'case' | 'schedule' | 'client' | 'collaboration';
@@ -174,10 +172,9 @@ export default async function NotificationsPage({
     return `/notifications?${params.toString()}`;
   };
 
-  const [notificationCenter, channelPreferences, hubs] = await Promise.all([
+  const [notificationCenter, channelPreferences] = await Promise.all([
     getNotificationCenter(pageSize),
-    getNotificationChannelPreferences(),
-    getCaseHubList(organizationId, 4)
+    getNotificationChannelPreferences()
   ]);
 
   const queueView = await getNotificationQueueView({
@@ -214,7 +211,6 @@ export default async function NotificationsPage({
 
   return (
     <div className="space-y-5">
-      <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="알림 센터" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
         {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
