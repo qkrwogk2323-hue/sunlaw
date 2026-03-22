@@ -534,33 +534,48 @@ export function CalendarBoardClient({
         <BriefingCard briefing={briefing} />
       )}
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">일정 확인</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">개인 일정과 조직 일정을 한 화면에서 확인합니다.</h1>
             <p className="mt-2 text-sm text-slate-600">신규 배지는 사건 연동 일정이 최근 갱신된 경우에만 바로 표시됩니다.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={'/calendar/worklog' as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
-              <ScrollText className="size-4" />업무일지
-            </Link>
-            <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
-              <ChevronLeft className="size-4" />이전 달
-            </Link>
-            <label className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700">
-              <span className="sr-only">기준 월 선택</span>
-              <Input
-                type="month"
-                value={monthJump}
-                onChange={(event) => setMonthJump(event.target.value)}
-                className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-semibold shadow-none focus:border-0"
-              />
-            </label>
-            <Link href={`/calendar?month=${monthJump}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
-              <CalendarDays className="size-4" />해당 달 보기
-            </Link>
-            <Link href={`/calendar?month=${nextMonth}` as Route} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700">
-              다음 달<ChevronRight className="size-4" />
+          <div className="grid w-full gap-3 sm:max-w-[26rem] sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <CalendarDays className="size-4 text-sky-600" />
+                달력 이동
+              </div>
+              <label className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <span className="sr-only">기준 월 선택</span>
+                <Input
+                  type="month"
+                  value={monthJump}
+                  onChange={(event) => setMonthJump(event.target.value)}
+                  className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-semibold shadow-none focus:border-0"
+                />
+              </label>
+              <div className="mt-3 flex gap-2">
+                <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+                  <ChevronLeft className="size-4" />
+                </Link>
+                <Link href={`/calendar?month=${monthJump}` as Route} className="inline-flex h-9 flex-[2] items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+                  보기
+                </Link>
+                <Link href={`/calendar?month=${nextMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+                  <ChevronRight className="size-4" />
+                </Link>
+              </div>
+            </div>
+            <Link href={'/calendar/worklog' as Route} className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <ScrollText className="size-4 text-emerald-600" />
+                업무일지
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-slate-950">{snapshot.workLogs.length}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">완료 처리한 일정 기록과 체크 이력을 따로 확인합니다.</p>
+              </div>
             </Link>
           </div>
         </div>
@@ -645,14 +660,24 @@ export function CalendarBoardClient({
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>최근 체크 로그</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>최근 일정 처리 기록</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">일정을 완료하거나 다시 열어 둔 최근 기록입니다.</p>
+              </div>
+              <Link href={'/calendar/worklog' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'rounded-xl px-3 text-xs' })}>
+                업무일지 전체 보기
+              </Link>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-3">
             {snapshot.workLogs.length ? snapshot.workLogs.slice(0, 6).map((log) => (
               <div key={log.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{log.actor_name ?? '담당자'} · {formatDateTime(log.created_at)}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-700">{log.summary}</p>
               </div>
-            )) : <p className="text-sm text-slate-500">최근 체크 로그가 없습니다.</p>}
+            )) : <p className="text-sm text-slate-500">최근 일정 처리 기록이 없습니다.</p>}
           </CardContent>
         </Card>
       </div>

@@ -19,6 +19,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { ImmediateDeleteForm } from '@/components/notifications/immediate-delete-form';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
+import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { formatNotificationDate } from '@/lib/format';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { HubContextStrip } from '@/components/hub-context-strip';
@@ -432,59 +433,56 @@ export default async function NotificationsPage({
         </div>
       ) : null}
 
-      <Card id="channel-preferences" className="border-slate-100">
-        <CardHeader><CardTitle>알림 수신 설정</CardTitle></CardHeader>
-        <CardContent>
-          <ClientActionForm
-            action={updateNotificationChannelPreferenceAction}
-            successTitle="수신 설정이 저장되었습니다."
-            successMessage="변경된 설정이 즉시 적용됩니다."
-            errorTitle="수신 설정 저장에 실패했습니다."
-            errorResolution="잠시 후 다시 시도해 주세요."
-            className="grid gap-3 md:grid-cols-2"
-          >
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="kakao_enabled" defaultChecked={Boolean(channelPreferences?.kakao_enabled)} className="size-4" />
-              카카오톡 알림 받기
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="kakao_important_only" defaultChecked={Boolean(channelPreferences?.kakao_important_only)} className="size-4" />
-              카카오톡은 중요 알림만 받기
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="allow_case" defaultChecked={Boolean(channelPreferences?.allow_case)} className="size-4" />
-              사건 알림 받기
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="allow_schedule" defaultChecked={Boolean(channelPreferences?.allow_schedule)} className="size-4" />
-              일정 알림 받기
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="allow_client" defaultChecked={Boolean(channelPreferences?.allow_client)} className="size-4" />
-              의뢰인 알림 받기
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="allow_collaboration" defaultChecked={Boolean(channelPreferences?.allow_collaboration)} className="size-4" />
-              협업 알림 받기
-            </label>
-            <div className="md:col-span-2">
-              <SubmitButton pendingLabel="저장 중...">수신 설정 저장</SubmitButton>
-            </div>
-          </ClientActionForm>
-        </CardContent>
-      </Card>
+      <CollapsibleSettingsSection
+        title="알림 수신 설정"
+        description="카카오톡과 화면 알림 수신 범위를 필요할 때만 펼쳐서 조정하세요."
+      >
+        <ClientActionForm
+          action={updateNotificationChannelPreferenceAction}
+          successTitle="수신 설정이 저장되었습니다."
+          successMessage="변경된 설정이 즉시 적용됩니다."
+          errorTitle="수신 설정 저장에 실패했습니다."
+          errorResolution="잠시 후 다시 시도해 주세요."
+          className="grid gap-3 md:grid-cols-2"
+        >
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="kakao_enabled" defaultChecked={Boolean(channelPreferences?.kakao_enabled)} className="size-4" />
+            카카오톡 알림 받기
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="kakao_important_only" defaultChecked={Boolean(channelPreferences?.kakao_important_only)} className="size-4" />
+            카카오톡은 중요 알림만 받기
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="allow_case" defaultChecked={Boolean(channelPreferences?.allow_case)} className="size-4" />
+            사건 알림 받기
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="allow_schedule" defaultChecked={Boolean(channelPreferences?.allow_schedule)} className="size-4" />
+            일정 알림 받기
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="allow_client" defaultChecked={Boolean(channelPreferences?.allow_client)} className="size-4" />
+            의뢰인 알림 받기
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="allow_collaboration" defaultChecked={Boolean(channelPreferences?.allow_collaboration)} className="size-4" />
+            협업 알림 받기
+          </label>
+          <div className="md:col-span-2">
+            <SubmitButton pendingLabel="저장 중...">수신 설정 저장</SubmitButton>
+          </div>
+        </ClientActionForm>
+      </CollapsibleSettingsSection>
 
       {notificationCenter.capabilities?.supportsTrash !== false ? (
-        <Card id="trash" className="border-slate-100">
-          <CardHeader>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-3">
-                <CardTitle>보관함</CardTitle>
-                {notificationCenter.trashedNotifications.length > 0 ? (
-                  <Badge tone="slate">{notificationCenter.trashedNotifications.length}</Badge>
-                ) : null}
-              </div>
-              {notificationCenter.trashedNotifications.length > 0 ? (
+        <CollapsibleSettingsSection
+          title={`보관함${notificationCenter.trashedNotifications.length > 0 ? ` · ${notificationCenter.trashedNotifications.length}건` : ''}`}
+          description="보관해 둔 알림을 필요할 때만 펼쳐서 복원하거나 정리하세요."
+        >
+          <div id="trash" className="space-y-3">
+            {notificationCenter.trashedNotifications.length > 0 ? (
+              <div className="flex justify-end">
                 <DangerActionButton
                   action={emptyNotificationTrashAction}
                   fields={{}}
@@ -502,10 +500,8 @@ export default async function NotificationsPage({
                 >
                   보관함 비우기
                 </DangerActionButton>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
+              </div>
+            ) : null}
             {notificationCenter.trashedNotifications.length > 0 ? (
               notificationCenter.trashedNotifications.map((notification: any) => (
                 <div key={notification.id} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
@@ -541,8 +537,8 @@ export default async function NotificationsPage({
             ) : (
               <p className="text-sm text-slate-400">보관함이 비어 있습니다.</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleSettingsSection>
       ) : null}
     </div>
   );
