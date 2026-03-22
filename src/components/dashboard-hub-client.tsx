@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, ShieldAlert, Sparkles, ThumbsDown } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, Sparkles, ThumbsDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1056,7 +1056,7 @@ export function DashboardHubClient({
   const coordinationSourceTimeLabel = coordinationSource?.generatedAt ? formatDateTime(coordinationSource.generatedAt) : '-';
 
   const reportAiIssue = useCallback(async (payload: {
-    aiFeature: 'home_ai_assistant' | 'ai_summary_card' | 'next_action_recommendation' | 'draft_assist' | 'anomaly_alert' | 'admin_copilot';
+    aiFeature: 'home_ai_assistant' | 'ai_summary_card' | 'next_action_recommendation' | 'draft_assist' | 'anomaly_alert';
     question: string;
     answer: string;
     rationale?: string;
@@ -1112,7 +1112,6 @@ export function DashboardHubClient({
   const [aiAssistantOpen, setAiAssistantOpen] = useState(true);
   const [todoOpen, setTodoOpen] = useState(true);
   const [draftOpen, setDraftOpen] = useState(true);
-  const [adminCopilotOpen, setAdminCopilotOpen] = useState(true);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -2041,70 +2040,6 @@ export function DashboardHubClient({
 
         </div>
       </div>
-
-      {isPlatformAdmin ? (
-        <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f6f8fb)]">
-          <CardHeader className="border-slate-200/70">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle>관리자 운영 코파일럿</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">플랫폼 운영 판단과 조정은 아래 운영 메뉴에서 직접 확인해 주세요.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone="amber">직접 확인</Badge>
-                <button
-                  type="button"
-                  aria-label={adminCopilotOpen ? '관리자 운영 코파일럿 접기' : '관리자 운영 코파일럿 펼치기'}
-                  onClick={() => setAdminCopilotOpen((v) => !v)}
-                  className="flex size-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                >
-                  {adminCopilotOpen ? <Minus className="size-3.5" /> : <Plus className="size-3.5" />}
-                </button>
-              </div>
-            </div>
-          </CardHeader>
-          {adminCopilotOpen ? (
-          <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
-                  <ShieldAlert className="size-4" aria-hidden="true" />
-                </div>
-                <div className="space-y-1">
-                  <p className="font-semibold">플랫폼 운영 질문은 AI가 답하지 않습니다.</p>
-                  <p className="leading-6 text-amber-900">
-                    조직 승인, 구독 조정, 조직 삭제, 운영 권한, 감사로그 판단 같은 항목은 AI 제안 없이 직접 확인하고 처리해야 합니다.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <Link
-                href={'/admin/organization-requests' as Route}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
-              >
-                <p className="font-semibold text-slate-900">조직 신청 관리</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">신청, 승인, 반려와 최근 기록을 직접 확인합니다.</p>
-              </Link>
-              <Link
-                href={'/admin/organizations' as Route}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
-              >
-                <p className="font-semibold text-slate-900">조직 관리</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">조직 상태 변경, 비활성화, 삭제, 로그를 직접 확인합니다.</p>
-              </Link>
-              <Link
-                href={'/settings/subscription' as Route}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300"
-              >
-                <p className="font-semibold text-slate-900">구독 관리</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">구독 상태와 제한, 변경 기록을 직접 확인합니다.</p>
-              </Link>
-            </div>
-          </CardContent>
-          ) : null}
-        </Card>
-      ) : null}
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <Card className="border-amber-200 bg-[linear-gradient(180deg,#fffdf2,#fff8da)]">

@@ -123,33 +123,6 @@ export const AI_AREA_CATALOG: Record<AiAreaId, AiAreaSpec> = {
   }
 };
 
-const INTERNAL_SANITIZED_POLICY = {
-  visibility: 'organization_internal' as const,
-  executionPath: 'rules_only' as const,
-  allowRawInput: false,
-  redactNationalId: true,
-  redactFinancial: true,
-  allowClientExposure: false
-};
-
-const PORTAL_VISIBLE_SANITIZED_POLICY = {
-  visibility: 'client_visible' as const,
-  executionPath: 'rules_only' as const,
-  allowRawInput: false,
-  redactNationalId: true,
-  redactFinancial: true,
-  allowClientExposure: true
-};
-
-const PLATFORM_BLOCKED_POLICY = {
-  visibility: 'platform_internal' as const,
-  executionPath: 'blocked' as const,
-  allowRawInput: false,
-  redactNationalId: true,
-  redactFinancial: true,
-  allowClientExposure: false
-};
-
 export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
   home_ai_assistant: {
     feature: 'home_ai_assistant',
@@ -158,7 +131,12 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['menu_link', 'status_summary', 'next_action'],
     allowedRoutes: ['/dashboard', '/notifications', '/calendar', '/cases', '/clients', '/billing', '/contracts', '/case-hubs', '/inbox'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'hybrid',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   ai_summary_card: {
     feature: 'ai_summary_card',
@@ -167,7 +145,12 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['status_summary', 'menu_link'],
     allowedRoutes: ['/dashboard', '/notifications', '/calendar', '/billing'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'hybrid',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   next_action_recommendation: {
     feature: 'next_action_recommendation',
@@ -176,7 +159,12 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['next_action', 'menu_link'],
     allowedRoutes: ['/dashboard', '/notifications', '/calendar', '/clients', '/billing', '/cases'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'hybrid',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   draft_assist: {
     feature: 'draft_assist',
@@ -185,7 +173,12 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['draft_text'],
     allowedRoutes: ['/clients', '/inbox', '/case-hubs'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'trusted_llm',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   anomaly_alert: {
     feature: 'anomaly_alert',
@@ -194,7 +187,12 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['status_summary', 'menu_link'],
     allowedRoutes: ['/dashboard', '/notifications', '/billing', '/calendar'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'rules_only',
+    allowRawInput: false,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   admin_copilot: {
     feature: 'admin_copilot',
@@ -204,34 +202,56 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedRoutes: ['/admin/organization-requests', '/admin/organizations', '/admin/support', '/settings/subscription'],
     blocked: true,
     blockedReason: '플랫폼 운영 판단과 조정은 AI가 답하지 않습니다.',
-    ...PLATFORM_BLOCKED_POLICY
+    visibility: 'platform_internal',
+    executionPath: 'blocked',
+    allowRawInput: false,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   client_profile_comment: {
     feature: 'client_profile_comment',
-    areaId: 'home_ai',
+    areaId: 'client_mgmt_ai',
     label: '의뢰인 성향 코멘트',
     allowedAnswerTypes: ['status_summary', 'next_action'],
     allowedRoutes: ['/clients', '/cases'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    // 절대 비공개 — 조직 내부 운영 전용 (의뢰인이 보면 안 됨)
+    visibility: 'organization_internal',
+    executionPath: 'trusted_llm',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   note_destination_recommender: {
     feature: 'note_destination_recommender',
-    areaId: 'home_ai',
+    areaId: 'client_mgmt_ai',
     label: '특이사항 저장 위치 추천',
     allowedAnswerTypes: ['menu_link', 'next_action'],
     allowedRoutes: ['/clients', '/cases', '/case-hubs', '/inbox'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    // rules_only 우선 — LLM 사용 최소화
+    visibility: 'organization_internal',
+    executionPath: 'rules_only',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   case_hub_conversation: {
     feature: 'case_hub_conversation',
     areaId: 'home_ai',
     label: '사건허브 대화 분석',
-    allowedAnswerTypes: ['status_summary', 'next_action', 'menu_link'],
+    allowedAnswerTypes: ['status_summary', 'next_action', 'checklist'],
     allowedRoutes: ['/case-hubs', '/inbox'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'trusted_llm',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   schedule_briefing: {
     feature: 'schedule_briefing',
@@ -240,7 +260,12 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['status_summary', 'checklist', 'menu_link'],
     allowedRoutes: ['/calendar', '/calendar/worklog'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    visibility: 'organization_internal',
+    executionPath: 'hybrid',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: true,
+    allowClientExposure: false
   },
   document_checklist: {
     feature: 'document_checklist',
@@ -249,7 +274,13 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['checklist', 'status_summary'],
     allowedRoutes: ['/documents', '/cases'],
     blocked: false,
-    ...INTERNAL_SANITIZED_POLICY
+    // 원문 허용 필수 (문서 파싱), 결과는 내부 draft 상태
+    visibility: 'organization_internal',
+    executionPath: 'trusted_llm',
+    allowRawInput: true,
+    redactNationalId: false,  // 문서 원문에서 주민번호가 필요할 수 있음
+    redactFinancial: false,   // 채권자 목록 등에 계좌 필요할 수 있음
+    allowClientExposure: false
   },
   overdue_notice: {
     feature: 'overdue_notice',
@@ -258,7 +289,13 @@ export const AI_FEATURE_POLICY: Record<AiFeatureId, AiFeaturePolicy> = {
     allowedAnswerTypes: ['draft_text', 'status_summary', 'menu_link'],
     allowedRoutes: ['/billing', '/contracts', '/cases'],
     blocked: false,
-    ...PORTAL_VISIBLE_SANITIZED_POLICY
+    // 초안 생성 후 담당자가 검토/수정 후 발송 — 직접 노출 금지, 변환 후 가능
+    visibility: 'organization_internal',
+    executionPath: 'hybrid',
+    allowRawInput: true,
+    redactNationalId: true,
+    redactFinancial: false,  // 연체 금액 등 필요
+    allowClientExposure: false
   }
 };
 
