@@ -26,10 +26,8 @@ import { HubContextStrip } from '@/components/hub-context-strip';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 
-const PAGE_SIZE_OPTIONS = [10, 20, 40, 80] as const;
-
-type QueueSectionKey = 'immediate' | 'confirm' | 'reference';
 type QueueEntityType = 'case' | 'schedule' | 'client' | 'collaboration';
+type NotificationCategoryKey = 'immediate' | 'confirm' | 'meeting' | 'other';
 
 function notificationOpenHref(notificationId: string, href: string, organizationId?: string | null) {
   const params = new URLSearchParams();
@@ -38,19 +36,6 @@ function notificationOpenHref(notificationId: string, href: string, organization
     params.set('organizationId', organizationId);
   }
   return `/notifications/open/${notificationId}?${params.toString()}`;
-}
-
-function sectionMeta(section: QueueSectionKey) {
-  if (section === 'immediate') return { label: '즉시 필요', tone: 'red' as const, openByDefault: false, description: '지금 바로 처리해야 하는 긴급 알림 목록입니다.' };
-  if (section === 'confirm') return { label: '검토 필요', tone: 'blue' as const, openByDefault: false, description: '읽고 판단하거나 승인 여부를 정해야 하는 알림 목록입니다.' };
-  return { label: '완료 / 참고', tone: 'slate' as const, openByDefault: false, description: '이미 확인했거나 이력으로 남겨둔 알림 목록입니다.' };
-}
-
-function entityLabel(entityType: QueueEntityType) {
-  if (entityType === 'case') return '사건';
-  if (entityType === 'schedule') return '일정';
-  if (entityType === 'client') return '의뢰인';
-  return '협업';
 }
 
 function statusLabel(status: string) {
@@ -74,24 +59,11 @@ function actionCopy(item: NotificationQueueItem) {
   return '조직 소통 화면에서 확인';
 }
 
-function queueMeaningCards(items: NotificationQueueItem[]) {
-  const urgent = items.filter((item) => item.status === 'active' && item.priority === 'urgent').length;
-  const pending = items.filter((item) => item.status === 'active' && item.priority !== 'urgent').length;
-
-  return [
-    {
-      label: '즉시 필요',
-      value: urgent,
-      tone: 'red' as const,
-      description: '오늘 바로 움직여야 하는 긴급 알림입니다.'
-    },
-    {
-      label: '검토 필요',
-      value: pending,
-      tone: 'blue' as const,
-      description: '읽고 판단해야 하는 일반 업무 알림입니다.'
-    }
-  ];
+function categoryMeta(key: NotificationCategoryKey) {
+  if (key === 'immediate') return { label: '즉시 필요', tone: 'red' as const };
+  if (key === 'confirm') return { label: '검토 필요', tone: 'blue' as const };
+  if (key === 'meeting') return { label: '미팅 알림', tone: 'green' as const };
+  return { label: '기타 알림', tone: 'slate' as const };
 }
 
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
@@ -117,24 +89,12 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
         <span>{formatNotificationDate(item.createdAt)}</span>
       </div>
 
-      {usesGenericInbox ? (
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-          이 알림은 아직 전용 처리 화면 연결이 완전하지 않습니다. 알림센터에서 내용을 확인한 뒤 관련 메뉴로 이동해 처리해 주세요.
-        </div>
-      ) : null}
-
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600">
           <input type="checkbox" name="notificationIds" value={item.notificationId} form="bulk-queue-form" className="h-3.5 w-3.5" />
           선택
         </label>
-        <Link
-          href={openHref as Route}
-          prefetch
-          className={buttonStyles({ size: 'sm', className: 'h-8 rounded-lg px-3 text-xs !text-white' })}
-        >
-          열기
-        </Link>
+        <Link href={openHref as Route} prefetch className={buttonStyles({ size: 'sm', className: 'h-8 rounded-lg px-3 text-xs !text-white' })}>열기</Link>
 
         {(item.status === 'active' || item.status === 'read') ? (
           <ClientActionForm action={markNotificationResolvedAction} successTitle="해결 처리되었습니다.">
@@ -156,55 +116,37 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
             <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">완료함 이동</SubmitButton>
           </ClientActionForm>
         ) : null}
+        {usesGenericInbox ? <Badge tone="amber">알림센터에서 확인</Badge> : null}
       </div>
     </div>
   );
 }
 
-function QueueSection({
-  section,
-  groups
+function NotificationListSection({
+  title,
+  tone,
+  items
 }: {
-  section: QueueSectionKey;
-  groups: Array<{ groupKey: string; entityType: QueueEntityType; entityId: string | null; title: string; count: number; items: NotificationQueueItem[] }>;
+  title: string;
+  tone: 'red' | 'blue' | 'green' | 'slate';
+  items: NotificationQueueItem[];
 }) {
-  const meta = sectionMeta(section);
-  const totalCount = groups.reduce((sum, group) => sum + group.count, 0);
+  const totalCount = items.length;
 
   return (
-      <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
+    <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>{meta.label}</CardTitle>
-          <Badge tone={meta.tone}>{totalCount}</Badge>
+          <CardTitle>{title}</CardTitle>
+          <Badge tone={tone}>{totalCount}</Badge>
         </div>
-        <p className="text-sm text-slate-500">{meta.description}</p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {(['case', 'schedule', 'client', 'collaboration'] as QueueEntityType[]).map((entityType) => {
-          const entityGroups = groups.filter((group) => group.entityType === entityType);
-          if (!entityGroups.length) return null;
-
-          return (
-            <details key={entityType} open={meta.openByDefault} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
-              <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-                {entityLabel(entityType)} · {entityGroups.length}개 그룹
-              </summary>
-              <div className="mt-3 space-y-3">
-                {entityGroups.map((group) => (
-                  <details key={group.groupKey} open={meta.openByDefault} className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                    <summary className="cursor-pointer list-none text-sm font-medium text-slate-900">
-                      {group.title} ({group.count})
-                    </summary>
-                    <div className="mt-3 space-y-2">
-                      {group.items.map((item) => <QueueItemRow key={item.notificationId} item={item} />)}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </details>
-          );
-        })}
+        {items.length ? items.map((item) => <QueueItemRow key={item.notificationId} item={item} />) : (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+            현재 표시할 알림이 없습니다.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -213,34 +155,22 @@ function QueueSection({
 export default async function NotificationsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ size?: string; q?: string; entity?: string; section?: string; priority?: string; state?: string }>;
+  searchParams?: Promise<{ q?: string; state?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
   const resolved = searchParams ? await searchParams : undefined;
-  const requestedSize = Number(resolved?.size ?? 20);
   const keyword = `${resolved?.q ?? ''}`.trim();
-  const entity = `${resolved?.entity ?? 'all'}` as 'all' | QueueEntityType;
-  const section = `${resolved?.section ?? 'all'}` as 'all' | QueueSectionKey;
-  const priority = `${resolved?.priority ?? 'all'}` as 'all' | 'urgent' | 'normal' | 'low';
-  const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived';
-  const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize as (typeof PAGE_SIZE_OPTIONS)[number]) ? requestedSize : 20;
+  const state = `${resolved?.state ?? 'active'}` as 'active' | 'archived';
+  const pageSize = 30;
   const buildFilterHref = ({
-    nextSection = section,
-    nextPriority = priority,
     nextState = state
   }: {
-    nextSection?: 'all' | QueueSectionKey;
-    nextPriority?: 'all' | 'urgent' | 'normal' | 'low';
-    nextState?: 'all' | 'active' | 'read' | 'resolved' | 'archived';
+    nextState?: 'active' | 'archived';
   }) => {
     const params = new URLSearchParams();
     if (keyword) params.set('q', keyword);
-    params.set('entity', entity);
-    params.set('section', nextSection);
-    params.set('priority', nextPriority);
     params.set('state', nextState);
-    params.set('size', String(pageSize));
     return `/notifications?${params.toString()}`;
   };
 
@@ -253,12 +183,46 @@ export default async function NotificationsPage({
   const queueView = await getNotificationQueueView({
     limit: pageSize,
     q: keyword || null,
-    entityType: entity,
-    section,
-    priority,
     state
   });
-  const meaningCards = queueMeaningCards(queueView.items);
+  const summaryCards = [
+    {
+      label: '새 알림',
+      value: queueView.items.length,
+      tone: 'slate' as const,
+      href: buildFilterHref({ nextState: 'active' })
+    },
+    {
+      label: '즉시 필요',
+      value: queueView.categories.immediate.length,
+      tone: 'red' as const,
+      href: '#immediate'
+    },
+    {
+      label: '검토 필요',
+      value: queueView.categories.confirm.length,
+      tone: 'blue' as const,
+      href: '#confirm'
+    },
+    {
+      label: '미팅 알림',
+      value: queueView.categories.meeting.length,
+      tone: 'green' as const,
+      href: '#meeting'
+    },
+    {
+      label: '기타 알림',
+      value: queueView.categories.other.length,
+      tone: 'slate' as const,
+      href: '#other'
+    },
+    {
+      label: '보관함',
+      value: notificationCenter.summary.trashCount,
+      tone: 'slate' as const,
+      href: buildFilterHref({ nextState: 'archived' })
+    }
+  ];
 
   return (
     <div className="space-y-5">
@@ -267,8 +231,6 @@ export default async function NotificationsPage({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
-            <p className="mt-2 text-sm text-slate-500">알림을 보는 곳이 아니라 사건/일정/의뢰인/협업 업무를 처리하는 큐입니다.</p>
-            <p className="mt-1 text-xs text-amber-700">카카오톡 가입자는 중요 알림을 카카오톡으로 받을 수 있습니다. 아래 수신 설정에서 알림 유형을 선택하세요.</p>
           </div>
           <div className="space-y-3">
             <div className="flex justify-end">
@@ -277,107 +239,39 @@ export default async function NotificationsPage({
               </Link>
             </div>
             <div className="grid min-w-[248px] grid-cols-2 gap-3">
-            <div className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+            <Link href={buildFilterHref({ nextState: 'active' }) as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
-            </div>
-            <Link href={'/notifications#trash' as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
+              <p className="mt-1 text-center text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
+            </Link>
+            <Link href={buildFilterHref({ nextState: 'archived' }) as Route} className="flex min-h-[106px] flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">보관함</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
+              <p className="mt-1 text-center text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
             </Link>
           </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {meaningCards.map((card) => {
-          const href =
-            card.label === '즉시 필요'
-              ? buildFilterHref({ nextSection: 'immediate', nextPriority: 'urgent', nextState: 'active' })
-              : buildFilterHref({ nextSection: 'confirm', nextState: 'active' });
-
-          return (
-            <Link key={card.label} href={href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
-                  <p className="mt-2 text-3xl font-semibold text-slate-950">{card.value}</p>
-                </div>
-                <Badge tone={card.tone}>{card.label}</Badge>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-slate-500">{card.description}</p>
-              <p className="mt-3 text-xs font-medium text-sky-700">해당 목록 열기</p>
-            </Link>
-          );
-        })}
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {summaryCards.map((card) => (
+          <Link key={card.label} href={card.href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
+            <p className="mt-6 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
+          </Link>
+        ))}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <UnifiedListSearch
           action="/notifications"
           defaultValue={keyword}
-          placeholder="제목, 조직, 처리 안내 검색"
+          placeholder="알림 제목 검색"
           ariaLabel="알림 센터 목록 검색"
           sticky
           hiddenFields={{
-            entity,
-            section,
-            priority,
-            state,
-            size: pageSize
+            state
           }}
-        >
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="whitespace-nowrap">유형</span>
-            <select name="entity" defaultValue={entity} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
-              <option value="all">전체</option>
-              <option value="case">사건</option>
-              <option value="schedule">일정</option>
-              <option value="client">의뢰인</option>
-              <option value="collaboration">협업</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="whitespace-nowrap">섹션</span>
-            <select name="section" defaultValue={section} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
-              <option value="all">전체</option>
-              <option value="immediate">즉시 처리</option>
-              <option value="confirm">확인 필요</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="whitespace-nowrap">우선순위</span>
-            <select name="priority" defaultValue={priority} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
-              <option value="all">전체</option>
-              <option value="urgent">긴급</option>
-              <option value="normal">일반</option>
-              <option value="low">낮음</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="whitespace-nowrap">상태</span>
-            <select name="state" defaultValue={state} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800">
-              <option value="all">전체</option>
-              <option value="active">신규</option>
-              <option value="read">확인</option>
-              <option value="resolved">해결</option>
-              <option value="archived">완료</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="whitespace-nowrap">표시 개수</span>
-            <select
-              name="size"
-              defaultValue={pageSize}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {PAGE_SIZE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}개</option>
-              ))}
-            </select>
-          </label>
-        </UnifiedListSearch>
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -405,14 +299,42 @@ export default async function NotificationsPage({
         </ClientActionForm>
       </div>
 
-      {queueView ? (
+      {state === 'archived' ? (
+        <NotificationListSection
+          title="보관함"
+          tone="slate"
+          items={notificationCenter.trashedNotifications.map((item: any) => ({
+            notificationId: item.id,
+            type: `${item.notification_type ?? item.kind ?? 'generic'}`,
+            entityType: 'collaboration',
+            entityId: item.case_id ?? null,
+            priority: 'low',
+            status: 'archived',
+            destinationType: `${item.destination_type ?? 'internal_route'}`,
+            destinationUrl: `${item.destination_url ?? '/notifications'}`,
+            createdAt: item.created_at,
+            title: item.title,
+            actionLabel: `${item.action_label ?? '열기'}`,
+            organizationId: item.organization_id ?? null,
+            organizationName: item.organization?.name ?? null
+          }))}
+        />
+      ) : (
         <div className="space-y-4">
-          <div className="space-y-4">
-            <QueueSection section="immediate" groups={queueView.sections.immediate} />
-            <QueueSection section="confirm" groups={queueView.sections.confirm} />
+          <div id="immediate">
+            <NotificationListSection title={categoryMeta('immediate').label} tone={categoryMeta('immediate').tone} items={queueView.categories.immediate} />
+          </div>
+          <div id="confirm">
+            <NotificationListSection title={categoryMeta('confirm').label} tone={categoryMeta('confirm').tone} items={queueView.categories.confirm} />
+          </div>
+          <div id="meeting">
+            <NotificationListSection title={categoryMeta('meeting').label} tone={categoryMeta('meeting').tone} items={queueView.categories.meeting} />
+          </div>
+          <div id="other">
+            <NotificationListSection title={categoryMeta('other').label} tone={categoryMeta('other').tone} items={queueView.categories.other} />
           </div>
         </div>
-      ) : null}
+      )}
 
       <CollapsibleSettingsSection
         title="알림 수신 설정"
@@ -456,70 +378,24 @@ export default async function NotificationsPage({
         </ClientActionForm>
       </CollapsibleSettingsSection>
 
-      {notificationCenter.capabilities?.supportsTrash !== false ? (
-        <CollapsibleSettingsSection
-          title={`보관함${notificationCenter.trashedNotifications.length > 0 ? ` · ${notificationCenter.trashedNotifications.length}건` : ''}`}
-          description="보관해 둔 알림을 필요할 때만 펼쳐서 복원하거나 정리하세요."
-        >
-          <div id="trash" className="space-y-3">
-            {notificationCenter.trashedNotifications.length > 0 ? (
-              <div className="flex justify-end">
-                <DangerActionButton
-                  action={emptyNotificationTrashAction}
-                  fields={{}}
-                  confirmTitle="보관함을 비울까요?"
-                  confirmDescription={`보관함의 알림 ${notificationCenter.trashedNotifications.length}건이 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`}
-                  confirmLabel="모두 삭제"
-                  variant="danger"
-                  successTitle="보관함을 비웠습니다."
-                  successMessage="보관된 알림이 모두 영구 삭제되었습니다."
-                  errorTitle="보관함 비우기에 실패했습니다."
-                  errorCause="보관함 안의 일부 알림이 이미 삭제되었거나 삭제 권한을 다시 확인해야 합니다."
-                  errorResolution="보관함 목록을 새로고침한 뒤 다시 시도해 주세요."
-                  buttonVariant="destructive"
-                  className="rounded-full px-5"
-                >
-                  보관함 비우기
-                </DangerActionButton>
-              </div>
-            ) : null}
-            {notificationCenter.trashedNotifications.length > 0 ? (
-              notificationCenter.trashedNotifications.map((notification: any) => (
-                <div key={notification.id} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm font-medium text-slate-500">{notification.title}</span>
-                      <Badge tone="slate">보관됨</Badge>
-                    </div>
-                    {notification.body ? (
-                      <p className="mt-1 line-clamp-1 text-xs text-slate-400">{notification.body}</p>
-                    ) : null}
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
-                      <span>{notification.organization?.name ?? '조직 정보 없음'}</span>
-                      <span>·</span>
-                      <span>도착 {formatNotificationDate(notification.created_at)}</span>
-                      <span>·</span>
-                      <span>보관 {formatNotificationDate(notification.trashed_at)}</span>
-                    </div>
-                  </div>
-                  <ClientActionForm
-                    action={restoreNotificationAction}
-                    successTitle="알림이 복원되었습니다."
-                    errorTitle="복원에 실패했습니다."
-                    errorResolution="잠시 후 다시 시도해 주세요."
-                    className="shrink-0"
-                  >
-                    <input type="hidden" name="notificationId" value={notification.id} />
-                    <SubmitButton variant="secondary" pendingLabel="복원 중..." className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs">복원</SubmitButton>
-                  </ClientActionForm>
-                  <ImmediateDeleteForm notificationId={notification.id} />
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-400">보관함이 비어 있습니다.</p>
-            )}
-          </div>
-        </CollapsibleSettingsSection>
+      {state === 'archived' && notificationCenter.capabilities?.supportsTrash !== false ? (
+        <div className="flex justify-end">
+          <DangerActionButton
+            action={emptyNotificationTrashAction}
+            fields={{}}
+            confirmTitle="보관함을 비울까요?"
+            confirmDescription={`보관함의 알림 ${notificationCenter.trashedNotifications.length}건이 영구 삭제됩니다.`}
+            confirmLabel="보관함 비우기"
+            variant="danger"
+            successTitle="보관함을 비웠습니다."
+            errorTitle="보관함 비우기에 실패했습니다."
+            errorResolution="잠시 후 다시 시도해 주세요."
+            buttonVariant="destructive"
+            className="rounded-xl px-4"
+          >
+            보관함 비우기
+          </DangerActionButton>
+        </div>
       ) : null}
     </div>
   );

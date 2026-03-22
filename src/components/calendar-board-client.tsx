@@ -405,7 +405,6 @@ export function CalendarBoardClient({
   caseOptions: CaseOption[];
   briefing?: ScheduleBriefing;
 }) {
-  const [scope, setScope] = useState<'merged' | 'personal' | 'organization'>('merged');
   const [rangeFilter, setRangeFilter] = useState<'today' | 'week' | 'month' | 'year'>('today');
   const [kindFilter, setKindFilter] = useState<'all' | 'work' | 'meeting' | 'other'>('all');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
@@ -490,19 +489,11 @@ export function CalendarBoardClient({
     return [...scheduleEntries, ...requestEntries, ...billingEntries].sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
   }, [currentUserId, recentEntryCutoff, snapshot.billingEntries, snapshot.requests, snapshot.schedules]);
 
-  const scopedEntries = useMemo(() => entries.filter((entry) => {
-    if (scope === 'personal') return entry.ownerScope === 'personal';
-    if (scope === 'organization') return entry.ownerScope === 'organization';
-    return true;
-  }), [entries, scope]);
-
   const summary = {
-    today: scopedEntries.filter((entry) => toLocalDateKey(entry.when) === todayKey).length,
-    week: scopedEntries.filter((entry) => new Date(entry.when).getTime() <= weekLaterTime).length,
-    important: scopedEntries.filter((entry) => entry.isImportant).length,
-    new: scopedEntries.filter((entry) => entry.isNew).length,
-    personal: entries.filter((entry) => entry.ownerScope === 'personal').length,
-    organization: entries.filter((entry) => entry.ownerScope === 'organization').length
+    today: entries.filter((entry) => toLocalDateKey(entry.when) === todayKey).length,
+    week: entries.filter((entry) => new Date(entry.when).getTime() <= weekLaterTime).length,
+    important: entries.filter((entry) => entry.isImportant).length,
+    new: entries.filter((entry) => entry.isNew).length
   };
 
   const prevMonth = monthShift(snapshot.focusMonth, -1);
@@ -532,7 +523,7 @@ export function CalendarBoardClient({
     return date;
   }, [currentMoment]);
 
-  const scheduleEntriesOnly = useMemo(() => scopedEntries.filter((entry) => entry.source === 'schedule'), [scopedEntries]);
+  const scheduleEntriesOnly = useMemo(() => entries.filter((entry) => entry.source === 'schedule'), [entries]);
   const todayTasks = useMemo(() => scheduleEntriesOnly.filter((entry) => toLocalDateKey(entry.when) === todayKey), [scheduleEntriesOnly, todayKey]);
   const weekTasks = useMemo(() => scheduleEntriesOnly.filter((entry) => isWithinRange(entry.when, startOfToday, endOfWeek)), [endOfWeek, scheduleEntriesOnly, startOfToday]);
   const monthTasks = useMemo(() => scheduleEntriesOnly.filter((entry) => isWithinRange(entry.when, startOfMonth, endOfMonth)), [endOfMonth, scheduleEntriesOnly, startOfMonth]);
@@ -557,6 +548,15 @@ export function CalendarBoardClient({
     if (kindFilter === 'work') return kind !== 'meeting' && kind !== 'other';
     return true;
   }), [kindFilter, rangeEntries]);
+  const kindSummaryCount = useMemo(() => {
+    if (kindFilter === 'meeting') return rangeEntries.filter((entry) => (entry.raw?.schedule_kind ?? 'other') === 'meeting').length;
+    if (kindFilter === 'other') return rangeEntries.filter((entry) => (entry.raw?.schedule_kind ?? 'other') === 'other').length;
+    if (kindFilter === 'work') return rangeEntries.filter((entry) => {
+      const kind = entry.raw?.schedule_kind ?? 'other';
+      return kind !== 'meeting' && kind !== 'other';
+    }).length;
+    return rangeEntries.length;
+  }, [kindFilter, rangeEntries]);
 
   return (
     <div className="space-y-6">
@@ -616,42 +616,22 @@ export function CalendarBoardClient({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {rangeCards.map((item) => (
           <button
             key={item.key}
             type="button"
             onClick={() => setRangeFilter(item.key)}
-            className={`flex min-h-40 flex-col rounded-2xl border p-4 text-left transition ${rangeFilter === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
+            className={`flex min-h-28 flex-col rounded-2xl border p-4 text-left transition ${rangeFilter === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
           >
             <p className={`flex items-center gap-1.5 text-xs font-semibold tracking-[0.18em] ${rangeFilter === item.key ? 'text-slate-200' : 'text-slate-500'}`}>
               <item.icon className="size-4 shrink-0" />
               {item.label}
             </p>
             <p className="mt-2 text-3xl font-semibold leading-none">{item.value}</p>
-            <p className={`mt-auto pt-4 text-xs ${rangeFilter === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.helper}</p>
+            <p className={`mt-auto pt-3 text-xs ${rangeFilter === item.key ? 'text-slate-200' : 'text-slate-500'}`}>{item.helper}</p>
           </button>
         ))}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
-          {[
-            { key: 'merged' as const, label: '합쳐서 보기' },
-            { key: 'personal' as const, label: `내 일정 ${summary.personal}` },
-            { key: 'organization' as const, label: `조직 일정 ${summary.organization}` }
-          ].map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setScope(item.key)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${scope === item.key ? 'bg-slate-950 text-white' : 'text-slate-600'}`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div className="text-sm text-slate-500">현재 보기 · {scope === 'merged' ? '합쳐서 보기' : scope === 'personal' ? '내 일정만' : '조직 일정만'}</div>
       </div>
 
       <Card>
@@ -659,24 +639,31 @@ export function CalendarBoardClient({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle>{rangeFilter === 'today' ? '오늘 일정' : rangeFilter === 'week' ? '금주 일정' : rangeFilter === 'month' ? '금번달 일정' : '금년 일정'}</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">업무일정, 미팅일정, 기타일정으로 나눠 지금 소화할 일정을 바로 확인합니다.</p>
             </div>
-            <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
-              {[
-                { key: 'all' as const, label: `전체 ${rangeEntries.length}` },
-                { key: 'work' as const, label: '업무일정' },
-                { key: 'meeting' as const, label: '미팅일정' },
-                { key: 'other' as const, label: '기타일정' }
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setKindFilter(item.key)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${kindFilter === item.key ? 'bg-slate-950 text-white' : 'text-slate-600'}`}
-                >
-                  {item.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-3">
+              <div className="min-w-[92px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  {kindFilter === 'all' ? '전체' : kindFilter === 'work' ? '업무일정' : kindFilter === 'meeting' ? '미팅일정' : '기타일정'}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950 tabular-nums">{kindSummaryCount}</p>
+              </div>
+              <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
+                {[
+                  { key: 'all' as const, label: '전체' },
+                  { key: 'work' as const, label: '업무일정' },
+                  { key: 'meeting' as const, label: '미팅일정' },
+                  { key: 'other' as const, label: '기타일정' }
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setKindFilter(item.key)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${kindFilter === item.key ? 'bg-slate-950 text-white' : 'text-slate-600'}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -706,7 +693,6 @@ export function CalendarBoardClient({
                     <div className="flex flex-wrap items-center gap-2">
                       {entry.source === 'schedule' && !canceled ? <ScheduleCompletionCheckbox entry={entry} /> : null}
                       {entry.source === 'schedule' ? <ScheduleCancellationButton entry={entry} /> : null}
-                      <Badge tone={entry.ownerScope === 'personal' ? 'blue' : 'slate'}>{entry.ownerScope === 'personal' ? '내 일정' : '조직 일정'}</Badge>
                       {entry.caseId ? (
                         <Link
                           href={`/cases/${entry.caseId}` as Route}
@@ -788,18 +774,6 @@ export function CalendarBoardClient({
           )}
         </CardContent>
       </Card>
-
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-900">달력 크게 보기</p>
-            <p className="mt-1 text-xs text-slate-500">{monthJump} 달 달력 화면으로 이동합니다.</p>
-          </div>
-          <Link href={`/calendar?month=${monthJump}` as Route} className={buttonStyles({ variant: 'secondary', className: 'rounded-xl px-4' })}>
-            달력 보기
-          </Link>
-        </div>
-      </div>
 
       {canManage ? (
         <Card>
