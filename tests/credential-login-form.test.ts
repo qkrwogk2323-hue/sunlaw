@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toLoginErrorFeedback } from '@/components/forms/credential-login-form';
+import { normalizeStoredLoginMode, toLoginErrorFeedback } from '@/components/forms/credential-login-form';
 
 describe('toLoginErrorFeedback', () => {
   it('이메일 로그인 실패를 원인과 해결 방법으로 풀어쓴다', () => {
@@ -24,5 +24,14 @@ describe('toLoginErrorFeedback', () => {
     expect(feedback.title).toContain('잠시 로그인');
     expect(feedback.cause).toContain('반복');
     expect(feedback.resolution).toContain('5분');
+  });
+
+  it('저장된 로그인 방식이 없으면 이메일 로그인을 기본으로 사용한다', () => {
+    expect(normalizeStoredLoginMode(null)).toBe('email');
+    expect(normalizeStoredLoginMode('unknown')).toBe('email');
+  });
+
+  it('저장된 로그인 방식이 임시 아이디면 그대로 복원한다', () => {
+    expect(normalizeStoredLoginMode('temp')).toBe('temp');
   });
 });

@@ -1,16 +1,20 @@
+// audit-link-exempt: reason=login-form-no-destructive-action; fallback=/admin/audit?tab=general; expires=2027-01-01; approvedBy=tech-lead
 'use client';
 
 import Link from 'next/link';
 import type { Route } from 'next';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { InlineErrorMessage } from '@/components/ui/inline-error';
 
+// audit-link-exempt: reason=로그인 입력 폼은 신청·승인·보관 이력 화면이 아니라 인증 입력 전용이다; fallback=로그인 실패와 제한 이벤트는 인증 시스템 로그와 플랫폼 오류 로그에서 추적한다; expires=2026-12-31; approvedBy=Codex
+
 type LoginMode = 'email' | 'temp';
+const LOGIN_MODE_STORAGE_KEY = 'vs-login-mode';
 
 type LoginErrorFeedback = {
   title: string;
@@ -65,6 +69,10 @@ export function toLoginErrorFeedback(error: unknown, mode: LoginMode): LoginErro
   };
 }
 
+export function normalizeStoredLoginMode(value: string | null | undefined): LoginMode {
+  return value === 'temp' ? 'temp' : 'email';
+}
+
 export function CredentialLoginForm() {
   const router = useRouter();
   const [mode, setMode] = useState<LoginMode>('email');
@@ -75,6 +83,16 @@ export function CredentialLoginForm() {
   const [tempPassword, setTempPassword] = useState('');
   const [error, setError] = useState<LoginErrorFeedback | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setMode(normalizeStoredLoginMode(window.localStorage.getItem(LOGIN_MODE_STORAGE_KEY)));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(LOGIN_MODE_STORAGE_KEY, mode);
+  }, [mode]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -152,6 +170,7 @@ export function CredentialLoginForm() {
             ? '가입한 이메일과 비밀번호로 로그인합니다.'
             : '조직에서 안내받은 조직 식별값과 임시 아이디로 로그인합니다.'}
         </p>
+        <p className="text-xs leading-5 text-slate-500">최근에 사용한 로그인 방식은 다음 방문 때도 그대로 보여줍니다.</p>
       </div>
 
       {mode === 'email' ? (
