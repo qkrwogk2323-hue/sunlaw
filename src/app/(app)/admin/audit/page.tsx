@@ -9,22 +9,42 @@ import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 type AuditTab = 'general' | 'delete' | 'violation' | 'restore';
 
-const TAB_META: Record<AuditTab, { label: string; description: string }> = {
+const TAB_META: Record<AuditTab, { label: string; description: string; details: string[] }> = {
   general: {
     label: '일반 작업',
-    description: '생성, 수정, 확인처럼 일상 운영에서 발생한 기본 변경 기록입니다.'
+    description: '생성, 수정, 상태 변경처럼 일상 운영에서 발생한 기본 변경 기록입니다.',
+    details: [
+      '조직이나 사건, 의뢰인, 설정값을 새로 만들거나 수정한 기록이 보입니다.',
+      '구독 상태 변경, 기능 설정 변경, 조직 상태 조정처럼 운영자가 반영한 변경이 포함됩니다.',
+      '누가 어느 조직에서 어떤 대상을 바꿨는지, 시각과 함께 추적할 때 사용합니다.'
+    ]
   },
   delete: {
     label: '삭제 기록',
-    description: '삭제함 이동, 보관, 실제 삭제처럼 원복이 중요할 수 있는 기록입니다.'
+    description: '삭제함 이동, 보관, 실제 삭제처럼 원복이 중요할 수 있는 기록입니다.',
+    details: [
+      '알림 보관함 이동, 삭제함 이동, 실제 삭제 처리 같은 기록이 나옵니다.',
+      '나중에 복구가 필요한지 판단해야 하는 항목을 먼저 모아 볼 때 사용합니다.',
+      '중요 자료가 언제 어떤 이유로 사라졌는지 역추적할 때 확인합니다.'
+    ]
   },
   violation: {
     label: '위반 기록',
-    description: '권한 위반, 정책 위반, 차단된 시도처럼 즉시 확인해야 하는 기록입니다.'
+    description: '권한 위반, 정책 위반, 차단된 시도처럼 즉시 확인해야 하는 기록입니다.',
+    details: [
+      '권한 밖 접근 시도, 차단된 요청, 정책에 걸려 수행되지 않은 작업이 보입니다.',
+      '실수인지, 오남용인지, 룰 누락인지 분리해서 봐야 하는 기록입니다.',
+      '보안 사고나 권한 설계 버그 후보를 찾을 때 가장 먼저 확인하는 탭입니다.'
+    ]
   },
   restore: {
     label: '복구 기록',
-    description: '삭제함 복구, 보관 해제처럼 되돌린 이력을 모아 봅니다.'
+    description: '삭제함 복구, 보관 해제처럼 되돌린 이력을 모아 봅니다.',
+    details: [
+      '보관 해제, 삭제 복구, 상태 되돌리기처럼 이전 상태를 복원한 기록이 나옵니다.',
+      '누가 어떤 항목을 되살렸는지, 복구 판단이 적절했는지 검토할 때 사용합니다.',
+      '삭제 기록과 함께 보면 삭제 후 복구까지의 전체 흐름을 확인할 수 있습니다.'
+    ]
   }
 };
 
@@ -87,7 +107,17 @@ export default async function AdminAuditPage({
               </a>
             ))}
           </div>
-          <p className="text-sm text-slate-500">{TAB_META[tab].description}</p>
+          <div className="space-y-2">
+            <p className="text-sm text-slate-500">{TAB_META[tab].description}</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <p className="font-medium text-slate-900">{TAB_META[tab].label} 버튼을 누르면 아래 기록이 보입니다.</p>
+              <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
+                {TAB_META[tab].details.map((detail) => (
+                  <li key={detail}>- {detail}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </CardHeader>
       </Card>
 

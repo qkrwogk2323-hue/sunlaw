@@ -114,6 +114,14 @@ export default async function ClientsPage({
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">의뢰인 관리</h1>
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <Link href={'/admin/audit?tab=general&table=client_profiles' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            의뢰인 정보 변경 기록 보기
+          </Link>
+          <Link href={'/admin/audit?tab=general&table=client_access_requests' as Route} className="font-medium text-sky-700 underline underline-offset-4">
+            의뢰인 연결 요청 기록 보기
+          </Link>
+        </div>
       </div>
 
       <section className="grid gap-3 md:grid-cols-4">
