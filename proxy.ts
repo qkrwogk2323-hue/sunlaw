@@ -27,12 +27,12 @@ const rateLimitStore = globalRateLimitStore.__veinRateLimitStore ?? new Map<stri
 globalRateLimitStore.__veinRateLimitStore = rateLimitStore;
 
 const RATE_LIMIT_RULES: Record<string, { windowMs: number; max: number }> = {
-  '/api/auth/temp-login/resolve':      { windowMs: 60_000, max: 10 },
+  '/api/auth/temp-login/resolve': { windowMs: 60_000, max: 10 },
   '/api/auth/temp-login/resolve-client': { windowMs: 60_000, max: 10 },
-  '/api/dashboard-ai/commit':          { windowMs: 60_000, max: 20 },
+  '/api/dashboard-ai/commit': { windowMs: 60_000, max: 20 },
   '/api/dashboard-ai/coordination-commit': { windowMs: 60_000, max: 20 },
-  '/api/cases/intake-parse':           { windowMs: 60_000, max: 20 },
-  '/api/dashboard/messages':           { windowMs: 60_000, max: 30 },
+  '/api/cases/intake-parse': { windowMs: 60_000, max: 20 },
+  '/api/dashboard/messages': { windowMs: 60_000, max: 30 }
 };
 
 function checkRateLimit(ip: string, pathname: string): boolean {
@@ -90,7 +90,7 @@ function shouldBypassMaintenance(pathname: string) {
   return pathname === '/maintenance' || pathname.startsWith('/_next') || pathname.startsWith('/api');
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (request.nextUrl.hostname === 'veinspiral.com') {
     const canonicalUrl = request.nextUrl.clone();
     canonicalUrl.hostname = 'www.veinspiral.com';
@@ -100,7 +100,6 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
 
-  // Rate limiting: POST 요청만 체크 (GET은 멱등성 보장)
   if (request.method === 'POST') {
     const ip =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
@@ -136,7 +135,7 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // NOTE: 미들웨어 타임아웃 방지를 위해 세션 갱신은 앱 라우트 내부에서 처리합니다.
+  // NOTE: 프록시 타임아웃 방지를 위해 세션 갱신은 앱 라우트 내부에서 처리합니다.
   return NextResponse.next({
     request: {
       headers: requestHeaders
@@ -145,5 +144,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
 };

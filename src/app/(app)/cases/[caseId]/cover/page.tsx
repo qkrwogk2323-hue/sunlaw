@@ -58,8 +58,9 @@ function Cell({ label, value, w = 'auto' }: { label?: string; value?: string | n
   );
 }
 
-export default async function CaseCoverPage({ params }: { params: { caseId: string } }) {
-  const result = await getCaseCoverData(params.caseId);
+export default async function CaseCoverPage({ params }: { params: Promise<{ caseId: string }> }) {
+  const { caseId } = await params;
+  const result = await getCaseCoverData(caseId);
   if (!result) notFound();
 
   const { c, clients, parties, schedules } = result;
@@ -83,7 +84,7 @@ export default async function CaseCoverPage({ params }: { params: { caseId: stri
         >
           🖨 인쇄
         </button>
-        <Link href={`/cases/${params.caseId}`} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+        <Link href={`/cases/${caseId}`} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
           ← 돌아가기
         </Link>
       </div>

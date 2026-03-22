@@ -922,6 +922,22 @@ export async function addScheduleAction(caseId: string, formData: FormData) {
     throw error;
   }
 
+  if (parsed.isImportant || parsed.scheduleKind === 'hearing' || parsed.scheduleKind === 'deadline') {
+    await notifyBillingStakeholders({
+      supabase,
+      organizationId: caseRecord.organization_id,
+      caseId,
+      actorId: auth.user.id,
+      title: `[일정] ${parsed.title}`,
+      body: `${caseRecord.title} 사건에 ${parsed.scheduleKind === 'hearing' ? '기일' : parsed.scheduleKind === 'deadline' ? '기한' : '중요 일정'}이 등록되었습니다: ${parsed.title}${parsed.scheduledStart ? ` · ${parsed.scheduledStart}` : ''}`,
+      payload: {
+        source: 'schedule_created',
+        schedule_kind: parsed.scheduleKind,
+        scheduled_start: parsed.scheduledStart
+      }
+    });
+  }
+
   revalidatePath(`/cases/${caseId}`);
   revalidatePath('/calendar');
   revalidatePath('/dashboard');
@@ -1245,6 +1261,22 @@ export async function updateCaseStageAction(formData: FormData) {
   });
   if (messageError) throw messageError;
 
+  if (changed) {
+    await notifyBillingStakeholders({
+      supabase,
+      organizationId: parsed.organizationId,
+      caseId: parsed.caseId,
+      actorId: auth.user.id,
+      title: `[사건] 단계 변경: ${getCaseStageLabel(parsed.stageKey)}`,
+      body: `${caseRecord.title} 사건의 진행 단계가 변경되었습니다.\n${stageChangeLine}${noteLine ? `\n${noteLine}` : ''}`,
+      payload: {
+        source: 'stage_changed',
+        previous_stage: previousStageKey,
+        new_stage: parsed.stageKey
+      }
+    });
+  }
+
   revalidatePath(`/cases/${parsed.caseId}`);
   revalidatePath('/cases');
   revalidatePath('/dashboard');
@@ -1276,6 +1308,20 @@ export async function addRequestAction(caseId: string, formData: FormData) {
   });
 
   if (error) throw error;
+
+  await notifyBillingStakeholders({
+    supabase,
+    organizationId: caseRecord.organization_id,
+    caseId,
+    actorId: auth.user.id,
+    title: `[요청] ${parsed.title}`,
+    body: `${caseRecord.title} 사건에 새 요청사항이 등록되었습니다: ${parsed.title}${parsed.dueAt ? ` · 기한 ${parsed.dueAt}` : ''}`,
+    payload: {
+      source: 'request_created',
+      request_kind: parsed.kind,
+      due_at: parsed.dueAt || null
+    }
+  });
 
   revalidatePath(`/cases/${caseId}`);
   revalidatePath('/inbox');
@@ -1484,6 +1530,7 @@ export async function addFeeAgreementAction(caseId: string, formData: FormData) 
   revalidatePath('/dashboard');
   revalidatePath('/calendar');
   revalidatePath('/billing');
+  revalidatePath('/contracts');
   revalidatePath('/notifications');
 }
 

@@ -9,6 +9,25 @@ import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 
 type AuditTab = 'general' | 'delete' | 'violation' | 'restore';
 
+const TAB_META: Record<AuditTab, { label: string; description: string }> = {
+  general: {
+    label: '일반 작업',
+    description: '생성, 수정, 확인처럼 일상 운영에서 발생한 기본 변경 기록입니다.'
+  },
+  delete: {
+    label: '삭제 기록',
+    description: '삭제함 이동, 보관, 실제 삭제처럼 원복이 중요할 수 있는 기록입니다.'
+  },
+  violation: {
+    label: '위반 기록',
+    description: '권한 위반, 정책 위반, 차단된 시도처럼 즉시 확인해야 하는 기록입니다.'
+  },
+  restore: {
+    label: '복구 기록',
+    description: '삭제함 복구, 보관 해제처럼 되돌린 이력을 모아 봅니다.'
+  }
+};
+
 function parseTab(value?: string): AuditTab {
   if (value === 'delete' || value === 'violation' || value === 'restore') return value;
   return 'general';
@@ -43,12 +62,10 @@ export default async function AdminAuditPage({
     actionPrefix: tab === 'violation' ? 'VIOLATION' : tab === 'restore' ? 'RESTORE' : null,
     actionIn: tab === 'delete' ? ['DELETE', 'SOFT_DELETE', 'ARCHIVE'] : null
   });
-  const tabs: Array<{ key: AuditTab; label: string }> = [
-    { key: 'general', label: '일반 작업' },
-    { key: 'delete', label: '삭제 기록' },
-    { key: 'violation', label: '위반 기록' },
-    { key: 'restore', label: '복구 기록' }
-  ];
+  const tabs = (Object.entries(TAB_META) as Array<[AuditTab, (typeof TAB_META)[AuditTab]]>).map(([key, meta]) => ({
+    key,
+    ...meta
+  }));
 
   return (
     <div className="space-y-6">
@@ -70,6 +87,7 @@ export default async function AdminAuditPage({
               </a>
             ))}
           </div>
+          <p className="text-sm text-slate-500">{TAB_META[tab].description}</p>
         </CardHeader>
       </Card>
 

@@ -75,9 +75,7 @@ export function Button({
   isLoading = false,
   // tooltip/disabledReason are typed here for prop-passing convenience but
   // interactive rendering is handled by EnhancedButton ('use client' wrapper).
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   tooltip: _tooltip,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   disabledReason: _disabledReason,
   ...props
 }: ButtonProps) {

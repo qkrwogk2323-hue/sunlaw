@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build",
+    "build": "next build --webpack",
     "check:migrations": "node ./scripts/check-migrations.mjs",
     "check:audit-traceability": "node ./scripts/check-audit-traceability.mjs",
     "check:test-coverage": "node ./scripts/check-test-coverage.mjs",
@@ -17,7 +17,7 @@
     "test:e2e:public-smoke": "playwright test --config=playwright.config.ts",
     "test:e2e:prod-smoke": "pnpm build && playwright test --config=playwright.prod-smoke.config.ts",
     "test:e2e:auth-prod-smoke": "pnpm build && playwright test --config=playwright.authenticated-prod-smoke.config.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "ops:preflight": "node ./scripts/preflight-env.mjs",
     "git:main:sync": "./scripts/main-sync.sh",
     "supabase:projects": "./scripts/run-with-env.sh supabase projects list",

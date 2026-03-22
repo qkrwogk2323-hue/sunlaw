@@ -40,9 +40,9 @@ function notificationOpenHref(notificationId: string, href: string, organization
 }
 
 function sectionMeta(section: QueueSectionKey) {
-  if (section === 'immediate') return { label: '오늘 할 일', tone: 'red' as const, openByDefault: true };
-  if (section === 'confirm') return { label: '검토 필요', tone: 'blue' as const, openByDefault: true };
-  return { label: '완료 / 참고', tone: 'slate' as const, openByDefault: false };
+  if (section === 'immediate') return { label: '즉시 필요', tone: 'red' as const, openByDefault: true, description: '지금 바로 처리해야 하는 긴급 알림 목록입니다.' };
+  if (section === 'confirm') return { label: '검토 필요', tone: 'blue' as const, openByDefault: true, description: '읽고 판단하거나 승인 여부를 정해야 하는 알림 목록입니다.' };
+  return { label: '완료 / 참고', tone: 'slate' as const, openByDefault: false, description: '이미 확인했거나 이력으로 남겨둔 알림 목록입니다.' };
 }
 
 function entityLabel(entityType: QueueEntityType) {
@@ -80,7 +80,7 @@ function queueMeaningCards(items: NotificationQueueItem[]) {
 
   return [
     {
-      label: '즉시 처리',
+      label: '즉시 필요',
       value: urgent,
       tone: 'red' as const,
       description: '오늘 바로 움직여야 하는 긴급 알림입니다.'
@@ -184,6 +184,7 @@ function QueueSection({
           <CardTitle>{meta.label}</CardTitle>
           <Badge tone={meta.tone}>{totalCount}</Badge>
         </div>
+        <p className="text-sm text-slate-500">{meta.description}</p>
       </CardHeader>
       <CardContent className="space-y-3">
         {(['case', 'schedule', 'client', 'collaboration'] as QueueEntityType[]).map((entityType) => {
@@ -230,6 +231,24 @@ export default async function NotificationsPage({
   const priority = `${resolved?.priority ?? 'all'}` as 'all' | 'urgent' | 'normal' | 'low';
   const state = `${resolved?.state ?? 'all'}` as 'all' | 'active' | 'read' | 'resolved' | 'archived';
   const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize as (typeof PAGE_SIZE_OPTIONS)[number]) ? requestedSize : 20;
+  const buildFilterHref = ({
+    nextSection = section,
+    nextPriority = priority,
+    nextState = state
+  }: {
+    nextSection?: 'all' | QueueSectionKey;
+    nextPriority?: 'all' | 'urgent' | 'normal' | 'low';
+    nextState?: 'all' | 'active' | 'read' | 'resolved' | 'archived';
+  }) => {
+    const params = new URLSearchParams();
+    if (keyword) params.set('q', keyword);
+    params.set('entity', entity);
+    params.set('section', nextSection);
+    params.set('priority', nextPriority);
+    params.set('state', nextState);
+    params.set('size', String(pageSize));
+    return `/notifications?${params.toString()}`;
+  };
 
   const [notificationCenter, channelPreferences, hubs] = await Promise.all([
     getNotificationCenter(pageSize),
@@ -262,27 +281,38 @@ export default async function NotificationsPage({
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">새 알림</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.unreadCount}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+            <Link href={'/notifications#trash' as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">보관함</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">{notificationCenter.summary.trashCount}</p>
-            </div>
+              <p className="mt-1 text-xs text-slate-500">보관된 알림 보기</p>
+            </Link>
           </div>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        {meaningCards.map((card) => (
-          <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950">{card.value}</p>
+        {meaningCards.map((card) => {
+          const href =
+            card.label === '즉시 필요'
+              ? buildFilterHref({ nextSection: 'immediate', nextPriority: 'urgent', nextState: 'active' })
+              : card.label === '검토 필요'
+                ? buildFilterHref({ nextSection: 'confirm', nextState: 'active' })
+                : buildFilterHref({ nextSection: 'reference', nextState: 'all', nextPriority: 'all' });
+
+          return (
+            <Link key={card.label} href={href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
+                  <p className="mt-2 text-3xl font-semibold text-slate-950">{card.value}</p>
+                </div>
+                <Badge tone={card.tone}>{card.label}</Badge>
               </div>
-              <Badge tone={card.tone}>{card.label}</Badge>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">{card.description}</p>
-          </div>
-        ))}
+              <p className="mt-2 text-xs leading-5 text-slate-500">{card.description}</p>
+              <p className="mt-3 text-xs font-medium text-sky-700">해당 목록 열기</p>
+            </Link>
+          );
+        })}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -438,7 +468,7 @@ export default async function NotificationsPage({
       </Card>
 
       {notificationCenter.capabilities?.supportsTrash !== false ? (
-        <Card className="border-slate-100">
+        <Card id="trash" className="border-slate-100">
           <CardHeader>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">

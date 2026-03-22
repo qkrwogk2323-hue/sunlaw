@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import { BriefcaseBusiness } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,18 +22,21 @@ import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
-const BUCKET_META: Record<BucketKey, { label: string; helper: string }> = {
+const BUCKET_META: Record<BucketKey, { label: string; helper: string; cardDescription: string }> = {
   active: {
     label: '진행중 사건',
-    helper: '현재 진행중인 사건목록입니다.'
+    helper: '현재 진행중인 사건목록입니다.',
+    cardDescription: '지금 관리 중인 사건과 다음 조치가 필요한 사건만 모아 봅니다.'
   },
   completed: {
     label: '완료된 사건',
-    helper: '완료된 사건목록입니다.'
+    helper: '완료된 사건목록입니다.',
+    cardDescription: '종결되었거나 마무리된 사건 이력을 다시 확인할 때 사용합니다.'
   },
   deleted: {
     label: '삭제함',
-    helper: '삭제예정함입니다. 30일 이후 자동삭제되며 강제삭제도 가능합니다.'
+    helper: '삭제예정함입니다. 30일 이후 자동삭제되며 강제삭제도 가능합니다.',
+    cardDescription: '삭제함으로 보낸 사건을 복구하거나 최종 보관 처리할 수 있습니다.'
   }
 };
 
@@ -207,10 +211,11 @@ export default async function CasesPage({
             {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
               const count = key === 'active' ? activeCases.length : key === 'completed' ? completedCases.length : deletedCases.length;
               const isActive = key === bucket;
+              const href = `/cases?bucket=${key}${queryFilter ? `&q=${encodeURIComponent(queryFilter)}` : ''}` as Route;
               return (
                 <Link
                   key={key}
-                  href={`/cases?bucket=${key}`}
+                  href={href}
                   className={`rounded-2xl border p-4 text-center backdrop-blur-sm transition ${
                     isActive
                       ? 'border-sky-100/70 bg-white/18'
@@ -219,6 +224,8 @@ export default async function CasesPage({
                 >
                   <p className="text-xs uppercase tracking-[0.24em] text-sky-100/75">{BUCKET_META[key].label}</p>
                   <p className="mt-3 text-4xl font-semibold text-white tabular-nums">{count}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-200/82">{BUCKET_META[key].cardDescription}</p>
+                  <p className="mt-3 text-xs font-semibold text-sky-100/88">해당 목록 열기</p>
                 </Link>
               );
             })}

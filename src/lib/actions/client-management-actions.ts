@@ -7,6 +7,48 @@ import { buildTaskPlan } from '@/lib/ai/task-planner';
 import { requireOrganizationActionAccess } from '@/lib/auth';
 import { getClientDetailSummary } from '@/lib/queries/clients';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+
+async function notifyOrgManagers(
+  organizationId: string,
+  actorId: string,
+  title: string,
+  body: string,
+  href: string,
+  payload: Record<string, unknown>
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: memberships } = await supabase
+    .from('organization_memberships')
+    .select('profile_id, role')
+    .eq('organization_id', organizationId)
+    .eq('status', 'active');
+
+  const recipientIds = [...new Set(
+    (memberships ?? [])
+      .filter((m: any) => m.role === 'org_owner' || m.role === 'org_manager')
+      .map((m: any) => m.profile_id)
+      .concat(actorId)
+  )].filter(Boolean);
+
+  if (!recipientIds.length) return;
+
+  const admin = createSupabaseAdminClient();
+  await admin.from('notifications').insert(
+    recipientIds.map((recipientProfileId) => ({
+      organization_id: organizationId,
+      recipient_profile_id: recipientProfileId,
+      kind: 'generic',
+      title,
+      body,
+      action_label: '의뢰인 보기',
+      action_href: href,
+      destination_type: 'internal_route',
+      destination_url: href,
+      payload
+    }))
+  );
+}
 
 export async function createClientSpecialNoteAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
@@ -40,6 +82,15 @@ export async function createClientSpecialNoteAction(formData: FormData) {
     created_by: auth.user.id
   });
   if (error) throw error;
+
+  await notifyOrgManagers(
+    organizationId,
+    auth.user.id,
+    `[의뢰인] 특이사항 등록: ${detail.name}`,
+    `${detail.name} 의뢰인에게 특이사항이 등록되었습니다: ${noteBody.slice(0, 80)}${noteBody.length > 80 ? '...' : ''}`,
+    returnPath || `/clients/${clientKey}`,
+    { source: 'client_special_note_created', note_type: noteType, client_key: clientKey }
+  );
 
   revalidatePath('/clients');
   if (returnPath) {
@@ -118,6 +169,15 @@ export async function linkRelatedClientAction(formData: FormData) {
     created_by: auth.user.id
   });
   if (error) throw error;
+
+  await notifyOrgManagers(
+    organizationId,
+    auth.user.id,
+    `[의뢰인] 관련인 연동: ${sourceDetail.name} ↔ ${targetDetail.name}`,
+    `${sourceDetail.name} 의뢰인에게 관련인이 등록되었습니다. 대상: ${targetDetail.name} · 관계: ${relation}`,
+    returnPath || `/clients/${clientKey}`,
+    { source: 'client_relation_linked', client_key: clientKey, target_client_key: targetClientKey, relation }
+  );
 
   revalidatePath('/clients');
   if (returnPath) {

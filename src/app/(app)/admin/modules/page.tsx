@@ -80,7 +80,12 @@ export default async function AdminModulesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>운영 기준</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>운영 기준</CardTitle>
+            <Link href={'/admin/audit?tab=general&table=organization_module_overrides' as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+              설정 이력 보기
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm text-slate-600 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -167,7 +172,12 @@ export default async function AdminModulesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>활용 가이드</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>활용 가이드</CardTitle>
+            <Link href={'/admin/audit?tab=general&table=organization_module_overrides' as Route} className="text-sm font-medium text-sky-700 underline underline-offset-4">
+              감사로그에서 확인
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
