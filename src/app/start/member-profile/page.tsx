@@ -4,7 +4,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { completeMemberInitialProfileAction } from '@/lib/actions/profile-actions';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { getDefaultAppRoute, requireAuthenticatedUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function MemberProfileSetupPage() {
   const auth = await requireAuthenticatedUser();
   if (!auth.profile.must_complete_profile) {
-    redirect('/dashboard');
+    redirect(getDefaultAppRoute(auth));
   }
 
   const supabase = await createSupabaseServerClient();

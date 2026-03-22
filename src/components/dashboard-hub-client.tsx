@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { BellRing, Bot, ChevronRight, Link2, Search, Sparkles, Wallet } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, Search, Sparkles, ThumbsDown, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1063,7 +1063,7 @@ export function DashboardHubClient({
     requestId?: string;
   }) => {
     if (!organizationId) return;
-    const reason = window.prompt('오답 신고 사유를 입력해 주세요.');
+    const reason = window.prompt('어떤 부분이 잘못됐나요? 간단히 설명해 주세요.');
     if (!reason?.trim()) return;
     try {
       const response = await fetch('/api/ai/feedback', {
@@ -1083,12 +1083,12 @@ export function DashboardHubClient({
         })
       });
       if (!response.ok) {
-        toastError('오답 신고 저장 실패', { message: '잠시 후 다시 시도해 주세요.' });
+        toastError('AI 피드백 저장 실패', { message: '잠시 후 다시 시도해 주세요.' });
         return;
       }
-      toastSuccess('오답 신고가 접수되었습니다.', { message: '운영 큐에서 분석 상태를 추적할 수 있습니다.' });
+      toastSuccess('AI 피드백이 접수되었습니다.', { message: '검토 후 개선에 반영합니다.' });
     } catch {
-      toastError('오답 신고 저장 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
+      toastError('AI 피드백 저장 실패', { message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' });
     }
   }, [organizationId, toastError, toastSuccess]);
   const [workspaceSearch, setWorkspaceSearch] = useState('');
@@ -1471,7 +1471,10 @@ export function DashboardHubClient({
                   <p className="mt-1 text-sm text-slate-600">{initialAiOverview.summary.headline}</p>
                 </div>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                  aria-label="AI 요약이 잘못됐나요? 피드백 보내기"
                   onClick={() => {
                     reportAiIssue({
                       aiFeature: 'ai_summary_card',
@@ -1483,10 +1486,9 @@ export function DashboardHubClient({
                     });
                   }}
                 >
-                  오답 신고
+                  <ThumbsDown className="size-3.5" />
+                  AI 결과가 틀렸나요?
                 </Button>
-              </div>
-              <div className="mt-3 grid gap-2">
                 {summaryRows.map((item) => (
                   <Link
                     key={item.label}
@@ -1540,7 +1542,10 @@ export function DashboardHubClient({
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                   <span>기준 시각 · {formatDateTime(assistantResult.source.generatedAt)}</span>
                   <Button
-                    variant="secondary"
+                    variant="ghost"
+                    size="sm"
+                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                    aria-label="AI 답변이 잘못됐나요? 피드백 보내기"
                     onClick={() => {
                       reportAiIssue({
                         aiFeature: 'home_ai_assistant',
@@ -1552,7 +1557,8 @@ export function DashboardHubClient({
                       });
                     }}
                   >
-                    오답 신고
+                    <ThumbsDown className="size-3.5" />
+                    AI 결과가 틀렸나요?
                   </Button>
                 </div>
               </div>
@@ -1586,7 +1592,10 @@ export function DashboardHubClient({
                 </Link>
               ))}
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                aria-label="AI 추천 항목이 잘못됐나요? 피드백 보내기"
                 onClick={() => {
                   reportAiIssue({
                     aiFeature: 'next_action_recommendation',
@@ -1598,7 +1607,8 @@ export function DashboardHubClient({
                   });
                 }}
               >
-                오답 신고
+                <ThumbsDown className="size-3.5" />
+                AI 결과가 틀렸나요?
               </Button>
             </CardContent>
           </Card>
@@ -1632,7 +1642,10 @@ export function DashboardHubClient({
                 <div className="rounded-2xl border border-amber-200 bg-white px-4 py-5 text-sm text-slate-600">지금은 눈에 띄는 급증이나 누락 흐름이 보이지 않습니다.</div>
               )}
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                aria-label="AI 이상 징후 감지가 잘못됐나요? 피드백 보내기"
                 onClick={() => {
                   reportAiIssue({
                     aiFeature: 'anomaly_alert',
@@ -1644,7 +1657,8 @@ export function DashboardHubClient({
                   });
                 }}
               >
-                오답 신고
+                <ThumbsDown className="size-3.5" />
+                AI 결과가 틀렸나요?
               </Button>
             </CardContent>
           </Card>
@@ -1723,7 +1737,7 @@ export function DashboardHubClient({
                     });
                   }}
                 >
-                  오답 신고
+                  AI 결과가 틀렸나요?
                 </Button>
               ) : null}
             </div>
@@ -1812,7 +1826,10 @@ export function DashboardHubClient({
                       </Link>
                     ))}
                     <Button
-                      variant="secondary"
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                      aria-label="AI 운영 분석이 잘못됐나요? 피드백 보내기"
                       onClick={() => {
                         reportAiIssue({
                           aiFeature: 'admin_copilot',
@@ -1824,7 +1841,8 @@ export function DashboardHubClient({
                         });
                       }}
                     >
-                      오답 신고
+                      <ThumbsDown className="size-3.5" />
+                      AI 결과가 틀렸나요?
                     </Button>
                   </div>
                 </div>
@@ -1970,7 +1988,10 @@ export function DashboardHubClient({
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button onClick={commitPlanner} disabled={plannerPending || !plannerCaseId || !organizationId}>초안 등록</Button>
                       <Button
-                        variant="secondary"
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                        aria-label="AI 일정 초안이 잘못됐나요? 피드백 보내기"
                         onClick={() => {
                           if (!plannerPreview) return;
                           reportAiIssue({
@@ -1983,7 +2004,8 @@ export function DashboardHubClient({
                           });
                         }}
                       >
-                        오답 신고
+                        <ThumbsDown className="size-3.5" />
+                        AI 결과가 틀렸나요?
                       </Button>
                       <Button variant="secondary" onClick={() => setPlannerPreview(null)}>다시 작성</Button>
                     </div>
@@ -2224,7 +2246,10 @@ export function DashboardHubClient({
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button onClick={commitCoordination} disabled={coordinationPending || !selectedChecklistIds.length}>정리 내용 반영</Button>
                       <Button
-                        variant="secondary"
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600"
+                        aria-label="AI 대화 분석이 잘못됐나요? 피드백 보내기"
                         onClick={() => {
                           if (!coordinationPreview) return;
                           reportAiIssue({
@@ -2237,7 +2262,8 @@ export function DashboardHubClient({
                           });
                         }}
                       >
-                        오답 신고
+                        <ThumbsDown className="size-3.5" />
+                        AI 결과가 틀렸나요?
                       </Button>
                       <Button variant="secondary" onClick={() => setCoordinationPreview(null)}>닫기</Button>
                     </div>

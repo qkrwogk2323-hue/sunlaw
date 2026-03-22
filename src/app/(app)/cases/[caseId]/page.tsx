@@ -10,7 +10,7 @@ import { ClientLinkForm } from '@/components/forms/client-link-form';
 import { DocumentCreateForm } from '@/components/forms/document-create-form';
 import { DocumentReviewForm } from '@/components/forms/document-review-form';
 import { FeeAgreementForm } from '@/components/forms/fee-agreement-form';
-import { MessageCreateForm } from '@/components/forms/message-create-form';
+import { MessageCreateFormWithVoice } from '@/components/forms/message-create-form-with-voice';
 import { PartyCreateForm } from '@/components/forms/party-create-form';
 import { PaymentRecordForm } from '@/components/forms/payment-record-form';
 import { RecoveryCreateForm } from '@/components/forms/recovery-create-form';
@@ -28,6 +28,7 @@ import { hasPermission, isWorkspaceAdmin } from '@/lib/permissions';
 import { getCaseDetail } from '@/lib/queries/cases';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
 import { ExportLinks } from '@/components/export-links';
+import { CaseDocumentChecklist } from '@/components/case-document-checklist';
 
 const tabs = ['overview', 'communication', 'documents', 'schedule', 'participants', 'billing', 'timeline', 'cover'] as const;
 
@@ -412,13 +413,16 @@ export default async function CaseDetailPage({
       </div>
 
       {currentTab === 'overview' ? (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '청구 원금' : '원금'}</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{formatCurrency(caseDetail.principal_amount)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '누적 회수금' : '사건번호'}</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-700">{collectionFocused ? formatCurrency(recoveredAmount) : (caseDetail.case_number ?? '-')}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '현재 약정' : '법원'}</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-700">{collectionFocused ? (activeAgreement ? `${activeAgreement.title} · ${activeAgreement.rate != null ? `${activeAgreement.rate}%` : formatCurrency(activeAgreement.fixed_amount)}` : '등록된 약정 없음') : (caseDetail.court_name ?? '-')}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '다음 일정/조치' : '다음 일정'}</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-700">{caseDetail.schedules[0] ? `${caseDetail.schedules[0].title} · ${formatDateTime(caseDetail.schedules[0].scheduled_start)}` : '-'}</p></CardContent></Card>
-          <Card className="md:col-span-2 xl:col-span-4"><CardHeader><CardTitle>사건 요약</CardTitle></CardHeader><CardContent><p className="text-sm leading-7 text-slate-700">{caseDetail.summary ?? '요약 없음'}</p></CardContent></Card>
-        </section>
+        <>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '청구 원금' : '원금'}</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{formatCurrency(caseDetail.principal_amount)}</p></CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '누적 회수금' : '사건번호'}</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-700">{collectionFocused ? formatCurrency(recoveredAmount) : (caseDetail.case_number ?? '-')}</p></CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '현재 약정' : '법원'}</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-700">{collectionFocused ? (activeAgreement ? `${activeAgreement.title} · ${activeAgreement.rate != null ? `${activeAgreement.rate}%` : formatCurrency(activeAgreement.fixed_amount)}` : '등록된 약정 없음') : (caseDetail.court_name ?? '-')}</p></CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">{collectionFocused ? '다음 일정/조치' : '다음 일정'}</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-700">{caseDetail.schedules[0] ? `${caseDetail.schedules[0].title} · ${formatDateTime(caseDetail.schedules[0].scheduled_start)}` : '-'}</p></CardContent></Card>
+            <Card className="md:col-span-2 xl:col-span-4"><CardHeader><CardTitle>사건 요약</CardTitle></CardHeader><CardContent><p className="text-sm leading-7 text-slate-700">{caseDetail.summary ?? '요약 없음'}</p></CardContent></Card>
+          </section>
+          <CaseDocumentChecklist caseType={caseDetail.case_type} caseTitle={caseDetail.title} />
+        </>
       ) : null}
 
       {currentTab === 'participants' ? (
@@ -500,7 +504,7 @@ export default async function CaseDetailPage({
               )) : <p className="text-sm text-slate-500">등록된 메시지가 없습니다.</p>}
             </CardContent>
           </Card>
-          {canManage ? <Card><CardHeader><CardTitle>메시지 등록</CardTitle></CardHeader><CardContent><MessageCreateForm caseId={caseId} allowInternal /></CardContent></Card> : null}
+          {canManage ? <Card><CardHeader><CardTitle>메시지 등록</CardTitle></CardHeader><CardContent><MessageCreateFormWithVoice caseId={caseId} allowInternal /></CardContent></Card> : null}
         </section>
       ) : null}
 

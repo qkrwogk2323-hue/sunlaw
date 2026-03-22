@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
+import { OverdueDraftButton } from '@/components/overdue-draft-button';
 
 type SearchParams = Promise<{ period?: string }>;
 
@@ -145,6 +146,9 @@ export default async function BillingPage({
   const resolved = searchParams ? await searchParams : undefined;
   const period = normalizePeriod(resolved?.period);
   const billing = await getBillingHubSnapshot(organizationId);
+
+  const orgName = auth.memberships.find((m) => m.organization_id === organizationId)?.organization?.name ?? '우리 사무소';
+  const lawyerName: string | undefined = undefined;
 
   const bounds = getPeriodBounds(period);
   const previousBounds = getPreviousPeriodBounds(period, bounds.start);
@@ -354,16 +358,33 @@ export default async function BillingPage({
             {overdueEntries.length ? (
               <div className="space-y-3 pt-3">
                 <h3 className="text-sm font-semibold text-slate-900">전체 연체 청구</h3>
-                {overdueEntries.slice(0, 8).map((entry: any) => (
-                  <Link key={`overdue-${entry.id}`} href={`/cases/${entry.case_id}?tab=billing`} className="block rounded-2xl border border-slate-200 bg-white/90 p-4 transition hover:border-slate-900">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium text-slate-900">{entry.title}</p>
-                      <Badge tone="red">연체</Badge>
+                {overdueEntries.slice(0, 8).map((entry: any) => {
+                  const dueDate = entry.due_on ? new Date(`${entry.due_on}T00:00:00`) : null;
+                  const dueDaysAgo = dueDate ? Math.max(0, Math.floor((Date.now() - dueDate.getTime()) / 86400000)) : 0;
+                  return (
+                    <div key={`overdue-${entry.id}`} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <Link href={`/cases/${entry.case_id}?tab=billing` as Route} className="font-medium text-slate-900 hover:underline">{entry.title}</Link>
+                        <Badge tone="red">연체</Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
+                      <p className="mt-2 text-sm text-slate-600">{formatCurrency(entry.totalAmount)} · 기한 {formatDate(entry.due_on)}</p>
+                      {organizationId && (
+                        <div className="mt-3">
+                          <OverdueDraftButton
+                            organizationId={organizationId}
+                            orgName={orgName}
+                            lawyerName={lawyerName}
+                            clientName={entry.targetLabel ?? '의뢰인'}
+                            caseTitle={entry.cases?.title ?? entry.title}
+                            overdueAmount={Number(entry.totalAmount ?? 0)}
+                            dueDaysAgo={dueDaysAgo}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <p className="mt-2 text-sm text-slate-500">{entry.cases?.title ?? '사건'} · {entry.targetLabel}</p>
-                    <p className="mt-2 text-sm text-slate-600">{formatCurrency(entry.totalAmount)} · 기한 {formatDate(entry.due_on)}</p>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
             ) : null}
           </CardContent>

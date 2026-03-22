@@ -5,6 +5,7 @@ import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { CalendarBoardClient } from '@/components/calendar-board-client';
 import { HubContextStrip } from '@/components/hub-context-strip';
+import { buildScheduleBriefing } from '@/lib/ai/schedule-briefing';
 
 export default async function CalendarPage({
   searchParams
@@ -30,6 +31,12 @@ export default async function CalendarPage({
     getCaseHubList(organizationId)
   ]);
 
+  const briefing = buildScheduleBriefing(
+    calendarSnapshot.schedules,
+    calendarSnapshot.today,
+    calendarSnapshot.weekEnd,
+  );
+
   return (
     <div className="space-y-6">
       <HubContextStrip hubs={hubs.slice(0, 4)} currentLabel="일정 확인" />
@@ -39,6 +46,7 @@ export default async function CalendarPage({
         canManage={canManage}
         snapshot={calendarSnapshot}
         caseOptions={dashboardSnapshot.caseOptions}
+        briefing={briefing}
       />
     </div>
   );
