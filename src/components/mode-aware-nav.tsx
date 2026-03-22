@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   BellRing,
   Building2,
@@ -403,6 +403,7 @@ export function ModeAwareNav({
 }) {
   const companyManagementStateKey = `vs-nav:collapsed:${profile.id}:company-management-menu`;
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [navCounts, setNavCounts] = useState<NavUnreadCounts>({
     unreadCount: unreadNotificationCount,
     actionRequiredCount,
@@ -598,6 +599,7 @@ export function ModeAwareNav({
         : [...current, sectionId]
     ));
   };
+  const currentPathWithSearch = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
 
   return (
     <div className="space-y-3">
@@ -656,7 +658,14 @@ export function ModeAwareNav({
                 {orgPickerOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
               </button>
               {orgPickerOpen ? (
-                <ClientActionForm action={switchDefaultOrganizationAction} successTitle="조직이 전환되었습니다." className="mt-3 flex items-center gap-2">
+                <ClientActionForm
+                  action={switchDefaultOrganizationAction}
+                  successTitle="조직이 전환되었습니다."
+                  onSuccess={() => {
+                    window.location.assign(currentPathWithSearch);
+                  }}
+                  className="mt-3 flex items-center gap-2"
+                >
                   <input type="hidden" name="contextOrganizationId" value={currentOrganization?.id ?? ''} />
                   <select
                     aria-label="전환할 조직 선택"

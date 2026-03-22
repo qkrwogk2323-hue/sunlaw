@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Building2, X } from 'lucide-react';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -23,6 +24,8 @@ export function OrganizationSwitchSheet({
   organizationOptions: OrganizationSwitchOption[];
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -45,6 +48,7 @@ export function OrganizationSwitchSheet({
   const handleBackdropClick = (event: React.MouseEvent<HTMLDialogElement>) => {
     if (event.target === dialogRef.current) onClose();
   };
+  const currentPathWithSearch = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
 
   return (
     <dialog
@@ -72,7 +76,10 @@ export function OrganizationSwitchSheet({
       <ClientActionForm
         action={switchDefaultOrganizationAction}
         successTitle="조직이 전환되었습니다."
-        onSuccess={onClose}
+        onSuccess={() => {
+          onClose();
+          window.location.assign(currentPathWithSearch);
+        }}
         className="space-y-4 px-5 py-5"
       >
         <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />

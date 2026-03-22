@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import { Button, segmentStyles } from '@/components/ui/button';
@@ -23,6 +24,8 @@ export function OrganizationSwitcher({
   allowExternalSelection?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const currentMembership = useMemo(
     () => memberships.find((membership) => membership.organization_id === currentOrganizationId) ?? memberships[0],
     [currentOrganizationId, memberships]
@@ -51,6 +54,8 @@ export function OrganizationSwitcher({
     return null;
   }
 
+  const currentPathWithSearch = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
+
   if (compact) {
     return (
       <div className="space-y-3">
@@ -73,7 +78,10 @@ export function OrganizationSwitcher({
             <ClientActionForm
               action={switchDefaultOrganizationAction}
               successTitle="조직이 전환되었습니다."
-              onSuccess={() => setIsOpen(false)}
+              onSuccess={() => {
+                setIsOpen(false);
+                window.location.assign(currentPathWithSearch);
+              }}
               className="rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
             >
               <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />
@@ -109,7 +117,14 @@ export function OrganizationSwitcher({
   }
 
   return (
-    <ClientActionForm action={switchDefaultOrganizationAction} successTitle="조직이 전환되었습니다." className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+    <ClientActionForm
+      action={switchDefaultOrganizationAction}
+      successTitle="조직이 전환되었습니다."
+      onSuccess={() => {
+        window.location.assign(currentPathWithSearch);
+      }}
+      className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm"
+    >
       <input type="hidden" name="contextOrganizationId" value={currentOrganizationId ?? ''} />
       <label htmlFor="organizationId" className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
         현재 조직
