@@ -13,20 +13,40 @@ async function createOrganizationRequestReader() {
 
 export async function listOrganizationSignupRequests() {
   const supabase = await createOrganizationRequestReader();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('organization_signup_requests')
-    .select('*, requester:profiles(id, full_name, email), reviewer:profiles(id, full_name, email), approvedOrganization:organizations(id, name, slug)')
+    .select(`
+      *,
+      requester:profiles!organization_signup_requests_requester_profile_id_fkey(id, full_name, email),
+      reviewer:profiles!organization_signup_requests_reviewed_by_fkey(id, full_name, email),
+      approvedOrganization:organizations!organization_signup_requests_approved_organization_id_fkey(id, name, slug)
+    `)
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[listOrganizationSignupRequests] query error:', error.message);
+    return [];
+  }
 
   return data ?? [];
 }
 
 export async function listOrganizationExitRequests() {
   const supabase = await createOrganizationRequestReader();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('organization_exit_requests')
-    .select('*, organization:organizations(id, name, slug), requester:profiles(id, full_name, email), reviewer:profiles(id, full_name, email)')
+    .select(`
+      *,
+      organization:organizations!organization_exit_requests_organization_id_fkey(id, name, slug),
+      requester:profiles!organization_exit_requests_requested_by_profile_id_fkey(id, full_name, email),
+      reviewer:profiles!organization_exit_requests_reviewed_by_profile_id_fkey(id, full_name, email)
+    `)
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[listOrganizationExitRequests] query error:', error.message);
+    return [];
+  }
 
   return data ?? [];
 }
