@@ -105,15 +105,15 @@ export default async function BillingPage() {
         </div>
       </div>
 
-      <section className="grid gap-3 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {topCards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-slate-300"
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 transition hover:border-slate-300"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{card.label}</p>
-            <p className="mt-6 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 leading-tight">{card.label}</p>
+            <p className="mt-3 text-center text-2xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
           </Link>
         ))}
       </section>
