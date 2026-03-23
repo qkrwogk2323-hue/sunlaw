@@ -63,9 +63,14 @@ export async function POST(request: Request) {
   const storagePaths = rows.map(r => r.storage_path as string).filter(Boolean);
   const docIds = rows.map(r => r.id as string);
 
-  // Step a: remove from storage first. If this fails, DB row is untouched — safe to retry.
+  // Step a: remove from storage first.
+  // storage.remove() treats "file not found" as success (idempotent by Supabase spec),
+  // so a partial failure (storage ok, DB update failed) on a prior run retries safely.
+  // If remove() returns a fatal error, abort before touching DB.
   const { error: storageError } = await admin.storage.from(BUCKET).remove(storagePaths);
   if (storageError) {
+    // Supabase returns an error object only for auth/permission failures, not for missing files.
+    // If we get here, it's a genuine error — leave DB untouched so the batch retries cleanly.
     return NextResponse.json(
       { ok: false, code: 'STORAGE_ERROR', userMessage: '\uc2a4\ud1a0\ub9ac\uc9c0 \ud30c\uc77c \uc0ad\uc81c \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.' },
       { status: 500 }
@@ -73,6 +78,8 @@ export async function POST(request: Request) {
   }
 
   // Step b: null storage_path only after confirmed removal (DB row kept for audit).
+  // If this update fails (transient DB error), the next cleanup run will try remove() again
+  // for the same paths — which is a no-op since the files are already gone.
   await admin
     .from('case_documents')
     .update({ storage_path: null })
