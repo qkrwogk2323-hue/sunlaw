@@ -289,3 +289,155 @@ export async function bulkUploadCasesAction(
 
   return { ok: true, created, skipped, errors, aiSuggestions: [] };
 }
+
+function normalizeScheduleKind(rawValue: string) {
+  const value = rawValue.trim().toLowerCase().replace(/\s/g, '');
+  if (!value) return 'reminder' as const;
+  if (['업무일정', '업무', 'task', 'work', 'reminder', '리마인더'].includes(value)) return 'reminder' as const;
+  if (['미팅일정', '미팅', '회의', 'meeting'].includes(value)) return 'meeting' as const;
+  if (['기타일정', '기타', 'other'].includes(value)) return 'other' as const;
+  if (['기일', '마감', '기한', 'deadline', 'hearing'].includes(value)) return 'deadline' as const;
+  return 'other' as const;
+}
+
+function normalizeScheduleDateTime(rawValue: string): string | null {
+  const value = rawValue.trim();
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T09:00`;
+  return null;
+}
+
+function asYes(rawValue: string) {
+  return ['y', 'yes', '예', '네', 'true', '1'].includes(rawValue.trim().toLowerCase());
+}
+
+function composeScheduleNotes(parts: Array<[string, string | undefined]>) {
+  return parts
+    .map(([label, value]) => [label, value?.trim() ?? ''] as const)
+    .filter(([, value]) => value)
+    .map(([label, value]) => `${label}: ${value}`)
+    .join('\n');
+}
+
+export async function bulkUploadSchedulesAction(
+  organizationId: string,
+  csvText: string
+): Promise<BulkUploadResult> {
+  const { auth } = await requireOrganizationActionAccess(organizationId, {
+    permission: 'schedule_create',
+    errorMessage: '일정 일괄 등록 권한이 없습니다.'
+  });
+
+  const rows = parseCSV(csvText);
+  if (!rows.length) {
+    return { ok: false, code: 'EMPTY_CSV', userMessage: 'CSV 파일에 데이터가 없습니다. 헤더를 포함해 최소 2행이 필요합니다.' };
+  }
+  if (rows.length > 200) {
+    return { ok: false, code: 'TOO_MANY_ROWS', userMessage: `한 번에 최대 200건까지 업로드할 수 있습니다. 현재 ${rows.length}건입니다.` };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existingCases } = await supabase
+    .from('cases')
+    .select('id, title, reference_no, case_number')
+    .eq('organization_id', organizationId)
+    .neq('lifecycle_status', 'soft_deleted');
+
+  const caseByReference = new Map<string, string>();
+  const caseByTitle = new Map<string, string>();
+  for (const item of existingCases ?? []) {
+    if (item.reference_no) caseByReference.set(item.reference_no.trim().toLowerCase(), item.id);
+    if (item.case_number) caseByReference.set(item.case_number.trim().toLowerCase(), item.id);
+    if (item.title) caseByTitle.set(item.title.trim().toLowerCase(), item.id);
+  }
+
+  const errors: Array<{ row: number; reason: string }> = [];
+  let created = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i];
+    const rowNum = i + 2;
+
+    const caseReference = (row['사건번호'] || row['reference_no'] || row['사건참조번호'] || '').trim();
+    const caseTitle = (row['사건명'] || row['case_title'] || row['제목'] || '').trim();
+    const title = (row['일정명'] || row['제목'] || row['name'] || row['현재상황'] || row['권고조치'] || '').trim();
+    const rawKind = (row['일정종류'] || row['kind'] || '').trim();
+    const scheduledStart = normalizeScheduleDateTime(
+      (row['일시'] || row['시작일시'] || row['scheduled_start'] || row['보정완료기한'] || '').trim()
+    );
+    const scheduledEnd = normalizeScheduleDateTime((row['종료일시'] || row['scheduled_end'] || '').trim());
+    const location = (row['장소'] || row['location'] || '').trim() || null;
+    const currentStatus = (row['현재상황'] || row['status'] || '').trim();
+    const specialNote = (row['특이사항'] || row['메모'] || row['note'] || '').trim();
+    const correctionServedOn = (row['보정송달완료일자'] || '').trim();
+    const correctionDueOn = (row['보정완료기한'] || '').trim();
+    const relatedPerson = (row['연계인'] || row['연계자'] || '').trim();
+    const recommendation = (row['권고조치'] || '').trim();
+    const important = asYes((row['중요일정'] || row['is_important'] || '').trim());
+
+    const caseId =
+      (caseReference ? caseByReference.get(caseReference.toLowerCase()) : null)
+      ?? (caseTitle ? caseByTitle.get(caseTitle.toLowerCase()) : null)
+      ?? null;
+
+    if (!caseId) {
+      errors.push({ row: rowNum, reason: '사건번호 또는 사건명으로 연결할 사건을 찾을 수 없습니다.' });
+      skipped += 1;
+      continue;
+    }
+    if (!title || title.length < 2) {
+      errors.push({ row: rowNum, reason: '일정명 또는 현재상황을 2자 이상 입력해 주세요.' });
+      skipped += 1;
+      continue;
+    }
+    if (!scheduledStart) {
+      errors.push({ row: rowNum, reason: '일시 또는 보정완료기한을 YYYY-MM-DD 또는 YYYY-MM-DDTHH:mm 형식으로 입력해 주세요.' });
+      skipped += 1;
+      continue;
+    }
+
+    const scheduleKind = normalizeScheduleKind(rawKind || (recommendation || correctionDueOn ? '업무일정' : '기타일정'));
+    const notes = composeScheduleNotes([
+      ['현재상황', currentStatus || undefined],
+      ['특이사항', specialNote || undefined],
+      ['보정송달완료일자', correctionServedOn || undefined],
+      ['보정완료기한', correctionDueOn || undefined],
+      ['연계인', relatedPerson || undefined],
+      ['권고조치', recommendation || undefined]
+    ]);
+
+    const shouldMarkImportant =
+      important ||
+      scheduleKind === 'deadline' ||
+      (correctionDueOn ? new Date(`${correctionDueOn}T23:59:59`).getTime() < Date.now() : false);
+
+    const { error } = await supabase.from('case_schedules').insert({
+      organization_id: organizationId,
+      case_id: caseId,
+      title,
+      schedule_kind: scheduleKind,
+      scheduled_start: scheduledStart,
+      scheduled_end: scheduledEnd,
+      location,
+      notes: notes || null,
+      client_visibility: 'internal_only',
+      is_important: shouldMarkImportant,
+      created_by: auth.user.id,
+      created_by_name: auth.profile.full_name,
+      updated_by: auth.user.id
+    });
+
+    if (error) {
+      errors.push({ row: rowNum, reason: error.message });
+      skipped += 1;
+      continue;
+    }
+    created += 1;
+  }
+
+  revalidatePath('/calendar');
+  revalidatePath('/dashboard');
+  return { ok: true, created, skipped, errors, aiSuggestions: [] };
+}

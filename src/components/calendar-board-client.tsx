@@ -9,6 +9,7 @@ import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { billingStatusLabel, labelFrom } from '@/lib/status-labels';
 import { Badge } from '@/components/ui/badge';
+import { BulkUploadPanel } from '@/components/bulk-upload-panel';
 import { Button, buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -396,7 +397,8 @@ export function CalendarBoardClient({
   canManage,
   snapshot,
   caseOptions,
-  briefing
+  briefing,
+  bulkUploadAction
 }: {
   organizationId: string | null;
   currentUserId: string;
@@ -404,6 +406,7 @@ export function CalendarBoardClient({
   snapshot: Snapshot;
   caseOptions: CaseOption[];
   briefing?: ScheduleBriefing;
+  bulkUploadAction: (organizationId: string, csvText: string) => Promise<import('@/lib/actions/bulk-upload-actions').BulkUploadResult>;
 }) {
   const [kindFilter, setKindFilter] = useState<'all' | 'work' | 'meeting' | 'other'>('all');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
@@ -417,6 +420,7 @@ export function CalendarBoardClient({
   const [recentEntryCutoff] = useState(() => Date.now() - 1000 * 60 * 60 * 48);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [aiHelperOpen, setAiHelperOpen] = useState(false);
+  const [csvUploadOpen, setCsvUploadOpen] = useState(false);
   const [aiDraftText, setAiDraftText] = useState('');
 
   const todayKey = toLocalDateKey(currentMoment);
@@ -929,6 +933,22 @@ export function CalendarBoardClient({
               </div>
             </div>
           </button>
+          <button
+            type="button"
+            onClick={() => setCsvUploadOpen(true)}
+            className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-sky-200 bg-[linear-gradient(180deg,#f3f9ff,#ffffff)] p-4 text-left transition hover:border-sky-300"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <CalendarDays className="size-4 text-sky-600" />
+              일정 CSV 등록
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm leading-6 text-slate-600">사건번호 또는 사건명으로 기존 사건에 붙여 여러 일정을 한 번에 올립니다.</p>
+              <div className="inline-flex h-9 items-center rounded-xl border border-sky-200 bg-white px-3 text-sm font-medium text-sky-700">
+                양식 내려받기 / 파일 올리기
+              </div>
+            </div>
+          </button>
           <div className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <ScrollText className="size-4 text-emerald-600" />
@@ -1013,6 +1033,47 @@ export function CalendarBoardClient({
                   <p className="text-sm text-slate-500">일정 메모를 입력하면 업무일정, 미팅일정, 기타일정 중 하나를 먼저 제안합니다.</p>
                 )}
               </div>
+            </div>
+          </div>
+        </dialog>
+      ) : null}
+
+      {csvUploadOpen ? (
+        <dialog
+          open
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setCsvUploadOpen(false);
+          }}
+          aria-label="일정 CSV 등록"
+        >
+          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900">일정 CSV 등록</h2>
+                <p className="mt-2 text-sm text-slate-600">사건번호 또는 사건명으로 기존 사건을 찾고, 일정종류와 기한 메모를 한 번에 올립니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCsvUploadOpen(false)}
+                className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4' })}
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="mt-5">
+              {organizationId ? (
+                <BulkUploadPanel
+                  mode="schedules"
+                  organizationId={organizationId}
+                  action={bulkUploadAction}
+                />
+              ) : (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  현재 조직을 찾을 수 없어 일정 CSV 등록을 열 수 없습니다.
+                </div>
+              )}
             </div>
           </div>
         </dialog>

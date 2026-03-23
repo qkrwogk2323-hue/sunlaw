@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import type { BulkUploadResult } from '@/lib/actions/bulk-upload-actions';
 
 interface Props {
-  mode: 'clients' | 'cases';
+  mode: 'clients' | 'cases' | 'schedules';
   organizationId: string;
   action: (orgId: string, csvText: string) => Promise<BulkUploadResult>;
 }
@@ -20,6 +20,10 @@ const CASE_TEMPLATE = `제목,사건유형,원금,법원,사건번호,접수일,
 2024 손해배상 청구,civil,5000000,서울중앙지방법원,2024가합12345,2024-01-15,홍길동,hong@example.com,교통사고 손해배상
 2024 대여금 청구,debt_collection,3000000,,,2024-02-01,,, `;
 
+const SCHEDULE_TEMPLATE = `사건번호,사건명,일정명,일정종류,일시,종료일시,현재상황,특이사항,보정송달완료일자,보정완료기한,연계인,권고조치,장소,중요일정
+2024가합12345,베인 손해배상 청구,보정서 제출 확인,업무일정,2026-03-25T10:00,,보정서 작성 중,추가 자료 요청 예정,2026-03-20,2026-03-27,김대리,보정 제출 전 서류 재확인,서울사무실,예
+2024가합12345,베인 손해배상 청구,의뢰인 진행상황 미팅,미팅일정,2026-03-26T15:00,2026-03-26T16:00,진행 설명 필요,, , ,박실장,미팅 후 업무일지 정리,회의실 A,아니오`;
+
 export function BulkUploadPanel({ mode, organizationId, action }: Props) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<BulkUploadResult | null>(null);
@@ -27,8 +31,8 @@ export function BulkUploadPanel({ mode, organizationId, action }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { success, error: toastError } = useToast();
 
-  const label = mode === 'clients' ? '의뢰인' : '사건';
-  const template = mode === 'clients' ? CLIENT_TEMPLATE : CASE_TEMPLATE;
+  const label = mode === 'clients' ? '의뢰인' : mode === 'cases' ? '사건' : '일정';
+  const template = mode === 'clients' ? CLIENT_TEMPLATE : mode === 'cases' ? CASE_TEMPLATE : SCHEDULE_TEMPLATE;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

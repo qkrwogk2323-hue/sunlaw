@@ -4,6 +4,7 @@ import { getCalendarBoardSnapshot } from '@/lib/queries/calendar';
 import { getCaseOptionsForCalendar } from '@/lib/queries/dashboard';
 import { CalendarBoardClient } from '@/components/calendar-board-client';
 import { buildScheduleBriefing } from '@/lib/ai/schedule-briefing';
+import { bulkUploadSchedulesAction } from '@/lib/actions/bulk-upload-actions';
 
 export default async function CalendarPage({
   searchParams
@@ -43,6 +44,7 @@ export default async function CalendarPage({
         snapshot={calendarSnapshot}
         caseOptions={caseOptions}
         briefing={briefing}
+        bulkUploadAction={bulkUploadSchedulesAction}
       />
     </div>
   );
