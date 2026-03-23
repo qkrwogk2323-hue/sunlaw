@@ -657,7 +657,11 @@ export function CalendarBoardClient({
                   size="sm"
                   onClick={() => setCreateFormOpen((prev) => !prev)}
                   aria-label={createFormOpen ? '일정 추가 닫기' : '일정 추가'}
-                  className={createFormOpen ? 'h-9 rounded-xl px-3 text-xs border-red-300 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700' : 'h-9 rounded-xl px-3 text-xs'}
+                  className={
+                    createFormOpen
+                      ? 'h-9 rounded-xl border-red-300 bg-red-50 px-3 text-xs text-red-600 hover:bg-red-100 hover:text-red-700'
+                      : 'h-9 rounded-xl border-sky-600 bg-sky-600 px-3 text-xs font-semibold text-white shadow-sm hover:border-sky-700 hover:bg-sky-700'
+                  }
                 >
                   {createFormOpen ? '✕ 닫기' : '+ 일정 추가'}
                 </Button>
