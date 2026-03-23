@@ -1,13 +1,11 @@
 import Link from 'next/link';
-import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { buttonStyles } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
+import { LogButton } from '@/components/ui/log-button';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listOrganizationExitRequests, listOrganizationSignupRequests } from '@/lib/queries/organization-requests';
-import { listAuditChangeLog } from '@/lib/queries/audit';
 import { reviewOrganizationSignupRequestAction } from '@/lib/actions/organization-actions';
 import { reviewOrganizationExitRequestAction } from '@/lib/actions/settings-actions';
 import { formatBusinessNumber, formatDateTime } from '@/lib/format';
@@ -73,10 +71,6 @@ export default async function OrganizationRequestsPage() {
     listOrganizationSignupRequests(),
     listOrganizationExitRequests()
   ]);
-  const [signupLogs, exitLogs] = await Promise.all([
-    listAuditChangeLog({ limit: 8, tableName: 'organization_signup_requests' }),
-    listAuditChangeLog({ limit: 8, tableName: 'organization_exit_requests' })
-  ]);
   const signupRequests = requests.sort((left: any, right: any) => {
     const priority = { mismatch: 0, unreadable: 1, matched: 2, pending_review: 3 } as Record<string, number>;
     const leftPriority = priority[left.business_registration_verification_status] ?? 9;
@@ -98,18 +92,12 @@ export default async function OrganizationRequestsPage() {
           <p className="mt-2 text-sm text-slate-600">신청 목록과 탈퇴 요청을 먼저 보고, 기록과 검토 기준은 옆에서 확인하는 구조로 정리했습니다.</p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
-          <Link
-            href={'/admin/audit?tab=general&table=organization_signup_requests' as Route}
-            className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4 text-sm' })}
-          >
-            조직 신청 기록
-          </Link>
-          <Link
-            href={'/admin/audit?tab=general&table=organization_exit_requests' as Route}
-            className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4 text-sm' })}
-          >
-            조직 탈퇴 기록
-          </Link>
+          <LogButton
+            mode="change_log"
+            tables={['organization_signup_requests', 'organization_exit_requests']}
+            title="조직 신청 기록"
+            description="현재 플랫폼 조직에서 처리한 신청과 탈퇴 기록만 확인할 수 있습니다."
+          />
         </div>
       </div>
 
@@ -271,36 +259,6 @@ export default async function OrganizationRequestsPage() {
                 <p className="font-medium text-slate-900">검토 기준</p>
                 <p className="mt-1 text-slate-600">문서 대조 불일치, 자동 판독 불가, 일반 검토 대기 순으로 위에서부터 확인하면 됩니다.</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>최근 조직 신청 기록</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {signupLogs.length ? signupLogs.map((row: any) => (
-                <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone="blue">{row.action}</Badge>
-                    <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
-                </div>
-              )) : <p className="text-sm text-slate-500">아직 조직 신청 관련 감사로그가 없습니다.</p>}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>최근 조직 탈퇴 기록</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {exitLogs.length ? exitLogs.map((row: any) => (
-                <div key={row.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone="blue">{row.action}</Badge>
-                    <span className="text-xs text-slate-500">{formatDateTime(row.logged_at)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">행위자 {row.actor_user_id ?? '-'} · 조직 {row.organization_id ?? '-'}</p>
-                </div>
-              )) : <p className="text-sm text-slate-500">아직 조직 탈퇴 관련 감사로그가 없습니다.</p>}
             </CardContent>
           </Card>
         </div>

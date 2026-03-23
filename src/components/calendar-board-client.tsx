@@ -408,12 +408,16 @@ export function CalendarBoardClient({
   const [kindFilter, setKindFilter] = useState<'all' | 'work' | 'meeting' | 'other'>('all');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [createCaseId, setCreateCaseId] = useState(caseOptions[0]?.id ?? '');
+  const [createTitle, setCreateTitle] = useState('');
+  const [createKind, setCreateKind] = useState('');
   const [createFormOpen, setCreateFormOpen] = useState(false);
   const [createScheduledStart, setCreateScheduledStart] = useState(() => toDateInput(snapshot.schedules[0]?.scheduled_start) || toDateTimeInputFromDateKey(toLocalDateKey(new Date())));
   const [monthJump, setMonthJump] = useState(snapshot.focusMonth);
   const [currentMoment] = useState(() => new Date());
   const [recentEntryCutoff] = useState(() => Date.now() - 1000 * 60 * 60 * 48);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [aiHelperOpen, setAiHelperOpen] = useState(false);
+  const [aiDraftText, setAiDraftText] = useState('');
 
   const todayKey = toLocalDateKey(currentMoment);
   const weekLaterTime = useMemo(() => {
@@ -542,6 +546,47 @@ export function CalendarBoardClient({
     return todayTasks.length;
   }, [kindFilter, todayTasks]);
 
+  const aiScheduleSuggestion = useMemo(() => {
+    const text = aiDraftText.trim().toLowerCase();
+    if (!text) return null;
+
+    const meetingKeywords = ['회의', '미팅', '면담', '상담', '방문', '오신대', '오신다', '만남', '미리 만나', '통화'];
+    const workKeywords = ['마감', '기한', '제출', '회신', '검토', '작성', '정리', '보정', '납부', '준비', '등록', '처리'];
+
+    const hasMeetingKeyword = meetingKeywords.some((keyword) => text.includes(keyword));
+    const hasWorkKeyword = workKeywords.some((keyword) => text.includes(keyword));
+
+    if (hasMeetingKeyword) {
+      return {
+        scheduleKind: 'meeting',
+        label: '미팅일정',
+        reason: '만남, 방문, 상담처럼 사람을 직접 만나거나 이야기하는 일정으로 읽혔습니다.'
+      };
+    }
+
+    if (hasWorkKeyword) {
+      return {
+        scheduleKind: 'deadline',
+        label: '업무일정',
+        reason: '기한, 제출, 검토, 작성처럼 처리해야 할 업무 일정으로 읽혔습니다.'
+      };
+    }
+
+    return {
+      scheduleKind: 'other',
+      label: '기타일정',
+      reason: '업무일정이나 미팅일정으로 단정하기 어려워 기타일정으로 먼저 제안합니다.'
+    };
+  }, [aiDraftText]);
+
+  function applyAiScheduleSuggestion() {
+    if (!aiScheduleSuggestion) return;
+    setCreateFormOpen(true);
+    setCreateTitle(aiDraftText.trim());
+    setCreateKind(aiScheduleSuggestion.scheduleKind);
+    setAiHelperOpen(false);
+  }
+
   return (
     <div className="space-y-6">
       {briefing && (
@@ -657,13 +702,29 @@ export function CalendarBoardClient({
                   <label htmlFor="create-title" className="text-sm font-medium text-slate-700">
                     일정 제목 <span className="text-red-500" aria-hidden="true">*</span>
                   </label>
-                  <Input id="create-title" name="title" placeholder="일정 제목" required aria-required="true" />
+                  <Input
+                    id="create-title"
+                    name="title"
+                    placeholder="일정 제목"
+                    required
+                    aria-required="true"
+                    value={createTitle}
+                    onChange={(event) => setCreateTitle(event.target.value)}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="create-schedule-kind" className="text-sm font-medium text-slate-700">
                     일정 종류 <span className="text-red-500" aria-hidden="true">*</span>
                   </label>
-                  <select id="create-schedule-kind" name="scheduleKind" defaultValue="" required aria-required="true" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900">
+                  <select
+                    id="create-schedule-kind"
+                    name="scheduleKind"
+                    value={createKind}
+                    required
+                    aria-required="true"
+                    onChange={(event) => setCreateKind(event.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                  >
                     <option value="" disabled>종류 선택 *</option>
                     <option value="hearing">기일</option>
                     <option value="deadline">마감</option>
@@ -821,7 +882,7 @@ export function CalendarBoardClient({
       </Card>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="grid w-full gap-3 sm:max-w-[34rem] sm:grid-cols-2">
+        <div className="grid w-full gap-3 xl:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <CalendarDays className="size-4 text-sky-600" />
@@ -848,6 +909,22 @@ export function CalendarBoardClient({
               </Link>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setAiHelperOpen(true)}
+            className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-violet-200 bg-[linear-gradient(180deg,#faf7ff,#ffffff)] p-4 text-left transition hover:border-violet-300"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Sparkles className="size-4 text-violet-600" />
+              AI 일정 도우미
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm leading-6 text-slate-600">짧게 적으면 일정 종류를 먼저 제안하고, 바로 일정 추가에 연결합니다.</p>
+              <div className="inline-flex h-9 items-center rounded-xl border border-violet-200 bg-white px-3 text-sm font-medium text-violet-700">
+                일정 메모 넣기
+              </div>
+            </div>
+          </button>
           <div className="flex min-h-[138px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <ScrollText className="size-4 text-emerald-600" />
@@ -868,6 +945,74 @@ export function CalendarBoardClient({
           </div>
         </div>
       </div>
+
+      {aiHelperOpen ? (
+        <dialog
+          open
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setAiHelperOpen(false);
+          }}
+          aria-label="AI 일정 도우미"
+        >
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900">AI 일정 도우미</h2>
+                <p className="mt-2 text-sm text-slate-600">누구를 만나고, 무엇을 처리해야 하는지만 적으면 일정 종류를 먼저 제안합니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiHelperOpen(false)}
+                className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4' })}
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <Textarea
+                value={aiDraftText}
+                onChange={(event) => setAiDraftText(event.target.value)}
+                placeholder="예: 목요일 오후 3시 김대리랑 보정서류 검토 미팅 / 이번 주 금요일까지 납부 확인 서류 정리"
+                className="min-h-36 rounded-2xl"
+              />
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                {aiScheduleSuggestion ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-slate-900">{aiScheduleSuggestion.label}에 등록할까요?</p>
+                    <p className="text-sm leading-6 text-slate-600">{aiScheduleSuggestion.reason}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={applyAiScheduleSuggestion}
+                        className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-10 rounded-xl px-4' })}
+                      >
+                        {aiScheduleSuggestion.label}으로 일정 추가
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreateFormOpen(true);
+                          setCreateTitle(aiDraftText.trim());
+                          setCreateKind('other');
+                          setAiHelperOpen(false);
+                        }}
+                        className={buttonStyles({ variant: 'ghost', size: 'sm', className: 'h-10 rounded-xl px-4' })}
+                      >
+                        기타일정으로 열기
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">일정 메모를 입력하면 업무일정, 미팅일정, 기타일정 중 하나를 먼저 제안합니다.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </dialog>
+      ) : null}
 
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { buttonStyles } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 type LogEntry = {
   id: string;
@@ -40,24 +41,34 @@ function actionTone(action: string): 'green' | 'red' | 'amber' | 'blue' | 'slate
 
 export function LogButton({
   organizationId,
+  mode = 'activity',
+  tables = [],
   label = '로그',
+  title = '활동 로그',
+  description = '조직에서 발생한 최근 작업 기록입니다.',
   limit = 80
 }: {
   organizationId?: string;
+  mode?: 'activity' | 'change_log';
+  tables?: string[];
   label?: string;
+  title?: string;
+  description?: string;
   limit?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ limit: String(limit) });
+      const params = new URLSearchParams({ limit: String(limit), mode });
       if (organizationId) params.set('organizationId', organizationId);
+      tables.forEach((table) => params.append('table', table));
       const res = await fetch(`/api/org-logs?${params.toString()}`);
       const json = await res.json();
       if (!json.ok) throw new Error(json.userMessage ?? '로그를 불러오지 못했습니다.');
@@ -67,7 +78,7 @@ export function LogButton({
     } finally {
       setLoading(false);
     }
-  }, [organizationId, limit]);
+  }, [organizationId, limit, mode, tables]);
 
   function handleOpen() {
     setOpen(true);
@@ -78,15 +89,30 @@ export function LogButton({
     setOpen(false);
   }
 
+  const filteredLogs = logs.filter((log) => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return true;
+    return [
+      log.action,
+      log.resource_type,
+      log.resource_id,
+      log.actor?.full_name,
+      log.created_at,
+      ...(Array.isArray(log.meta?.changed_fields) ? (log.meta?.changed_fields as string[]) : [])
+    ]
+      .filter(Boolean)
+      .some((value) => `${value}`.toLowerCase().includes(needle));
+  });
+
   return (
     <>
       <button
         type="button"
         onClick={handleOpen}
-        className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-7 rounded-lg px-2.5 text-xs text-slate-500 hover:text-slate-700' })}
+        className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs text-slate-600 hover:text-slate-800' })}
         aria-label="활동 로그 보기"
       >
-        로그 ‹
+        로그 기록
       </button>
 
       {open && (
@@ -99,8 +125,8 @@ export function LogButton({
           <div className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">활동 로그</h2>
-                <p className="text-xs text-slate-500 mt-0.5">조직에서 발생한 최근 작업 기록입니다.</p>
+                <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">{description}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -123,6 +149,16 @@ export function LogButton({
               </div>
             </div>
 
+            <div className="border-b border-slate-100 px-5 py-4">
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="날짜, 작업자, 작업 종류 검색"
+                className="h-11 rounded-xl"
+                aria-label="로그 기록 검색"
+              />
+            </div>
+
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
               {loading && (
                 <div className="py-10 text-center text-sm text-slate-400">로그를 불러오는 중...</div>
@@ -132,13 +168,13 @@ export function LogButton({
                   {error}
                 </div>
               )}
-              {!loading && !error && logs.length === 0 && (
+              {!loading && !error && filteredLogs.length === 0 && (
                 <div className="py-10 text-center text-slate-400">
                   <p className="font-medium">기록된 로그가 없습니다.</p>
-                  <p className="mt-1 text-sm">조직에서 작업이 발생하면 여기에 표시됩니다.</p>
+                  <p className="mt-1 text-sm">현재 조건에 맞는 기록이 없습니다.</p>
                 </div>
               )}
-              {!loading && logs.map((log) => (
+              {!loading && filteredLogs.map((log) => (
                 <div key={log.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={actionTone(log.action)}>{log.action}</Badge>
@@ -152,6 +188,9 @@ export function LogButton({
                       {log.resource_id && <span>대상 ID: {log.resource_id}</span>}
                     </div>
                   )}
+                  {Array.isArray(log.meta?.changed_fields) && (log.meta?.changed_fields as string[]).length ? (
+                    <p className="mt-1.5 text-xs text-slate-500">변경 항목: {(log.meta?.changed_fields as string[]).join(', ')}</p>
+                  ) : null}
                 </div>
               ))}
             </div>
