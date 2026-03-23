@@ -1200,6 +1200,7 @@ export function DashboardHubClient({
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
   const [activeAiPanels, setActiveAiPanels] = useState<Array<'assistant' | 'todo'>>(['assistant']);
   const [aiSectionCollapsed, setAiSectionCollapsed] = useState(true);
+  const [expandedNotifCard, setExpandedNotifCard] = useState<null | 'immediate' | 'confirm' | 'meeting' | 'other'>(null);
   const [conversationExpanded, setConversationExpanded] = useState(false);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
@@ -1377,27 +1378,118 @@ export function DashboardHubClient({
     <div className="space-y-6">
       {/* 알림-일정 연동 요약 스트립 */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Link href={'/notifications?section=immediate' as Route} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center transition hover:bg-rose-100" aria-label={`즉시필요 알림 ${immediateNotifications.length}건`}>
+        <button
+          type="button"
+          onClick={() => setExpandedNotifCard(expandedNotifCard === 'immediate' ? null : 'immediate')}
+          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'immediate' ? 'border-rose-400 bg-rose-100 ring-2 ring-rose-300' : 'border-rose-200 bg-rose-50 hover:bg-rose-100'}`}
+          aria-label={`즉시필요 알림 ${immediateNotifications.length}건`}
+          aria-expanded={expandedNotifCard === 'immediate'}
+        >
           <p className="text-xs font-semibold text-rose-700">즉시필요</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">{immediateNotifications.length}</p>
           <p className="mt-1 text-[10px] text-rose-600">업무일정 임박</p>
-        </Link>
-        <Link href={'/notifications?section=confirm' as Route} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center transition hover:bg-blue-100" aria-label={`검토필요 알림 ${confirmNotifications.length}건`}>
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpandedNotifCard(expandedNotifCard === 'confirm' ? null : 'confirm')}
+          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'confirm' ? 'border-blue-400 bg-blue-100 ring-2 ring-blue-300' : 'border-blue-200 bg-blue-50 hover:bg-blue-100'}`}
+          aria-label={`검토필요 알림 ${confirmNotifications.length}건`}
+          aria-expanded={expandedNotifCard === 'confirm'}
+        >
           <p className="text-xs font-semibold text-blue-700">검토필요</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-blue-800">{confirmNotifications.length}</p>
           <p className="mt-1 text-[10px] text-blue-600">요청·협업 알림</p>
-        </Link>
-        <Link href={'/notifications' as Route} className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-center transition hover:bg-violet-100" aria-label={`미팅알림 ${meetingNotifications.length}건`}>
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpandedNotifCard(expandedNotifCard === 'meeting' ? null : 'meeting')}
+          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'meeting' ? 'border-violet-400 bg-violet-100 ring-2 ring-violet-300' : 'border-violet-200 bg-violet-50 hover:bg-violet-100'}`}
+          aria-label={`미팅알림 ${meetingNotifications.length}건`}
+          aria-expanded={expandedNotifCard === 'meeting'}
+        >
           <p className="text-xs font-semibold text-violet-700">미팅알림</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-violet-800">{meetingNotifications.length}</p>
           <p className="mt-1 text-[10px] text-violet-600">미팅 일정</p>
-        </Link>
-        <Link href={'/notifications' as Route} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center transition hover:bg-slate-100" aria-label={`기타알림 ${Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}건`}>
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpandedNotifCard(expandedNotifCard === 'other' ? null : 'other')}
+          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'other' ? 'border-slate-400 bg-slate-100 ring-2 ring-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
+          aria-label={`기타알림 ${Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}건`}
+          aria-expanded={expandedNotifCard === 'other'}
+        >
           <p className="text-xs font-semibold text-slate-700">기타알림</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}</p>
           <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
-        </Link>
+        </button>
       </div>
+
+      {expandedNotifCard === 'immediate' && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-semibold text-rose-800">즉시필요 알림</p>
+            <Link href={'/notifications?section=immediate' as Route} className="text-xs text-rose-600 underline hover:text-rose-800">전체보기 →</Link>
+          </div>
+          <div className="space-y-2">
+            {immediateNotifications.slice(0, 5).map(item => (
+              <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
+                <p className="font-medium text-slate-900">{item.title}</p>
+                <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
+                <a href={item.destination_url ?? '/notifications'} className="mt-2 inline-flex text-xs text-rose-700 underline">열기</a>
+              </div>
+            ))}
+            {immediateNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
+          </div>
+        </div>
+      )}
+
+      {expandedNotifCard === 'confirm' && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-semibold text-blue-800">검토필요 알림</p>
+            <Link href={'/notifications?section=confirm' as Route} className="text-xs text-blue-600 underline hover:text-blue-800">전체보기 →</Link>
+          </div>
+          <div className="space-y-2">
+            {confirmNotifications.slice(0, 5).map(item => (
+              <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
+                <p className="font-medium text-slate-900">{item.title}</p>
+                <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
+                <a href={item.destination_url ?? '/notifications'} className="mt-2 inline-flex text-xs text-blue-700 underline">열기</a>
+              </div>
+            ))}
+            {confirmNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
+          </div>
+        </div>
+      )}
+
+      {expandedNotifCard === 'meeting' && (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-semibold text-violet-800">미팅알림 알림</p>
+            <Link href={'/notifications' as Route} className="text-xs text-violet-600 underline hover:text-violet-800">전체보기 →</Link>
+          </div>
+          <div className="space-y-2">
+            {meetingNotifications.slice(0, 5).map(item => (
+              <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
+                <p className="font-medium text-slate-900">{item.title}</p>
+                <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
+                <a href={item.destination_url ?? '/notifications'} className="mt-2 inline-flex text-xs text-violet-700 underline">열기</a>
+              </div>
+            ))}
+            {meetingNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
+          </div>
+        </div>
+      )}
+
+      {expandedNotifCard === 'other' && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-semibold text-slate-800">기타알림 알림</p>
+            <Link href={'/notifications' as Route} className="text-xs text-slate-600 underline hover:text-slate-800">전체보기 →</Link>
+          </div>
+          <p className="py-4 text-center text-sm text-slate-500">알림센터에서 확인하세요.</p>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">

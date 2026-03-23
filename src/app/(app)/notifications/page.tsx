@@ -1,13 +1,13 @@
 import {
-  bulkNotificationTransitionAction,
   emptyNotificationTrashAction,
-  markAllNotificationsReadAction,
   markNotificationReadAction,
   markNotificationResolvedAction,
   moveNotificationToTrashAction,
   restoreNotificationAction,
   updateNotificationChannelPreferenceAction
 } from '@/lib/actions/notification-actions';
+import { NotificationsArchiveButton } from '@/components/notifications-archive-button';
+import { NotificationSectionWithPopup } from '@/components/notification-section-with-popup';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,10 +88,6 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600">
-          <input type="checkbox" name="notificationIds" value={item.notificationId} form="bulk-queue-form" className="h-3.5 w-3.5" />
-          선택
-        </label>
         <Link href={openHref as Route} prefetch className={buttonStyles({ size: 'sm', className: 'h-8 rounded-lg px-3 text-xs !text-white' })}>열기</Link>
 
         {(item.status === 'active' || item.status === 'read') ? (
@@ -108,10 +104,10 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
           </ClientActionForm>
         ) : null}
 
-        {item.status === 'resolved' ? (
+        {(item.status === 'active' || item.status === 'read' || item.status === 'resolved') ? (
           <ClientActionForm action={moveNotificationToTrashAction} successTitle="보관함으로 이동했습니다.">
             <input type="hidden" name="notificationId" value={item.notificationId} />
-            <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">완료함 이동</SubmitButton>
+            <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">보관함</SubmitButton>
           </ClientActionForm>
         ) : null}
         {usesGenericInbox ? <Badge tone="amber">알림센터에서 확인</Badge> : null}
@@ -221,7 +217,7 @@ export default async function NotificationsPage({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
-        {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
+        <NotificationsArchiveButton archivedCount={notificationCenter.trashedNotifications.length} />
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -268,35 +264,13 @@ export default async function NotificationsPage({
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ClientActionForm
-          id="bulk-queue-form"
-          action={bulkNotificationTransitionAction}
-          successTitle="선택한 알림을 정리했습니다."
-          errorTitle="일괄 처리에 실패했습니다."
-          errorCause="선택한 알림 중 현재 상태에서 처리할 수 없는 항목이 포함되어 있습니다."
-          errorResolution="신규, 해결, 보관 상태를 구분해 다시 선택한 뒤 처리해 주세요."
-          className="flex flex-wrap items-center gap-2"
-        >
-          <SubmitButton name="operation" value="read" variant="secondary" pendingLabel="반영 중..." className="px-3">
-            선택 읽음
-          </SubmitButton>
-          <SubmitButton name="operation" value="resolve" variant="secondary" pendingLabel="반영 중..." className="px-3">
-            선택 해결
-          </SubmitButton>
-          <SubmitButton name="operation" value="archive" variant="secondary" pendingLabel="이동 중..." className="px-3">
-            선택 완료함 이동
-          </SubmitButton>
-        </ClientActionForm>
-        <ClientActionForm action={markAllNotificationsReadAction} successTitle="모든 알림을 확인 표시했습니다.">
-          <SubmitButton variant="secondary" pendingLabel="반영 중...">모두 확인 표시</SubmitButton>
-        </ClientActionForm>
-      </div>
+
 
       {state === 'archived' ? (
         <NotificationListSection
           title="보관함"
           tone="slate"
+          colorKey="slate"
           items={notificationCenter.trashedNotifications.map((item: any) => ({
             notificationId: item.id,
             type: `${item.notification_type ?? item.kind ?? 'generic'}`,
@@ -316,16 +290,16 @@ export default async function NotificationsPage({
       ) : (
         <div className="space-y-4">
           <div id="immediate">
-            <NotificationListSection title={categoryMeta('immediate').label} tone={categoryMeta('immediate').tone} colorKey={categoryMeta('immediate').colorKey} items={queueView.categories.immediate} />
+            <NotificationSectionWithPopup title={categoryMeta('immediate').label} tone={categoryMeta('immediate').tone} colorKey={categoryMeta('immediate').colorKey} items={queueView.categories.immediate} />
           </div>
           <div id="confirm">
-            <NotificationListSection title={categoryMeta('confirm').label} tone={categoryMeta('confirm').tone} colorKey={categoryMeta('confirm').colorKey} items={queueView.categories.confirm} />
+            <NotificationSectionWithPopup title={categoryMeta('confirm').label} tone={categoryMeta('confirm').tone} colorKey={categoryMeta('confirm').colorKey} items={queueView.categories.confirm} />
           </div>
           <div id="meeting">
-            <NotificationListSection title={categoryMeta('meeting').label} tone={categoryMeta('meeting').tone} colorKey={categoryMeta('meeting').colorKey} items={queueView.categories.meeting} />
+            <NotificationSectionWithPopup title={categoryMeta('meeting').label} tone={categoryMeta('meeting').tone} colorKey={categoryMeta('meeting').colorKey} items={queueView.categories.meeting} />
           </div>
           <div id="other">
-            <NotificationListSection title={categoryMeta('other').label} tone={categoryMeta('other').tone} colorKey={categoryMeta('other').colorKey} items={queueView.categories.other} />
+            <NotificationSectionWithPopup title={categoryMeta('other').label} tone={categoryMeta('other').tone} colorKey={categoryMeta('other').colorKey} items={queueView.categories.other} />
           </div>
         </div>
       )}
