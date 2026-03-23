@@ -51,6 +51,13 @@ const sectionAccent = {
     dot: 'bg-violet-500',
     mobile: 'bg-violet-600'
   },
+  'platform-menu': {
+    soft: 'border-violet-200 bg-violet-50/70',
+    active: 'border-violet-300 bg-violet-50 text-slate-950 shadow-[0_12px_24px_rgba(124,58,237,0.10)]',
+    icon: 'bg-violet-100 text-violet-700',
+    dot: 'bg-violet-500',
+    mobile: 'bg-violet-600'
+  },
   'collaboration-menu': {
     soft: 'border-emerald-200 bg-emerald-50/70',
     active: 'border-emerald-300 bg-emerald-50 text-slate-950 shadow-[0_12px_24px_rgba(16,185,129,0.10)]',
@@ -122,17 +129,20 @@ function getOrganizationSections({
         { href: '/support', label: '고객센터', icon: MessageSquareText }
       ])
     : uniqueItems([
-        { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
+        isPlatformManagementOrganizationView
+          ? { href: '/product-home', label: '운영 첫 화면', icon: LayoutDashboard }
+          : { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
         { href: '/calendar', label: '일정관리', icon: CalendarRange },
         { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
       ]);
 
+  const platformItems: NavItem[] = [];
   const organizationItems: NavItem[] = [];
   const collaborationItems: NavItem[] = [];
   const companyManagementItems: NavItem[] = [];
 
   if (isPlatformManagementOrganizationView) {
-    organizationItems.push(
+    platformItems.push(
       { href: '/admin/organization-requests', label: '조직 신청 관리', icon: FileText },
       { href: '/admin/organizations', label: '조직 관리', icon: Building2 },
       { href: '/admin/audit', label: '감사 로그', icon: ShieldAlert },
@@ -192,6 +202,7 @@ function getOrganizationSections({
 
   const sections: NavSection[] = [];
   if (commonItems.length) sections.push({ id: 'common-menu', label: '공통 메뉴', items: commonItems });
+  if (platformItems.length) sections.push({ id: 'platform-menu', label: '플랫폼 메뉴', items: uniqueItems(platformItems) });
   if (organizationItems.length) sections.push({ id: 'organization-menu', label: '조직 메뉴', items: uniqueItems(organizationItems) });
   if (collaborationItems.length) sections.push({ id: 'collaboration-menu', label: '협업 메뉴', items: uniqueItems(collaborationItems) });
   if (companyManagementItems.length) sections.push({ id: 'company-management-menu', label: '회사 관리', items: uniqueItems(companyManagementItems) });
