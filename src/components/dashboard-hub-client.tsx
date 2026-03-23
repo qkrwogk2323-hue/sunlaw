@@ -1198,7 +1198,7 @@ export function DashboardHubClient({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveQuery, setArchiveQuery] = useState('');
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
-  const [activeAiPanels, setActiveAiPanels] = useState<Array<'assistant' | 'todo'>>(['assistant']);
+  const [activeAiDialog, setActiveAiDialog] = useState<null | 'assistant' | 'todo'>(null);
   const [aiSectionCollapsed, setAiSectionCollapsed] = useState(true);
   const [expandedNotifCard, setExpandedNotifCard] = useState<null | 'immediate' | 'confirm' | 'meeting' | 'other'>(null);
   const [conversationExpanded, setConversationExpanded] = useState(false);
@@ -1232,12 +1232,9 @@ export function DashboardHubClient({
     [data.teamMembers, effectiveCurrentUserId]
   );
   const canOpenArchive = Boolean(currentViewerMembership && isManagementRole(currentViewerMembership.role));
-  const toggleAiPanel = (panel: 'assistant' | 'todo') => {
-    setActiveAiPanels((current) => (
-      current.includes(panel)
-        ? current.filter((item) => item !== panel)
-        : [...current, panel]
-    ));
+  const toggleAiDialog = (panel: 'assistant' | 'todo') => {
+    setAiSectionCollapsed(false);
+    setActiveAiDialog((current) => (current === panel ? null : panel));
   };
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -1498,17 +1495,16 @@ export function DashboardHubClient({
               { key: 'assistant' as const, title: 'AI 업무질의', badge: '질의' },
               { key: 'todo' as const, title: 'AI 스케줄도우미', badge: String(initialAiOverview.recommendations.length) }
             ].map((panel) => {
-              const active = activeAiPanels.includes(panel.key);
+              const active = activeAiDialog === panel.key && !aiSectionCollapsed;
               return (
                 <button
                   key={panel.key}
                   type="button"
-                  onClick={() => {
-                    setAiSectionCollapsed(false);
-                    toggleAiPanel(panel.key);
-                  }}
+                  onClick={() => toggleAiDialog(panel.key)}
                   className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
-                    active && !aiSectionCollapsed ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
+                    active
+                      ? 'border-amber-500 bg-[linear-gradient(180deg,#fff7e7,#ffe9bf)] text-slate-950 shadow-[0_10px_20px_rgba(180,120,0,0.16)]'
+                      : 'border-amber-200 bg-[linear-gradient(180deg,#fffdf7,#fff6de)] text-slate-900 hover:border-amber-300'
                   }`}
                 >
                   <span>{panel.title}</span>
@@ -1522,7 +1518,13 @@ export function DashboardHubClient({
             variant="secondary"
             className="h-10 w-10 rounded-xl p-0"
             aria-label={aiSectionCollapsed ? 'AI 섹션 펼치기' : 'AI 섹션 접기'}
-            onClick={() => setAiSectionCollapsed((current) => !current)}
+            onClick={() => {
+              setAiSectionCollapsed((current) => {
+                const next = !current;
+                if (next) setActiveAiDialog(null);
+                return next;
+              });
+            }}
           >
             {aiSectionCollapsed ? <Plus className="size-4" /> : <Minus className="size-4" />}
           </Button>
@@ -1781,51 +1783,20 @@ export function DashboardHubClient({
         </div>
       ) : null}
 
-      {!aiSectionCollapsed ? (
-      <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-2">
-          {[
-            { key: 'assistant' as const, title: 'AI 업무질의', desc: '문서 분석·문서 안내·업무 질의를 한 곳에서 처리합니다.', tone: 'border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]', badge: '질의' },
-            { key: 'todo' as const, title: 'AI 스케줄도우미', desc: '업무 우선순위와 다음 처리 순서를 제안합니다.', tone: 'border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]', badge: String(initialAiOverview.recommendations.length) }
-          ].map((panel) => {
-            const active = activeAiPanels.includes(panel.key);
-            return (
-              <button
-                key={panel.key}
-                type="button"
-                onClick={() => toggleAiPanel(panel.key)}
-                className={`flex min-h-[176px] flex-col rounded-2xl border p-4 text-left transition ${active ? 'border-slate-950 ring-2 ring-slate-950/10' : panel.tone}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-base font-semibold text-slate-900">{panel.title}</p>
-                  <Badge tone={panel.key === 'assistant' ? 'blue' : panel.key === 'todo' ? 'blue' : 'green'}>
-                    {panel.badge}
-                  </Badge>
+      {!aiSectionCollapsed && activeAiDialog === 'assistant' ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-5xl rounded-2xl border border-amber-200 bg-white p-4 shadow-[0_24px_64px_rgba(15,23,42,0.35)]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Bot className="size-5 text-amber-600" />
+                <div>
+                  <p className="text-lg font-semibold text-slate-900">AI 업무질의</p>
+                  <p className="text-xs text-slate-500">문서를 올리거나 질문을 입력하면 바로 처리합니다.</p>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{panel.desc}</p>
-                <div className="mt-auto flex items-center justify-between pt-4 text-xs font-medium">
-                  <span className={active ? 'text-slate-900' : 'text-slate-500'}>{active ? '열림' : '닫힘'}</span>
-                  <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full border ${active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
-                    {active ? '-' : '+'}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {activeAiPanels.includes('assistant') ? (
-        <Card className="border-sky-200 bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
-          <CardHeader className="border-sky-200/70">
-            <div className="flex items-center gap-2">
-              <Bot className="size-5 text-sky-600" />
-              <div>
-                <CardTitle>AI 업무질의</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">문서를 올리거나 질문을 입력하면 바로 처리합니다.</p>
               </div>
+              <Button variant="secondary" onClick={() => setActiveAiDialog(null)}>닫기</Button>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            <div className="mt-4 max-h-[72vh] space-y-4 overflow-y-auto pr-1">
             {/* AI 문서 분석 */}
             <div className="flex items-center gap-3">
               <label htmlFor="dashboard-doc-upload" className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100">
@@ -2059,25 +2030,28 @@ export function DashboardHubClient({
                 </div>
               </div>
             ) : null}
-          </CardContent>
-        </Card>
-        ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-        {activeAiPanels.includes('todo') ? (
-        <Card className="border-violet-200 bg-[linear-gradient(180deg,#fcfbff,#f5f0ff)]">
-          <CardHeader className="border-violet-200/70">
+      {!aiSectionCollapsed && activeAiDialog === 'todo' ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-4xl rounded-2xl border border-amber-200 bg-white p-4 shadow-[0_24px_64px_rgba(15,23,42,0.35)]">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Bot className="size-5 text-violet-600" />
+                <Bot className="size-5 text-amber-600" />
                 <div>
-                  <CardTitle>AI 스케줄도우미</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">업무 우선순위와 다음 처리 순서를 정리합니다.</p>
+                  <p className="text-lg font-semibold text-slate-900">AI 스케줄도우미</p>
+                  <p className="text-xs text-slate-500">업무 우선순위와 다음 처리 순서를 정리합니다.</p>
                 </div>
               </div>
-              <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone="blue">{initialAiOverview.recommendations.length}</Badge>
+                <Button variant="secondary" onClick={() => setActiveAiDialog(null)}>닫기</Button>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
+            <div className="mt-4 max-h-[72vh] space-y-3 overflow-y-auto pr-1">
               {initialAiOverview.recommendations.map((item) => (
                 <Link
                   key={`${item.href}:${item.title}`}
@@ -2110,11 +2084,9 @@ export function DashboardHubClient({
                 <ThumbsDown className="size-3.5" />
                 AI 결과가 틀렸나요?
               </Button>
-          </CardContent>
-        </Card>
-        ) : null}
-
-      </div>
+            </div>
+          </div>
+        </div>
       ) : null}
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
