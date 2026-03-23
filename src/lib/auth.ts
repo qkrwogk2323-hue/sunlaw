@@ -306,7 +306,16 @@ export async function requirePlatformAdminAction(errorMessage = '플랫폼 관�
 }
 
 export function getEffectiveOrganizationId(auth: AuthContext) {
-  return auth.profile.default_organization_id ?? auth.memberships[0]?.organization_id ?? null;
+  const activeMemberships = auth.memberships.filter((membership) => membership.status === 'active');
+  const preferredMembership = activeMemberships.find(
+    (membership) => membership.organization_id === auth.profile.default_organization_id
+  );
+
+  if (preferredMembership) {
+    return preferredMembership.organization_id;
+  }
+
+  return activeMemberships[0]?.organization_id ?? auth.memberships[0]?.organization_id ?? null;
 }
 
 export function findMembership(auth: AuthContext, organizationId: string) {

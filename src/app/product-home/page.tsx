@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { getEffectiveOrganizationId, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, hasPlatformViewForOrganization, requireAuthenticatedUser } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
 import { getOrganizationAdminMode } from '@/components/mode-switcher';
@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProductHomePage() {
   const auth = await requireAuthenticatedUser();
-  const isPlatformView = isPlatformOperator(auth);
   const organizationId = getEffectiveOrganizationId(auth) ?? '';
+  const isPlatformView = hasPlatformViewForOrganization(auth, organizationId);
   const currentMembership = auth.memberships.find((membership) => membership.organization_id === organizationId) ?? auth.memberships[0] ?? null;
   const currentOrganizationKind = currentMembership?.organization?.kind;
   const organizationMode = getOrganizationAdminMode(currentOrganizationKind);

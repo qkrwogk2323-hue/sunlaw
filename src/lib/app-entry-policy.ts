@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 import { redirect } from 'next/navigation';
-import { getEffectiveOrganizationId, isPlatformOperator } from '@/lib/auth';
+import { getEffectiveOrganizationId, hasPlatformViewForOrganization, isPlatformOperator } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { enforceSubscriptionRouteAccess, getOrganizationSubscriptionSnapshot, getSubscriptionLockMessage } from '@/lib/subscription-lock';
 import { readSupportSessionCookie } from '@/lib/support-cookie';
@@ -37,13 +37,16 @@ export async function enforceAppEntryPolicy(auth: AuthContext) {
   }
 
   const effectiveOrganizationId = getEffectiveOrganizationId(auth);
+  const isPlatformView = hasPlatformViewForOrganization(auth, effectiveOrganizationId);
 
   const [supportSession, subscriptionSnapshot] = await Promise.all([
     readSupportSessionCookie(),
-    getOrganizationSubscriptionSnapshot(effectiveOrganizationId)
+    isPlatformView ? Promise.resolve(null) : getOrganizationSubscriptionSnapshot(effectiveOrganizationId)
   ]);
 
-  await enforceSubscriptionRouteAccess(subscriptionSnapshot);
+  if (!isPlatformView) {
+    await enforceSubscriptionRouteAccess(subscriptionSnapshot);
+  }
 
   if (!auth.memberships.length && !isPlatformOperator(auth)) {
     redirect('/start/signup' as Route);
