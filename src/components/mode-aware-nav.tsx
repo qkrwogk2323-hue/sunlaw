@@ -625,7 +625,16 @@ export function ModeAwareNav({
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">사용자</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">사용자</p>
+                <Link
+                  href={'/settings/team/self' as Route}
+                  aria-label="본인 정보 변경"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                >
+                  ⚙️
+                </Link>
+              </div>
               <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{displayName}</p>
             </div>
 

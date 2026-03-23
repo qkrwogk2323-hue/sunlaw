@@ -13,17 +13,24 @@ export function hashHubPin(pin: string) {
 
 export async function hasVerifiedHubPin(scope: HubAccessScope, hubId: string) {
   const cookieStore = await cookies();
-  return cookieStore.get(cookieName(scope, hubId))?.value === 'ok';
+  const value = cookieStore.get(cookieName(scope, hubId))?.value ?? '';
+  if (!value) return false;
+  if (value === 'ok') return true;
+  const expiresAt = Number(value);
+  if (!Number.isFinite(expiresAt)) return false;
+  return Date.now() < expiresAt;
 }
 
-export async function grantHubPinAccess(scope: HubAccessScope, hubId: string) {
+export async function grantHubPinAccess(scope: HubAccessScope, hubId: string, expiresAt?: string | null) {
   const cookieStore = await cookies();
-  cookieStore.set(cookieName(scope, hubId), 'ok', {
+  const deadline = expiresAt ? new Date(expiresAt).getTime() : Date.now() + 1000 * 60 * 2;
+  const maxAge = Math.max(1, Math.floor((deadline - Date.now()) / 1000));
+  cookieStore.set(cookieName(scope, hubId), `${deadline}`, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 8
+    maxAge
   });
 }
 
