@@ -19,7 +19,9 @@ export default async function LoginPage({
 }: {
   searchParams?: Promise<{ error?: string }>;
 }) {
-  const auth = await getCurrentAuth();
+  // Use .catch(null) so that a transient DB error in getCurrentAuth never crashes the
+  // login page — users must always be able to see and submit the login form.
+  const auth = await getCurrentAuth().catch(() => null);
   const resolved = searchParams ? await searchParams : undefined;
   const error = resolved?.error;
   const authenticatedHomePath = auth ? getAuthenticatedHomePath(auth) : null;
