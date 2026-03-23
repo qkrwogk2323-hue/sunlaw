@@ -26,6 +26,7 @@ import { useState, useTransition } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { InlineErrorMessage } from '@/components/ui/inline-error';
 import { createConditionFailedFeedback, formatGuardFeedbackMessage, normalizeGuardFeedback, type GuardFeedback } from '@/lib/guard-feedback';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 /** SubmitButton이 ClientActionForm 내부에서도 isPending을 읽을 수 있도록 하는 컨텍스트 */
 export const ActionFormPendingContext = createContext(false);
@@ -82,6 +83,8 @@ export function ClientActionForm({
         success(successTitle, { message: successMessage });
         onSuccess?.();
       } catch (err) {
+        // Next.js redirect()는 특수 에러를 throw하므로 재throw해 정상 이동 허용
+        if (isRedirectError(err)) throw err;
         const normalized = normalizeGuardFeedback(
           err,
           createConditionFailedFeedback({
