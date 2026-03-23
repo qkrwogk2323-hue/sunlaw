@@ -1,40 +1,12 @@
+/**
+ * DEPRECATED: This endpoint is no longer in use.
+ * Returns 410 Gone unconditionally to eliminate any account-existence oracle surface.
+ */
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { checkDbRateLimit } from '@/lib/rate-limit';
 
-const resolveSchema = z.object({
-  loginId: z.string().trim().min(2).max(120)
-});
-
-export async function POST(request: Request) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const limited = await checkDbRateLimit(`resolve-client:${ip}`, 10, 60, { failClosed: true });
-  if (limited) {
-    return NextResponse.json({ message: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' }, { status: 429 });
-  }
-
-  try {
-    const body = await request.json();
-    const parsed = resolveSchema.parse(body);
-    const admin = createSupabaseAdminClient();
-
-    const { data: account } = await admin
-      .from('client_temp_credentials')
-      .select('login_email')
-      .eq('login_id_normalized', parsed.loginId.toLowerCase())
-      .maybeSingle();
-
-    if (!account?.login_email) {
-      // Generic message to prevent enumeration
-      return NextResponse.json({ message: '임시 로그인 정보를 확인할 수 없습니다.' }, { status: 404 });
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ message: error.issues[0]?.message ?? '입력값이 올바르지 않습니다.' }, { status: 400 });
-    }
-    return NextResponse.json({ message: '의뢰인 임시 로그인 정보를 확인하지 못했습니다.' }, { status: 500 });
-  }
+export async function POST() {
+  return NextResponse.json(
+    { message: '\uc774 \uacbd\ub85c\ub294 \ub354 \uc774\uc0c1 \uc0ac\uc6a9\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.' },
+    { status: 410 }
+  );
 }

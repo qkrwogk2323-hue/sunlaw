@@ -1,28 +1,46 @@
 /**
- * Storage cleanup endpoint — platform admin only.
+ * Storage cleanup endpoint — platform admin OR scheduled pg_cron job.
  * Physically removes storage files for soft-deleted case_documents
  * that have been deleted for more than the retention period (default: 30 days).
  *
- * This closes the storage lifecycle: soft delete protects against data loss;
- * this endpoint completes the lifecycle by reclaiming storage space.
+ * Two callers are authorised:
+ *   1. Platform admin session (interactive use via requirePlatformAdminAction)
+ *   2. pg_cron via pg_net with Bearer token matching SUPABASE_STORAGE_CLEANUP_SECRET
+ *      (see migration 0079)
  *
- * Invoke manually or from a scheduled cron (e.g., Supabase Edge Functions / pg_cron).
+ * Deletion order is intentional:
+ *   a) Storage remove() first — if this fails, DB row is untouched (safe to retry)
+ *   b) DB storage_path nulled after storage confirm — row kept for audit trail
  */
 import { NextResponse } from 'next/server';
-import { requirePlatformAdminAction } from '@/lib/auth';
+import { getCurrentAuth, isPlatformOperator } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 const RETENTION_DAYS = 30;
 const BATCH_SIZE = 100;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? 'case-files';
+const CLEANUP_SECRET = process.env.SUPABASE_STORAGE_CLEANUP_SECRET ?? '';
 
-export async function POST() {
-  await requirePlatformAdminAction('스토리지 정리는 플랫폼 관리자만 실행할 수 있습니다.');
+export async function POST(request: Request) {
+  // Accept either a platform admin session or the shared cleanup secret (pg_cron).
+  const authHeader = request.headers.get('authorization') ?? '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const isCronCaller = CLEANUP_SECRET.length > 0 && bearerToken === CLEANUP_SECRET;
+
+  if (!isCronCaller) {
+    // Interactive call: require platform admin session.
+    const auth = await getCurrentAuth();
+    if (!auth || !isPlatformOperator(auth)) {
+      return NextResponse.json(
+        { ok: false, code: 'FORBIDDEN', userMessage: '\uc2a4\ud1a0\ub9ac\uc9c0 \uc815\ub9ac\ub294 \ud50c\ub7ab\ud3fc \uad00\ub9ac\uc790\ub9cc \uc2e4\ud589\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.' },
+        { status: 403 }
+      );
+    }
+  }
 
   const admin = createSupabaseAdminClient();
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  // Fetch soft-deleted documents past the retention window
   const { data: rows, error } = await admin
     .from('case_documents')
     .select('id, storage_path')
@@ -33,28 +51,28 @@ export async function POST() {
 
   if (error) {
     return NextResponse.json(
-      { ok: false, code: 'QUERY_ERROR', userMessage: '삭제 대상 조회 중 오류가 발생했습니다.' },
+      { ok: false, code: 'QUERY_ERROR', userMessage: '\uc0ad\uc81c \ub300\uc0c1 \uc870\ud68c \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.' },
       { status: 500 }
     );
   }
 
   if (!rows || rows.length === 0) {
-    return NextResponse.json({ ok: true, purged: 0, message: '정리할 파일이 없습니다.' });
+    return NextResponse.json({ ok: true, purged: 0 });
   }
 
   const storagePaths = rows.map(r => r.storage_path as string).filter(Boolean);
   const docIds = rows.map(r => r.id as string);
 
-  // Remove files from storage
+  // Step a: remove from storage first. If this fails, DB row is untouched — safe to retry.
   const { error: storageError } = await admin.storage.from(BUCKET).remove(storagePaths);
   if (storageError) {
     return NextResponse.json(
-      { ok: false, code: 'STORAGE_ERROR', userMessage: '스토리지 파일 삭제 중 오류가 발생했습니다.' },
+      { ok: false, code: 'STORAGE_ERROR', userMessage: '\uc2a4\ud1a0\ub9ac\uc9c0 \ud30c\uc77c \uc0ad\uc81c \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.' },
       { status: 500 }
     );
   }
 
-  // Null out storage_path to signal physical file is gone (DB row kept for audit)
+  // Step b: null storage_path only after confirmed removal (DB row kept for audit).
   await admin
     .from('case_documents')
     .update({ storage_path: null })
@@ -62,3 +80,4 @@ export async function POST() {
 
   return NextResponse.json({ ok: true, purged: storagePaths.length });
 }
+
