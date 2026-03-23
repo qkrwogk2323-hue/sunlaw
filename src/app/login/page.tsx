@@ -1,10 +1,10 @@
 // audit-link-exempt: reason=login-page-no-destructive-action; fallback=/admin/audit?tab=general; expires=2027-01-01; approvedBy=tech-lead
 import Link from 'next/link';
 import type { Route } from 'next';
-import { redirect } from 'next/navigation';
 import { CredentialLoginForm } from '@/components/forms/credential-login-form';
 import { LoginButton } from '@/components/login-button';
 import { InlineErrorMessage } from '@/components/ui/inline-error';
+import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath } from '@/lib/client-account';
@@ -19,12 +19,9 @@ export default async function LoginPage({
   searchParams?: Promise<{ error?: string }>;
 }) {
   const auth = await getCurrentAuth();
-  if (auth) {
-    redirect(getAuthenticatedHomePath(auth));
-  }
-
   const resolved = searchParams ? await searchParams : undefined;
   const error = resolved?.error;
+  const authenticatedHomePath = auth ? getAuthenticatedHomePath(auth) : null;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 sm:px-6 sm:py-16">
@@ -37,6 +34,29 @@ export default async function LoginPage({
           </p>
         </CardHeader>
         <CardContent className="grid gap-5 px-5 pb-5 sm:px-6 sm:pb-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          {auth && authenticatedHomePath ? (
+            <div className="lg:col-span-2">
+              <InlineErrorMessage
+                title="이미 로그인한 사용자입니다."
+                cause="현재 계정으로 이미 로그인되어 있습니다."
+                resolution="아래 버튼으로 이동하거나, 다른 계정으로 로그인하려면 먼저 로그아웃해 주세요."
+              />
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href={authenticatedHomePath as Route}
+                  className={buttonStyles({ className: 'min-h-11 rounded-xl px-4' })}
+                >
+                  바로 이동
+                </Link>
+                <Link
+                  href={'/dashboard' as Route}
+                  className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4' })}
+                >
+                  대시보드 보기
+                </Link>
+              </div>
+            </div>
+          ) : null}
           {error ? (
             <InlineErrorMessage
               title="로그인을 진행할 수 없습니다."
@@ -45,6 +65,7 @@ export default async function LoginPage({
               className="lg:col-span-2"
             />
           ) : null}
+          {auth ? null : (
           <div className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div>
               <p className="text-sm font-semibold text-slate-900">일반 로그인</p>
@@ -54,6 +75,8 @@ export default async function LoginPage({
             </div>
             <CredentialLoginForm />
           </div>
+          )}
+          {auth ? null : (
           <div className="space-y-4">
             <div className="space-y-4 rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,#f7fbff,#eef6ff)] p-5 sm:p-6">
               <div>
@@ -88,6 +111,7 @@ export default async function LoginPage({
               </div>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
     </main>
