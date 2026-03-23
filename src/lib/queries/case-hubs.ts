@@ -35,6 +35,7 @@ export type CaseHubSummary = {
   readyMemberCount: number;
   unreadCount: number;
   visibilityScope: string | null;
+  accessPinEnabled: boolean;
   readinessPercent: number;
   lifecycleStatus: string;
   lastActivityAt: string | null;
@@ -69,6 +70,7 @@ export type CaseHubActivityItem = {
 
 export type CaseHubDetail = CaseHubSummary & {
   createdBy: string | null;
+  accessPinEnabled: boolean;
   primaryClientLinkStatus: 'linked' | 'pending_unlink' | 'unlinked' | 'orphan_review' | null;
   primaryClientOrphanReason: string | null;
   primaryClientReviewDeadline: string | null;
@@ -136,7 +138,7 @@ export async function getCaseHubsForCases(
 
   const { data: hubs, error } = await admin
     .from('case_hubs')
-    .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
+    .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, access_pin_enabled, lifecycle_status, created_at, updated_at')
     .eq('lifecycle_status', 'active')
     .in('id', accessibleHubIds)
     .in('case_id', caseIds);
@@ -221,6 +223,7 @@ export async function getCaseHubsForCases(
       readyMemberCount: counts.ready,
       unreadCount: unreadCountByHub[hub.id] ?? 0,
       visibilityScope: hub.visibility_scope ?? null,
+      accessPinEnabled: Boolean(hub.access_pin_enabled),
       readinessPercent: readiness.percent,
       lifecycleStatus: hub.lifecycle_status,
       lastActivityAt: lastActivityByHub[hub.id] ?? null,
@@ -246,7 +249,7 @@ export async function getCaseHubList(organizationId: string, limit?: number): Pr
 
   let hubsQuery = admin
     .from('case_hubs')
-    .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, lifecycle_status, created_at, updated_at')
+    .select('id, organization_id, case_id, primary_client_id, primary_case_client_id, title, status, collaborator_limit, viewer_limit, visibility_scope, access_pin_enabled, lifecycle_status, created_at, updated_at')
     .eq('lifecycle_status', 'active')
     .in('id', accessibleHubIds)
     .order('updated_at', { ascending: false });
@@ -337,6 +340,7 @@ export async function getCaseHubList(organizationId: string, limit?: number): Pr
       readyMemberCount: counts.ready,
       unreadCount: unreadCountByHub[hub.id] ?? 0,
       visibilityScope: hub.visibility_scope ?? null,
+      accessPinEnabled: Boolean(hub.access_pin_enabled),
       readinessPercent: readiness.percent,
       lifecycleStatus: hub.lifecycle_status,
       lastActivityAt: lastActivityByHub[hub.id] ?? null,
@@ -351,17 +355,13 @@ export async function getCaseHubList(organizationId: string, limit?: number): Pr
 // ────────────────────────────────────────────────────────────────────
 export async function getCaseHubDetail(
   hubId: string,
-  organizationId: string
+  organizationId?: string | null
 ): Promise<CaseHubDetail | null> {
   const auth = await getCurrentAuth();
   if (!auth) return null;
-  if (!auth.memberships.some((m) => m.organization_id === organizationId)) return null;
   const currentProfileId = auth.profile.id;
 
   const admin = createSupabaseAdminClient();
-  const accessibleHubIds = await listAccessibleCaseHubIds(admin, organizationId);
-  if (!accessibleHubIds.includes(hubId)) return null;
-
   const { data: hub, error: hubError } = await admin
     .from('case_hubs')
     .select('*')
@@ -371,6 +371,20 @@ export async function getCaseHubDetail(
 
   if (hubError) { console.error('[getCaseHubDetail] hub error:', hubError.message); return null; }
   if (!hub) return null;
+
+  const isPrimaryClientViewer = Boolean(
+    auth.profile.is_client_account
+    && auth.profile.client_account_status === 'active'
+    && hub.primary_client_id
+    && hub.primary_client_id === auth.profile.id
+  );
+
+  if (!isPrimaryClientViewer) {
+    if (!organizationId) return null;
+    if (!auth.memberships.some((m) => m.organization_id === organizationId && m.status === 'active')) return null;
+    const accessibleHubIds = await listAccessibleCaseHubIds(admin, organizationId);
+    if (!accessibleHubIds.includes(hubId)) return null;
+  }
 
   const [caseResult, membersResult, activityResult, clientResult] = await Promise.all([
     admin.from('cases').select('id, title, reference_no').eq('id', hub.case_id).maybeSingle(),
@@ -476,6 +490,7 @@ export async function getCaseHubDetail(
     readyMemberCount,
     unreadCount,
     visibilityScope: hub.visibility_scope ?? null,
+    accessPinEnabled: Boolean(hub.access_pin_enabled),
     readinessPercent: readiness.percent,
     createdBy: hub.created_by ?? null,
     lifecycleStatus: hub.lifecycle_status,

@@ -14,9 +14,10 @@ import { HubReadinessRing } from '@/components/hub-readiness-ring';
 import { ParticipantSlotRing } from '@/components/participant-slot-ring';
 import { PremiumInfoPanel } from '@/components/premium-info-panel';
 import { PremiumPageHeader } from '@/components/premium-page-header';
-import { activateCaseHubAction, archiveCaseHubAction } from '@/lib/actions/case-hub-actions';
+import { activateCaseHubAction, archiveCaseHubAction, updateCaseHubPinAction } from '@/lib/actions/case-hub-actions';
 import { formatHubRelativeActivity, getHubReadinessStateLabel } from '@/lib/case-hub-metrics';
 import type { CaseHubDetail, CaseHubStatus } from '@/lib/queries/case-hubs';
+import { Input } from '@/components/ui/input';
 
 const STATUS_LABEL: Record<CaseHubStatus, string> = {
   draft: '준비 중',
@@ -63,12 +64,13 @@ function clientLinkLabel(status: CaseHubDetail['primaryClientLinkStatus']) {
 
 interface Props {
   hub: CaseHubDetail;
-  organizationId: string;
+  organizationId: string | null;
   currentProfileId: string;
 }
 
 export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Props) {
   const canActivate = ['setup_required', 'ready', 'draft'].includes(hub.status);
+  const canManageHub = Boolean(organizationId);
   const currentMember = hub.members.find((member) => member.profileId === currentProfileId) ?? null;
   const viewerFillRate = hub.viewerLimit > 0 ? Math.min(100, Math.round((hub.viewerCount / hub.viewerLimit) * 100)) : 0;
   const readinessState = getHubReadinessStateLabel(hub.readinessPercent);
@@ -83,22 +85,24 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
           <ChevronLeft className="size-4" aria-hidden="true" />
           허브 목록
         </Link>
-        <DangerActionButton
-          action={archiveCaseHubAction}
-          fields={{ hubId: hub.id, organizationId }}
-          confirmTitle="허브를 보관할까요?"
-          confirmDescription="허브를 보관하면 기본 목록에서 숨겨집니다. 복원은 관리자 작업이 필요합니다."
-          highlightedInfo={hub.caseTitle ?? hub.title ?? '이 허브'}
-          confirmLabel="보관"
-          variant="warning"
-          successTitle="허브가 보관되었습니다."
-          errorTitle="허브 보관에 실패했습니다."
-          errorCause="허브 보관 요청을 처리하는 중 오류가 발생했습니다."
-          errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
-          buttonVariant="secondary"
-        >
-          허브 보관
-        </DangerActionButton>
+        {canManageHub ? (
+          <DangerActionButton
+            action={archiveCaseHubAction}
+            fields={{ hubId: hub.id, organizationId }}
+            confirmTitle="허브를 보관할까요?"
+            confirmDescription="허브를 보관하면 기본 목록에서 숨겨집니다. 복원은 관리자 작업이 필요합니다."
+            highlightedInfo={hub.caseTitle ?? hub.title ?? '이 허브'}
+            confirmLabel="보관"
+            variant="warning"
+            successTitle="허브가 보관되었습니다."
+            errorTitle="허브 보관에 실패했습니다."
+            errorCause="허브 보관 요청을 처리하는 중 오류가 발생했습니다."
+            errorResolution="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
+            buttonVariant="secondary"
+          >
+            허브 보관
+          </DangerActionButton>
+        ) : null}
       </div>
 
       <PremiumPageHeader
@@ -167,6 +171,22 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
               </div>
             )}
           </PremiumInfoPanel>
+
+          {canManageHub ? (
+            <PremiumInfoPanel title="허브 비밀번호" description="협업 상태 조직과 대표 의뢰인만 허브에 들어오도록 4자리 비밀번호를 설정합니다.">
+              <form action={updateCaseHubPinAction} className="space-y-3">
+                <input type="hidden" name="hubId" value={hub.id} />
+                <input type="hidden" name="organizationId" value={organizationId ?? ''} />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="case-hub-pin">4자리 비밀번호</label>
+                  <Input id="case-hub-pin" name="pin" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="비워두면 해제" />
+                </div>
+                <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl px-4' })}>
+                  비밀번호 저장
+                </button>
+              </form>
+            </PremiumInfoPanel>
+          ) : null}
         </aside>
 
         <main className="space-y-6">
@@ -211,7 +231,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {canActivate ? (
+                  {canActivate && canManageHub ? (
                     <ClientActionForm
                       action={activateCaseHubAction}
                       successTitle="협업이 시작되었습니다."

@@ -32,6 +32,7 @@ import {
 } from '@/lib/guard-feedback';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { grantHubPinAccess, hashHubPin, revokeHubPinAccess } from '@/lib/hub-access';
 import { encryptString } from '@/lib/pii';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { getDefaultTemplatePermissions, hasPermission, PERMISSION_KEYS } from '@/lib/permissions';
@@ -58,6 +59,10 @@ const maxOrganizationSignupDocumentSize = 10 * 1024 * 1024;
 const maxCollaborationDocumentSize = 15 * 1024 * 1024;
 const allowedOrganizationSignupDocumentMimeTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 const allowedOrganizationSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg', 'jpeg']);
+
+function generateFourDigitPin() {
+  return `${Math.floor(1000 + Math.random() * 9000)}`;
+}
 
 type OrganizationSignupDocumentMimeType = 'application/pdf' | 'image/png' | 'image/jpeg';
 type OrganizationSignupVerificationStatus = 'matched' | 'mismatch' | 'unreadable';
@@ -3183,6 +3188,138 @@ export async function markCollaborationHubReadAction(formData: FormData) {
 
   revalidatePath('/inbox');
   revalidatePath(`/inbox/${parsed.hubId}`);
+}
+
+export async function verifyCollaborationHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const pin = `${formData.get('pin') ?? ''}`.trim();
+
+  if (!hubId || !organizationId || pin.length !== 4) {
+    throw new Error('업무 허브 비밀번호 4자리를 입력해 주세요.');
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    errorMessage: '업무 허브 입장 권한을 확인할 수 없습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: hubRow, error } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id, access_pin_enabled, access_pin_hash, status')
+    .eq('id', hubId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (error || !hubRow) {
+    throw error ?? new Error('업무 허브를 찾을 수 없습니다.');
+  }
+
+  if (![hubRow.primary_organization_id, hubRow.partner_organization_id].includes(organizationId)) {
+    throw new Error('현재 조직은 이 업무 허브를 볼 수 없습니다.');
+  }
+
+  if (hubRow.access_pin_enabled && hubRow.access_pin_hash) {
+    if (hashHubPin(pin) !== hubRow.access_pin_hash) {
+      throw new Error('업무 허브 비밀번호가 맞지 않습니다.');
+    }
+  }
+
+  await grantHubPinAccess('collaboration_hub', hubId);
+}
+
+export async function updateCollaborationHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const pin = `${formData.get('pin') ?? ''}`.trim();
+
+  if (!hubId || !organizationId) {
+    throw new Error('업무 허브 정보를 확인할 수 없습니다.');
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    requireManager: true,
+    errorMessage: '조직 관리자만 업무 허브 비밀번호를 설정할 수 있습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: hubRow, error: hubError } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id')
+    .eq('id', hubId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (hubError || !hubRow) {
+    throw hubError ?? new Error('업무 허브를 찾을 수 없습니다.');
+  }
+
+  if (![hubRow.primary_organization_id, hubRow.partner_organization_id].includes(organizationId)) {
+    throw new Error('현재 조직은 이 업무 허브를 관리할 수 없습니다.');
+  }
+
+  const nextEnabled = pin.length === 4;
+  const { error } = await adminClient
+    .from('organization_collaboration_hubs')
+    .update({
+      access_pin_enabled: nextEnabled,
+      access_pin_hash: nextEnabled ? hashHubPin(pin) : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', hubId);
+
+  if (error) throw error;
+
+  await revokeHubPinAccess('collaboration_hub', hubId);
+  revalidatePath(`/inbox/${hubId}`);
+  revalidatePath('/inbox');
+}
+
+export async function generateCollaborationHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+
+  if (!hubId || !organizationId) {
+    throw new Error('업무 허브 정보를 확인할 수 없습니다.');
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    requireManager: true,
+    errorMessage: '조직 관리자만 업무 허브 비밀번호를 생성할 수 있습니다.'
+  });
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: hubRow, error: hubError } = await adminClient
+    .from('organization_collaboration_hubs')
+    .select('id, primary_organization_id, partner_organization_id')
+    .eq('id', hubId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (hubError || !hubRow) {
+    throw hubError ?? new Error('업무 허브를 찾을 수 없습니다.');
+  }
+
+  if (![hubRow.primary_organization_id, hubRow.partner_organization_id].includes(organizationId)) {
+    throw new Error('현재 조직은 이 업무 허브를 관리할 수 없습니다.');
+  }
+
+  const pin = generateFourDigitPin();
+  const { error } = await adminClient
+    .from('organization_collaboration_hubs')
+    .update({
+      access_pin_enabled: true,
+      access_pin_hash: hashHubPin(pin),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', hubId);
+
+  if (error) throw error;
+
+  await revokeHubPinAccess('collaboration_hub', hubId);
+  revalidatePath(`/inbox/${hubId}`);
+  revalidatePath('/inbox');
+  redirect(`/inbox/${hubId}/pin?generated=${pin}`);
 }
 
 // 사건을 협업 허브에 공유한다.

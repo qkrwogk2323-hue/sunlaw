@@ -4,18 +4,14 @@ import { cookies } from 'next/headers';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClientStructuredInviteForm } from '@/components/forms/client-structured-invite-form';
-import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
-import { BulkUploadPanel } from '@/components/bulk-upload-panel';
-import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
+import { ClientsActionPanels } from '@/components/clients-action-panels';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { listCases } from '@/lib/queries/cases';
 import { listClientRosterSummary } from '@/lib/queries/clients';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
-import { bulkUploadClientsAction } from '@/lib/actions/bulk-upload-actions';
 
 function linkStatusTone(status: string): 'green' | 'amber' | 'red' | 'slate' {
   if (status === '연결 완료') return 'green';
@@ -146,8 +142,15 @@ export default async function ClientsPage({
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.38fr)_380px]">
-        <div className="space-y-6">
+      {canManage ? (
+        <ClientsActionPanels
+          organizationId={organizationId!}
+          cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
+          roster={roster}
+        />
+      ) : null}
+
+      <div className="space-y-6">
           {clientInviteSummary?.created?.length ? (
             <Card className="border-emerald-200 bg-emerald-50/70">
               <CardHeader>
@@ -215,73 +218,12 @@ export default async function ClientsPage({
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
                   <p className="text-sm font-medium text-slate-700">의뢰인 데이터가 없습니다.</p>
-                  <p className="mt-2 text-sm text-slate-500">우측 작업영역에서 기본 초대, 임시 계정 발급, CSV 등록 중 필요한 방식으로 첫 의뢰인을 등록해 주세요.</p>
+                  <p className="mt-2 text-sm text-slate-500">상단 작업 버튼에서 기본 초대, 임시 계정 발급, CSV 등록 중 필요한 방식으로 첫 의뢰인을 등록해 주세요.</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
-
-        {canManage ? (
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-            <CollapsibleSettingsSection
-              title="기존의뢰인초대"
-              description="의뢰인 초대 링크를 만들거나 CSV로 여러 명을 한 번에 준비합니다."
-            >
-                <ClientStructuredInviteForm
-                  organizationId={organizationId!}
-                  cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
-                />
-            </CollapsibleSettingsSection>
-
-            <CollapsibleSettingsSection
-              title="CSV 일괄 등록"
-              description="양식에 맞춘 CSV 파일로 의뢰인 정보를 한 번에 올립니다."
-            >
-              <div className="space-y-3">
-                <p className="text-sm text-slate-600">대량 등록은 CSV 양식에 맞춰 올려 주세요. 명수 제한 없이 불러올 수 있습니다.</p>
-                <BulkUploadPanel
-                  mode="clients"
-                  organizationId={organizationId!}
-                  action={bulkUploadClientsAction}
-                />
-              </div>
-            </CollapsibleSettingsSection>
-
-            <CollapsibleSettingsSection
-              title="임시 계정 직접 발급"
-              description="예외적으로 직접 계정을 만들어 바로 전달해야 할 때 사용합니다."
-            >
-              <div className="space-y-3">
-                <p className="text-sm text-slate-600">비밀번호 직접 전달이 필요한 예외 상황에서만 사용합니다.</p>
-                <ClientPreRegisterForm organizationId={organizationId!} cases={cases} />
-              </div>
-            </CollapsibleSettingsSection>
-
-            <CollapsibleSettingsSection
-              title="초대 링크 재발송"
-              description="이미 만든 초대 링크를 다시 전달해야 할 때 이 목록에서 재발송합니다."
-            >
-              <div className="space-y-2">
-                {roster.filter((item: any) => item.source === 'invite' && item.invitationId).slice(0, 5).map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
-                    <div className="text-sm">
-                      <p className="font-medium text-slate-900">{item.name}</p>
-                      <p className="text-slate-500">{item.email ?? '-'}</p>
-                    </div>
-                    <ResendInvitationForm invitationId={item.invitationId} compact />
-                  </div>
-                ))}
-                {!roster.some((item: any) => item.source === 'invite' && item.invitationId) ? (
-                  <p className="text-sm text-slate-500">재발송 가능한 초대가 없습니다.</p>
-                ) : null}
-              </div>
-            </CollapsibleSettingsSection>
-            </div>
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }

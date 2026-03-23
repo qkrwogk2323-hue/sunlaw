@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { ClipboardList, MessageSquareText, Users } from 'lucide-react';
+import { ClipboardList, Lock, LockOpen, MessageSquareText, Users } from 'lucide-react';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,12 +67,26 @@ export default async function InboxPage() {
                   <p className="font-medium text-slate-900">{hub.partnerOrganization?.name ?? '협업 조직'} 사건허브</p>
                   <div className="flex items-center gap-2">
                     {hub.unreadCount > 0 ? <Badge tone="blue">새 메시지 {hub.unreadCount}</Badge> : null}
+                    <Badge tone={hub.accessPinEnabled ? 'amber' : 'green'}>
+                      <span className="inline-flex items-center gap-1">
+                        {hub.accessPinEnabled ? <Lock className="size-3" aria-hidden="true" /> : <LockOpen className="size-3" aria-hidden="true" />}
+                        {hub.accessPinEnabled ? 'PIN 잠금' : '잠금 해제'}
+                      </span>
+                    </Badge>
                     <Badge tone="green">활성</Badge>
                   </div>
                 </div>
                 <p className="mt-1 text-sm text-slate-500">{hub.title}</p>
                 <p className="mt-2 text-sm text-slate-600 line-clamp-2">{hub.lastMessageBody ?? hub.summary ?? '첫 메시지를 시작해 허브를 열어 보세요.'}</p>
                 <p className="mt-2 text-xs text-slate-400">{hub.lastMessageAt ? formatDateTime(hub.lastMessageAt) : '대화 없음'}{hub.lastMessageCaseTitle ? ` · ${hub.lastMessageCaseTitle}` : ''}</p>
+                <div className="mt-3 flex justify-end">
+                  <Link
+                    href={`/inbox/${hub.id}/pin` as Route}
+                    className={`${buttonStyles({ variant: 'secondary' })} min-h-10 rounded-xl px-3 text-xs font-semibold`}
+                  >
+                    PIN 관리
+                  </Link>
+                </div>
               </InboxCard>
             )) : <p className="text-sm text-slate-500">아직 열린 사건허브가 없습니다.</p>}
           </CardContent>

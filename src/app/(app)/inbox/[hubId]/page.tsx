@@ -11,12 +11,16 @@ import { StaffDirectInviteForm } from '@/components/forms/staff-direct-invite-fo
 import { CaseHubRoomPanel } from '@/components/case-hub-room-panel';
 import { CaseHubAiAssistant } from '@/components/case-hub-ai-assistant';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { hasVerifiedHubPin } from '@/lib/hub-access';
 import { isClientAccountActive } from '@/lib/client-account';
 import { formatDateTime } from '@/lib/format';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { buttonStyles } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { HubPinGateForm } from '@/components/forms/hub-pin-gate-form';
+import { updateCollaborationHubPinAction, verifyCollaborationHubPinAction } from '@/lib/actions/organization-actions';
 
 export default async function CollaborationHubPage({
   params,
@@ -43,6 +47,19 @@ export default async function CollaborationHubPage({
 
   if (!hub) {
     notFound();
+  }
+
+  const hasPinAccess = hub.accessPinEnabled ? await hasVerifiedHubPin('collaboration_hub', hub.id) : true;
+  if (!hasPinAccess) {
+    return (
+      <HubPinGateForm
+        action={verifyCollaborationHubPinAction}
+        hubId={hub.id}
+        organizationId={organizationId}
+        title={hub.title}
+        description="이 조직협업 허브는 비밀번호가 설정되어 있습니다. 현재 참여 중인 조직만 4자리 비밀번호를 입력해 입장할 수 있습니다."
+      />
+    );
   }
 
   const caseOptions = (workspace?.recentCases ?? []).map((item: any) => ({
@@ -252,6 +269,28 @@ export default async function CollaborationHubPage({
               ) : (
                 <p className="text-sm text-slate-500">공유할 수 있는 현재 조직 사건이 없습니다.</p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>허브 비밀번호</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 text-sm text-slate-600">참여 조직만 이 허브를 열 수 있도록 4자리 비밀번호를 설정합니다. 비워두면 잠금이 해제됩니다.</p>
+              <form action={updateCollaborationHubPinAction} className="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="hubId" value={hub.id} />
+                <input type="hidden" name="organizationId" value={organizationId} />
+                <div className="min-w-[12rem] flex-1">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="collaboration-hub-pin">
+                    4자리 비밀번호
+                  </label>
+                  <Input id="collaboration-hub-pin" name="pin" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="비워두면 해제" />
+                </div>
+                <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl px-4' })}>
+                  비밀번호 저장
+                </button>
+              </form>
             </CardContent>
           </Card>
 

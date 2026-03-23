@@ -29,6 +29,7 @@ export type CollaborationHubSummary = {
   id: string;
   title: string;
   summary: string | null;
+  accessPinEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   currentOrganizationId: string;
@@ -81,6 +82,7 @@ export type CollaborationHubDetail = {
   id: string;
   title: string;
   summary: string | null;
+  accessPinEnabled: boolean;
   currentOrganizationId: string;
   currentOrganization: OrganizationLite | null;
   partnerOrganization: OrganizationLite | null;
@@ -132,7 +134,7 @@ export async function getCollaborationOverview(organizationId?: string | null): 
       .limit(40),
     admin
       .from('organization_collaboration_hubs')
-      .select('id, primary_organization_id, partner_organization_id, title, summary, status, created_at, updated_at')
+      .select('id, primary_organization_id, partner_organization_id, title, summary, status, access_pin_enabled, created_at, updated_at')
       .eq('status', 'active')
       .or(`primary_organization_id.eq.${currentOrganizationId},partner_organization_id.eq.${currentOrganizationId}`)
       .order('updated_at', { ascending: false })
@@ -235,6 +237,7 @@ export async function getCollaborationOverview(organizationId?: string | null): 
       id: row.id,
       title: row.title,
       summary: row.summary ?? null,
+      accessPinEnabled: Boolean(row.access_pin_enabled),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       currentOrganizationId,
@@ -276,7 +279,7 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
   const currentUserId = auth.user.id;
   const { data: hubRow, error: hubError } = await admin
     .from('organization_collaboration_hubs')
-    .select('id, primary_organization_id, partner_organization_id, title, summary, status')
+    .select('id, primary_organization_id, partner_organization_id, title, summary, status, access_pin_enabled')
     .eq('id', hubId)
     .eq('status', 'active')
     .maybeSingle();
@@ -364,6 +367,7 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
     id: hubRow.id,
     title: hubRow.title,
     summary: hubRow.summary ?? null,
+    accessPinEnabled: Boolean(hubRow.access_pin_enabled),
     currentOrganizationId,
     currentOrganization: organizations[currentOrganizationId] ?? null,
     partnerOrganization: organizations[partnerOrganizationId] ?? null,

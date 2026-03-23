@@ -2,8 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireOrganizationActionAccess } from '@/lib/auth';
+import { requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
+import { grantHubPinAccess, hashHubPin, revokeHubPinAccess } from '@/lib/hub-access';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+
+function generateFourDigitPin() {
+  return `${Math.floor(1000 + Math.random() * 9000)}`;
+}
 
 async function getAccessibleHubRecord(admin: ReturnType<typeof createSupabaseAdminClient>, hubId: string, organizationId: string) {
   const { data: bridgeRow, error: bridgeError } = await admin
@@ -44,6 +49,7 @@ export async function createCaseHubAction(formData: FormData) {
   const collaboratorLimit = Math.max(1, parseInt(`${formData.get('collaboratorLimit') ?? '5'}`, 10) || 5);
   const viewerLimit = Math.max(1, parseInt(`${formData.get('viewerLimit') ?? '12'}`, 10) || 12);
   const visibilityScope = `${formData.get('visibilityScope') ?? 'organization'}`.trim();
+  const accessPin = `${formData.get('accessPin') ?? ''}`.trim();
 
   if (!organizationId || !caseId) {
     throw new Error('조직과 사건 정보가 필요합니다. 다시 시도해 주세요.');
@@ -131,6 +137,8 @@ export async function createCaseHubAction(formData: FormData) {
       visibility_scope: ['organization', 'private', 'custom'].includes(visibilityScope)
         ? visibilityScope
         : 'organization',
+      access_pin_enabled: accessPin.length === 4,
+      access_pin_hash: accessPin.length === 4 ? hashHubPin(accessPin) : null,
       created_by: auth.profile.id,
       lifecycle_status: 'active'
     })
@@ -180,6 +188,7 @@ export async function updateCaseHubAction(formData: FormData) {
   const collaboratorLimit = Math.max(1, parseInt(`${formData.get('collaboratorLimit') ?? '5'}`, 10) || 5);
   const viewerLimit = Math.max(1, parseInt(`${formData.get('viewerLimit') ?? '12'}`, 10) || 12);
   const status = `${formData.get('status') ?? ''}`.trim();
+  const accessPin = `${formData.get('accessPin') ?? ''}`.trim();
 
   if (!hubId || !organizationId) {
     throw new Error('허브 정보가 올바르지 않습니다. 페이지를 새로고침 해주세요.');
@@ -203,6 +212,8 @@ export async function updateCaseHubAction(formData: FormData) {
       title,
       collaborator_limit: collaboratorLimit,
       viewer_limit: viewerLimit,
+      access_pin_enabled: accessPin.length === 4,
+      access_pin_hash: accessPin.length === 4 ? hashHubPin(accessPin) : null,
       ...(status && validStatuses.includes(status) ? { status } : {}),
       updated_at: new Date().toISOString()
     })
@@ -222,6 +233,134 @@ export async function updateCaseHubAction(formData: FormData) {
 
   revalidatePath(`/case-hubs/${hubId}`);
   revalidatePath('/case-hubs');
+}
+
+export async function verifyCaseHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const pin = `${formData.get('pin') ?? ''}`.trim();
+
+  if (!hubId || pin.length !== 4) {
+    throw new Error('사건허브 비밀번호 4자리를 입력해 주세요.');
+  }
+
+  const auth = await requireAuthenticatedUser();
+  const admin = createSupabaseAdminClient();
+  const { data: hubRow, error } = await admin
+    .from('case_hubs')
+    .select('id, lifecycle_status, primary_client_id, access_pin_enabled, access_pin_hash')
+    .eq('id', hubId)
+    .eq('lifecycle_status', 'active')
+    .maybeSingle();
+
+  if (error || !hubRow) {
+    throw error ?? new Error('사건허브를 찾을 수 없습니다.');
+  }
+
+  const isPrimaryClientViewer = Boolean(
+    auth.profile.is_client_account
+    && auth.profile.client_account_status === 'active'
+    && hubRow.primary_client_id === auth.profile.id
+  );
+
+  if (!isPrimaryClientViewer) {
+    if (!organizationId) {
+      throw new Error('조직 기준이 확인되지 않아 사건허브 비밀번호를 검증할 수 없습니다.');
+    }
+    const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+    if (!hubRecord) {
+      throw new Error('현재 조직은 이 사건허브를 볼 수 없습니다.');
+    }
+  }
+
+  if (hubRow.access_pin_enabled && hubRow.access_pin_hash) {
+    if (hashHubPin(pin) !== hubRow.access_pin_hash) {
+      throw new Error('사건허브 비밀번호가 맞지 않습니다.');
+    }
+  }
+
+  await grantHubPinAccess('case_hub', hubId);
+}
+
+export async function clearCaseHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  if (!hubId) return;
+  await revokeHubPinAccess('case_hub', hubId);
+}
+
+export async function updateCaseHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const pin = `${formData.get('pin') ?? ''}`.trim();
+
+  if (!hubId || !organizationId) {
+    throw new Error('사건허브 정보를 확인할 수 없습니다.');
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_edit',
+    errorMessage: '사건 수정 권한이 있어야 허브 비밀번호를 설정할 수 있습니다.'
+  });
+
+  const admin = createSupabaseAdminClient();
+  const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+  if (!hubRecord) {
+    throw new Error('현재 조직은 이 사건허브를 관리할 수 없습니다.');
+  }
+
+  const nextEnabled = pin.length === 4;
+  const { error } = await admin
+    .from('case_hubs')
+    .update({
+      access_pin_enabled: nextEnabled,
+      access_pin_hash: nextEnabled ? hashHubPin(pin) : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', hubId)
+    .eq('lifecycle_status', 'active');
+
+  if (error) throw error;
+
+  await revokeHubPinAccess('case_hub', hubId);
+  revalidatePath(`/case-hubs/${hubId}`);
+  revalidatePath('/case-hubs');
+}
+
+export async function generateCaseHubPinAction(formData: FormData) {
+  const hubId = `${formData.get('hubId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!hubId || !organizationId) {
+    throw new Error('사건허브 정보를 확인할 수 없습니다.');
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_edit',
+    errorMessage: '사건 수정 권한이 있어야 허브 비밀번호를 생성할 수 있습니다.'
+  });
+
+  const admin = createSupabaseAdminClient();
+  const hubRecord = await getAccessibleHubRecord(admin, hubId, organizationId);
+  if (!hubRecord) {
+    throw new Error('현재 조직은 이 사건허브를 관리할 수 없습니다.');
+  }
+
+  const pin = generateFourDigitPin();
+  const { error } = await admin
+    .from('case_hubs')
+    .update({
+      access_pin_enabled: true,
+      access_pin_hash: hashHubPin(pin),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', hubId)
+    .eq('lifecycle_status', 'active');
+
+  if (error) throw error;
+
+  await revokeHubPinAccess('case_hub', hubId);
+  revalidatePath(`/case-hubs/${hubId}`);
+  revalidatePath('/case-hubs');
+  redirect(`/case-hubs/${hubId}/pin?generated=${pin}`);
 }
 
 // ────────────────────────────────────────────────────────────────────
