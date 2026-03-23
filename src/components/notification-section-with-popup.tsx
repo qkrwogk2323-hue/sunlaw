@@ -101,7 +101,19 @@ export function NotificationSectionWithPopup({
         <CardHeader className={cs.header}>
           <div className="flex items-center justify-between gap-3">
             <CardTitle className={cs.title}>{title}</CardTitle>
-            <Badge tone={tone}>{items.length}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge tone={tone}>{items.length}</Badge>
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPopupOpen(true)}
+                  aria-label={`${title} 전체보기`}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${cs.more}`}
+                >
+                  전체보기
+                </button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -114,7 +126,7 @@ export function NotificationSectionWithPopup({
                   onClick={() => setPopupOpen(true)}
                   className={`w-full rounded-xl border px-3 py-2 text-center text-xs font-medium transition ${cs.more}`}
                 >
-                  더보기 ({items.length - PREVIEW_LIMIT}개 더)
+                  {items.length - PREVIEW_LIMIT}개 더 보기
                 </button>
               )}
             </>
@@ -127,7 +139,10 @@ export function NotificationSectionWithPopup({
       </Card>
 
       {popupOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setPopupOpen(false); }}
+        >
           <div className={`w-full max-w-2xl rounded-2xl border p-4 shadow-[0_24px_64px_rgba(15,23,42,0.35)] ${cs.popup}`}>
             <div className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${cs.popupHeader}`}>
               <div>
@@ -143,7 +158,11 @@ export function NotificationSectionWithPopup({
               </button>
             </div>
             <div className={`mt-3 max-h-[26rem] space-y-2 overflow-y-auto rounded-xl border p-3 ${cs.scrollArea}`}>
-              {items.map((item) => <ItemRow key={item.notificationId} item={item} colorKey={colorKey} />)}
+              {items.length ? (
+                items.map((item) => <ItemRow key={item.notificationId} item={item} colorKey={colorKey} />)
+              ) : (
+                <p className="py-10 text-center text-sm text-slate-500">표시할 알림이 없습니다.</p>
+              )}
             </div>
           </div>
         </div>
