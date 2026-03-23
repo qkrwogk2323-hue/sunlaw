@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { BillingComingSoonCards } from '@/components/billing-coming-soon-cards';
 import { buttonStyles } from '@/components/ui/button';
 import { BillingEntrySectionPanel } from '@/components/forms/billing-entry-section-panel';
 import { InstallmentAgreementSectionPanel } from '@/components/forms/installment-agreement-section-panel';
@@ -116,6 +117,8 @@ export default async function BillingPage() {
           </Link>
         ))}
       </section>
+
+      <BillingComingSoonCards />
 
       <section className="grid gap-6 xl:grid-cols-2">
         <BillingEntrySectionPanel

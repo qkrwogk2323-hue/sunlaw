@@ -82,5 +82,5 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
     return '/start/signup' as Route;
   }
 
-  return getDefaultAppRoute(auth);
+  return getDefaultAppRoute(auth) as Route;
 }

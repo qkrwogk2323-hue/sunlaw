@@ -24,8 +24,19 @@ export async function listOrganizationSignupRequests() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[listOrganizationSignupRequests] query error:', error.message);
-    return [];
+    console.error('[listOrganizationSignupRequests] query error:', error.message, error.code, error.details);
+    // fallback: simpler query without FK joins to diagnose if the issue is FK hint names
+    const { data: fallback, error: fallbackError } = await supabase
+      .from('organization_signup_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (fallbackError) {
+      console.error('[listOrganizationSignupRequests] fallback query also failed:', fallbackError.message);
+      return [];
+    }
+    console.warn('[listOrganizationSignupRequests] using fallback query without joins, count:', fallback?.length ?? 0);
+    return fallback ?? [];
   }
 
   return data ?? [];

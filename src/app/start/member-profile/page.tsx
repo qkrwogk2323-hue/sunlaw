@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function MemberProfileSetupPage() {
   const auth = await requireAuthenticatedUser();
   if (!auth.profile.must_complete_profile) {
-    redirect(getDefaultAppRoute(auth));
+    redirect(getDefaultAppRoute(auth) as Route);
   }
 
   const supabase = await createSupabaseServerClient();

@@ -127,20 +127,52 @@ function getActionErrorMessage(error: unknown, fallback: string) {
 
 async function listActivePlatformAdminRecipients() {
   const admin = createSupabaseAdminClient();
+
+  // Find the platform root org first (by is_platform_root = true OR kind = 'platform_management')
+  const { data: platformOrgData, error: orgError } = await admin
+    .from('organizations')
+    .select('id')
+    .or('is_platform_root.eq.true,kind.eq.platform_management')
+    .limit(1)
+    .maybeSingle();
+
+  if (orgError) {
+    console.error('[listActivePlatformAdminRecipients] platform org lookup error:', orgError.message);
+    throw orgError;
+  }
+
+  // Fall back to membership join if org lookup fails or returns null
+  if (!platformOrgData?.id) {
+    console.warn('[listActivePlatformAdminRecipients] platform org not found via is_platform_root/kind, falling back to membership filter');
+    const { data: fallbackData, error: fallbackError } = await admin
+      .from('organization_memberships')
+      .select('profile_id, organization_id, profile:profiles(id, is_active), organization:organizations(id, kind, is_platform_root)')
+      .eq('status', 'active')
+      .in('role', ['org_owner', 'org_manager']);
+
+    if (fallbackError) throw fallbackError;
+    return (fallbackData ?? [])
+      .filter((row: any) => isPlatformManagementOrganization(row.organization) && row.profile?.is_active !== false)
+      .map((row: any) => ({ profileId: row.profile_id, organizationId: row.organization_id }))
+      .filter((row: any) => row.profileId && row.organizationId);
+  }
+
+  const platformOrganizationId = platformOrgData.id;
   const { data, error } = await admin
     .from('organization_memberships')
-    .select('profile_id, organization_id, profile:profiles(id, is_active), organization:organizations(id, kind, is_platform_root)')
+    .select('profile_id, profile:profiles(id, is_active)')
+    .eq('organization_id', platformOrganizationId)
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
   if (error) throw error;
   return (data ?? [])
-    .filter((row: any) => isPlatformManagementOrganization(row.organization) && row.profile?.is_active !== false)
+    .filter((row: any) => row.profile?.is_active !== false)
     .map((row: any) => ({
       profileId: row.profile_id,
-      organizationId: row.organization_id
+      organizationId: platformOrganizationId
     }))
-    .filter((row: any) => row.profileId && row.organizationId);
+    .filter((row: any) => row.profileId);
 }
 
 async function listOrganizationManagerProfileIds(adminClient: ReturnType<typeof createSupabaseAdminClient>, organizationId: string) {

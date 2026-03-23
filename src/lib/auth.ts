@@ -263,7 +263,7 @@ export async function hasActivePlatformAdminView(auth: AuthContext, organization
   return Boolean(
     isPlatformManagementOrganization(membership.organization)
     && isManagementRole(membership.role)
-    && hasPlatformAdminSecurityClearance(auth)
+    && (await hasPlatformAdminSecurityClearance(auth))
   );
 }
 
@@ -277,7 +277,7 @@ export async function requirePlatformAdmin(organizationId?: string | null) {
   const auth = await requireAuthenticatedUser();
   const platformOrganizationId = organizationId ?? getPlatformOrganizationContextId(auth);
   if (!(await hasActivePlatformAdminView(auth, platformOrganizationId))) {
-    redirect(getDefaultAppRoute(auth));
+    redirect(getDefaultAppRoute(auth) as Route);
   }
   return auth;
 }

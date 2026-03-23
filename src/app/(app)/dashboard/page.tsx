@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import type { Route } from 'next';
 import { getDefaultAppRoute, getEffectiveOrganizationId, hasActivePlatformAdminView, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { buildDashboardAiOverview } from '@/lib/ai/dashboard-home';
 import { DashboardHubClient } from '@/components/dashboard-hub-client';
@@ -8,7 +9,7 @@ export default async function DashboardPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
   if (getDefaultAppRoute(auth, organizationId) !== '/dashboard') {
-    redirect(getDefaultAppRoute(auth, organizationId));
+    redirect(getDefaultAppRoute(auth, organizationId) as Route);
   }
   const data = await getDashboardSnapshot(organizationId);
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, organizationId);
