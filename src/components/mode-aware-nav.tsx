@@ -129,9 +129,7 @@ function getOrganizationSections({
         { href: '/support', label: '고객센터', icon: MessageSquareText }
       ])
     : uniqueItems([
-        isPlatformManagementOrganizationView
-          ? { href: '/product-home', label: '운영 첫 화면', icon: LayoutDashboard }
-          : { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
+        { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
         { href: '/calendar', label: '일정관리', icon: CalendarRange },
         { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
       ]);

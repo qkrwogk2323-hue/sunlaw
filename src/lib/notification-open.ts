@@ -17,8 +17,7 @@ function normalizeRelativeHref(value: string) {
 }
 
 function isPlatformOnlyHref(value: string) {
-  return value === '/product-home'
-    || value.startsWith('/admin')
+  return value.startsWith('/admin')
     || value.startsWith('/settings/platform')
     || value.startsWith('/settings/features');
 }

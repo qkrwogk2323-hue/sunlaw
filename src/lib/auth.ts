@@ -350,12 +350,12 @@ export function hasPlatformViewForOrganization(auth: AuthContext, organizationId
 }
 
 export function getDefaultAppRoute(auth: AuthContext, organizationId?: string | null) {
-  return hasPlatformViewForOrganization(auth, organizationId) ? '/product-home' : '/dashboard';
+  return '/dashboard';
 }
 
 export function getTopLevelAppRoutes(auth: AuthContext, organizationId?: string | null): Route[] {
   if (hasPlatformViewForOrganization(auth, organizationId)) {
-    return ['/product-home', '/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
+    return ['/dashboard', '/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
   }
 
   return ['/dashboard', '/inbox', '/cases', '/clients', '/organizations', '/collections', '/documents', '/notifications', '/calendar', '/reports', '/settings'];
