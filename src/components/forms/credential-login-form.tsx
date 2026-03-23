@@ -123,8 +123,8 @@ export function CredentialLoginForm() {
           throw new Error(payload?.message ?? '조직 식별값 또는 임시 아이디를 확인해 주세요.');
         }
 
-        // Auth cookies are already set by the server — just redirect.
-        window.location.href = '/login';
+        // Auth cookies are already set by the server — redirect to home.
+        window.location.href = '/dashboard';
         return;
       }
 
@@ -138,7 +138,7 @@ export function CredentialLoginForm() {
         throw signInError;
       }
 
-      window.location.href = '/login';
+      window.location.href = '/dashboard';
     } catch (submitError) {
       setError(toLoginErrorFeedback(submitError, mode));
     } finally {

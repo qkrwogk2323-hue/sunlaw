@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CaseCreateForm } from '@/components/forms/case-create-form';
 import { forceDeleteCaseAction, moveCaseToDeletedAction, restoreCaseAction } from '@/lib/actions/case-actions';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { getCaseClientLinkedMap, listCases, purgeDeletedCasesPastRetention } from '@/lib/queries/cases';
+import { getCaseClientLinkedMap, listCases } from '@/lib/queries/cases';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
@@ -67,8 +67,6 @@ export default async function CasesPage({
   const resolved = searchParams ? await searchParams : undefined;
   const bucket = parseBucket(resolved?.bucket);
   const queryFilter = `${resolved?.q ?? ''}`.trim().toLowerCase();
-
-  await purgeDeletedCasesPastRetention(currentOrganizationId, 30);
 
   const [activeCases, completedCases, deletedCases] = await Promise.all([
     listCases(currentOrganizationId, { bucket: 'active' }),

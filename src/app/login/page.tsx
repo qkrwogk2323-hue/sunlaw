@@ -1,4 +1,5 @@
 // audit-link-exempt: reason=login-page-no-destructive-action; fallback=/admin/audit?tab=general; expires=2027-01-01; approvedBy=tech-lead
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { CredentialLoginForm } from '@/components/forms/credential-login-form';
@@ -22,6 +23,11 @@ export default async function LoginPage({
   const resolved = searchParams ? await searchParams : undefined;
   const error = resolved?.error;
   const authenticatedHomePath = auth ? getAuthenticatedHomePath(auth) : null;
+
+  // Already authenticated — go straight to the role-appropriate home screen.
+  if (authenticatedHomePath && !error) {
+    redirect(authenticatedHomePath);
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 sm:px-6 sm:py-16">
