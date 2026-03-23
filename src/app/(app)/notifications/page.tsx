@@ -58,10 +58,10 @@ function actionCopy(item: NotificationQueueItem) {
 }
 
 function categoryMeta(key: NotificationCategoryKey) {
-  if (key === 'immediate') return { label: '즉시 필요', tone: 'red' as const };
-  if (key === 'confirm') return { label: '검토 필요', tone: 'blue' as const };
-  if (key === 'meeting') return { label: '미팅 알림', tone: 'green' as const };
-  return { label: '기타 알림', tone: 'slate' as const };
+  if (key === 'immediate') return { label: '즉시 필요', tone: 'red' as const, colorKey: 'rose' as const };
+  if (key === 'confirm') return { label: '검토 필요', tone: 'blue' as const, colorKey: 'blue' as const };
+  if (key === 'meeting') return { label: '미팅 알림', tone: 'green' as const, colorKey: 'violet' as const };
+  return { label: '기타 알림', tone: 'slate' as const, colorKey: 'slate' as const };
 }
 
 function QueueItemRow({ item }: { item: NotificationQueueItem }) {
@@ -123,25 +123,59 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
 function NotificationListSection({
   title,
   tone,
+  colorKey,
   items
 }: {
   title: string;
   tone: 'red' | 'blue' | 'green' | 'slate';
+  colorKey: 'rose' | 'blue' | 'violet' | 'slate';
   items: NotificationQueueItem[];
 }) {
   const totalCount = items.length;
 
+  const colorStyles = {
+    rose: {
+      card: 'border-rose-200 bg-[linear-gradient(180deg,#fff5f5,#fff1f2)]',
+      header: 'border-rose-100',
+      title: 'text-rose-800',
+      icon: '🔴',
+      empty: 'border-rose-200 bg-rose-50'
+    },
+    blue: {
+      card: 'border-blue-200 bg-[linear-gradient(180deg,#f0f8ff,#eff6ff)]',
+      header: 'border-blue-100',
+      title: 'text-blue-800',
+      icon: '🔵',
+      empty: 'border-blue-200 bg-blue-50'
+    },
+    violet: {
+      card: 'border-violet-200 bg-[linear-gradient(180deg,#faf5ff,#f5f3ff)]',
+      header: 'border-violet-100',
+      title: 'text-violet-800',
+      icon: '🟣',
+      empty: 'border-violet-200 bg-violet-50'
+    },
+    slate: {
+      card: 'border-slate-200 bg-[linear-gradient(180deg,#f8fafc,#f1f5f9)]',
+      header: 'border-slate-100',
+      title: 'text-slate-700',
+      icon: '⚪',
+      empty: 'border-slate-200 bg-slate-50'
+    }
+  };
+  const cs = colorStyles[colorKey];
+
   return (
-    <Card className="bg-[linear-gradient(180deg,#ffffff,#f8fbff)]">
-      <CardHeader>
+    <Card className={cs.card}>
+      <CardHeader className={cs.header}>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className={cs.title}>{title}</CardTitle>
           <Badge tone={tone}>{totalCount}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {items.length ? items.map((item) => <QueueItemRow key={item.notificationId} item={item} />) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+          <div className={`rounded-2xl border border-dashed p-8 text-center text-sm text-slate-500 ${cs.empty}`}>
             현재 표시할 알림이 없습니다.
           </div>
         )}
@@ -190,32 +224,32 @@ export default async function NotificationsPage({
         {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Link href={buildFilterHref({ nextState: 'active' }) as Route}
-          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-center transition hover:bg-rose-100"
-          aria-label={`즉시 필요 알림 ${queueView.categories.immediate.length}건`}>
+          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center transition hover:bg-rose-100"
+          aria-label={`즉시필요 알림 ${queueView.categories.immediate.length}건`}>
           <p className="text-xs font-semibold text-rose-700">즉시필요</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">{queueView.categories.immediate.length}</p>
           <p className="mt-1 text-[10px] text-rose-600">업무일정 임박</p>
         </Link>
         <Link href={'#confirm' as Route}
-          className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-center transition hover:bg-blue-100"
-          aria-label={`검토 필요 알림 ${queueView.categories.confirm.length}건`}>
+          className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center transition hover:bg-blue-100"
+          aria-label={`검토필요 알림 ${queueView.categories.confirm.length}건`}>
           <p className="text-xs font-semibold text-blue-700">검토필요</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-blue-800">{queueView.categories.confirm.length}</p>
           <p className="mt-1 text-[10px] text-blue-600">요청·협업 알림</p>
         </Link>
         <Link href={'#meeting' as Route}
-          className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-center transition hover:bg-violet-100"
-          aria-label={`미팅 알림 ${queueView.categories.meeting.length}건`}>
+          className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-center transition hover:bg-violet-100"
+          aria-label={`미팅알림 ${queueView.categories.meeting.length}건`}>
           <p className="text-xs font-semibold text-violet-700">미팅알림</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-violet-800">{queueView.categories.meeting.length}</p>
           <p className="mt-1 text-[10px] text-violet-600">미팅 일정</p>
         </Link>
         <Link href={'#other' as Route}
-          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center transition hover:bg-slate-100"
-          aria-label={`기타 알림 ${queueView.categories.other.length}건`}>
-          <p className="text-xs font-semibold text-slate-600">기타알림</p>
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center transition hover:bg-slate-100"
+          aria-label={`기타알림 ${queueView.categories.other.length}건`}>
+          <p className="text-xs font-semibold text-slate-700">기타알림</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{queueView.categories.other.length}</p>
           <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
         </Link>
@@ -282,16 +316,16 @@ export default async function NotificationsPage({
       ) : (
         <div className="space-y-4">
           <div id="immediate">
-            <NotificationListSection title={categoryMeta('immediate').label} tone={categoryMeta('immediate').tone} items={queueView.categories.immediate} />
+            <NotificationListSection title={categoryMeta('immediate').label} tone={categoryMeta('immediate').tone} colorKey={categoryMeta('immediate').colorKey} items={queueView.categories.immediate} />
           </div>
           <div id="confirm">
-            <NotificationListSection title={categoryMeta('confirm').label} tone={categoryMeta('confirm').tone} items={queueView.categories.confirm} />
+            <NotificationListSection title={categoryMeta('confirm').label} tone={categoryMeta('confirm').tone} colorKey={categoryMeta('confirm').colorKey} items={queueView.categories.confirm} />
           </div>
           <div id="meeting">
-            <NotificationListSection title={categoryMeta('meeting').label} tone={categoryMeta('meeting').tone} items={queueView.categories.meeting} />
+            <NotificationListSection title={categoryMeta('meeting').label} tone={categoryMeta('meeting').tone} colorKey={categoryMeta('meeting').colorKey} items={queueView.categories.meeting} />
           </div>
           <div id="other">
-            <NotificationListSection title={categoryMeta('other').label} tone={categoryMeta('other').tone} items={queueView.categories.other} />
+            <NotificationListSection title={categoryMeta('other').label} tone={categoryMeta('other').tone} colorKey={categoryMeta('other').colorKey} items={queueView.categories.other} />
           </div>
         </div>
       )}
