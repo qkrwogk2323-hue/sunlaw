@@ -20,7 +20,7 @@ const GENERIC_FAIL = { message: '\uc784\uc2dc \ub85c\uadf8\uc778 \uc815\ubcf4\ub
 
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const limited = await checkDbRateLimit(`temp-login:${ip}`, 10, 60);
+  const limited = await checkDbRateLimit(`temp-login:${ip}`, 10, 60, { failClosed: true });
   if (limited) {
     await new Promise(r => setTimeout(r, UNIFORM_DELAY_MS));
     return NextResponse.json({ message: '\uc694\uccad\uc774 \ub108\ubb34 \ub9ce\uc2b5\ub2c8\ub2e4. \uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574 \uc8fc\uc138\uc694.' }, { status: 429 });

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const identity = ip === 'unknown'
       ? `ua:${request.headers.get('user-agent') ?? 'unknown'}`
       : ip;
-    const limited = await checkDbRateLimit(`general-signup:${identity}`, 5, 60);
+    const limited = await checkDbRateLimit(`general-signup:${identity}`, 5, 60, { failClosed: true });
     if (limited) {
       return NextResponse.json(
         { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
