@@ -1,17 +1,12 @@
 import type { ReactNode } from 'react';
 import type { Route } from 'next';
-import { LogOut } from 'lucide-react';
 import { getDefaultAppRoute, getTopLevelAppRoutes, requireAuthenticatedUser } from '@/lib/auth';
 import { NavBadgesAsync } from '@/components/nav-badges-async';
 import { BrandBanner } from '@/components/brand-banner';
 import { PageBackButton } from '@/components/page-back-button';
-import { buttonStyles } from '@/components/ui/button';
-import { signOutAction } from '@/lib/actions/auth-actions';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
 import { GlobalCommandPalette } from '@/components/global-command-palette';
 import { FloatingExportWidget } from '@/components/floating-export-widget';
-import { ClientActionForm } from '@/components/ui/client-action-form';
-import { SubmitButton } from '@/components/ui/submit-button';
 import { enforceAppEntryPolicy } from '@/lib/app-entry-policy';
 
 // auth/subscription은 쿠키 기반이므로 force-dynamic 불필요.
@@ -33,12 +28,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             memberships={auth.memberships}
             profile={auth.profile}
           />
-
-          <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다.">
-            <SubmitButton variant="secondary" pendingLabel="로그아웃 중..." className={buttonStyles({ variant: 'secondary', className: 'w-full justify-center gap-2' })}>
-              <LogOut className="size-4" /> 로그아웃
-            </SubmitButton>
-          </ClientActionForm>
         </aside>
 
         <main className="space-y-6">

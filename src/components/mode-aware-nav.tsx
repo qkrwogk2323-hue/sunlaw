@@ -12,6 +12,7 @@ import {
   ChevronRight,
   FileText,
   LayoutDashboard,
+  LogOut,
   MessageSquareText,
   Network,
   Receipt,
@@ -26,6 +27,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { MobileOrganizationSwitcher } from '@/components/mobile-organization-switcher';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useToast } from '@/components/ui/toast-provider';
+import { signOutAction } from '@/lib/actions/auth-actions';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
@@ -645,6 +647,18 @@ export function ModeAwareNav({
                 </Link>
               </div>
               <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{displayName}</p>
+              <div className="mt-3">
+                <ClientActionForm action={signOutAction} successTitle="로그아웃되었습니다.">
+                  <SubmitButton
+                    variant="secondary"
+                    pendingLabel="로그아웃 중..."
+                    className="h-9 rounded-lg px-3 text-sm font-medium"
+                  >
+                    <LogOut className="mr-1.5 size-4" />
+                    로그아웃
+                  </SubmitButton>
+                </ClientActionForm>
+              </div>
             </div>
 
             <div>
