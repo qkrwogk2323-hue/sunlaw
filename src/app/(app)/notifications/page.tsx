@@ -182,32 +182,6 @@ export default async function NotificationsPage({
     q: keyword || null,
     state
   });
-  const summaryCards = [
-    {
-      label: '새 알림',
-      value: queueView.items.length,
-      tone: 'slate' as const,
-      href: buildFilterHref({ nextState: 'active' })
-    },
-    {
-      label: '즉시 필요',
-      value: queueView.categories.immediate.length,
-      tone: 'red' as const,
-      href: '#immediate'
-    },
-    {
-      label: '미팅 알림',
-      value: queueView.categories.meeting.length,
-      tone: 'green' as const,
-      href: '#meeting'
-    },
-    {
-      label: '기타 알림',
-      value: queueView.categories.other.length,
-      tone: 'slate' as const,
-      href: '#other'
-    }
-  ];
 
   return (
     <div className="space-y-5">
@@ -217,12 +191,34 @@ export default async function NotificationsPage({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <Link key={card.label} href={card.href as Route} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:bg-slate-50">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
-            <p className="mt-5 text-center text-3xl font-semibold text-slate-950 tabular-nums">{card.value}</p>
-          </Link>
-        ))}
+        <Link href={buildFilterHref({ nextState: 'active' }) as Route}
+          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-center transition hover:bg-rose-100"
+          aria-label={`즉시 필요 알림 ${queueView.categories.immediate.length}건`}>
+          <p className="text-xs font-semibold text-rose-700">즉시필요</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">{queueView.categories.immediate.length}</p>
+          <p className="mt-1 text-[10px] text-rose-600">업무일정 임박</p>
+        </Link>
+        <Link href={'#confirm' as Route}
+          className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-center transition hover:bg-blue-100"
+          aria-label={`검토 필요 알림 ${queueView.categories.confirm.length}건`}>
+          <p className="text-xs font-semibold text-blue-700">검토필요</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-blue-800">{queueView.categories.confirm.length}</p>
+          <p className="mt-1 text-[10px] text-blue-600">요청·협업 알림</p>
+        </Link>
+        <Link href={'#meeting' as Route}
+          className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-center transition hover:bg-violet-100"
+          aria-label={`미팅 알림 ${queueView.categories.meeting.length}건`}>
+          <p className="text-xs font-semibold text-violet-700">미팅알림</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-violet-800">{queueView.categories.meeting.length}</p>
+          <p className="mt-1 text-[10px] text-violet-600">미팅 일정</p>
+        </Link>
+        <Link href={'#other' as Route}
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center transition hover:bg-slate-100"
+          aria-label={`기타 알림 ${queueView.categories.other.length}건`}>
+          <p className="text-xs font-semibold text-slate-600">기타알림</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{queueView.categories.other.length}</p>
+          <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
+        </Link>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3">

@@ -383,7 +383,7 @@ export async function generateCaseHubPinAction(formData: FormData) {
   await revokeHubPinAccess('case_hub', hubId);
   revalidatePath(`/case-hubs/${hubId}`);
   revalidatePath('/case-hubs');
-  redirect(`/case-hubs/${hubId}/pin?generated=${pin}`);
+  redirect(`/case-hubs/${hubId}/pin?generated=${pin}` as any);
 }
 
 // ────────────────────────────────────────────────────────────────────

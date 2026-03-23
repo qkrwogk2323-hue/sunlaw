@@ -88,7 +88,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
         {canManageHub ? (
           <DangerActionButton
             action={archiveCaseHubAction}
-            fields={{ hubId: hub.id, organizationId }}
+            fields={{ hubId: hub.id, organizationId: organizationId ?? '' }}
             confirmTitle="허브를 보관할까요?"
             confirmDescription="허브를 보관하면 기본 목록에서 숨겨집니다. 복원은 관리자 작업이 필요합니다."
             highlightedInfo={hub.caseTitle ?? hub.title ?? '이 허브'}
@@ -241,7 +241,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                       errorResolution="대표 의뢰인, 공개 범위, 참여 구성을 확인한 뒤 다시 시도해 주세요."
                     >
                       <input type="hidden" name="hubId" value={hub.id} />
-                      <input type="hidden" name="organizationId" value={organizationId} />
+                      <input type="hidden" name="organizationId" value={organizationId ?? ''} />
                       <SubmitButton className="h-11 bg-slate-950 px-5 text-sm font-semibold text-white" pendingLabel="시작 중...">
                         <Zap className="mr-2 size-4" aria-hidden="true" />
                         협업 시작

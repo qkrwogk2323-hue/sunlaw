@@ -605,12 +605,6 @@ export function CalendarBoardClient({
                   </button>
                 ))}
               </div>
-              <div className="min-w-[92px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  {kindFilter === 'all' ? '전체' : kindFilter === 'work' ? '업무일정' : kindFilter === 'meeting' ? '미팅일정' : '기타일정'}
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950 tabular-nums">{kindSummaryCount}</p>
-              </div>
               {canManage ? (
                 <Button
                   type="button"
@@ -623,6 +617,12 @@ export function CalendarBoardClient({
                   {createFormOpen ? '✕ 닫기' : '+ 일정 추가'}
                 </Button>
               ) : null}
+              <div className="min-w-[92px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  {kindFilter === 'all' ? '전체' : kindFilter === 'work' ? '업무일정' : kindFilter === 'meeting' ? '미팅일정' : '기타일정'}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950 tabular-nums">{kindSummaryCount}</p>
+              </div>
             </div>
           </div>
         </CardHeader>

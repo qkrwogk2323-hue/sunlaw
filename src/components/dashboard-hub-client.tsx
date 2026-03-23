@@ -1199,6 +1199,7 @@ export function DashboardHubClient({
   const [archiveQuery, setArchiveQuery] = useState('');
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
   const [activeAiPanels, setActiveAiPanels] = useState<Array<'assistant' | 'todo'>>(['assistant']);
+  const [aiSectionCollapsed, setAiSectionCollapsed] = useState(true);
   const [conversationExpanded, setConversationExpanded] = useState(false);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
@@ -1396,6 +1397,44 @@ export function DashboardHubClient({
           <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}</p>
           <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
         </Link>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'assistant' as const, title: 'AI 업무질의', badge: '질의' },
+              { key: 'todo' as const, title: 'AI 스케줄도우미', badge: String(initialAiOverview.recommendations.length) }
+            ].map((panel) => {
+              const active = activeAiPanels.includes(panel.key);
+              return (
+                <button
+                  key={panel.key}
+                  type="button"
+                  onClick={() => {
+                    setAiSectionCollapsed(false);
+                    toggleAiPanel(panel.key);
+                  }}
+                  className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
+                    active && !aiSectionCollapsed ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
+                  }`}
+                >
+                  <span>{panel.title}</span>
+                  <Badge tone="blue">{panel.badge}</Badge>
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-10 w-10 rounded-xl p-0"
+            aria-label={aiSectionCollapsed ? 'AI 섹션 펼치기' : 'AI 섹션 접기'}
+            onClick={() => setAiSectionCollapsed((current) => !current)}
+          >
+            {aiSectionCollapsed ? <Plus className="size-4" /> : <Minus className="size-4" />}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -1650,6 +1689,7 @@ export function DashboardHubClient({
         </div>
       ) : null}
 
+      {!aiSectionCollapsed ? (
       <div className="space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
           {[
@@ -1983,6 +2023,7 @@ export function DashboardHubClient({
         ) : null}
 
       </div>
+      ) : null}
       {false ? (
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <Card className="border-amber-200 bg-[linear-gradient(180deg,#fffdf2,#fff8da)]">

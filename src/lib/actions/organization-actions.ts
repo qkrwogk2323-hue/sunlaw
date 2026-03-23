@@ -64,6 +64,10 @@ function generateFourDigitPin() {
   return `${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
+function pinExpiresAt() {
+  return new Date(Date.now() + 1000 * 60 * 2).toISOString();
+}
+
 type OrganizationSignupDocumentMimeType = 'application/pdf' | 'image/png' | 'image/jpeg';
 type OrganizationSignupVerificationStatus = 'matched' | 'mismatch' | 'unreadable';
 
@@ -3206,7 +3210,7 @@ export async function verifyCollaborationHubPinAction(formData: FormData) {
   const adminClient = createSupabaseAdminClient();
   const { data: hubRow, error } = await adminClient
     .from('organization_collaboration_hubs')
-    .select('id, primary_organization_id, partner_organization_id, access_pin_enabled, access_pin_hash, status')
+    .select('id, primary_organization_id, partner_organization_id, access_pin_enabled, access_pin_hash, access_pin_expires_at, status')
     .eq('id', hubId)
     .eq('status', 'active')
     .maybeSingle();
@@ -3220,12 +3224,26 @@ export async function verifyCollaborationHubPinAction(formData: FormData) {
   }
 
   if (hubRow.access_pin_enabled && hubRow.access_pin_hash) {
+    if (!hubRow.access_pin_expires_at || new Date(hubRow.access_pin_expires_at).getTime() <= Date.now()) {
+      const refreshedPin = generateFourDigitPin();
+      const nextExpiresAt = pinExpiresAt();
+      await adminClient
+        .from('organization_collaboration_hubs')
+        .update({
+          access_pin_hash: hashHubPin(refreshedPin),
+          access_pin_expires_at: nextExpiresAt,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', hubId);
+      await revokeHubPinAccess('collaboration_hub', hubId);
+      throw new Error('기존 조직허브 PIN이 만료되었습니다. 새 PIN이 다시 생성되었습니다. 허브 관리자에게 새 PIN을 확인해 주세요.');
+    }
     if (hashHubPin(pin) !== hubRow.access_pin_hash) {
       throw new Error('업무 허브 비밀번호가 맞지 않습니다.');
     }
   }
 
-  await grantHubPinAccess('collaboration_hub', hubId);
+  await grantHubPinAccess('collaboration_hub', hubId, hubRow.access_pin_expires_at ?? null);
 }
 
 export async function updateCollaborationHubPinAction(formData: FormData) {
@@ -3264,6 +3282,7 @@ export async function updateCollaborationHubPinAction(formData: FormData) {
     .update({
       access_pin_enabled: nextEnabled,
       access_pin_hash: nextEnabled ? hashHubPin(pin) : null,
+      access_pin_expires_at: nextEnabled ? pinExpiresAt() : null,
       updated_at: new Date().toISOString()
     })
     .eq('id', hubId);
@@ -3310,6 +3329,7 @@ export async function generateCollaborationHubPinAction(formData: FormData) {
     .update({
       access_pin_enabled: true,
       access_pin_hash: hashHubPin(pin),
+      access_pin_expires_at: pinExpiresAt(),
       updated_at: new Date().toISOString()
     })
     .eq('id', hubId);
@@ -3319,7 +3339,7 @@ export async function generateCollaborationHubPinAction(formData: FormData) {
   await revokeHubPinAccess('collaboration_hub', hubId);
   revalidatePath(`/inbox/${hubId}`);
   revalidatePath('/inbox');
-  redirect(`/inbox/${hubId}/pin?generated=${pin}`);
+  redirect(`/inbox/${hubId}/pin?generated=${pin}` as any);
 }
 
 // 사건을 협업 허브에 공유한다.
