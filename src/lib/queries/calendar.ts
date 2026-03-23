@@ -81,6 +81,7 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     .gte('due_on', visibleGridStart.toISOString().slice(0, 10))
     .lte('due_on', visibleGridEnd.toISOString().slice(0, 10))
     .in('status', ['draft', 'issued', 'partial'])
+    .is('deleted_at', null)
     .order('due_on', { ascending: true })
     .limit(60);
 

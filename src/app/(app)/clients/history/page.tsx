@@ -63,7 +63,7 @@ export default async function ClientHistoryPage({
   const tab = parseTab(resolved?.tab);
   const query = `${resolved?.q ?? ''}`.trim().toLowerCase();
   const [profileLogs, requestLogs] = await Promise.all([
-    tab === 'profiles' ? listOrganizationTableHistory(organizationId, 'case_clients') : Promise.resolve([]),
+    tab === 'profiles' ? listOrganizationTableHistory(organizationId, 'case_clients', 80, auth) : Promise.resolve([]),
     tab === 'requests' ? listOrganizationClientAccessRequests(organizationId) : Promise.resolve([])
   ]);
   const filteredProfileLogs = profileLogs.filter((log) => {

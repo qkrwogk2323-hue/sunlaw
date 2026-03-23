@@ -57,6 +57,7 @@ export default async function ContractsPage({
           .select('id, case_id, title, created_at, client_visibility, summary')
           .in('case_id', agreementCaseIds)
           .eq('document_kind', 'contract')
+          .is('deleted_at', null)
           .order('created_at', { ascending: false })
       : Promise.resolve({ data: [] as any[] }),
     supabase

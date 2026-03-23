@@ -590,7 +590,7 @@ export async function getDashboardStats(organizationId?: string | null): Promise
       .from('billing_entries')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
-      .neq('lifecycle_status', 'soft_deleted')
+      .is('deleted_at', null)
       .in('status', ['pending', 'overdue']),
   ]);
   return {

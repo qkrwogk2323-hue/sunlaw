@@ -38,6 +38,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     .from('fee_agreements')
     .select('id, title, agreement_type, effective_from, effective_to, bill_to_case_client_id, case_id, cases(title, organization_id), terms_json')
     .eq('id', agreementId)
+    .is('deleted_at', null)
     .maybeSingle();
 
   if (!agreement) {

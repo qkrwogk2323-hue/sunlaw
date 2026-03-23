@@ -46,7 +46,7 @@ export default async function CaseHistoryPage({
   }
   const resolved = searchParams ? await searchParams : undefined;
   const query = `${resolved?.q ?? ''}`.trim().toLowerCase();
-  const logs = await listOrganizationTableHistory(organizationId, 'cases');
+  const logs = await listOrganizationTableHistory(organizationId, 'cases', 80, auth);
   const caseTitles = await listOrganizationCaseTitles(logs.map((item) => item.case_id ?? item.record_id ?? ''));
   const filteredLogs = logs.filter((log) => {
     if (!query) return true;

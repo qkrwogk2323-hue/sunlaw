@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     const grouped = await Promise.all(
       tables.map(async (tableName) => ({
         tableName,
-        rows: await listOrganizationTableHistory(organizationId, tableName, limit)
+        rows: await listOrganizationTableHistory(organizationId, tableName, limit, auth)
       }))
     );
 

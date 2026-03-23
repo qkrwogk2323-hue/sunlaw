@@ -102,25 +102,33 @@ export function CredentialLoginForm() {
     setError(null);
 
     try {
-      const supabase = createSupabaseBrowserClient();
       let resolvedEmail = mode === 'email' ? email.trim() : loginId.trim();
       const password = mode === 'email' ? emailPassword : tempPassword;
 
       if (mode === 'temp') {
-        const response = await fetch('/api/auth/temp-login/resolve', {
+        // Server-side auth: email is resolved and sign-in performed server-side.
+        // Email never exposed to the client.
+        const response = await fetch('/api/auth/temp-login/sign-in', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ organizationKey: organizationKey.trim().toLowerCase(), loginId: resolvedEmail })
+          body: JSON.stringify({
+            organizationKey: organizationKey.trim().toLowerCase(),
+            loginId: resolvedEmail,
+            password
+          })
         });
 
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload?.email) {
+        if (!response.ok) {
           throw new Error(payload?.message ?? '조직 식별값 또는 임시 아이디를 확인해 주세요.');
         }
 
-        resolvedEmail = payload.email;
+        // Auth cookies are already set by the server — just redirect.
+        window.location.href = '/login';
+        return;
       }
 
+      const supabase = createSupabaseBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: resolvedEmail,
         password

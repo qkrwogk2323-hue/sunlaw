@@ -1,3 +1,5 @@
+import { type AuthContext, type Membership } from '@/lib/types';
+import { isManagementRole, isPlatformOperator } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 type ChangeLogRow = {
@@ -15,7 +17,32 @@ type ChangeLogRow = {
   new_values: Record<string, unknown> | null;
 };
 
-export async function listOrganizationTableHistory(organizationId: string, tableName: string, limit = 80) {
+/**
+ * Reads raw DB change log for an organization.
+ * Requires caller to pass their AuthContext. Access is restricted to org managers
+ * and platform admins — rejects silently with empty array for unauthorized callers.
+ * This guard is at the data layer to prevent bypass through any future caller.
+ */
+export async function listOrganizationTableHistory(
+  organizationId: string,
+  tableName: string,
+  limit = 80,
+  auth?: AuthContext
+) {
+  // Enforce access control at the data layer, not just the caller layer.
+  if (auth) {
+    const membership = auth.memberships?.find((m: Membership) => m.organization_id === organizationId);
+    const authorized = isPlatformOperator(auth) || isManagementRole(membership?.role);
+    if (!authorized) {
+      console.warn('[listOrganizationTableHistory] unauthorized access attempt', {
+        userId: auth.user?.id,
+        organizationId,
+        tableName
+      });
+      return [];
+    }
+  }
+
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .schema('audit')

@@ -4,25 +4,7 @@ import { PLATFORM_PRIVACY_POLICY_VERSION, PLATFORM_TERMS_VERSION } from '@/lib/l
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { generalSignupSchema } from '@/lib/validators';
-
-const SIGNUP_RATE_LIMIT_WINDOW_MS = 60_000;
-const SIGNUP_RATE_LIMIT_MAX = 5;
-// Module-level Map: persists within a single serverless instance lifecycle.
-// Not distributed-safe across multiple instances, but removes the globalThis anti-pattern
-// and prevents single-instance abuse.
-const signupAttempts = new Map<string, number[]>();
-
-function isSignupRateLimited(identity: string): boolean {
-  const now = Date.now();
-  const attempts = (signupAttempts.get(identity) ?? []).filter((timestamp) => now - timestamp < SIGNUP_RATE_LIMIT_WINDOW_MS);
-  if (attempts.length >= SIGNUP_RATE_LIMIT_MAX) {
-    signupAttempts.set(identity, attempts);
-    return true;
-  }
-  attempts.push(now);
-  signupAttempts.set(identity, attempts);
-  return false;
-}
+import { checkDbRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +15,8 @@ export async function POST(request: Request) {
     const identity = ip === 'unknown'
       ? `ua:${request.headers.get('user-agent') ?? 'unknown'}`
       : ip;
-    if (isSignupRateLimited(identity)) {
+    const limited = await checkDbRateLimit(`general-signup:${identity}`, 5, 60);
+    if (limited) {
       return NextResponse.json(
         { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
         { status: 429, headers: { 'Retry-After': '60' } }

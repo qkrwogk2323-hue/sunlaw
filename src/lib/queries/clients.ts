@@ -77,7 +77,8 @@ export async function listClientRosterSummary(organizationId?: string | null) {
       .select('case_id, id')
       .in('case_id', linkedCaseIds)
       .eq('status', 'pending')
-      .lt('due_on', today);
+      .lt('due_on', today)
+      .is('deleted_at', null);
     for (const entry of overdueEntries ?? []) {
       if (entry.case_id) overdueByCase.set(entry.case_id, (overdueByCase.get(entry.case_id) ?? 0) + 1);
     }
