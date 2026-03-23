@@ -133,6 +133,7 @@ export async function getCaseDetail(caseId: string) {
       .from('case_documents')
       .select('id, title, document_kind, approval_status, client_visibility, summary, storage_path, mime_type, file_size, row_version, created_by_name, approval_requested_by_name, reviewed_by_name, reviewed_at, review_note, created_at, updated_at')
       .eq('case_id', caseId)
+      .is('deleted_at', null)
       .order('updated_at', { ascending: false }),
     supabase
       .from('case_document_reviews')
@@ -165,6 +166,7 @@ export async function getCaseDetail(caseId: string) {
       .from('billing_entries')
       .select('id, entry_kind, title, amount, tax_amount, status, due_on, paid_at, notes, bill_to_party_kind, bill_to_case_client_id, bill_to_case_organization_id, created_at')
       .eq('case_id', caseId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
@@ -176,6 +178,7 @@ export async function getCaseDetail(caseId: string) {
       .from('fee_agreements')
       .select('id, agreement_type, title, description, fixed_amount, rate, bill_to_party_kind, bill_to_case_client_id, bill_to_case_organization_id, effective_from, effective_to, is_active, created_at')
       .eq('case_id', caseId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')

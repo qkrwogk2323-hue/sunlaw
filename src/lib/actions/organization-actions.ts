@@ -61,7 +61,9 @@ const allowedOrganizationSignupDocumentMimeTypes = new Set(['application/pdf', '
 const allowedOrganizationSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg', 'jpeg']);
 
 function generateFourDigitPin() {
-  return `${Math.floor(1000 + Math.random() * 9000)}`;
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return `${1000 + (arr[0] % 9000)}`;
 }
 
 function pinExpiresAt() {
@@ -217,7 +219,10 @@ function sanitizeStorageFileName(fileName: string) {
 
 function buildOrganizationSignupDocumentPath(requesterProfileId: string, fileName: string) {
   const safeName = sanitizeStorageFileName(fileName);
-  return `requester/${requesterProfileId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+  const arr = new Uint8Array(4);
+  crypto.getRandomValues(arr);
+  const rand = Array.from(arr, b => b.toString(16).padStart(2, '0')).join('').slice(0, 8);
+  return `requester/${requesterProfileId}/${Date.now()}-${rand}-${safeName}`;
 }
 
 function detectOrganizationSignupDocumentType(fileBytes: Uint8Array): OrganizationSignupDocumentMimeType | null {
@@ -403,7 +408,10 @@ async function verifyOrganizationSignupDocument(
 
 function buildOrganizationSlug(name: string) {
   const base = makeSlug(name) || 'org';
-  return `${base}-${Math.random().toString(36).slice(2, 6)}`;
+  const arr = new Uint8Array(2);
+  crypto.getRandomValues(arr);
+  const rand = Array.from(arr, b => b.toString(36)).join('').slice(0, 4);
+  return `${base}-${rand}`;
 }
 
 async function findOrganizationForSignupRequest(requestId: string) {
@@ -594,7 +602,9 @@ const staffPreRegisterInvitationSchema = z.object({
 
 function randomAlphaNumeric(length: number) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => chars[b % chars.length]).join('');
 }
 
 async function generateUniqueTempLoginId(admin: ReturnType<typeof createSupabaseAdminClient>, organizationId: string) {

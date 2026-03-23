@@ -16,12 +16,14 @@ export async function getBillingHubSnapshot(organizationId?: string | null) {
   let entriesQuery = supabase
     .from('billing_entries')
     .select('id, title, amount, tax_amount, total_amount, status, due_on, paid_at, notes, entry_kind, created_at, case_id, bill_to_case_client_id, bill_to_case_organization_id, cases(title, reference_no)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(200);
 
   let agreementsQuery = supabase
     .from('fee_agreements')
     .select('id, title, agreement_type, fixed_amount, rate, effective_from, effective_to, is_active, description, terms_json, created_at, case_id, bill_to_case_client_id, bill_to_case_organization_id, cases(title, reference_no)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(120);
 

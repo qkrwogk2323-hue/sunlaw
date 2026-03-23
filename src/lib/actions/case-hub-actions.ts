@@ -7,7 +7,9 @@ import { grantHubPinAccess, hashHubPin, revokeHubPinAccess } from '@/lib/hub-acc
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 function generateFourDigitPin() {
-  return `${Math.floor(1000 + Math.random() * 9000)}`;
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return `${1000 + (arr[0] % 9000)}`;
 }
 
 function pinExpiresAt() {

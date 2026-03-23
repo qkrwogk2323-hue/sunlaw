@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
+import { getCurrentAuth, getEffectiveOrganizationId, isPlatformOperator, isManagementRole } from '@/lib/auth';
 import { listOrganizationActivityLog } from '@/lib/queries/audit';
 import { listOrganizationTableHistory } from '@/lib/queries/menu-history';
 
@@ -10,11 +10,25 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const organizationId = searchParams.get('organizationId') ?? getEffectiveOrganizationId(auth);
+  // Restrict organizationId to the caller's own organization unless platform admin.
+  const callerOrgId = getEffectiveOrganizationId(auth);
+  const requestedOrgId = searchParams.get('organizationId');
+  const organizationId = (isPlatformOperator(auth) ? (requestedOrgId ?? callerOrgId) : callerOrgId);
+
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '80', 10), 200);
   const mode = searchParams.get('mode') ?? 'activity';
 
   if (mode === 'change_log') {
+    // change_log contains raw DB diffs — restrict to org managers and platform admins only.
+    const membership = auth.memberships?.find(m => m.organization_id === organizationId);
+    const isOrgManager = membership && isManagementRole(membership.role);
+    if (!isPlatformOperator(auth) && !isOrgManager) {
+      return NextResponse.json(
+        { ok: false, code: 'FORBIDDEN', userMessage: '변경 기록은 관리자만 조회할 수 있습니다.' },
+        { status: 403 }
+      );
+    }
+
     const tables = searchParams.getAll('table').filter(Boolean);
     if (!organizationId) {
       return NextResponse.json({ ok: true, logs: [] });

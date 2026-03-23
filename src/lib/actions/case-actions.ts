@@ -897,15 +897,13 @@ export async function deleteDocumentAction(formData: FormData) {
     errorMessage: '문서를 삭제할 권한이 없습니다.'
   });
 
-  if (document.storage_path) {
-    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'case-files';
-    const { error: storageError } = await supabase.storage.from(bucket).remove([document.storage_path]);
-    if (storageError) {
-      throw storageError;
-    }
-  }
-
-  const { error: deleteError } = await supabase.from('case_documents').delete().eq('id', documentId);
+  // Soft delete: mark deleted_at instead of hard-deleting.
+  // Storage file removal is deferred (run as background cleanup) to avoid
+  // partial-failure where the file is gone but the DB row still shows the doc.
+  const { error: deleteError } = await supabase
+    .from('case_documents')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: auth.user.id, updated_by: auth.user.id })
+    .eq('id', documentId);
   if (deleteError) {
     throw deleteError;
   }
@@ -915,8 +913,8 @@ export async function deleteDocumentAction(formData: FormData) {
     organizationId: document.organization_id,
     resourceType: 'case_document',
     resourceId: document.id,
-    action: 'document.deleted',
-    meta: { case_id: document.case_id, title: document.title }
+    action: 'document.soft_deleted',
+    meta: { case_id: document.case_id, title: document.title, storage_path: document.storage_path }
   });
 
   if (document.case_id) {
@@ -1822,7 +1820,10 @@ export async function deleteBillingEntryAction(formData: FormData) {
   if (!entryId) throw new Error('삭제할 청구 항목을 찾을 수 없습니다.');
 
   const { supabase, auth, caseRecord, entry } = await loadBillingEntryForMutation(entryId);
-  const { error } = await supabase.from('billing_entries').delete().eq('id', entryId);
+  const { error } = await supabase
+    .from('billing_entries')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: auth.user.id, updated_by: auth.user.id })
+    .eq('id', entryId);
   if (error) throw error;
 
   await logCaseAudit({
@@ -2055,7 +2056,10 @@ export async function deleteFeeAgreementAction(formData: FormData) {
   if (!agreementId) throw new Error('삭제할 약정 항목을 찾을 수 없습니다.');
 
   const { supabase, auth, caseRecord, agreement } = await loadFeeAgreementForMutation(agreementId);
-  const { error } = await supabase.from('fee_agreements').delete().eq('id', agreementId);
+  const { error } = await supabase
+    .from('fee_agreements')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: auth.user.id, updated_by: auth.user.id })
+    .eq('id', agreementId);
   if (error) throw error;
 
   await logCaseAudit({
@@ -2610,11 +2614,20 @@ export async function moveCaseToDeletedAction(formData: FormData) {
   });
   const supabase = await createSupabaseServerClient();
 
+  // Read original status before overwriting so restoreCase can bring it back exactly.
+  const { data: currentCase } = await supabase
+    .from('cases')
+    .select('case_status')
+    .eq('id', caseId)
+    .eq('organization_id', organizationId)
+    .single();
+
   const { error } = await supabase
     .from('cases')
     .update({
       lifecycle_status: 'soft_deleted',
       case_status: 'archived',
+      original_case_status: currentCase?.case_status ?? null,
       updated_by: auth.user.id
     })
     .eq('id', caseId)
@@ -2641,11 +2654,21 @@ export async function restoreCaseAction(formData: FormData) {
   });
   const supabase = await createSupabaseServerClient();
 
+  // Read original_case_status to restore exact prior state.
+  const { data: deletedCase } = await supabase
+    .from('cases')
+    .select('original_case_status')
+    .eq('id', caseId)
+    .eq('organization_id', organizationId)
+    .eq('lifecycle_status', 'soft_deleted')
+    .single();
+
   const { error } = await supabase
     .from('cases')
     .update({
       lifecycle_status: 'active',
-      case_status: 'active',
+      case_status: deletedCase?.original_case_status ?? 'active',
+      original_case_status: null,
       updated_by: auth.user.id
     })
     .eq('id', caseId)
