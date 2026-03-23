@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getDefaultAppRoute, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
+import { getDefaultAppRoute, getEffectiveOrganizationId, hasActivePlatformAdminView, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { buildDashboardAiOverview } from '@/lib/ai/dashboard-home';
 import { DashboardHubClient } from '@/components/dashboard-hub-client';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
@@ -11,7 +11,7 @@ export default async function DashboardPage() {
     redirect(getDefaultAppRoute(auth, organizationId));
   }
   const data = await getDashboardSnapshot(organizationId);
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
+  const isPlatformAdmin = await hasActivePlatformAdminView(auth, organizationId);
   const currentMembership = auth.memberships.find((membership) => membership.organization_id === organizationId) ?? null;
   const roleLabel = isPlatformAdmin
     ? '플랫폼 관리자'
