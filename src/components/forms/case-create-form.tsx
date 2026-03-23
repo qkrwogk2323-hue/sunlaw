@@ -148,13 +148,6 @@ export function CaseCreateForm({
         </div>
         <div className="space-y-3">
           <Input
-            name="title"
-            value={fields.title}
-            onChange={(event) => setFields((prev) => ({ ...prev, title: event.target.value }))}
-            placeholder="사건명"
-            required
-          />
-          <Input
             name="clientName"
             value={fields.clientName}
             onChange={(event) => setFields((prev) => ({ ...prev, clientName: event.target.value }))}
@@ -171,6 +164,13 @@ export function CaseCreateForm({
             value={fields.courtName}
             onChange={(event) => setFields((prev) => ({ ...prev, courtName: event.target.value }))}
             placeholder="법원"
+          />
+          <Input
+            name="title"
+            value={fields.title}
+            onChange={(event) => setFields((prev) => ({ ...prev, title: event.target.value }))}
+            placeholder="사건명"
+            required
           />
         </div>
       </div>
