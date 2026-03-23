@@ -174,17 +174,15 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
 
           {canManageHub ? (
             <PremiumInfoPanel title="허브 비밀번호" description="협업 상태 조직과 대표 의뢰인만 허브에 들어오도록 4자리 비밀번호를 설정합니다.">
-              <form action={updateCaseHubPinAction} className="space-y-3">
+              <ClientActionForm action={updateCaseHubPinAction} successTitle="비밀번호가 저장되었습니다." className="space-y-3">
                 <input type="hidden" name="hubId" value={hub.id} />
                 <input type="hidden" name="organizationId" value={organizationId ?? ''} />
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="case-hub-pin">4자리 비밀번호</label>
                   <Input id="case-hub-pin" name="pin" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="비워두면 해제" />
                 </div>
-                <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl px-4' })}>
-                  비밀번호 저장
-                </button>
-              </form>
+                <SubmitButton variant="secondary" pendingLabel="저장 중...">비밀번호 저장</SubmitButton>
+              </ClientActionForm>
             </PremiumInfoPanel>
           ) : null}
         </aside>

@@ -4,6 +4,8 @@ import { ArrowLeft, Lock, LockOpen } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { buttonStyles } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCaseHubDetail } from '@/lib/queries/case-hubs';
 import { generateCaseHubPinAction, updateCaseHubPinAction } from '@/lib/actions/case-hub-actions';
@@ -67,30 +69,26 @@ export default async function CaseHubPinPage({
           </div>
           <p className="mt-2 text-sm text-slate-600">협업 상태 조직과 대표 의뢰인만 허브에 들어오고, 그 다음 4자리 PIN으로 한 번 더 확인합니다.</p>
 
-          <form action={generateCaseHubPinAction} className="mt-5">
+          <ClientActionForm action={generateCaseHubPinAction} successTitle="PIN이 자동 생성되었습니다." className="mt-5">
             <input type="hidden" name="hubId" value={hub.id} />
             <input type="hidden" name="organizationId" value={organizationId} />
-            <button type="submit" className={buttonStyles({ className: 'min-h-11 rounded-xl px-4 text-sm' })}>
-              PIN 자동 생성
-            </button>
-          </form>
+            <SubmitButton pendingLabel="생성 중...">PIN 자동 생성</SubmitButton>
+          </ClientActionForm>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">직접 저장 또는 잠금 해제</h2>
           <p className="mt-2 text-sm text-slate-600">4자리 숫자를 저장하면 새 PIN으로 바뀌고, 비워 두고 저장하면 잠금이 해제됩니다.</p>
 
-          <form action={updateCaseHubPinAction} className="mt-5 space-y-3">
+          <ClientActionForm action={updateCaseHubPinAction} successTitle="PIN 설정이 저장되었습니다." className="mt-5 space-y-3">
             <input type="hidden" name="hubId" value={hub.id} />
             <input type="hidden" name="organizationId" value={organizationId} />
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="case-hub-manage-pin">4자리 PIN</label>
               <Input id="case-hub-manage-pin" name="pin" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="비워두면 잠금 해제" />
             </div>
-            <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4 text-sm' })}>
-              저장
-            </button>
-          </form>
+            <SubmitButton variant="secondary" pendingLabel="저장 중...">저장</SubmitButton>
+          </ClientActionForm>
         </section>
       </div>
     </div>

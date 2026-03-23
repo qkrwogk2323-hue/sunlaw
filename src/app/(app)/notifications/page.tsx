@@ -3,7 +3,6 @@ import {
   markNotificationReadAction,
   markNotificationResolvedAction,
   moveNotificationToTrashAction,
-  restoreNotificationAction,
   updateNotificationChannelPreferenceAction
 } from '@/lib/actions/notification-actions';
 import { NotificationsArchiveButton } from '@/components/notifications-archive-button';
@@ -16,15 +15,12 @@ import { buttonStyles } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
-import { ImmediateDeleteForm } from '@/components/notifications/immediate-delete-form';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
-import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { formatNotificationDate } from '@/lib/format';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 
-type QueueEntityType = 'case' | 'schedule' | 'client' | 'collaboration';
 type NotificationCategoryKey = 'immediate' | 'confirm' | 'meeting' | 'other';
 
 function notificationOpenHref(notificationId: string, href: string, organizationId?: string | null) {

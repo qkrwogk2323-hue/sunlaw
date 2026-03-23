@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { getEffectiveOrganizationId, hasPlatformViewForOrganization, requireAuthenticatedUser } from '@/lib/auth';
+import { getOrganizationAdminMode } from '@/lib/organization-mode';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
-import { getOrganizationAdminMode } from '@/components/mode-switcher';
 
 export const dynamic = 'force-dynamic';
 

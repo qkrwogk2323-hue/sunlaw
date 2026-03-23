@@ -1465,7 +1465,7 @@ export function DashboardHubClient({
       {expandedNotifCard === 'meeting' && (
         <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-semibold text-violet-800">미팅알림 알림</p>
+            <p className="font-semibold text-violet-800">미팅알림</p>
             <Link href={'/notifications' as Route} className="text-xs text-violet-600 underline hover:text-violet-800">전체보기 →</Link>
           </div>
           <div className="space-y-2">
@@ -1484,7 +1484,7 @@ export function DashboardHubClient({
       {expandedNotifCard === 'other' && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-semibold text-slate-800">기타알림 알림</p>
+            <p className="font-semibold text-slate-800">기타알림</p>
             <Link href={'/notifications' as Route} className="text-xs text-slate-600 underline hover:text-slate-800">전체보기 →</Link>
           </div>
           <p className="py-4 text-center text-sm text-slate-500">알림센터에서 확인하세요.</p>

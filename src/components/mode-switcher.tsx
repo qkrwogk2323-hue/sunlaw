@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { Building2, ChevronDown, ChevronRight, MessageSquareText, UserCog } from 'lucide-react';
+import { getCurrentMode, getDefaultMode, getOrganizationAdminMode, type OrganizationKind } from '@/lib/organization-mode';
 import { segmentStyles } from '@/components/ui/button';
+
+export { getCurrentMode, getDefaultMode, getOrganizationAdminMode, type OrganizationKind } from '@/lib/organization-mode';
 
 const modeAccent = {
   law_admin: {
@@ -46,19 +49,6 @@ const baseModeOptions = [
 ] as const;
 
 export type ModeKey = (typeof baseModeOptions)[number]['key'];
-
-export type OrganizationKind = 'platform_management' | 'law_firm' | 'collection_company' | 'mixed_practice' | 'corporate_legal_team' | 'other' | null | undefined;
-
-export function getOrganizationAdminMode(kind: OrganizationKind) {
-  if (kind === 'law_firm' || kind === 'corporate_legal_team' || kind === 'mixed_practice') return 'law_admin';
-  if (kind === 'collection_company') return 'collection_admin';
-  return 'other_admin';
-}
-
-export function getDefaultMode(organizationKind?: OrganizationKind, isManager = false) {
-  if (isManager) return getOrganizationAdminMode(organizationKind);
-  return 'organization_staff';
-}
 
 export function ModeSwitcher({ mode, onChange }: { mode: ModeKey; onChange: (value: ModeKey) => void }) {
   const modeOptions = useMemo(
@@ -202,8 +192,4 @@ export function ModeSwitcher({ mode, onChange }: { mode: ModeKey; onChange: (val
       ) : null}
     </div>
   );
-}
-
-export function getCurrentMode(organizationKind?: OrganizationKind, isManager = false) {
-  return getDefaultMode(organizationKind, isManager);
 }

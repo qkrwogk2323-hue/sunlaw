@@ -1044,7 +1044,7 @@ function finalizeInvitationAcceptanceNavigation(kind: string) {
   revalidatePath('/cases');
 
   if (kind === 'staff_invite') {
-    redirect('/dashboard');
+    redirect('/settings/team');
   }
 
   redirect('/portal');

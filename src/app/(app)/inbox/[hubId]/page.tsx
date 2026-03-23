@@ -17,8 +17,9 @@ import { formatDateTime } from '@/lib/format';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
-import { buttonStyles } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ClientActionForm } from '@/components/ui/client-action-form';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { HubPinGateForm } from '@/components/forms/hub-pin-gate-form';
 import { updateCollaborationHubPinAction, verifyCollaborationHubPinAction } from '@/lib/actions/organization-actions';
 
@@ -278,7 +279,7 @@ export default async function CollaborationHubPage({
             </CardHeader>
             <CardContent>
               <p className="mb-3 text-sm text-slate-600">참여 조직만 이 허브를 열 수 있도록 4자리 비밀번호를 설정합니다. 비워두면 잠금이 해제됩니다.</p>
-              <form action={updateCollaborationHubPinAction} className="flex flex-wrap items-end gap-3">
+              <ClientActionForm action={updateCollaborationHubPinAction} successTitle="비밀번호가 저장되었습니다." className="flex flex-wrap items-end gap-3">
                 <input type="hidden" name="hubId" value={hub.id} />
                 <input type="hidden" name="organizationId" value={organizationId} />
                 <div className="min-w-[12rem] flex-1">
@@ -287,10 +288,8 @@ export default async function CollaborationHubPage({
                   </label>
                   <Input id="collaboration-hub-pin" name="pin" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="비워두면 해제" />
                 </div>
-                <button type="submit" className={buttonStyles({ variant: 'secondary', className: 'h-10 rounded-xl px-4' })}>
-                  비밀번호 저장
-                </button>
-              </form>
+                <SubmitButton variant="secondary" pendingLabel="저장 중..." className="h-10 rounded-xl px-4">비밀번호 저장</SubmitButton>
+              </ClientActionForm>
             </CardContent>
           </Card>
 
