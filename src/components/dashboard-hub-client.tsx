@@ -1243,6 +1243,18 @@ export function DashboardHubClient({
     return () => window.clearInterval(interval);
   }, []);
   useEffect(() => {
+    if (!archiveOpen && !activeAiDialog) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      if (archiveOpen) setArchiveOpen(false);
+      if (activeAiDialog) setActiveAiDialog(null);
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeAiDialog, archiveOpen]);
+  useEffect(() => {
     if (!messageCaseId && data.caseOptions.length) {
       setMessageCaseId(data.caseOptions[0].id);
     }
