@@ -11,6 +11,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     .from('case_documents')
     .select('id, storage_path')
     .eq('id', documentId)
+    .is('deleted_at', null)
     .maybeSingle();
 
   if (!document?.storage_path) {

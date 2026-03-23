@@ -2615,23 +2615,32 @@ export async function moveCaseToDeletedAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
 
   // Read original status before overwriting so restoreCase can bring it back exactly.
+  // Only proceed if the case is currently active (not already soft_deleted) to prevent
+  // original_case_status from being overwritten to 'archived' on duplicate calls.
   const { data: currentCase } = await supabase
     .from('cases')
     .select('case_status')
     .eq('id', caseId)
     .eq('organization_id', organizationId)
+    .neq('lifecycle_status', 'soft_deleted')
     .single();
+
+  if (!currentCase) {
+    // Already soft-deleted — ignore duplicate call
+    return;
+  }
 
   const { error } = await supabase
     .from('cases')
     .update({
       lifecycle_status: 'soft_deleted',
       case_status: 'archived',
-      original_case_status: currentCase?.case_status ?? null,
+      original_case_status: currentCase.case_status,
       updated_by: auth.user.id
     })
     .eq('id', caseId)
-    .eq('organization_id', organizationId);
+    .eq('organization_id', organizationId)
+    .neq('lifecycle_status', 'soft_deleted');
 
   if (error) throw error;
 

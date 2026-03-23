@@ -20,6 +20,7 @@ export async function getInboxSnapshot(organizationId?: string | null) {
     .from('case_documents')
     .select('id, title, approval_status, updated_at, case_id, cases(title)')
     .eq('approval_status', 'pending_review')
+    .is('deleted_at', null)
     .order('updated_at', { ascending: false })
     .limit(8);
 

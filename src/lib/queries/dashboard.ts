@@ -246,7 +246,8 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
   let pendingDocumentsQuery = supabase
     .from('case_documents')
     .select('*', { count: 'exact', head: true })
-    .eq('approval_status', 'pending_review');
+    .eq('approval_status', 'pending_review')
+    .is('deleted_at', null);
 
   let requestCountQuery = supabase
     .from('case_requests')
@@ -311,11 +312,13 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
   let pendingBillingCountQuery = supabase
     .from('billing_entries')
     .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .in('status', ['draft', 'issued', 'partial']);
 
   let upcomingBillingQuery = supabase
     .from('billing_entries')
     .select('id, title, amount, status, due_on, case_id, cases(title)')
+    .is('deleted_at', null)
     .in('status', ['draft', 'issued', 'partial'])
     .order('due_on', { ascending: true, nullsFirst: false })
     .limit(5);

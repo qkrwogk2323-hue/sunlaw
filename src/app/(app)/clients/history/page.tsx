@@ -4,8 +4,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
-import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { listOrganizationClientAccessRequests } from '@/lib/queries/client-access';
 import { listOrganizationTableHistory } from '@/lib/queries/menu-history';
@@ -48,7 +47,9 @@ export default async function ClientHistoryPage({
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
 
-  if (!organizationId || !hasPermission(auth, organizationId, 'user_manage')) {
+  // audit.change_log contains raw DB diffs — restrict to org managers and above only.
+  const membership = auth.memberships?.find(m => m.organization_id === organizationId);
+  if (!organizationId || !isManagementRole(membership?.role)) {
     return (
       <AccessDeniedBlock
         blocked="의뢰인 기록을 열 수 없습니다."

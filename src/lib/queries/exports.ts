@@ -55,11 +55,13 @@ export async function getBillingExportRows(caseId: string) {
       .from('fee_agreements')
       .select('title, agreement_type, fixed_amount, rate, effective_from, effective_to, is_active')
       .eq('case_id', caseId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }),
     supabase
       .from('billing_entries')
       .select('title, entry_kind, amount, tax_amount, total_amount, status, due_on, occurred_on, billable_on')
       .eq('case_id', caseId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')

@@ -7,11 +7,10 @@ import { generalSignupSchema } from '@/lib/validators';
 
 const SIGNUP_RATE_LIMIT_WINDOW_MS = 60_000;
 const SIGNUP_RATE_LIMIT_MAX = 5;
-const globalSignupAttempts = globalThis as typeof globalThis & {
-  __veinGeneralSignupAttempts?: Map<string, number[]>;
-};
-const signupAttempts = globalSignupAttempts.__veinGeneralSignupAttempts ?? new Map<string, number[]>();
-globalSignupAttempts.__veinGeneralSignupAttempts = signupAttempts;
+// Module-level Map: persists within a single serverless instance lifecycle.
+// Not distributed-safe across multiple instances, but removes the globalThis anti-pattern
+// and prevents single-instance abuse.
+const signupAttempts = new Map<string, number[]>();
 
 function isSignupRateLimited(identity: string): boolean {
   const now = Date.now();

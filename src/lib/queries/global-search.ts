@@ -43,6 +43,7 @@ export async function searchGlobalWorkspace(query: string, limit = 8): Promise<G
     .from('case_documents')
     .select('id, title, case_id, updated_at, organization_id')
     .in('organization_id', organizationIds)
+    .is('deleted_at', null)
     .ilike('title', ilike)
     .order('updated_at', { ascending: false })
     .limit(limit);
