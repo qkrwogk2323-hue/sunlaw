@@ -34,13 +34,13 @@ export default async function SupportCenterPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">고객센터</h1>
-        <p className="mt-2 text-sm text-slate-600">플랫폼 운영팀에 요청, 의견, 오류 신고를 남기고 현재 처리 상태를 확인합니다.</p>
+        <p className="mt-2 text-sm text-slate-600">서비스 운영팀에 요청, 의견, 오류 신고를 남기고 현재 처리 상태를 확인합니다.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="rounded-[1.6rem] border-sky-200 bg-[linear-gradient(180deg,#f8fbff,#eef6ff)]">
           <CardHeader>
-            <CardTitle>플랫폼에 요청 보내기</CardTitle>
+            <CardTitle>문의 남기기</CardTitle>
           </CardHeader>
           <CardContent>
             <PlatformSupportTicketForm />

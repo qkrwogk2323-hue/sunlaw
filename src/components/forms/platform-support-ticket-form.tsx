@@ -11,7 +11,7 @@ export function PlatformSupportTicketForm() {
     <ClientActionForm
       action={createPlatformSupportTicketAction}
       successTitle="고객센터 문의가 접수되었습니다."
-      successMessage="플랫폼 운영팀이 내용을 확인한 뒤 상태와 답변을 남깁니다."
+      successMessage="서비스 운영팀이 내용을 확인한 뒤 상태와 답변을 남깁니다."
       className="space-y-4"
     >
       <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
