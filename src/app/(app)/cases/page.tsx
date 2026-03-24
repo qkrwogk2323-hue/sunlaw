@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CaseCreateForm } from '@/components/forms/case-create-form';
 import { forceDeleteCaseAction, moveCaseToDeletedAction, restoreCaseAction } from '@/lib/actions/case-actions';
-import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { getCaseClientLinkedMap, listCases } from '@/lib/queries/cases';
+import { resolveOrganizationCasePolicies } from '@/lib/case-scope';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
@@ -67,6 +68,17 @@ export default async function CasesPage({
   const resolved = searchParams ? await searchParams : undefined;
   const bucket = parseBucket(resolved?.bucket);
   const queryFilter = `${resolved?.q ?? ''}`.trim().toLowerCase();
+
+  // Determine if this user is in restricted (assigned-cases-only) scope
+  const { restrictedOrganizationIds } = resolveOrganizationCasePolicies(auth, currentOrganizationId);
+  const isRestrictedScope = restrictedOrganizationIds.length > 0 && !auth.memberships.some(
+    (m) => m.organization_id === currentOrganizationId && isManagementRole(m.role)
+  );
+
+  // Current organization name for context display
+  const currentOrgName = auth.memberships.find(
+    (m) => m.organization_id === currentOrganizationId
+  )?.organization?.name ?? null;
 
   const [activeCases, completedCases, deletedCases] = await Promise.all([
     listCases(currentOrganizationId, { bucket: 'active' }),
@@ -267,7 +279,12 @@ export default async function CasesPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-              <span>사건목록</span>
+              <span>
+                사건목록
+                {currentOrgName ? (
+                  <span className="ml-2 text-sm font-normal text-slate-500">— {currentOrgName}</span>
+                ) : null}
+              </span>
               <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
                 <span>{BUCKET_META[bucket].helper}</span>
                 <Link
@@ -280,6 +297,15 @@ export default async function CasesPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {isRestrictedScope && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <span className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true">⚠️</span>
+                <span>
+                  현재 나에게 배정된 사건만 표시됩니다.
+                  {' '}전체 사건을 보려면 관리자에게 권한 변경을 요청하세요.
+                </span>
+              </div>
+            )}
             {filteredCases.length ? (
               <CollapsibleList
                 label="사건"

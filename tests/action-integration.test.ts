@@ -106,33 +106,16 @@ function expectRedirectError(error: unknown, href: string) {
 }
 
 function createCaseWriteClient(caseId = '44444444-4444-4444-8444-444444444444') {
-  const casesInsert = vi.fn((payload: Record<string, unknown>) => ({
-    select: vi.fn(() => ({
-      single: vi.fn(async () => ({ data: { id: caseId, payload }, error: null }))
-    }))
-  }));
-  const caseHandlersInsert = vi.fn(async () => ({ error: null }));
-  const caseOrganizationsInsert = vi.fn(async () => ({ error: null }));
+  const rpc = vi.fn(async () => ({ data: caseId, error: null }));
 
   return {
     client: {
       from: vi.fn((table: string) => {
-        if (table === 'cases') {
-          return { insert: casesInsert };
-        }
-        if (table === 'case_handlers') {
-          return { insert: caseHandlersInsert };
-        }
-        if (table === 'case_organizations') {
-          return { insert: caseOrganizationsInsert };
-        }
-
-        throw new Error(`Unexpected table: ${table}`);
-      })
+        throw new Error(`Unexpected table access in case create (should use RPC): ${table}`);
+      }),
+      rpc
     },
-    casesInsert,
-    caseHandlersInsert,
-    caseOrganizationsInsert,
+    rpc,
     caseId
   };
 }
@@ -219,15 +202,14 @@ describe('server action integration', () => {
       permission: 'case_create',
       errorMessage: '사건 생성 권한이 없습니다.'
     });
-    expect(writeClient.casesInsert).toHaveBeenCalledWith(expect.objectContaining({
-      organization_id: '22222222-2222-4222-8222-222222222222',
-      title: '신규 채권 회수',
-      case_type: 'debt_collection',
-      created_by: authContext.user.id,
-      updated_by: authContext.user.id
+    // Atomic RPC must be called with the correct organization and title
+    expect(writeClient.rpc).toHaveBeenCalledWith('create_case_atomic', expect.objectContaining({
+      p_organization_id: '22222222-2222-4222-8222-222222222222',
+      p_title: '신규 채권 회수',
+      p_case_type: 'debt_collection',
+      p_actor_id: authContext.user.id,
+      p_can_manage_collection: true
     }));
-    expect(writeClient.caseHandlersInsert).toHaveBeenCalled();
-    expect(writeClient.caseOrganizationsInsert).toHaveBeenCalled();
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/cases');
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard');
   });

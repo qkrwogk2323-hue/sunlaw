@@ -370,77 +370,35 @@ async function createCaseCoreWrite({
         : 'general-default';
   const moduleFlags = caseType === 'debt_collection' ? { billing: true, collection: true } : { billing: true };
 
-  const { data: caseRecord, error } = await supabase
-    .from('cases')
-    .insert({
-      organization_id: organizationId,
-      reference_no: referenceNo,
-      title,
-      case_type: caseType,
-      case_status: 'intake',
-      stage_template_key: stageTemplateKey,
-      stage_key: 'intake',
-      module_flags: moduleFlags,
-      principal_amount: principalAmount,
-      opened_on: openedOn || null,
-      court_name: courtName || null,
-      case_number: caseNumber || null,
-      summary: summary || null,
-      created_by: actorId,
-      updated_by: actorId
-    })
-    .select('id')
-    .single();
+  // All three inserts (cases, case_handlers, case_organizations) run inside a single
+  // DB transaction via the create_case_atomic RPC. If any insert fails the whole
+  // transaction is rolled back — no partial rows, no compensating-delete needed.
+  const { data: caseId, error } = await supabase.rpc('create_case_atomic', {
+    p_organization_id: organizationId,
+    p_reference_no: referenceNo,
+    p_title: title,
+    p_case_type: caseType,
+    p_stage_template_key: stageTemplateKey,
+    p_stage_key: 'intake',
+    p_module_flags: moduleFlags,
+    p_principal_amount: principalAmount,
+    p_opened_on: openedOn ?? null,
+    p_court_name: courtName ?? null,
+    p_case_number: caseNumber ?? null,
+    p_summary: summary ?? null,
+    p_actor_id: actorId,
+    p_actor_name: actorName ?? null,
+    p_can_manage_collection: caseType === 'debt_collection'
+  });
 
-  if (error || !caseRecord) {
+  if (error || !caseId) {
     throw error ?? new Error('사건 생성에 실패했습니다.');
   }
 
-  try {
-    const { error: handlerError } = await supabase.from('case_handlers').insert({
-      organization_id: organizationId,
-      case_id: caseRecord.id,
-      profile_id: actorId,
-      handler_name: actorName,
-      role: 'case_manager'
-    });
-
-    if (handlerError) {
-      throw handlerError;
-    }
-
-    const { error: caseOrgError } = await supabase.from('case_organizations').insert({
-      organization_id: organizationId,
-      case_id: caseRecord.id,
-      role: 'managing_org',
-      status: 'active',
-      access_scope: 'full',
-      billing_scope: 'direct_client_billing',
-      communication_scope: 'client_visible',
-      is_lead: true,
-      can_submit_legal_requests: true,
-      can_receive_legal_requests: true,
-      can_manage_collection: caseType === 'debt_collection',
-      can_view_client_messages: true,
-      created_by: actorId,
-      updated_by: actorId
-    });
-
-    if (caseOrgError) {
-      throw caseOrgError;
-    }
-
-    return {
-      caseId: caseRecord.id,
-      moduleFlags
-    };
-  } catch (writeError) {
-    // Compensating delete: remove rows created in this failed request so a partial case does not remain.
-    await supabase.from('case_handlers').delete().eq('case_id', caseRecord.id);
-    await supabase.from('case_organizations').delete().eq('case_id', caseRecord.id);
-    await supabase.from('cases').delete().eq('id', caseRecord.id);
-    throw writeError;
-  }
+  return {
+    caseId: caseId as string,
+    moduleFlags
+  };
 }
 
 async function runCreateCasePostProcessing({
