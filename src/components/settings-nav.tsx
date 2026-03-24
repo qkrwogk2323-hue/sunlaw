@@ -1,13 +1,14 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 
-const items: { href: Route; label: string }[] = [
+const items: { href: Route; label: string; platformOnly?: boolean }[] = [
   { href: '/settings', label: '개요' },
   { href: '/settings/team', label: '구성원 관리' },
   { href: '/settings/organization', label: '조직 설정' },
-  { href: '/settings/subscription' as Route, label: '구독 관리' },
   { href: '/settings/content', label: '문구 관리' },
-  { href: '/settings/features', label: '기능 설정' }
+  // 아래 두 항목은 플랫폼 관리자 전용 (일반 조직 메뉴에 노출 금지)
+  { href: '/settings/subscription' as Route, label: '구독 관리', platformOnly: true },
+  { href: '/settings/features', label: '기능 설정', platformOnly: true }
 ];
 
 export function SettingsNav({
@@ -17,7 +18,7 @@ export function SettingsNav({
   currentPath: string;
   canViewPlatformControls?: boolean;
 }) {
-  const visibleItems = items.filter((item) => canViewPlatformControls || item.href !== '/settings/features');
+  const visibleItems = items.filter((item) => !item.platformOnly || canViewPlatformControls);
 
   return (
     <div className="flex flex-wrap gap-2">

@@ -2044,7 +2044,7 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
   }
 
   revalidatePath('/settings/team');
-  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}`);
+  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}&issuedTempPassword=${encodeURIComponent(tempPassword)}`);
 }
 
 // 의뢰인 직접 초대를 생성한다.

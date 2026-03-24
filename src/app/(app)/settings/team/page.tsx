@@ -33,7 +33,7 @@ function toneByStatus(value: string) {
 export default async function TeamSettingsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; staffInviteBatch?: string; staffInviteFailed?: string }>;
+  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; issuedTempPassword?: string; staffInviteBatch?: string; staffInviteFailed?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -48,6 +48,7 @@ export default async function TeamSettingsPage({
   const canManage = isWorkspaceAdmin(currentMembership) && hasPermission(auth, organizationId, 'user_manage');
   const inviteToken = resolvedSearchParams?.invite;
   const issuedLoginId = resolvedSearchParams?.issuedLoginId;
+  const issuedTempPassword = resolvedSearchParams?.issuedTempPassword ?? null;
   const staffInviteSummaryRaw = cookieStore.get('_vs_staff_invite_summary')?.value ?? null;
   const selectedMemberId = resolvedSearchParams?.member ?? null;
   const staffInviteSummary = (() => {
@@ -203,9 +204,21 @@ export default async function TeamSettingsPage({
       ) : null}
 
       {issuedLoginId ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          임시 계정 발급 완료: 아이디 <code className="font-mono">{issuedLoginId}</code>
-          <p className="mt-1 text-xs text-amber-700">보안을 위해 임시 비밀번호는 화면에 표시되지 않습니다. 직원은 첫 로그인 직후 비밀번호 변경 화면으로 이동합니다.</p>
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <p className="font-semibold">✅ 임시 계정 발급 완료 — 아래 정보를 직원에게 즉시 전달하세요.</p>
+          <div className="mt-3 grid gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 font-mono text-sm">
+            <div className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-xs font-semibold text-green-700">아이디</span>
+              <code className="flex-1 rounded bg-green-100 px-2 py-0.5 text-green-900">{issuedLoginId}</code>
+            </div>
+            {issuedTempPassword ? (
+              <div className="flex items-center gap-3">
+                <span className="w-20 shrink-0 text-xs font-semibold text-green-700">임시 비밀번호</span>
+                <code className="flex-1 rounded bg-green-100 px-2 py-0.5 text-green-900">{issuedTempPassword}</code>
+              </div>
+            ) : null}
+          </div>
+          <p className="mt-2 text-xs text-green-700">⚠️ 이 정보는 이 화면을 벗어나면 다시 볼 수 없습니다. 직원이 첫 로그인 후 즉시 비밀번호를 변경하도록 안내해 주세요.</p>
         </div>
       ) : null}
 

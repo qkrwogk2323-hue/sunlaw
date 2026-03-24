@@ -3,15 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { SettingsNav } from '@/components/settings-nav';
-import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { updateOrganizationSubscriptionStateAction } from '@/lib/actions/billing-actions';
 import { getOrganizationSubscriptionSnapshot } from '@/lib/subscription-lock';
-import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { listAccessibleOrganizations } from '@/lib/queries/organizations';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
-import { buttonStyles } from '@/components/ui/button';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
+import { redirect } from 'next/navigation';
+import type { Route } from 'next';
 
 type SearchParams = Promise<{ locked?: string; org?: string }>;
 
@@ -39,24 +39,17 @@ export default async function SubscriptionSettingsPage({
 }) {
   const auth = await requireAuthenticatedUser();
   const defaultOrganizationId = getEffectiveOrganizationId(auth);
+  const canViewPlatformControls = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
 
-  if (!defaultOrganizationId && !isPlatformOperator(auth)) {
-    return (
-      <AccessDeniedBlock
-        blocked="구독 관리 화면 접근이 차단되었습니다."
-        cause="현재 계정에 접근 가능한 조직 컨텍스트가 없습니다."
-        resolution="조직 전환 후 다시 시도해 주세요."
-      />
-    );
+  // 플랫폼 관리자 전용 페이지 — 일반 조직 사용자는 조직설정 개요로 이동
+  if (!canViewPlatformControls) {
+    redirect('/settings' as Route);
   }
 
   const resolved = searchParams ? await searchParams : undefined;
-  const canViewPlatformControls = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
-  const organizationOptions = canViewPlatformControls ? await listAccessibleOrganizations({ includeAll: true }) : [];
-  const selectedOrganizationId = canViewPlatformControls
-    ? (`${resolved?.org ?? ''}`.trim() || defaultOrganizationId)
-    : defaultOrganizationId;
-  const canAdjustSubscription = Boolean(canViewPlatformControls && selectedOrganizationId);
+  const organizationOptions = await listAccessibleOrganizations({ includeAll: true });
+  const selectedOrganizationId = `${resolved?.org ?? ''}`.trim() || defaultOrganizationId;
+  const canAdjustSubscription = Boolean(selectedOrganizationId);
   const subscriptionSnapshot = await getOrganizationSubscriptionSnapshot(selectedOrganizationId);
   const settingsAdminData = selectedOrganizationId ? await getSettingsAdminData(selectedOrganizationId) : null;
   const subscriptionLogs = (settingsAdminData?.changeLogs ?? []).filter((row: any) => row.target_type === 'organization_subscription_state').slice(0, 8);
@@ -69,9 +62,9 @@ export default async function SubscriptionSettingsPage({
         <p className="mt-2 text-sm text-slate-600">우리 조직의 플랫폼 이용 상태와 갱신 일정을 확인합니다. 의뢰인 청구·분납 현황은 조직 메뉴의 비용 관리에서 확인합니다.</p>
       </div>
 
-      <SettingsNav currentPath="/settings/subscription" canViewPlatformControls={canViewPlatformControls} />
+      <SettingsNav currentPath="/settings/subscription" canViewPlatformControls={true} />
 
-      {canViewPlatformControls && organizationOptions.length ? (
+      {organizationOptions.length ? (
         <CollapsibleSettingsSection
           title="조직별 구독 권한 조정"
           description="대상 조직을 고르거나 구독 상태를 바꿀 때만 열어서 사용합니다."
