@@ -95,7 +95,7 @@ export default async function MarketingPage({
   }
 
   const auth = await getCurrentAuth();
-  const startHref = (auth ? getDefaultAppRoute(auth) : '/demo') as Route;
+  const startHref = (auth ? getDefaultAppRoute(auth) : '/start') as Route;
   const organizationId = auth ? getEffectiveOrganizationId(auth) : null;
   const isPlatformView = auth ? isPlatformOperator(auth) : false;
   let dashboard = auth && !isPlatformView ? emptyDashboardSnapshot : null;
@@ -121,17 +121,31 @@ export default async function MarketingPage({
         <div className="relative z-10 flex flex-col items-center gap-8 text-center">
           <BrandBanner href={'/' as Route} className="mx-auto w-full max-w-7xl" theme="dark" />
           <div className="grid w-full max-w-7xl gap-4 lg:grid-cols-[1.32fr_1fr] lg:items-center">
-            <Link
-              href={startHref}
-              className={buttonStyles({
-                size: 'lg',
-                className:
-                  'h-20 w-full rounded-[1.7rem] px-10 text-2xl font-extrabold tracking-[-0.02em] bg-[linear-gradient(135deg,#b45309_0%,#d97706_18%,#f59e0b_54%,#facc15_100%)] text-slate-950 shadow-[0_24px_54px_rgba(217,119,6,0.42)] hover:bg-[linear-gradient(135deg,#92400e_0%,#b45309_22%,#d97706_58%,#eab308_100%)]'
-              })}
-            >
-              시작하기
-              <ArrowRight className="ml-3 size-6" />
-            </Link>
+            <div className="grid gap-3">
+              <Link
+                href={startHref}
+                className={buttonStyles({
+                  size: 'lg',
+                  className:
+                    'h-20 w-full rounded-[1.7rem] px-10 text-2xl font-extrabold tracking-[-0.02em] bg-[linear-gradient(135deg,#b45309_0%,#d97706_18%,#f59e0b_54%,#facc15_100%)] text-slate-950 shadow-[0_24px_54px_rgba(217,119,6,0.42)] hover:bg-[linear-gradient(135deg,#92400e_0%,#b45309_22%,#d97706_58%,#eab308_100%)]'
+                })}
+              >
+                시작하기
+                <ArrowRight className="ml-3 size-6" />
+              </Link>
+              {!auth ? (
+                <Link
+                  href={'/demo' as Route}
+                  className={buttonStyles({
+                    variant: 'secondary',
+                    className:
+                      'min-h-12 rounded-[1.2rem] border border-white/14 bg-white/10 px-5 text-base font-semibold text-white backdrop-blur-sm hover:bg-white/14'
+                  })}
+                >
+                  데모 보기
+                </Link>
+              ) : null}
+            </div>
 
             {auth ? (
               <div className="grid h-20 w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-[1.7rem] border border-white/12 bg-white/10 px-5 text-center backdrop-blur-sm">
