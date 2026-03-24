@@ -18,17 +18,18 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const organizationId = String(body.organizationId || '');
-  const caseId = String(body.caseId || '');
+  // caseId는 선택 사항 — null이면 사건과 무관한 조직 내부 메시지로 저장
+  const caseId = body.caseId ? String(body.caseId) : null;
   const content = String(body.content || '').trim();
   const recipientMembershipId = String(body.recipientMembershipId || '');
   const targetType = ['org', 'client', 'partner'].includes(String(body.targetType || '')) ? String(body.targetType) : 'org';
   const isInternal = true;
 
-  if (!organizationId || !caseId || !content) {
+  if (!organizationId || !content) {
     return guardValidationFailedResponse(400, {
       blocked: '업무소통 전송이 차단되었습니다.',
-      cause: 'organizationId, caseId, content 중 필수 값이 누락되었습니다.',
-      resolution: '조직/사건/메시지 내용을 확인한 뒤 다시 전송해 주세요.'
+      cause: 'organizationId 또는 content가 누락되었습니다.',
+      resolution: '조직/메시지 내용을 확인한 뒤 다시 전송해 주세요.'
     });
   }
 
@@ -51,25 +52,31 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: caseRow, error: caseError } = await supabase
-    .from('cases')
-    .select('id, organization_id, title')
-    .eq('id', caseId)
-    .eq('organization_id', organizationId)
-    .maybeSingle();
 
-  if (caseError || !caseRow) {
-    return guardConditionFailedResponse(404, {
-      blocked: '업무소통 전송이 차단되었습니다.',
-      cause: caseError?.message || '요청한 사건을 찾을 수 없습니다.',
-      resolution: '유효한 사건을 다시 선택한 뒤 전송해 주세요.'
-    });
+  // caseId가 있을 때만 사건 존재 여부를 검증한다.
+  let caseRow: { id: string; organization_id: string; title: string } | null = null;
+  if (caseId) {
+    const { data, error: caseError } = await supabase
+      .from('cases')
+      .select('id, organization_id, title')
+      .eq('id', caseId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (caseError || !data) {
+      return guardConditionFailedResponse(404, {
+        blocked: '업무소통 전송이 차단되었습니다.',
+        cause: caseError?.message || '요청한 사건을 찾을 수 없습니다.',
+        resolution: '유효한 사건을 다시 선택한 뒤 전송해 주세요.'
+      });
+    }
+    caseRow = data;
   }
 
   const senderRole = membership && isManagementRole(membership.role) ? 'admin' : 'staff';
   const { error: messageError } = await supabase.from('case_messages').insert({
     organization_id: organizationId,
-    case_id: caseId,
+    case_id: caseRow?.id ?? null,
     sender_profile_id: auth.user.id,
     sender_role: senderRole,
     body: content,
@@ -96,17 +103,18 @@ export async function POST(request: Request) {
     if (recipientRow?.profile_id && recipientRow.profile_id !== auth.user.id) {
       const recipientProfile = Array.isArray(recipientRow.profile) ? recipientRow.profile[0] : recipientRow.profile;
       const admin = createSupabaseAdminClient();
+      const destinationUrl = caseRow ? `/cases/${caseRow.id}` : '/dashboard';
       const { error: notificationError } = await admin.from('notifications').insert({
         organization_id: organizationId,
-        case_id: caseId,
+        case_id: caseRow?.id ?? null,
         recipient_profile_id: recipientRow.profile_id,
         kind: 'generic',
-        title: `조직간 업무소통: ${caseRow.title}`,
+        title: caseRow ? `조직간 업무소통: ${caseRow.title}` : '조직소통 메시지',
         body: content.slice(0, 160),
-        action_label: '사건 보기',
-        action_href: `/cases/${caseId}`,
+        action_label: caseRow ? '사건 보기' : '대시보드로 이동',
+        action_href: destinationUrl,
         destination_type: 'internal_route',
-        destination_url: `/cases/${caseId}`,
+        destination_url: destinationUrl,
         payload: {
           source: 'dashboard_message',
           sender_profile_id: auth.user.id,
@@ -123,7 +131,7 @@ export async function POST(request: Request) {
 
   revalidatePath('/dashboard');
   revalidatePath('/inbox');
-  revalidatePath(`/cases/${caseId}`);
+  if (caseRow) revalidatePath(`/cases/${caseRow.id}`);
 
   return NextResponse.json({ ok: true });
 }

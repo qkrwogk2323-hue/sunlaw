@@ -641,16 +641,8 @@ function useDashboardCommunicationState({
 
   const sendMessage = () => {
     if (!messageInput.trim()) return;
-    const resolvedCaseId = messageCaseId || data.caseOptions[0]?.id || '';
-    if (!resolvedCaseId) {
-      onError('전송 불가', { message: '연결된 사건이 없습니다. 먼저 사건을 생성한 뒤 사용해 주세요.' });
-      return;
-    }
-
-    if (!memberOptions.length) {
-      onError('전송 불가', { message: '다른 조직 구성원이 없습니다. 구성원을 초대한 뒤 사용해 주세요.' });
-      return;
-    }
+    // caseId는 선택 사항 — 연결 사건이 없어도 조직 내부 메시지로 전송 가능
+    const resolvedCaseId = messageCaseId || data.caseOptions[0]?.id || null;
 
     // 전체 공유 시 recipientMembershipId 없이 1회, 특정 대상 선택 시 해당 1명에게 1회
     const targetMembershipId = isOrganizationWideRoom ? '' : orgRecipientMembershipId;
@@ -1656,16 +1648,6 @@ export function DashboardHubClient({
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
-                  {data.caseOptions.length === 0 && (
-                    <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                      연결된 사건이 없어 전송할 수 없습니다. 먼저 사건을 생성해 주세요.
-                    </p>
-                  )}
-                  {data.caseOptions.length > 0 && memberOptions.length === 0 && (
-                    <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                      다른 조직 구성원이 없어 전송할 수 없습니다. 구성원을 초대한 뒤 사용해 주세요.
-                    </p>
-                  )}
                   <div className="flex items-end gap-3">
                     <Textarea
                       id="organization-message-input"
@@ -1673,16 +1655,10 @@ export function DashboardHubClient({
                       onChange={(event) => setMessageInput(event.target.value)}
                       placeholder="조직소통 대화방에 메시지를 입력하세요."
                       className="min-h-24 flex-1"
-                      disabled={!data.caseOptions.length || !memberOptions.length}
                     />
                     <Button
                       onClick={sendMessage}
-                      disabled={
-                        messagePending
-                        || !messageInput.trim()
-                        || !data.caseOptions.length
-                        || !memberOptions.length
-                      }
+                      disabled={messagePending || !messageInput.trim()}
                       className="min-h-24 rounded-2xl px-5"
                     >
                       {messagePending ? '전송 중...' : '대화 보내기'}
