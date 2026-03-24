@@ -164,9 +164,8 @@ function getOrganizationSections({
       { href: '/billing', label: '비용 관리', icon: Receipt }
     );
   } else if (mode === 'other_admin') {
-    // 일반 협업 조직 — 법률 내부 운영 메뉴 제외
+    // 일반 협업 조직 — 법률 내부 운영 메뉴 제외. 협업은 collaborationItems에 별도 표시
     organizationItems.push(
-      { href: '/inbox', label: '협업 메시지', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 },
       { href: '/documents', label: '문서 수신', icon: FileText },
       { href: '/billing', label: '비용 확인', icon: Receipt }
     );
@@ -182,8 +181,8 @@ function getOrganizationSections({
         { href: '/billing', label: '비용 관리', icon: Receipt }
       );
     } else if (staffOrgKind === 'other') {
+      // 일반 협업 조직 직원 — 협업은 collaborationItems에 표시
       organizationItems.push(
-        { href: '/inbox', label: '협업 메시지', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 },
         { href: '/documents', label: '문서 수신', icon: FileText },
         { href: '/billing', label: '비용 확인', icon: Receipt }
       );
@@ -197,15 +196,11 @@ function getOrganizationSections({
     }
   }
 
-  if (!isPlatformManagementOrganizationView && mode !== 'client_communication' && mode !== 'other_admin') {
-    // 사건허브는 법률/추심 조직만 — 일반 협업 조직은 업무 흐름이 다름
+  // 사건허브 + 조직 협업: 법률/추심/일반 조직 모두 — 협업이 이 제품의 핵심 아이덴티티
+  // 의뢰인(client_communication)과 플랫폼 운영 콘솔만 제외
+  if (!isPlatformManagementOrganizationView && mode !== 'client_communication') {
     collaborationItems.push(
-      { href: '/case-hubs', label: '사건허브', icon: Network }
-    );
-  }
-  if (!isPlatformManagementOrganizationView && mode !== 'client_communication' && mode !== 'other_admin') {
-    // 법률/추심 조직의 조직 협업 (일반 조직은 organizationItems에 포함)
-    collaborationItems.push(
+      { href: '/case-hubs', label: '사건허브', icon: Network },
       { href: '/inbox', label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
     );
   }
