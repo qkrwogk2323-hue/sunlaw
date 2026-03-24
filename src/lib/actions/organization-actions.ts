@@ -4191,9 +4191,11 @@ export async function revokeStaffTempCredentialAction(formData: FormData) {
   const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 임시 계정을 폐기할 수 있습니다.');
 
   const admin = createSupabaseAdminClient();
+  const revokedAt = new Date().toISOString();
+  // soft revoke: delete 대신 credential_status 업데이트로 이력 보존
   const { error } = await admin
     .from('organization_staff_temp_credentials')
-    .delete()
+    .update({ credential_status: 'revoked', revoked_at: revokedAt, revoked_by: auth.user.id })
     .eq('profile_id', profileId)
     .eq('organization_id', organizationId);
   if (error) throw new Error(`임시 계정 폐기에 실패했습니다: ${error.message}`);
@@ -4206,7 +4208,7 @@ export async function revokeStaffTempCredentialAction(formData: FormData) {
     resource_id: profileId,
     organization_id: organizationId,
     actor_id: auth.user.id,
-    meta: { target_profile_id: profileId }
+    meta: { target_profile_id: profileId, revoked_at: revokedAt }
   });
 
   revalidatePath('/settings/team');
@@ -4220,9 +4222,10 @@ export async function revokeClientTempCredentialAction(formData: FormData) {
   const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인 임시 계정을 폐기할 수 있습니다.');
 
   const admin = createSupabaseAdminClient();
+  const revokedAt = new Date().toISOString();
   const { error } = await admin
     .from('client_temp_credentials')
-    .delete()
+    .update({ credential_status: 'revoked', revoked_at: revokedAt, revoked_by: auth.user.id })
     .eq('profile_id', profileId)
     .eq('organization_id', organizationId);
   if (error) throw new Error(`의뢰인 임시 계정 폐기에 실패했습니다: ${error.message}`);
@@ -4235,7 +4238,7 @@ export async function revokeClientTempCredentialAction(formData: FormData) {
     resource_id: profileId,
     organization_id: organizationId,
     actor_id: auth.user.id,
-    meta: { target_profile_id: profileId }
+    meta: { target_profile_id: profileId, revoked_at: revokedAt }
   });
 
   revalidatePath('/clients');

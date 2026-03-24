@@ -54,6 +54,7 @@ export default async function ClientsPage({
   const queryFilter = `${resolvedSearchParams?.q ?? ''}`.trim().toLowerCase();
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
   const issuedClientTempPassword = cookieStore.get('_vs_issued_pw')?.value ?? null;
+  if (issuedClientTempPassword) cookieStore.delete('_vs_issued_pw');
   const clientInviteSummaryRaw = cookieStore.get('_vs_client_invite_summary')?.value ?? null;
   const issuedOrgName = resolvedSearchParams?.issuedOrgName ?? (organizationId ? (auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? '현재 조직') : '현재 조직');
   const clientInviteSummary = (() => {

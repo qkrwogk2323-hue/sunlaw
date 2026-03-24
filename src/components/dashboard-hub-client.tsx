@@ -1132,6 +1132,8 @@ export function DashboardHubClient({
   const [workItems, setWorkItems] = useState<WorkItem[]>(data.recentWorkItems ?? []);
   const [workItemType, setWorkItemType] = useState<'message' | 'task' | 'request'>('message');
   const [workItemLinks, setWorkItemLinks] = useState<WorkItemLink[]>([]);
+  const [workItemDueAt, setWorkItemDueAt] = useState('');
+  const [workItemAssignee, setWorkItemAssignee] = useState('');
   const [workItemPending, startWorkItemTransition] = useTransition();
 
   const sendWorkItem = () => {
@@ -1152,6 +1154,8 @@ export function DashboardHubClient({
           organizationId,
           itemType: workItemType,
           content: messageInput,
+          dueAt: workItemDueAt || null,
+          assignedProfileId: workItemAssignee || null,
           links: workItemLinks.map((l) => ({ linkType: l.link_type, targetId: l.target_id, displayLabel: l.display_label }))
         })
       });
@@ -1163,17 +1167,19 @@ export function DashboardHubClient({
           body: messageInput.trim(),
           status: 'open',
           priority: 'normal',
-          assigned_profile_id: null,
+          assigned_profile_id: workItemAssignee || null,
           created_by: currentUserId,
           completed_by: null,
           completed_at: null,
-          due_at: null,
+          due_at: workItemDueAt || null,
           created_at: new Date().toISOString(),
           links: [...workItemLinks]
         };
         setWorkItems((prev) => [newItem, ...prev]);
         setMessageInput('');
         setWorkItemLinks([]);
+        setWorkItemDueAt('');
+        setWorkItemAssignee('');
         router.refresh();
         toastSuccess(workItemType === 'task' ? '할 일이 등록되었습니다.' : '요청사항이 등록되었습니다.');
       } else {
@@ -1794,6 +1800,42 @@ export function DashboardHubClient({
                             ))}
                           </div>
                         </details>
+                      )}
+                    </div>
+                  )}
+                  {/* 기한 + 담당자 (task/request 전용) */}
+                  {workItemType !== 'message' && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <label htmlFor="work-item-due-at" className="text-xs text-slate-500 whitespace-nowrap">기한</label>
+                        <input
+                          id="work-item-due-at"
+                          type="datetime-local"
+                          value={workItemDueAt}
+                          onChange={(e) => setWorkItemDueAt(e.target.value)}
+                          className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
+                        />
+                      </div>
+                      {data.teamMembers.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <label htmlFor="work-item-assignee" className="text-xs text-slate-500 whitespace-nowrap">담당자</label>
+                          <select
+                            id="work-item-assignee"
+                            value={workItemAssignee}
+                            onChange={(e) => setWorkItemAssignee(e.target.value)}
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
+                          >
+                            <option value="">미지정</option>
+                            {data.teamMembers.map((member) => {
+                              const profile = profileRecord(member.profile);
+                              const profileId = profile?.id ?? member.id;
+                              const name = profile?.full_name ?? profile?.email ?? '(이름 없음)';
+                              return (
+                                <option key={profileId} value={profileId}>{name}</option>
+                              );
+                            })}
+                          </select>
+                        </div>
                       )}
                     </div>
                   )}

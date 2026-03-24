@@ -48,7 +48,7 @@ export default async function TeamSettingsPage({
   const supabase = await createSupabaseServerClient();
   const { data: staffTempCreds } = await supabase
     .from('organization_staff_temp_credentials')
-    .select('profile_id, login_id, created_at, must_change_password, profile:profiles(full_name, email)')
+    .select('profile_id, login_id, created_at, must_change_password, credential_status, revoked_at, profile:profiles(full_name, email)')
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false })
     .limit(20);
@@ -269,30 +269,43 @@ export default async function TeamSettingsPage({
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <p className="mb-3 text-sm font-semibold text-slate-900">발급된 임시 계정 목록</p>
                   <div className="space-y-2">
-                    {staffTempCreds.map((cred: any) => (
-                      <div key={cred.profile_id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
-                        <div>
-                          <span className="font-medium text-slate-900">{(cred.profile as any)?.full_name ?? '이름 미입력'}</span>
-                          <span className="ml-2 font-mono text-xs text-slate-600">{cred.login_id}</span>
-                          <span className="ml-2 text-xs text-slate-400">{formatDateTime(cred.created_at)}</span>
+                    {staffTempCreds.map((cred: any) => {
+                      const credStatus: string = cred.credential_status ?? 'active';
+                      const isRevoked = credStatus === 'revoked' || credStatus === 'expired';
+                      return (
+                        <div key={cred.profile_id} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm ${isRevoked ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-slate-100 bg-slate-50'}`}>
+                          <div>
+                            <span className="font-medium text-slate-900">{(cred.profile as any)?.full_name ?? '이름 미입력'}</span>
+                            <span className="ml-2 font-mono text-xs text-slate-600">{cred.login_id}</span>
+                            <span className="ml-2 text-xs text-slate-400">{formatDateTime(cred.created_at)}</span>
+                            {isRevoked && cred.revoked_at ? (
+                              <span className="ml-2 text-xs text-red-400">폐기일 {formatDateTime(cred.revoked_at)}</span>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {credStatus === 'revoked' ? (
+                              <Badge tone="red">폐기됨</Badge>
+                            ) : credStatus === 'expired' ? (
+                              <Badge tone="slate">만료됨</Badge>
+                            ) : cred.must_change_password ? (
+                              <Badge tone="amber">비밀번호 변경 전</Badge>
+                            ) : (
+                              <Badge tone="green">활성</Badge>
+                            )}
+                            {!isRevoked ? (
+                              <DangerActionButton
+                                action={revokeStaffTempCredentialAction}
+                                fields={{ profileId: cred.profile_id, organizationId }}
+                                confirmTitle="임시 계정 폐기"
+                                highlightedInfo={`대상: ${(cred.profile as any)?.full_name ?? cred.login_id}`}
+                                confirmLabel="폐기"
+                                successTitle="임시 계정이 폐기되었습니다."
+                              >폐기</DangerActionButton>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {cred.must_change_password ? (
-                            <Badge tone="amber">비밀번호 변경 전</Badge>
-                          ) : (
-                            <Badge tone="green">초기 이행 완료</Badge>
-                          )}
-                          <DangerActionButton
-                            action={revokeStaffTempCredentialAction}
-                            fields={{ profileId: cred.profile_id, organizationId }}
-                            confirmTitle="임시 계정 폐기"
-                            highlightedInfo={`대상: ${(cred.profile as any)?.full_name ?? cred.login_id}`}
-                            confirmLabel="폐기"
-                            successTitle="임시 계정이 폐기되었습니다."
-                          >폐기</DangerActionButton>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}
