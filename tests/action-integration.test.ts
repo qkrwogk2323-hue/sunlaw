@@ -586,7 +586,7 @@ describe('server action integration', () => {
 
     const { requestDocumentReviewAction } = await import('@/lib/actions/case-actions');
 
-    await expect(requestDocumentReviewAction('doc-1')).rejects.toThrow('현재 상태에서는 결재를 다시 요청할 수 없습니다.');
+    await expect(requestDocumentReviewAction('doc-1')).rejects.toThrow('결재 요청이 차단되었습니다.');
   });
 
   it('creates collection compensation plans atomically through the RPC helper', async () => {

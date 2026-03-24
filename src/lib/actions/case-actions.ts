@@ -587,7 +587,13 @@ export async function linkClientAction(caseId: string, formData: FormData) {
 
   const needsFinancialManage = Boolean(parsed.feeAgreementTitle || (parsed.billingEntryTitle && parsed.billingEntryAmount != null));
   if (needsFinancialManage && !hasPermission(auth, caseRecord.organization_id, 'billing_manage')) {
-    throw new Error('비용 항목 또는 약정을 함께 등록하려면 청구/입금 관리 권한이 필요합니다.');
+    throwGuardFeedback({
+      type: 'access_denied',
+      code: 'BILLING_MANAGE_REQUIRED',
+      blocked: '비용 항목 또는 약정 등록이 차단되었습니다.',
+      cause: '비용 항목 또는 약정을 함께 등록하려면 청구/입금 관리 권한이 필요합니다.',
+      resolution: '조직 관리자에게 billing_manage 권한을 요청하거나, 비용·약정 없이 의뢰인만 등록해 주세요.'
+    });
   }
 
   const { data: linkedClientRows, error } = await supabase.rpc('link_case_client_atomic', {
@@ -941,7 +947,13 @@ export async function requestDocumentReviewAction(documentId: string) {
   });
 
   if (!['draft', 'stale'].includes(document.approval_status)) {
-    throw new Error('현재 상태에서는 결재를 다시 요청할 수 없습니다.');
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'DOCUMENT_APPROVAL_STATUS_INVALID',
+      blocked: '결재 요청이 차단되었습니다.',
+      cause: `현재 문서 상태(${document.approval_status})에서는 결재를 다시 요청할 수 없습니다.`,
+      resolution: '초안(draft) 또는 반려(stale) 상태의 문서만 결재 요청이 가능합니다.'
+    });
   }
 
   const now = new Date().toISOString();
@@ -1040,7 +1052,13 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
   });
 
   if (document.approval_status !== 'pending_review') {
-    throw new Error('대기 중인 결재 요청만 처리할 수 있습니다.');
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'DOCUMENT_NOT_PENDING_REVIEW',
+      blocked: '결재 처리가 차단되었습니다.',
+      cause: `문서가 결재 대기 상태가 아닙니다. (현재: ${document.approval_status})`,
+      resolution: '결재 대기(pending_review) 상태의 문서만 처리할 수 있습니다.'
+    });
   }
 
   const now = new Date().toISOString();
@@ -1251,7 +1269,13 @@ export async function updateScheduleCompletionAction(scheduleId: string, formDat
 
   const shouldComplete = `${formData.get('completed') ?? ''}` === 'true';
   if (shouldComplete && scheduleRow.canceled_at) {
-    throw new Error('취소된 일정은 완료 처리할 수 없습니다. 먼저 취소를 해제해 주세요.');
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'SCHEDULE_ALREADY_CANCELLED',
+      blocked: '일정 완료 처리가 차단되었습니다.',
+      cause: '취소된 일정은 완료 처리할 수 없습니다.',
+      resolution: '먼저 일정의 취소를 해제한 뒤 완료 처리해 주세요.'
+    });
   }
   const completedAt = shouldComplete ? new Date().toISOString() : null;
 
