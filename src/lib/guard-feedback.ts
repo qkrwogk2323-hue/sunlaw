@@ -14,9 +14,9 @@ export function createAccessDeniedFeedback(overrides?: Partial<GuardFeedback>): 
   return {
     type: 'access_denied',
     code: 'ACCESS_DENIED',
-    blocked: '플랫폼 관리자 전용 기능입니다.',
+    blocked: '이 기능에 대한 접근 권한이 없습니다.',
     cause: '현재 조직 또는 현재 계정 권한으로는 이 작업을 수행할 수 없습니다.',
-    resolution: '플랫폼 조직 관리자 권한으로 전환하거나, 권한 승인을 요청해 주세요.',
+    resolution: '권한을 가진 관리자에게 접근 승인을 요청해 주세요.',
     ...overrides
   };
 }
