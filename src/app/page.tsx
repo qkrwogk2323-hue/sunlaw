@@ -73,7 +73,8 @@ const emptyDashboardSnapshot: DashboardSnapshot = {
   teamMembers: [],
   clientContacts: [],
   partnerContacts: [],
-  organizationConversations: []
+  organizationConversations: [],
+  recentWorkItems: []
 };
 
 export default async function MarketingPage({

@@ -86,6 +86,13 @@ export const LOG_EVENTS = [
   { action: 'hub.left',                        importance: 'business', surface: 'collaboration', summary: '허브 이탈' },
   { action: 'case.shared',                     importance: 'critical', surface: 'collaboration', summary: '사건 공유' },
   { action: 'case.share_revoked',              importance: 'critical', surface: 'collaboration', summary: '사건 공유 해제' },
+
+  // 조직 업무 항목 (organization_work_items)
+  { action: 'work_item.created',               importance: 'business', surface: 'team',          summary: '업무 항목 생성' },
+  { action: 'work_item.assigned',              importance: 'critical', surface: 'team',          summary: '업무 항목 담당자 지정' },
+  { action: 'work_item.checked',               importance: 'business', surface: 'team',          summary: '업무 항목 완료 체크' },
+  { action: 'work_item.unchecked',             importance: 'business', surface: 'team',          summary: '업무 항목 완료 해제' },
+  { action: 'work_item.deleted',               importance: 'critical', surface: 'team',          summary: '업무 항목 삭제' },
 ] as const satisfies ReadonlyArray<{
   action: string;
   importance: LogImportance;

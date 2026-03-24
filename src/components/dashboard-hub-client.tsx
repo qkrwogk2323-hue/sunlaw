@@ -208,6 +208,29 @@ type CoordinationPlan = {
   checklist: CoordinationChecklistItem[];
 };
 
+type WorkItemLink = {
+  id: string;
+  link_type: string;
+  target_id: string;
+  display_label: string | null;
+};
+
+type WorkItem = {
+  id: string;
+  item_type: 'message' | 'task' | 'request' | 'instruction';
+  title: string | null;
+  body: string;
+  status: 'open' | 'in_progress' | 'done' | 'canceled';
+  priority: 'urgent' | 'normal' | 'low';
+  assigned_profile_id: string | null;
+  created_by: string;
+  completed_by: string | null;
+  completed_at: string | null;
+  due_at: string | null;
+  created_at: string;
+  links: WorkItemLink[];
+};
+
 type DashboardSnapshot = {
   activeCases: number;
   pendingDocuments: number;
@@ -229,6 +252,7 @@ type DashboardSnapshot = {
   clientContacts: ClientContact[];
   partnerContacts: PartnerContact[];
   organizationConversations: OrganizationConversationRoom[];
+  recentWorkItems: WorkItem[];
 };
 
 function isManagementRole(role?: string | null) {
@@ -1103,6 +1127,78 @@ export function DashboardHubClient({
   } = communication;
 
   const pendingClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'pending').length;
+
+  // 조직 업무 항목 로컬 상태 (서버 refetch 없이 낙관적 체크)
+  const [workItems, setWorkItems] = useState<WorkItem[]>(data.recentWorkItems ?? []);
+  const [workItemType, setWorkItemType] = useState<'message' | 'task' | 'request'>('message');
+  const [workItemLinks, setWorkItemLinks] = useState<WorkItemLink[]>([]);
+  const [workItemPending, startWorkItemTransition] = useTransition();
+
+  const sendWorkItem = () => {
+    if (!messageInput.trim()) return;
+    if (!organizationId) {
+      toastError('전송 불가', { message: '조직 정보가 없습니다. 페이지를 새로고침해 주세요.' });
+      return;
+    }
+    if (workItemType === 'message') {
+      sendMessage();
+      return;
+    }
+    startWorkItemTransition(async () => {
+      const response = await fetch('/api/dashboard/work-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          itemType: workItemType,
+          content: messageInput,
+          links: workItemLinks.map((l) => ({ linkType: l.link_type, targetId: l.target_id, displayLabel: l.display_label }))
+        })
+      });
+      if (response.ok) {
+        const newItem: WorkItem = {
+          id: `local-${Date.now()}`,
+          item_type: workItemType,
+          title: null,
+          body: messageInput.trim(),
+          status: 'open',
+          priority: 'normal',
+          assigned_profile_id: null,
+          created_by: currentUserId,
+          completed_by: null,
+          completed_at: null,
+          due_at: null,
+          created_at: new Date().toISOString(),
+          links: [...workItemLinks]
+        };
+        setWorkItems((prev) => [newItem, ...prev]);
+        setMessageInput('');
+        setWorkItemLinks([]);
+        router.refresh();
+        toastSuccess(workItemType === 'task' ? '할 일이 등록되었습니다.' : '요청사항이 등록되었습니다.');
+      } else {
+        toastError('등록 실패', { message: '잠시 후 다시 시도해 주세요.' });
+      }
+    });
+  };
+
+  const toggleWorkItemDone = (itemId: string, currentStatus: WorkItem['status']) => {
+    if (!organizationId) return;
+    const newStatus = currentStatus === 'done' ? 'open' : 'done';
+    setWorkItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: newStatus, completed_at: newStatus === 'done' ? new Date().toISOString() : null } : i));
+    fetch('/api/dashboard/work-items', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workItemId: itemId, status: newStatus, organizationId })
+    }).then((r) => { if (!r.ok) router.refresh(); });
+  };
+
+  const addCaseLinkChip = (caseId: string, caseTitle: string) => {
+    if (workItemLinks.some((l) => l.link_type === 'case' && l.target_id === caseId)) return;
+    setWorkItemLinks((prev) => [...prev, { id: `chip-${caseId}`, link_type: 'case', target_id: caseId, display_label: caseTitle }]);
+  };
+
+
   const approvedClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'approved').length;
   const requestByCaseId = new Map(
     data.recentRequests
@@ -1648,23 +1744,123 @@ export function DashboardHubClient({
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
+                  {/* 항목 유형 토글 */}
+                  <div className="mb-2 flex gap-1.5">
+                    {(['message', 'task', 'request'] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setWorkItemType(type)}
+                        className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${workItemType === type ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        aria-pressed={workItemType === type}
+                      >
+                        {type === 'message' ? '💬 메시지' : type === 'task' ? '☑️ 할 일' : '📋 요청사항'}
+                      </button>
+                    ))}
+                  </div>
+                  {/* 사건 태그 칩 (task/request 전용) */}
+                  {workItemType !== 'message' && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {workItemLinks.map((link) => (
+                        <span
+                          key={link.id}
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs text-blue-800"
+                        >
+                          {link.link_type === 'case' ? '사건' : link.link_type === 'client' ? '의뢰인' : '허브'}: {link.display_label ?? link.target_id.slice(0, 8)}
+                          <button
+                            type="button"
+                            onClick={() => setWorkItemLinks((prev) => prev.filter((l) => l.id !== link.id))}
+                            className="ml-0.5 text-blue-500 hover:text-blue-900"
+                            aria-label={`${link.display_label} 태그 제거`}
+                          >✕</button>
+                        </span>
+                      ))}
+                      {/* 사건 검색 드롭다운 */}
+                      {data.caseOptions.length > 0 && (
+                        <details className="relative">
+                          <summary className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-500 hover:text-slate-700">
+                            + 사건 연결
+                          </summary>
+                          <div className="absolute left-0 top-7 z-30 max-h-48 w-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
+                            {data.caseOptions.slice(0, 10).map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => { addCaseLinkChip(c.id, c.title ?? c.id.slice(0, 8)); }}
+                                className="w-full px-4 py-2.5 text-left text-xs text-slate-800 hover:bg-slate-50"
+                              >
+                                {c.title ?? '(제목 없음)'}
+                              </button>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-end gap-3">
                     <Textarea
                       id="organization-message-input"
                       value={messageInput}
                       onChange={(event) => setMessageInput(event.target.value)}
-                      placeholder="조직소통 대화방에 메시지를 입력하세요."
+                      placeholder={workItemType === 'message' ? '조직소통 대화방에 메시지를 입력하세요.' : workItemType === 'task' ? '할 일 내용을 입력하세요.' : '요청사항 내용을 입력하세요.'}
                       className="min-h-24 flex-1"
                     />
                     <Button
-                      onClick={sendMessage}
-                      disabled={messagePending || !messageInput.trim()}
+                      onClick={sendWorkItem}
+                      disabled={(workItemType === 'message' ? messagePending : workItemPending) || !messageInput.trim()}
                       className="min-h-24 rounded-2xl px-5"
                     >
-                      {messagePending ? '전송 중...' : '대화 보내기'}
+                      {(workItemType === 'message' ? messagePending : workItemPending) ? '처리 중...' : workItemType === 'message' ? '대화 보내기' : workItemType === 'task' ? '할 일 등록' : '요청 등록'}
                     </Button>
                   </div>
                 </div>
+
+                {/* 업무 항목 목록 (task/request/instruction) */}
+                {workItems.filter((i) => ['task', 'request', 'instruction'].includes(i.item_type) && i.status !== 'canceled').length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-slate-500">할 일 · 요청사항</p>
+                    {workItems
+                      .filter((i) => ['task', 'request', 'instruction'].includes(i.item_type) && i.status !== 'canceled')
+                      .slice(0, 8)
+                      .map((item) => (
+                        <label
+                          key={item.id}
+                          className={`flex cursor-pointer gap-3 rounded-2xl border px-4 py-3 transition ${item.status === 'done' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={item.status === 'done'}
+                            onChange={() => toggleWorkItemDone(item.id, item.status)}
+                            className="mt-0.5 size-4 accent-emerald-600"
+                            aria-label={`완료 체크: ${item.body.slice(0, 40)}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`text-sm font-medium ${item.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                                {item.body.slice(0, 120)}
+                              </span>
+                              <Badge tone={item.item_type === 'request' ? 'amber' : 'blue'}>
+                                {item.item_type === 'task' ? '할 일' : item.item_type === 'request' ? '요청' : '지시'}
+                              </Badge>
+                              {item.due_at && <span className="text-xs text-slate-500">{formatDate(item.due_at)}</span>}
+                            </div>
+                            {item.links.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {item.links.map((l) => (
+                                  <span key={l.id} className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700">
+                                    {l.link_type === 'case' ? '사건' : l.link_type === 'client' ? '의뢰인' : '허브'}: {l.display_label ?? l.target_id.slice(0, 8)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {item.status === 'done' && item.completed_at && (
+                              <p className="mt-0.5 text-xs text-emerald-600">완료 {formatDateTime(item.completed_at)}</p>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                  </div>
+                )}
 
                 {coordinationPreview ? (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">

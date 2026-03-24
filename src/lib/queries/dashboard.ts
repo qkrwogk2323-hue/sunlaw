@@ -160,6 +160,28 @@ export type DashboardSecondaryPanels = {
   clientContacts: DashboardClientContactItem[];
   partnerContacts: DashboardPartnerContactItem[];
   organizationConversations: never[];
+  recentWorkItems: DashboardWorkItem[];
+};
+
+export type DashboardWorkItem = {
+  id: string;
+  item_type: 'message' | 'task' | 'request' | 'instruction';
+  title: string | null;
+  body: string;
+  status: 'open' | 'in_progress' | 'done' | 'canceled';
+  priority: 'urgent' | 'normal' | 'low';
+  assigned_profile_id: string | null;
+  created_by: string;
+  completed_by: string | null;
+  completed_at: string | null;
+  due_at: string | null;
+  created_at: string;
+  links: Array<{
+    id: string;
+    link_type: string;
+    target_id: string;
+    display_label: string | null;
+  }>;
 };
 
 const getDashboardSections = cache(async (organizationId?: string | null) => {
@@ -190,7 +212,8 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
         teamMembers: [],
         clientContacts: [],
         partnerContacts: [],
-        organizationConversations: []
+        organizationConversations: [],
+        recentWorkItems: []
       }
     };
   }
@@ -223,7 +246,8 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
         teamMembers: [],
         clientContacts: [],
         partnerContacts: [],
-        organizationConversations: []
+        organizationConversations: [],
+        recentWorkItems: []
       }
     };
   }
@@ -511,8 +535,47 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     teamMembers: teamMembers ?? [],
     clientContacts,
     partnerContacts,
-    organizationConversations: []
+    organizationConversations: [],
+    recentWorkItems: []
   };
+
+  // 조직 업무 항목 최근 20개 조회 (open/in_progress 우선)
+  if (organizationId) {
+    const { data: workItemRows } = await supabase
+      .from('organization_work_items')
+      .select(`
+        id, item_type, title, body, status, priority,
+        assigned_profile_id, created_by, completed_by, completed_at, due_at, created_at,
+        organization_work_item_links(id, link_type, target_id, display_label)
+      `)
+      .eq('organization_id', organizationId)
+      .in('status', ['open', 'in_progress', 'done'])
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (workItemRows) {
+      secondary.recentWorkItems = workItemRows.map((row) => ({
+        id: row.id,
+        item_type: row.item_type as DashboardWorkItem['item_type'],
+        title: row.title ?? null,
+        body: row.body,
+        status: row.status as DashboardWorkItem['status'],
+        priority: row.priority as DashboardWorkItem['priority'],
+        assigned_profile_id: row.assigned_profile_id ?? null,
+        created_by: row.created_by,
+        completed_by: row.completed_by ?? null,
+        completed_at: row.completed_at ?? null,
+        due_at: row.due_at ?? null,
+        created_at: row.created_at,
+        links: (Array.isArray(row.organization_work_item_links) ? row.organization_work_item_links : []).map((l: { id: string; link_type: string; target_id: string; display_label: string | null }) => ({
+          id: l.id,
+          link_type: l.link_type,
+          target_id: l.target_id,
+          display_label: l.display_label,
+        })),
+      }));
+    }
+  }
 
   return {
     summary,
