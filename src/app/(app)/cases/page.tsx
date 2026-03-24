@@ -112,7 +112,7 @@ export default async function CasesPage({
 
   function renderCaseCard(item: any) {
     return (
-      <div key={item.id} className="vs-interactive rounded-xl border border-slate-200 bg-white/85 p-3 transition hover:border-slate-900">
+      <div key={item.id} className="vs-interactive rounded-xl border border-slate-200 bg-white/85 p-3 transition hover:border-slate-400">
         <Link href={`/cases/${item.id}`} className="block">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>

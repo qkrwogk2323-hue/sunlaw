@@ -15,7 +15,7 @@ function InboxCard({
   href?: string;
   children: React.ReactNode;
 }) {
-  const className = 'vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-slate-900';
+  const className = 'vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-slate-400';
 
   if (!href) {
     return <div className={className}>{children}</div>;

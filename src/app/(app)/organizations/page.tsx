@@ -94,7 +94,7 @@ export default async function OrganizationsPage({
                 const role = memberships.find((membership: any) => membership.organization_id === organization.id)?.role ?? 'accessible';
                 const isCurrentOrganization = organization.id === currentOrganizationId;
                 return (
-                  <Link key={organization.id} href={`/organizations/${organization.id}` as Route} className="block rounded-xl border border-slate-200 p-4 transition hover:border-slate-900 hover:bg-slate-50/70">
+                  <Link key={organization.id} href={`/organizations/${organization.id}` as Route} className="block rounded-xl border border-slate-200 p-4 transition hover:border-slate-400 hover:bg-slate-50/70">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">

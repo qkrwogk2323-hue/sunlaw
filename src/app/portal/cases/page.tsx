@@ -33,7 +33,7 @@ export default async function PortalCasesPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {cases.length ? cases.map((item: any) => (
-            <Link key={item.id} href={`/portal/cases/${item.case_id}`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-slate-900">
+            <Link key={item.id} href={`/portal/cases/${item.case_id}`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-900">{item.cases?.title ?? item.client_name}</p>

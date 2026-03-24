@@ -98,13 +98,13 @@ export default async function OrganizationSettingsPage({
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
-          <Link href="/settings/organization?section=intro" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'intro' ? 'border-slate-900 bg-slate-900 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
+          <Link href="/settings/organization?section=intro" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'intro' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             회사소개
           </Link>
-          <Link href="/settings/organization?section=info" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'info' ? 'border-slate-900 bg-slate-900 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
+          <Link href="/settings/organization?section=info" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'info' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             회사정보
           </Link>
-          <Link href="/settings/organization?section=env" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'env' ? 'border-slate-900 bg-slate-900 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
+          <Link href="/settings/organization?section=env" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'env' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             환경설정
           </Link>
         </div>
@@ -239,9 +239,11 @@ export default async function OrganizationSettingsPage({
           ) : null}
         </div>
       </div>
-      <CollapsibleSettingsSection
-        title="조직 탈퇴 신청"
-        description="조직 탈퇴는 플랫폼 관리자 승인 후 처리됩니다. 승인 전에는 상태가 유지됩니다."
+      {!isPlatformManagementOrganizationView ? (
+        <>
+          <CollapsibleSettingsSection
+            title="조직 탈퇴 신청"
+        description="조직 탈퇴 신청은 관리팀 검토 후 처리됩니다. 승인 전까지 조직 운영은 유지됩니다."
       >
         <div className="space-y-4 px-5 pb-5">
           {latestExitRequest ? (
@@ -259,12 +261,13 @@ export default async function OrganizationSettingsPage({
           <ClientActionForm
             action={createOrganizationExitRequestAction}
             successTitle="탈퇴 신청이 접수되었습니다."
-            successMessage="플랫폼 관리자 검토 후 처리됩니다. 승인 전까지 조직 운영은 유지됩니다."
+            successMessage="관리팀 검토 후 처리됩니다. 승인 전까지 조직 운영은 유지됩니다."
             errorTitle="탈퇴 신청에 실패했습니다."
             errorCause="이미 대기 중인 신청이 있거나 탈퇴 요청 저장에 실패했습니다."
             errorResolution="기존 신청 상태를 확인하거나 잠시 후 다시 시도해 주세요."
             className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4"
           >
+            <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
             <input type="hidden" name="organizationId" value={organizationId} />
             <div className="space-y-1">
               <label htmlFor="organization-exit-reason" className="text-sm font-medium text-slate-700">
@@ -279,7 +282,7 @@ export default async function OrganizationSettingsPage({
                 className="min-h-24 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
               />
             </div>
-            <SubmitButton variant="destructive" pendingLabel="신청 중...">플랫폼 관리자 승인 요청</SubmitButton>
+            <SubmitButton variant="destructive" pendingLabel="신청 중...">탈퇴 신청 접수</SubmitButton>
           </ClientActionForm>
         </div>
       </CollapsibleSettingsSection>
@@ -340,6 +343,8 @@ export default async function OrganizationSettingsPage({
           </ClientActionForm>
         </div>
       </CollapsibleSettingsSection>
+        </>
+      ) : null}
     </div>
   );
 }

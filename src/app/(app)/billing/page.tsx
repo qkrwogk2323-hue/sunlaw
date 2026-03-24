@@ -94,6 +94,7 @@ export default async function BillingPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">비용 관리</h1>
+          <p className="mt-1 text-sm text-slate-500">보수, 공과금, 분납약정, 미납 항목을 관리합니다. 의뢰인 계약·청구는 계약 관리에서 확인합니다.</p>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
           <Link href={'/billing/history' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
