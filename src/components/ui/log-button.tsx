@@ -42,6 +42,7 @@ function actionTone(action: string): 'green' | 'red' | 'amber' | 'blue' | 'slate
 export function LogButton({
   organizationId,
   mode = 'activity',
+  surface,
   tables = [],
   label = '로그',
   title = '활동 로그',
@@ -50,6 +51,8 @@ export function LogButton({
 }: {
   organizationId?: string;
   mode?: 'activity' | 'change_log';
+  /** 업무 도메인별 필터. 지정하면 해당 메뉴 관련 로그만 표시한다. */
+  surface?: 'team' | 'clients' | 'cases' | 'billing' | 'collaboration' | 'platform' | 'all';
   tables?: string[];
   label?: string;
   title?: string;
@@ -68,6 +71,7 @@ export function LogButton({
     try {
       const params = new URLSearchParams({ limit: String(limit), mode });
       if (organizationId) params.set('organizationId', organizationId);
+      if (surface) params.set('surface', surface);
       tables.forEach((table) => params.append('table', table));
       const res = await fetch(`/api/org-logs?${params.toString()}`);
       const json = await res.json();

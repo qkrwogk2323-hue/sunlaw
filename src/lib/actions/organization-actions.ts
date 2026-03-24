@@ -2043,6 +2043,17 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
     throw error;
   }
 
+  // 핵심 감사 로그: 직원 임시계정 발급
+  const supabaseForLog = await createSupabaseServerClient();
+  await supabaseForLog.from('audit_logs').insert({
+    action: 'staff_temp_credential.issued',
+    resource_type: 'organization_staff_temp_credentials',
+    resource_id: createdUserId,
+    organization_id: parsed.organizationId,
+    actor_id: auth.user.id,
+    meta: { login_id: loginId, target_name: parsed.name }
+  });
+
   revalidatePath('/settings/team');
   const cookieStore = await cookies();
   cookieStore.set('_vs_staff_issued_pw', tempPassword, {
@@ -2393,6 +2404,17 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
     await admin.auth.admin.deleteUser(createdUserId);
     throw error;
   }
+
+  // 핵심 감사 로그: 의뢰인 임시계정 발급
+  const supabaseForLog = await createSupabaseServerClient();
+  await supabaseForLog.from('audit_logs').insert({
+    action: 'client_temp_credential.issued',
+    resource_type: 'client_temp_credentials',
+    resource_id: createdUserId,
+    organization_id: parsed.organizationId,
+    actor_id: auth.user.id,
+    meta: { login_id: loginId, target_name: parsed.name }
+  });
 
   revalidatePath('/clients');
   const cookieStore = await cookies();
@@ -4166,7 +4188,7 @@ export async function revokeStaffTempCredentialAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   if (!profileId || !organizationId) throw new Error('필수 파라미터가 누락되었습니다.');
 
-  await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 임시 계정을 폐기할 수 있습니다.');
+  const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 임시 계정을 폐기할 수 있습니다.');
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin
@@ -4176,6 +4198,17 @@ export async function revokeStaffTempCredentialAction(formData: FormData) {
     .eq('organization_id', organizationId);
   if (error) throw new Error(`임시 계정 폐기에 실패했습니다: ${error.message}`);
 
+  // 핵심 감사 로그: 직원 임시계정 폐기
+  const supabase = await createSupabaseServerClient();
+  await supabase.from('audit_logs').insert({
+    action: 'staff_temp_credential.revoked',
+    resource_type: 'organization_staff_temp_credentials',
+    resource_id: profileId,
+    organization_id: organizationId,
+    actor_id: auth.user.id,
+    meta: { target_profile_id: profileId }
+  });
+
   revalidatePath('/settings/team');
 }
 
@@ -4184,7 +4217,7 @@ export async function revokeClientTempCredentialAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   if (!profileId || !organizationId) throw new Error('필수 파라미터가 누락되었습니다.');
 
-  await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인 임시 계정을 폐기할 수 있습니다.');
+  const { auth } = await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인 임시 계정을 폐기할 수 있습니다.');
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin
@@ -4193,6 +4226,17 @@ export async function revokeClientTempCredentialAction(formData: FormData) {
     .eq('profile_id', profileId)
     .eq('organization_id', organizationId);
   if (error) throw new Error(`의뢰인 임시 계정 폐기에 실패했습니다: ${error.message}`);
+
+  // 핵심 감사 로그: 의뢰인 임시계정 폐기
+  const supabase = await createSupabaseServerClient();
+  await supabase.from('audit_logs').insert({
+    action: 'client_temp_credential.revoked',
+    resource_type: 'client_temp_credentials',
+    resource_id: profileId,
+    organization_id: organizationId,
+    actor_id: auth.user.id,
+    meta: { target_profile_id: profileId }
+  });
 
   revalidatePath('/clients');
 }

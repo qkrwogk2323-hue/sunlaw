@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentAuth, getEffectiveOrganizationId, isPlatformOperator, isManagementRole } from '@/lib/auth';
 import { listOrganizationActivityLog } from '@/lib/queries/audit';
 import { listOrganizationTableHistory } from '@/lib/queries/menu-history';
+import { type LogSurface } from '@/lib/log-policy';
 
 export async function GET(request: Request) {
   const auth = await getCurrentAuth();
@@ -17,6 +18,8 @@ export async function GET(request: Request) {
 
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '80', 10), 200);
   const mode = searchParams.get('mode') ?? 'activity';
+  // surface 파라미터: 업무 도메인별 필터 (team/clients/cases/billing/collaboration/platform/all)
+  const surface = (searchParams.get('surface') ?? 'all') as LogSurface;
 
   if (mode === 'change_log') {
     // change_log contains raw DB diffs — restrict to org managers and platform admins only.
@@ -61,6 +64,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, logs });
   }
 
-  const logs = await listOrganizationActivityLog({ organizationId, limit });
+  const logs = await listOrganizationActivityLog({ organizationId, surface, limit });
   return NextResponse.json({ ok: true, logs });
 }
