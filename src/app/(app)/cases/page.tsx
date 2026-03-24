@@ -24,6 +24,7 @@ import { bulkUploadCasesAction } from '@/lib/actions/bulk-upload-actions';
 import { buttonStyles } from '@/components/ui/button';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { ExportLinks } from '@/components/export-links';
+import { LogButton } from '@/components/ui/log-button';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
 
@@ -249,6 +250,15 @@ export default async function CasesPage({
           </CollapsibleSettingsSection>
         ) : null}
         <div className="flex items-center gap-2">
+          {!isRestrictedScope && currentOrganizationId && (
+            <LogButton
+              organizationId={currentOrganizationId}
+              surface="cases"
+              label="사건 기록"
+              title="사건 상태·담당·문서 기록"
+              description="사건 생성·수정·상태변경·담당자 변경, 문서 승인·반려 이력입니다."
+            />
+          )}
           <div className="min-w-0 flex-1">
             <UnifiedListSearch
               action="/cases"

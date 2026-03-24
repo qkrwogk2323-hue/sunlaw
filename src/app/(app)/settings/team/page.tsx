@@ -18,6 +18,7 @@ import { deleteMembershipAction, updateMembershipAdminSummaryAction, revokeStaff
 import { revokeUserSessionsAction } from '@/lib/actions/auth-actions';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
+import { LogButton } from '@/components/ui/log-button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { cookies } from 'next/headers';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -151,6 +152,15 @@ export default async function TeamSettingsPage({
             </div>
           </details>
           {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
+          {canManage && organizationId && (
+            <LogButton
+              organizationId={organizationId}
+              surface="team"
+              label="구성원 기록"
+              title="구성원·초대·임시계정 기록"
+              description="초대 생성, 임시계정 발급·폐기, 역할 변경 등 팀 관리 이력입니다."
+            />
+          )}
         </div>
       </div>
 

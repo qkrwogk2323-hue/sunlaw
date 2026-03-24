@@ -4,13 +4,16 @@ import { BillingComingSoonCards } from '@/components/billing-coming-soon-cards';
 import { buttonStyles } from '@/components/ui/button';
 import { BillingEntrySectionPanel } from '@/components/forms/billing-entry-section-panel';
 import { InstallmentAgreementSectionPanel } from '@/components/forms/installment-agreement-section-panel';
-import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { getBillingHubSnapshot } from '@/lib/queries/billing';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { LogButton } from '@/components/ui/log-button';
 
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
+  const membership = organizationId ? findMembership(auth, organizationId) : null;
+  const isManager = Boolean(membership && isManagementRole(membership.role));
   const supabase = await createSupabaseServerClient();
   const [billing, { data: caseRows }, { data: caseClientRows }] = await Promise.all([
     getBillingHubSnapshot(organizationId),
@@ -97,6 +100,15 @@ export default async function BillingPage() {
           <p className="mt-1 text-sm text-slate-500">보수, 공과금, 분납약정, 미납 항목을 관리합니다. 의뢰인 계약·청구는 계약 관리에서 확인합니다.</p>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
+          {isManager && organizationId && (
+            <LogButton
+              organizationId={organizationId}
+              surface="billing"
+              label="비용 기록"
+              title="비용·약정·구독 기록"
+              description="청구 항목 생성·수정, 약정 변경, 입금 기록, 구독 상태 변경 이력입니다."
+            />
+          )}
           <Link href={'/billing/history' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             비용 기록 보기
           </Link>

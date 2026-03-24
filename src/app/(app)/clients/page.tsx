@@ -12,6 +12,7 @@ import { listCases } from '@/lib/queries/cases';
 import { listClientRosterSummary } from '@/lib/queries/clients';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { LogButton } from '@/components/ui/log-button';
 
 function linkStatusTone(status: string): 'green' | 'amber' | 'red' | 'slate' {
   if (status === '연결 완료') return 'green';
@@ -115,6 +116,15 @@ export default async function ClientsPage({
         <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
+          {canManage && organizationId && (
+            <LogButton
+              organizationId={organizationId}
+              surface="clients"
+              label="의뢰인 기록"
+              title="의뢰인 계정·초대 기록"
+              description="의뢰인 임시계정 발급·폐기, 초대 생성 등 의뢰인 관리 이력입니다."
+            />
+          )}
           <Link href={'/clients/history?tab=profiles' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 정보 변경 기록 보기
           </Link>

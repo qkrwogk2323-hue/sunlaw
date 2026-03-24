@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { buttonStyles } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { getLogEventPolicy } from '@/lib/log-policy';
+import type { LogSurface } from '@/lib/log-policy';
 
 type LogEntry = {
   id: string;
@@ -178,25 +180,32 @@ export function LogButton({
                   <p className="mt-1 text-sm">현재 조건에 맞는 기록이 없습니다.</p>
                 </div>
               )}
-              {!loading && filteredLogs.map((log) => (
+              {!loading && filteredLogs.map((log) => {
+                const policy = getLogEventPolicy(log.action);
+                const displayLabel = policy?.summary ?? log.action;
+                return (
                 <div key={log.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={actionTone(log.action)}>{log.action}</Badge>
-                    {log.resource_type && <span className="text-xs text-slate-500">{log.resource_type}</span>}
+                    <Badge tone={actionTone(log.action)}>{displayLabel}</Badge>
+                    {!policy && log.resource_type && <span className="text-xs text-slate-500">{log.resource_type}</span>}
                     <span className="ml-auto text-xs text-slate-400">{formatLogDate(log.created_at)}</span>
                   </div>
                   {(log.actor?.full_name || log.resource_id) && (
                     <div className="mt-1.5 text-xs text-slate-600">
                       {log.actor?.full_name && <span>작업자: {log.actor.full_name}</span>}
                       {log.actor?.full_name && log.resource_id && <span className="mx-1.5">·</span>}
-                      {log.resource_id && <span>대상 ID: {log.resource_id}</span>}
+                      {log.resource_id && <span className="font-mono text-slate-400">{log.resource_id.slice(0, 8)}…</span>}
                     </div>
                   )}
                   {Array.isArray(log.meta?.changed_fields) && (log.meta?.changed_fields as string[]).length ? (
                     <p className="mt-1.5 text-xs text-slate-500">변경 항목: {(log.meta?.changed_fields as string[]).join(', ')}</p>
                   ) : null}
+                  {log.meta?.summary && typeof log.meta.summary === 'string' ? (
+                    <p className="mt-1.5 text-xs text-slate-500">{log.meta.summary}</p>
+                  ) : null}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">

@@ -2,11 +2,12 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { Network } from 'lucide-react';
 import { buttonStyles } from '@/components/ui/button';
-import { requireAuthenticatedUser, getEffectiveOrganizationId } from '@/lib/auth';
+import { findMembership, requireAuthenticatedUser, getEffectiveOrganizationId, isManagementRole } from '@/lib/auth';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { CaseHubListClient } from '@/components/case-hub-list-client';
 import { HubContextStrip } from '@/components/hub-context-strip';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { LogButton } from '@/components/ui/log-button';
 
 export const metadata = { title: '사건허브' };
 
@@ -17,6 +18,8 @@ export default async function CaseHubsPage({
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
+  const membership = organizationId ? findMembership(auth, organizationId) : null;
+  const isManager = Boolean(membership && isManagementRole(membership.role));
   const resolved = searchParams ? await searchParams : undefined;
   const query = `${resolved?.q ?? ''}`.trim();
 
@@ -42,7 +45,15 @@ export default async function CaseHubsPage({
       </div>
 
       <div className="flex flex-wrap gap-2 text-sm">
-        {/* BUG-AUDIT: 감사로그 직접 이동 차단 - 일반 사용자가 플랫폼 관리자 감사로그에 접근하는 버그 */}
+        {isManager && organizationId && (
+          <LogButton
+            organizationId={organizationId}
+            surface="collaboration"
+            label="협업 기록"
+            title="협업·허브·사건공유 기록"
+            description="협업 제안·승인, 허브 생성·이탈, 사건 공유 등 협업 이력입니다."
+          />
+        )}
       </div>
 
       <UnifiedListSearch
