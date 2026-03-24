@@ -4151,3 +4151,41 @@ export async function importCasesCsvAction(formData: FormData) {
   }
   redirect(`/cases?imported=${imported}` as Route);
 }
+
+// ─── 임시계정 폐기 ───────────────────────────────────────────
+
+export async function revokeStaffTempCredentialAction(formData: FormData) {
+  const profileId = `${formData.get('profileId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!profileId || !organizationId) throw new Error('필수 파라미터가 누락되었습니다.');
+
+  await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 임시 계정을 폐기할 수 있습니다.');
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from('organization_staff_temp_credentials')
+    .delete()
+    .eq('profile_id', profileId)
+    .eq('organization_id', organizationId);
+  if (error) throw new Error(`임시 계정 폐기에 실패했습니다: ${error.message}`);
+
+  revalidatePath('/settings/team');
+}
+
+export async function revokeClientTempCredentialAction(formData: FormData) {
+  const profileId = `${formData.get('profileId') ?? ''}`.trim();
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  if (!profileId || !organizationId) throw new Error('필수 파라미터가 누락되었습니다.');
+
+  await requireOrganizationUserManagementAccess(organizationId, '조직 관리자만 의뢰인 임시 계정을 폐기할 수 있습니다.');
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from('client_temp_credentials')
+    .delete()
+    .eq('profile_id', profileId)
+    .eq('organization_id', organizationId);
+  if (error) throw new Error(`의뢰인 임시 계정 폐기에 실패했습니다: ${error.message}`);
+
+  revalidatePath('/clients');
+}

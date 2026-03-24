@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { createClientSpecialNoteAction, linkRelatedClientAction } from '@/lib/actions/client-management-actions';
+import { revokeClientTempCredentialAction } from '@/lib/actions/organization-actions';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { hasPermission } from '@/lib/permissions';
@@ -68,6 +70,16 @@ export default async function ClientDetailPage({
             {detail.linkStatus === 'unlinked' ? <Badge tone="slate">연결 해제</Badge> : null}
             {detail.linkStatus === 'orphan_review' ? <Badge tone="red">연결 검토 중</Badge> : null}
             {detail.tempLoginId ? <Badge tone="slate">임시아이디 {detail.tempLoginId}</Badge> : null}
+            {detail.tempLoginId && detail.profileId && canManage ? (
+              <DangerActionButton
+                action={revokeClientTempCredentialAction}
+                fields={{ profileId: detail.profileId, organizationId }}
+                confirmTitle="임시 계정 폐기"
+                highlightedInfo={`대상: ${detail.name} (${detail.tempLoginId})`}
+                confirmLabel="폐기"
+                successTitle="임시 계정이 폐기되었습니다."
+              >폐기</DangerActionButton>
+            ) : null}
             <Badge tone={detail.mustChangePassword ? 'amber' : 'green'}>{detail.mustChangePassword ? '초기 이행 필요' : '초기 이행 완료'}</Badge>
           </div>
         </CardContent>

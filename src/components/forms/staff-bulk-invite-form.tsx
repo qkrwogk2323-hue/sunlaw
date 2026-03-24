@@ -24,7 +24,7 @@ const defaultRow = (): StaffInviteRow => ({
 
 export function StaffBulkInviteForm({ organizationId }: { organizationId: string }) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [rows, setRows] = useState<StaffInviteRow[]>(() => Array.from({ length: 3 }, defaultRow));
+  const [rows, setRows] = useState<StaffInviteRow[]>(() => [defaultRow()]);
   const [actorCategory, setActorCategory] = useState<'admin' | 'staff'>('staff');
   const [expiresHours, setExpiresHours] = useState(72);
   const populatedRows = useMemo(
@@ -37,7 +37,11 @@ export function StaffBulkInviteForm({ organizationId }: { organizationId: string
   }
 
   function addRow() {
-    setRows((current) => (current.length >= 5 ? current : [...current, defaultRow()]));
+    setRows((current) => (current.length >= 10 ? current : [...current, defaultRow()]));
+  }
+
+  function removeRow(id: string) {
+    setRows((current) => (current.length <= 1 ? current : current.filter((row) => row.id !== id)));
   }
 
   function continueToSettings() {
@@ -98,23 +102,35 @@ export function StaffBulkInviteForm({ organizationId }: { organizationId: string
                   placeholder="보조 이메일(선택)"
                   aria-label={`초대 대상 ${index + 1} 보조 이메일`}
                 />
-                <Input
-                  value={row.membershipTitle}
-                  onChange={(event) => updateRow(row.id, 'membershipTitle', event.target.value)}
-                  placeholder="직책(선택)"
-                  aria-label={`초대 대상 ${index + 1} 직책`}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={row.membershipTitle}
+                    onChange={(event) => updateRow(row.id, 'membershipTitle', event.target.value)}
+                    placeholder="직책(선택)"
+                    aria-label={`초대 대상 ${index + 1} 직책`}
+                  />
+                  {rows.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(row.id)}
+                      aria-label={`${index + 1}번째 행 삭제`}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200 text-red-500 hover:bg-red-50"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">기본 3행, 최대 5행까지 직접 입력할 수 있습니다.</p>
+            <p className="text-xs text-slate-500">기본 1행, 최대 10행까지 추가할 수 있습니다. 각 행의 × 버튼으로 삭제하세요.</p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={addRow}
-                disabled={rows.length >= 5}
+                disabled={rows.length >= 10}
                 className="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 다른 구성원 추가

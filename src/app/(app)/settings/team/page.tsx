@@ -5,7 +5,6 @@ import { buttonStyles } from '@/components/ui/button';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { decodeInvitationNote } from '@/lib/invitation-metadata';
 import { actorCategoryLabel, membershipRoleLabel } from '@/lib/membership-labels';
@@ -13,15 +12,16 @@ import { getOrganizationWorkspace } from '@/lib/queries/organizations';
 import { MembershipPermissionForm } from '@/components/forms/membership-permission-form';
 import { MemberAdminSummaryForm } from '@/components/forms/member-admin-summary-form';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
-import { StaffBulkInviteForm } from '@/components/forms/staff-bulk-invite-form';
-import { StaffPreRegisterForm } from '@/components/forms/staff-pre-register-form';
+import { InviteWorkbench } from '@/components/settings/invite-workbench';
 import { isWorkspaceAdmin, hasPermission } from '@/lib/permissions';
-import { deleteMembershipAction, updateMembershipAdminSummaryAction } from '@/lib/actions/organization-actions';
+import { deleteMembershipAction, updateMembershipAdminSummaryAction, revokeStaffTempCredentialAction } from '@/lib/actions/organization-actions';
 import { revokeUserSessionsAction } from '@/lib/actions/auth-actions';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { cookies } from 'next/headers';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { formatDateTime } from '@/lib/format';
 
 function toneByStatus(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -42,6 +42,15 @@ export default async function TeamSettingsPage({
   const workspace = await getOrganizationWorkspace(organizationId);
   if (!workspace) notFound();
   const cookieStore = await cookies();
+
+  // 발급된 임시 계정 목록 조회 (폐기 UI용)
+  const supabase = await createSupabaseServerClient();
+  const { data: staffTempCreds } = await supabase
+    .from('organization_staff_temp_credentials')
+    .select('profile_id, login_id, created_at, must_change_password, profile:profiles(full_name, email)')
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .limit(20);
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const currentMembership = auth.memberships.find((item) => item.organization_id === organizationId) ?? null;
@@ -241,13 +250,40 @@ export default async function TeamSettingsPage({
           ) : null}
 
           {canManage ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <CollapsibleSettingsSection title="구성원 초대하기" description="새 구성원을 조직에 초대합니다.">
-                <StaffBulkInviteForm organizationId={organizationId} />
-              </CollapsibleSettingsSection>
-              <CollapsibleSettingsSection title="임시 계정 발급" description="예외 상황에서만 임시 계정을 발급합니다.">
-                <StaffPreRegisterForm organizationId={organizationId} />
-              </CollapsibleSettingsSection>
+            <div className="space-y-3">
+              <InviteWorkbench organizationId={organizationId} />
+
+              {staffTempCreds && staffTempCreds.length > 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="mb-3 text-sm font-semibold text-slate-900">발급된 임시 계정 목록</p>
+                  <div className="space-y-2">
+                    {staffTempCreds.map((cred: any) => (
+                      <div key={cred.profile_id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                        <div>
+                          <span className="font-medium text-slate-900">{(cred.profile as any)?.full_name ?? '이름 미입력'}</span>
+                          <span className="ml-2 font-mono text-xs text-slate-600">{cred.login_id}</span>
+                          <span className="ml-2 text-xs text-slate-400">{formatDateTime(cred.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {cred.must_change_password ? (
+                            <Badge tone="amber">비밀번호 변경 전</Badge>
+                          ) : (
+                            <Badge tone="green">초기 이행 완료</Badge>
+                          )}
+                          <DangerActionButton
+                            action={revokeStaffTempCredentialAction}
+                            fields={{ profileId: cred.profile_id, organizationId }}
+                            confirmTitle="임시 계정 폐기"
+                            highlightedInfo={`대상: ${(cred.profile as any)?.full_name ?? cred.login_id}`}
+                            confirmLabel="폐기"
+                            successTitle="임시 계정이 폐기되었습니다."
+                          >폐기</DangerActionButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
