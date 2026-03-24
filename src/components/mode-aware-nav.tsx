@@ -161,7 +161,8 @@ function getOrganizationSections({
       { href: '/collections', label: '회수 활동', icon: FileText },
       { href: '/cases', label: '채권 사건', icon: FileText },
       { href: '/clients', label: '채무자 관리', icon: Users },
-      { href: '/billing', label: '비용 관리', icon: Receipt }
+      { href: '/billing', label: '비용 관리', icon: Receipt },
+      { href: '/calendar', label: '일정', icon: FileText }
     );
   } else if (mode === 'other_admin') {
     // 일반 협업 조직 — 법률 내부 운영 메뉴 제외. 협업은 collaborationItems에 별도 표시
@@ -178,7 +179,8 @@ function getOrganizationSections({
         { href: '/collections', label: '회수 활동', icon: FileText },
         { href: '/cases', label: '채권 사건', icon: FileText },
         { href: '/clients', label: '채무자 관리', icon: Users },
-        { href: '/billing', label: '비용 관리', icon: Receipt }
+        { href: '/billing', label: '비용 관리', icon: Receipt },
+        { href: '/calendar', label: '일정', icon: FileText }
       );
     } else if (staffOrgKind === 'other') {
       // 일반 협업 조직 직원 — 협업은 collaborationItems에 표시

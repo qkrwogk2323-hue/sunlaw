@@ -24,8 +24,8 @@ const periodOptions = [
   { key: 'year', label: '연별' }
 ] as const;
 
-export default async function CollectionsPage({ searchParams }: { searchParams?: Promise<{ period?: string }> }) {
-  const { period = 'month' } = searchParams ? await searchParams : { period: 'month' };
+export default async function CollectionsPage({ searchParams }: { searchParams?: Promise<{ period?: string; tab?: string }> }) {
+  const { period = 'month', tab = 'activity' } = searchParams ? await searchParams : { period: 'month', tab: 'activity' };
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
   const data = await getCollectionsWorkspace(organizationId, period);
@@ -66,11 +66,29 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
         <ExportLinks resource="collections" period={period} />
       </div>
 
+      {/* 탭 네비게이션 */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-0">
+        {[
+          { key: 'activity', label: '회수 활동' },
+          { key: 'contacts', label: '접촉 이력' },
+          { key: 'agreements', label: '약정 현황' },
+          { key: 'performance', label: '성과 추이' },
+        ].map((t) => (
+          <Link
+            key={t.key}
+            href={`/collections?tab=${t.key}&period=${period}`}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${tab === t.key ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {periodOptions.map((item) => (
           <Link
             key={item.key}
-            href={`/collections?period=${item.key}`}
+            href={`/collections?period=${item.key}&tab=${tab}`}
             className={`rounded-full px-4 py-2 text-sm font-medium ${period === item.key ? 'bg-[linear-gradient(135deg,#0f766e,#0ea5e9)] text-white shadow-[0_10px_24px_rgba(14,165,164,0.20)]' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
           >
             {item.label}
@@ -109,69 +127,137 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Card className="vs-interactive vs-mesh-card">
-          <CardHeader><CardTitle>추심 사건</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {data.collectionCases.length ? data.collectionCases.map((item: any) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <Link href={`/cases/${item.id}?tab=collection`} className="font-medium text-slate-900 hover:underline">{item.title}</Link>
-                  <Badge tone="amber">{item.stage_key ?? '-'}</Badge>
-                </div>
-                <p className="mt-2 text-sm text-slate-500">{item.reference_no ?? '-'} · {formatCurrency(item.principal_amount)}</p>
-                {organizationId && (
-                  <div className="mt-3">
-                    <OverdueDraftButton
-                      organizationId={organizationId}
-                      orgName={orgName}
-                      clientName={item.title}
-                      caseTitle={item.title}
-                      overdueAmount={Number(item.principal_amount ?? 0)}
-                      dueDaysAgo={30}
-                    />
+      {/* 탭 콘텐츠: 회수 활동 */}
+      {(tab === 'activity' || !tab) && (
+        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <Card className="vs-interactive vs-mesh-card">
+            <CardHeader><CardTitle>추심 사건</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {data.collectionCases.length ? data.collectionCases.map((item: any) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link href={`/cases/${item.id}?tab=collection`} className="font-medium text-slate-900 hover:underline">{item.title}</Link>
+                    <Badge tone="amber">{item.stage_key ?? '-'}</Badge>
                   </div>
-                )}
-              </div>
-            )) : <p className="text-sm text-slate-500">추심 사건이 없습니다.</p>}
-          </CardContent>
-        </Card>
-
-        <Card className="vs-interactive">
-          <CardHeader><CardTitle>최근 회수 활동</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {data.activities.length ? data.activities.map((item: any) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4 text-sm text-slate-700">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-slate-900">{item.cases?.title ?? '-'}</p>
-                  <Badge tone="slate">{item.activity_kind}</Badge>
+                  <p className="mt-2 text-sm text-slate-500">{item.reference_no ?? '-'} · {formatCurrency(item.principal_amount)}</p>
+                  {organizationId && (
+                    <div className="mt-3">
+                      <OverdueDraftButton
+                        organizationId={organizationId}
+                        orgName={orgName}
+                        clientName={item.title}
+                        caseTitle={item.title}
+                        overdueAmount={Number(item.principal_amount ?? 0)}
+                        dueDaysAgo={30}
+                      />
+                    </div>
+                  )}
                 </div>
-                <p className="mt-1 text-slate-500">{item.outcome_status ?? '-'} · {formatCurrency(item.amount)}</p>
-                <p className="mt-2 text-xs text-slate-400">{formatDateTime(item.occurred_at)}</p>
-              </div>
-            )) : <p className="text-sm text-slate-500">표시할 회수 활동이 없습니다.</p>}
-          </CardContent>
-        </Card>
-      </section>
+              )) : <p className="text-sm text-slate-500">추심 사건이 없습니다.</p>}
+            </CardContent>
+          </Card>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Card className="vs-interactive">
-          <CardHeader><CardTitle>보수/정산 현황판</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {data.compensationEntries.length ? data.compensationEntries.map((item: any) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4 text-sm text-slate-700">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-slate-900">{item.collection_compensation_plan_versions?.collection_compensation_plans?.title ?? '보수 규칙'}</p>
-                  <Badge tone="blue">{item.status}</Badge>
+          <Card className="vs-interactive">
+            <CardHeader><CardTitle>최근 회수 활동</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {data.activities.length ? data.activities.map((item: any) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">{item.cases?.title ?? '-'}</p>
+                    <Badge tone="slate">{item.activity_kind}</Badge>
+                  </div>
+                  <p className="mt-1 text-slate-500">{item.outcome_status ?? '-'} · {formatCurrency(item.amount)}</p>
+                  <p className="mt-2 text-xs text-slate-400">{formatDateTime(item.occurred_at)}</p>
                 </div>
-                <p className="mt-2 text-slate-500">산정 기준 금액: {formatCurrency(item.calculated_from_amount)}</p>
-                <p className="text-slate-500">산정 보수: {formatCurrency(item.calculated_amount)}</p>
-                <p className="text-slate-500">기간: {formatDate(item.period_start)} ~ {formatDate(item.period_end)}</p>
+              )) : <p className="text-sm text-slate-500">표시할 회수 활동이 없습니다.</p>}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* 탭 콘텐츠: 접촉 이력 */}
+      {tab === 'contacts' && (
+        <Card className="vs-interactive">
+          <CardHeader>
+            <CardTitle>접촉 이력</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.activities.length ? (
+              <div className="space-y-3">
+                {data.activities.map((item: any) => (
+                  <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-slate-900">{item.cases?.title ?? '-'}</p>
+                      <div className="flex gap-2">
+                        <Badge tone="slate">{item.activity_kind}</Badge>
+                        <Badge tone={item.outcome_status === 'success' ? 'green' : item.outcome_status === 'failed' ? 'red' : 'amber'}>
+                          {item.outcome_status ?? '결과 미입력'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-slate-500">회수 금액: {formatCurrency(item.amount)}</p>
+                    <p className="mt-1 text-xs text-slate-400">{formatDateTime(item.occurred_at)}</p>
+                  </div>
+                ))}
               </div>
-            )) : <p className="text-sm text-slate-500">아직 확정된 보수/정산 항목이 없습니다.</p>}
+            ) : (
+              <div className="py-10 text-center text-slate-400">
+                <p className="font-medium">접촉 이력이 없습니다</p>
+                <p className="mt-1 text-sm">회수 활동 탭에서 활동을 등록하면 이력이 쌓입니다.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
+      )}
 
+      {/* 탭 콘텐츠: 약정 현황 */}
+      {tab === 'agreements' && (
+        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <Card className="vs-interactive">
+            <CardHeader><CardTitle>보수/정산 현황판</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {data.compensationEntries.length ? data.compensationEntries.map((item: any) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">{item.collection_compensation_plan_versions?.collection_compensation_plans?.title ?? '보수 규칙'}</p>
+                    <Badge tone="blue">{item.status}</Badge>
+                  </div>
+                  <p className="mt-2 text-slate-500">산정 기준 금액: {formatCurrency(item.calculated_from_amount)}</p>
+                  <p className="text-slate-500">산정 보수: {formatCurrency(item.calculated_amount)}</p>
+                  <p className="text-slate-500">기간: {formatDate(item.period_start)} ~ {formatDate(item.period_end)}</p>
+                </div>
+              )) : (
+                <div className="py-10 text-center text-slate-400">
+                  <p className="font-medium">약정 항목이 없습니다</p>
+                  <p className="mt-1 text-sm">아래 보수 규칙 등록에서 추가할 수 있습니다.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {canManageComp ? (
+            <Card>
+              <CardHeader><CardTitle>추심 보수 규칙 등록</CardTitle></CardHeader>
+              <CardContent>
+                <CompensationPlanForm
+                  cases={data.collectionCases.map((item: any) => ({ id: item.id, title: item.title }))}
+                  membershipOptions={memberOptions}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="vs-interactive">
+              <CardHeader><CardTitle>보수 규칙</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-500">보수 규칙 관리 권한이 필요합니다.</p>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      )}
+
+      {/* 탭 콘텐츠: 성과 추이 */}
+      {tab === 'performance' && (
         <Card className="vs-interactive">
           <CardHeader><CardTitle>기간별 성과 추이</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -187,22 +273,15 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
                   <p>확정 보수: {formatCurrency(row.confirmedCompensationAmount)}</p>
                 </div>
               </div>
-            )) : <p className="text-sm text-slate-500">표시할 성과 데이터가 없습니다.</p>}
+            )) : (
+              <div className="py-10 text-center text-slate-400">
+                <p className="font-medium">성과 데이터가 없습니다</p>
+                <p className="mt-1 text-sm">회수 활동이 쌓이면 기간별 추이가 표시됩니다.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
-      </section>
-
-      {canManageComp ? (
-        <Card>
-          <CardHeader><CardTitle>추심 보수 규칙 등록</CardTitle></CardHeader>
-          <CardContent>
-            <CompensationPlanForm
-              cases={data.collectionCases.map((item: any) => ({ id: item.id, title: item.title }))}
-              membershipOptions={memberOptions}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
+      )}
     </div>
   );
 }
