@@ -642,10 +642,18 @@ function useDashboardCommunicationState({
   const sendMessage = () => {
     if (!messageInput.trim()) return;
     const resolvedCaseId = messageCaseId || data.caseOptions[0]?.id || '';
-    if (!resolvedCaseId) return;
+    if (!resolvedCaseId) {
+      onError('전송 불가', { message: '연결된 사건이 없습니다. 먼저 사건을 생성한 뒤 사용해 주세요.' });
+      return;
+    }
 
-    const recipientMembershipIds = memberOptions.map((item) => item.membershipId);
-    if (!recipientMembershipIds.length) return;
+    if (!memberOptions.length) {
+      onError('전송 불가', { message: '다른 조직 구성원이 없습니다. 구성원을 초대한 뒤 사용해 주세요.' });
+      return;
+    }
+
+    // 전체 공유 시 recipientMembershipId 없이 1회, 특정 대상 선택 시 해당 1명에게 1회
+    const targetMembershipId = isOrganizationWideRoom ? '' : orgRecipientMembershipId;
 
     if (scenarioMode && !organizationId) {
       startMessageTransition(async () => {
@@ -668,36 +676,26 @@ function useDashboardCommunicationState({
       return;
     }
 
-    if (!organizationId) return;
+    if (!organizationId) {
+      onError('전송 불가', { message: '조직 정보가 없습니다. 페이지를 새로고침해 주세요.' });
+      return;
+    }
 
     startMessageTransition(async () => {
-      const response = recipientMembershipIds.length === 1
-        ? await fetch('/api/dashboard/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              organizationId,
-              caseId: resolvedCaseId,
-              content: messageInput,
-              targetType: 'org',
-              recipientMembershipId: recipientMembershipIds[0],
-              isInternal: true
-            })
-          })
-        : await Promise.all(recipientMembershipIds.map((membershipId) => fetch('/api/dashboard/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              organizationId,
-              caseId: resolvedCaseId,
-              content: messageInput,
-              targetType: 'org',
-              recipientMembershipId: membershipId,
-              isInternal: true
-            })
-          })));
+      const response = await fetch('/api/dashboard/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          caseId: resolvedCaseId,
+          content: messageInput,
+          targetType: 'org',
+          recipientMembershipId: targetMembershipId,
+          isInternal: true
+        })
+      });
 
-      if ((Array.isArray(response) && response.every((item) => item.ok)) || (!Array.isArray(response) && response.ok)) {
+      if (response.ok) {
         setMessageInput('');
         router.refresh();
         onSuccess('메시지가 전송되었습니다.');
@@ -1658,6 +1656,16 @@ export function DashboardHubClient({
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
+                  {data.caseOptions.length === 0 && (
+                    <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                      연결된 사건이 없어 전송할 수 없습니다. 먼저 사건을 생성해 주세요.
+                    </p>
+                  )}
+                  {data.caseOptions.length > 0 && memberOptions.length === 0 && (
+                    <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                      다른 조직 구성원이 없어 전송할 수 없습니다. 구성원을 초대한 뒤 사용해 주세요.
+                    </p>
+                  )}
                   <div className="flex items-end gap-3">
                     <Textarea
                       id="organization-message-input"
@@ -1665,12 +1673,15 @@ export function DashboardHubClient({
                       onChange={(event) => setMessageInput(event.target.value)}
                       placeholder="조직소통 대화방에 메시지를 입력하세요."
                       className="min-h-24 flex-1"
+                      disabled={!data.caseOptions.length || !memberOptions.length}
                     />
                     <Button
                       onClick={sendMessage}
                       disabled={
                         messagePending
                         || !messageInput.trim()
+                        || !data.caseOptions.length
+                        || !memberOptions.length
                       }
                       className="min-h-24 rounded-2xl px-5"
                     >
