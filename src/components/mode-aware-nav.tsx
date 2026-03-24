@@ -155,28 +155,57 @@ function getOrganizationSections({
       { href: '/portal/messages', label: '사건 소통', icon: MessageSquareText },
       { href: '/portal/notifications', label: '알림 확인', icon: BellRing }
     );
-  } else {
-    const organizationKind = membership?.organization?.kind;
-
-    if (organizationKind === 'other') {
-      organizationItems.push({ href: '/clients', label: '의뢰인 관리', icon: Users });
-    } else {
-    if (mode === 'collection_admin') {
-      organizationItems.push({ href: '/collections', label: '신용정보 운영', icon: FileText });
-    }
-
+  } else if (mode === 'collection_admin') {
+    // 추심/신용정보 조직 전용 메뉴
     organizationItems.push(
-      { href: '/cases', label: '사건 목록', icon: FileText },
-      { href: '/clients', label: '의뢰인 관리', icon: Users },
-      { href: '/documents', label: '업로드 문서', icon: FileText },
+      { href: '/collections', label: '회수 활동', icon: FileText },
+      { href: '/cases', label: '채권 사건', icon: FileText },
+      { href: '/clients', label: '채무자 관리', icon: Users },
       { href: '/billing', label: '비용 관리', icon: Receipt }
     );
+  } else if (mode === 'other_admin') {
+    // 일반 협업 조직 — 법률 내부 운영 메뉴 제외
+    organizationItems.push(
+      { href: '/inbox', label: '협업 메시지', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 },
+      { href: '/documents', label: '문서 수신', icon: FileText },
+      { href: '/billing', label: '비용 확인', icon: Receipt }
+    );
+  } else {
+    // law_admin 또는 organization_staff (모든 법률/법무 조직 구성원) — 법률 기본 제품
+    // organization_staff이지만 collection_company 소속인 경우 추심 메뉴 사용
+    const staffOrgKind = membership?.organization?.kind;
+    if (staffOrgKind === 'collection_company') {
+      organizationItems.push(
+        { href: '/collections', label: '회수 활동', icon: FileText },
+        { href: '/cases', label: '채권 사건', icon: FileText },
+        { href: '/clients', label: '채무자 관리', icon: Users },
+        { href: '/billing', label: '비용 관리', icon: Receipt }
+      );
+    } else if (staffOrgKind === 'other') {
+      organizationItems.push(
+        { href: '/inbox', label: '협업 메시지', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 },
+        { href: '/documents', label: '문서 수신', icon: FileText },
+        { href: '/billing', label: '비용 확인', icon: Receipt }
+      );
+    } else {
+      organizationItems.push(
+        { href: '/cases', label: '사건 목록', icon: FileText },
+        { href: '/clients', label: '의뢰인 관리', icon: Users },
+        { href: '/documents', label: '업로드 문서', icon: FileText },
+        { href: '/billing', label: '비용 관리', icon: Receipt }
+      );
     }
   }
 
-  if (!isPlatformManagementOrganizationView) {
+  if (!isPlatformManagementOrganizationView && mode !== 'client_communication' && mode !== 'other_admin') {
+    // 사건허브는 법률/추심 조직만 — 일반 협업 조직은 업무 흐름이 다름
     collaborationItems.push(
-      { href: '/case-hubs', label: '사건허브', icon: Network },
+      { href: '/case-hubs', label: '사건허브', icon: Network }
+    );
+  }
+  if (!isPlatformManagementOrganizationView && mode !== 'client_communication' && mode !== 'other_admin') {
+    // 법률/추심 조직의 조직 협업 (일반 조직은 organizationItems에 포함)
+    collaborationItems.push(
       { href: '/inbox', label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
     );
   }
@@ -194,10 +223,13 @@ function getOrganizationSections({
     companyManagementItems.push(
       { href: '/settings/organization', label: '조직 설정', icon: Settings },
       { href: '/settings/team', label: '구성원 관리', icon: Building2 },
-      { href: '/contracts', label: '계약 관리', icon: Receipt },
       { href: '/settings/subscription', label: '구독 관리', icon: Receipt },
       { href: '/support', label: '고객센터', icon: MessageSquareText }
     );
+    // 계약 관리는 법률/추심 조직만
+    if (mode === 'law_admin' || mode === 'collection_admin') {
+      companyManagementItems.splice(2, 0, { href: '/contracts', label: '계약 관리', icon: Receipt });
+    }
   }
 
   const sections: NavSection[] = [];
