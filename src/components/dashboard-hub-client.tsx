@@ -716,7 +716,9 @@ function useDashboardCommunicationState({
         router.refresh();
         onSuccess('메시지가 전송되었습니다.');
       } else {
-        onError('메시지 전송에 실패했습니다.', { message: '잠시 후 다시 시도해 주세요.' });
+        const errorBody = await response.json().catch(() => ({}));
+        const cause = errorBody?.cause || errorBody?.message || '잠시 후 다시 시도해 주세요.';
+        onError('메시지 전송에 실패했습니다.', { message: cause });
       }
     });
   };
