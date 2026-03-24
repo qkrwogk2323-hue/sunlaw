@@ -148,32 +148,21 @@ export default async function OrganizationSettingsPage({
                   action={updateOrganizationProfileAction}
                   successTitle="회사정보가 저장되었습니다."
                   errorTitle="회사정보 저장에 실패했습니다."
-                  errorCause="필수 항목 누락 또는 서버 오류"
-                  errorResolution="입력값을 확인하고 다시 저장해 주세요."
+                  errorCause="필수 항목(회사명 2자 이상, 이메일·URL 형식)을 확인해 주세요."
+                  errorResolution="입력값을 수정한 뒤 다시 저장하세요."
                   className="grid gap-3 md:grid-cols-2"
                 >
                   <input type="hidden" name="organizationId" value={organizationId} />
                   <label htmlFor="organization-name" className="text-sm text-slate-600">회사명
                     <input id="organization-name" name="name" defaultValue={workspace.organization.name ?? ''} required aria-required="true" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
-                  <label htmlFor="organization-kind" className="text-sm text-slate-600">조직유형
-                    {isPlatformAdmin && !isPlatformManagementOrganizationView ? (
-                      <select id="organization-kind" name="kind" defaultValue={workspace.organization.kind ?? 'law_firm'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900">
-                        <option value="law_firm">{kindLabel.law_firm}</option>
-                        <option value="collection_company">{kindLabel.collection_company}</option>
-                        <option value="mixed_practice">{kindLabel.mixed_practice}</option>
-                        <option value="corporate_legal_team">{kindLabel.corporate_legal_team}</option>
-                        <option value="other">{kindLabel.other}</option>
-                      </select>
-                    ) : (
-                      <>
-                        <input type="hidden" name="kind" value={isPlatformManagementOrganizationView ? 'platform_management' : (workspace.organization.kind ?? 'law_firm')} />
-                        <div className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
-                          {isPlatformManagementOrganizationView ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}
-                        </div>
-                      </>
-                    )}
-                  </label>
+                  <div className="text-sm text-slate-600">
+                    <input type="hidden" name="kind" value={workspace.organization.kind ?? 'law_firm'} />
+                    <div className="mt-1 flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                      {kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-'}
+                      <span className="ml-auto text-xs text-slate-400">   </span>
+                    </div>
+                  </div>
                   <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                     <input
                       type="checkbox"
@@ -196,7 +185,7 @@ export default async function OrganizationSettingsPage({
                     <input id="organization-email" name="email" type="email" defaultValue={workspace.organization.email ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label htmlFor="organization-website-url" className="text-sm text-slate-600 md:col-span-2">웹사이트
-                    <input id="organization-website-url" name="websiteUrl" defaultValue={workspace.organization.website_url ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-website-url" name="websiteUrl" defaultValue={workspace.organization.website_url ?? ''} placeholder="https://example.com" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                     <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>

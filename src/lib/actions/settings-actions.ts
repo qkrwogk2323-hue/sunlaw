@@ -51,14 +51,14 @@ const organizationIntroUpdateSchema = z.object({
 
 const organizationProfileUpdateSchema = z.object({
   organizationId: z.string().uuid(),
-  name: z.string().trim().min(2).max(120),
+  name: z.string().trim().min(2, { message: '회사명은 2자 이상 입력해 주세요.' }).max(120, { message: '회사명은 120자 이하로 입력해 주세요.' }),
   kind: z.enum(['platform_management', 'law_firm', 'collection_company', 'mixed_practice', 'corporate_legal_team', 'other']),
   isDirectoryPublic: z.boolean().default(true),
   representativeName: z.string().trim().max(80).optional().or(z.literal('')),
   representativeTitle: z.string().trim().max(80).optional().or(z.literal('')),
-  email: z.string().trim().email().optional().or(z.literal('')),
+  email: z.string().trim().email({ message: '올바른 이메일 형식으로 입력해 주세요.' }).optional().or(z.literal('')),
   phone: z.string().trim().max(30).optional().or(z.literal('')),
-  websiteUrl: z.string().trim().url().optional().or(z.literal(''))
+  websiteUrl: z.string().trim().url({ message: '올바른 URL 형식으로 입력해 주세요. (예: https://example.com)' }).optional().or(z.literal(''))
 });
 
 const organizationLifecycleMutationSchema = z.object({
@@ -574,7 +574,7 @@ export async function updateOrganizationIntroAction(formData: FormData) {
 
 // 조직 기본 프로필 정보를 저장한다.
 export async function updateOrganizationProfileAction(formData: FormData) {
-  const parsed = organizationProfileUpdateSchema.parse({
+  const raw = {
     organizationId: formData.get('organizationId'),
     name: formData.get('name'),
     kind: formData.get('kind'),
@@ -584,7 +584,21 @@ export async function updateOrganizationProfileAction(formData: FormData) {
     email: formData.get('email'),
     phone: formData.get('phone'),
     websiteUrl: formData.get('websiteUrl')
-  });
+  };
+  const result = organizationProfileUpdateSchema.safeParse(raw);
+  if (!result.success) {
+    const firstError = result.error.errors[0];
+    const fieldNames: Record<string, string> = {
+      name: '회사명',
+      email: '이메일',
+      websiteUrl: '웹사이트 URL',
+      phone: '연락처',
+      representativeName: '대표자명'
+    };
+    const fieldLabel = fieldNames[firstError.path[0] as string] ?? String(firstError.path[0] ?? '입력값');
+    throw new Error(`[${fieldLabel}] ${firstError.message}`);
+  }
+  const parsed = result.data;
   const auth = await assertOrgAdmin(parsed.organizationId);
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
