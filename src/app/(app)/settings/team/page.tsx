@@ -33,7 +33,7 @@ function toneByStatus(value: string) {
 export default async function TeamSettingsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; issuedTempPassword?: string; staffInviteBatch?: string; staffInviteFailed?: string }>;
+  searchParams?: Promise<{ invite?: string; member?: string; issuedLoginId?: string; staffInviteBatch?: string; staffInviteFailed?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
@@ -57,7 +57,9 @@ export default async function TeamSettingsPage({
   const canManage = isWorkspaceAdmin(currentMembership) && hasPermission(auth, organizationId, 'user_manage');
   const inviteToken = resolvedSearchParams?.invite;
   const issuedLoginId = resolvedSearchParams?.issuedLoginId;
-  const issuedTempPassword = resolvedSearchParams?.issuedTempPassword ?? null;
+  // 임시 비밀번호는 URL이 아닌 1회성 httpOnly flash cookie에서 읽어 즉시 삭제한다
+  const issuedTempPassword = cookieStore.get('_vs_staff_issued_pw')?.value ?? null;
+  if (issuedTempPassword) cookieStore.delete('_vs_staff_issued_pw');
   const staffInviteSummaryRaw = cookieStore.get('_vs_staff_invite_summary')?.value ?? null;
   const selectedMemberId = resolvedSearchParams?.member ?? null;
   const staffInviteSummary = (() => {

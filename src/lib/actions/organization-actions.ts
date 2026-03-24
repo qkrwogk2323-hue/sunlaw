@@ -2044,7 +2044,14 @@ export async function createStaffPreRegisteredInvitationAction(formData: FormDat
   }
 
   revalidatePath('/settings/team');
-  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}&issuedTempPassword=${encodeURIComponent(tempPassword)}`);
+  const cookieStore = await cookies();
+  cookieStore.set('_vs_staff_issued_pw', tempPassword, {
+    maxAge: 120,
+    path: '/settings/team',
+    sameSite: 'strict',
+    httpOnly: true
+  });
+  redirect(`/settings/team?issuedLoginId=${encodeURIComponent(loginId)}`);
 }
 
 // 의뢰인 직접 초대를 생성한다.
@@ -2393,7 +2400,7 @@ export async function createClientPreRegisteredInvitationAction(formData: FormDa
     maxAge: 120,
     path: '/clients',
     sameSite: 'strict',
-    httpOnly: false
+    httpOnly: true
   });
   redirect(`/clients?issuedClientLoginId=${encodeURIComponent(loginId)}&issuedOrgName=${encodeURIComponent(orgName)}`);
 }
