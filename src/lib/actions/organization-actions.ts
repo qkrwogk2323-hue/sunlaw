@@ -2650,17 +2650,17 @@ export async function switchDefaultOrganizationAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`;
   const contextOrganizationId = `${formData.get('contextOrganizationId') ?? ''}`.trim() || null;
   if (!contextOrganizationId) {
-    throw new Error('contextOrganizationId is required');
+    throw new Error('현재 조직 정보를 확인할 수 없습니다. 페이지를 새로고침해 주세요.');
   }
   const canUsePlatformScope = await hasActivePlatformAdminView(auth, contextOrganizationId);
 
   if (!organizationId) {
-    throw new Error('organizationId is required');
+    throw new Error('전환할 조직을 선택해 주세요.');
   }
 
   const hasMembership = auth.memberships.some((membership) => membership.organization_id === organizationId);
   if (!hasMembership && !canUsePlatformScope) {
-    throw new Error('No membership for the requested organization');
+    throw new Error('해당 조직의 구성원이 아닙니다. 초대를 받은 뒤 다시 시도해 주세요.');
   }
 
   if (!hasMembership && canUsePlatformScope) {

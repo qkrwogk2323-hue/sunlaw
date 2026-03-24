@@ -75,30 +75,31 @@ export default async function ClientsPage({
   });
 
   function renderRosterCard(item: any) {
+    const details = [
+      item.residentNumberMasked ? `주민번호 ${item.residentNumberMasked}` : null,
+      item.contactPhone ? `연락처 ${item.contactPhone}` : null,
+      item.addressSummary ? item.addressSummary : null,
+    ].filter(Boolean).join(' · ');
     return (
-      <div key={item.id} className="relative rounded-xl border border-slate-200 p-4">
+      <div key={item.id} className="relative rounded-xl border border-slate-200 bg-white p-3.5 hover:border-sky-300 transition-colors">
         <Link
           href={`/clients/${item.clientKey ?? item.id}` as Route}
           className="absolute inset-0 rounded-xl"
           aria-label={`${item.name} 상세보기`}
         />
-        <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="font-medium text-slate-900">{item.name}</p>
-            <p className="mt-1 text-sm text-slate-600">주민번호: <span className="font-medium text-slate-900">{item.residentNumberMasked ?? '-'}</span></p>
-            <p className="mt-1 text-sm text-slate-600">주소: <span className="font-medium text-slate-900">{item.addressSummary ?? '-'}</span></p>
-            <p className="mt-1 text-sm text-slate-600">연락처: <span className="font-medium text-slate-900">{item.contactPhone ?? '-'}</span></p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge tone={linkStatusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
-            {item.overdueCount > 0 && (
-              <Badge tone="red">미납 {item.overdueCount}건</Badge>
-            )}
-            <Badge tone="slate">의뢰인 상세 관리</Badge>
-          </div>
+        {/* row 1: name + badges */}
+        <div className="relative z-10 flex flex-wrap items-center gap-2">
+          <span className="font-medium text-slate-900">{item.name}</span>
+          <Badge tone={linkStatusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
+          {item.overdueCount > 0 && <Badge tone="red">미납 {item.overdueCount}건</Badge>}
+          {item.caseCount > 0 && <Badge tone="blue">사건 {item.caseCount}건</Badge>}
         </div>
+        {/* row 2: compact details */}
+        {details ? (
+          <p className="relative z-10 mt-1 truncate text-xs text-slate-500">{details}</p>
+        ) : null}
         {canManage && item.source === 'invite' && item.invitationId ? (
-          <div className="relative z-20 mt-3">
+          <div className="relative z-20 mt-2">
             <ResendInvitationForm invitationId={item.invitationId} />
           </div>
         ) : null}
