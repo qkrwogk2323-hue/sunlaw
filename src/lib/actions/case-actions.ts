@@ -9,6 +9,7 @@ import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
 import { hasPermission } from '@/lib/permissions';
 import { NOTIFICATION_TYPES } from '@/lib/notification-policy';
+import { throwGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
@@ -340,7 +341,14 @@ function parseCreateCaseInput(formData: FormData) {
       caseType: '[사건 유형] 올바른 사건 유형을 선택해 주세요.',
     };
     const firstField = result.error.issues[0]?.path[0]?.toString() ?? '';
-    throw new Error(fieldMessages[firstField] ?? `[입력 오류] ${result.error.issues[0]?.message ?? '필수 항목을 확인해 주세요.'}`);
+    const message = fieldMessages[firstField] ?? `[입력 오류] ${result.error.issues[0]?.message ?? '필수 항목을 확인해 주세요.'}`;
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'CASE_CREATE_VALIDATION_FAILED',
+      blocked: '사건 등록에 실패했습니다.',
+      cause: message,
+      resolution: '사건명(2자 이상)과 필수 항목을 확인하고 다시 시도해 주세요.'
+    });
   }
 
   return result.data;

@@ -104,8 +104,8 @@ export function CaseCreateForm({
       action={createCaseAction}
       successTitle="사건이 등록되었습니다."
       errorTitle="사건 등록에 실패했습니다."
-      errorCause="입력값이 올바르지 않거나 사건 등록 권한이 없습니다."
-      errorResolution="사건명(필수)을 2자 이상 입력하고, 조직 권한을 확인한 뒤 다시 시도해 주세요."
+      errorCause="입력값 검증 오류이거나 사건 등록 권한이 없습니다."
+      errorResolution="사건명(2자 이상)과 필수 항목을 확인하세요. 권한 오류라면 조직 관리자에게 case_create 권한을 요청하세요."
       className="space-y-4"
     >
       <input type="hidden" name="organizationId" value={defaultOrganization} />

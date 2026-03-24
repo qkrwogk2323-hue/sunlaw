@@ -220,7 +220,14 @@ function applyOverrides(base: PermissionSet, overrides?: MembershipPermissionOve
 
 export function resolveMembershipPermissions(membership: Membership | null | undefined): PermissionSet {
   if (!membership) return {} as PermissionSet;
-  const template = templates[membership.permission_template_key ?? ''] ?? templates[membership.role] ?? ({} as PermissionSet);
+  // 관리 역할(org_owner/org_manager)은 템플릿 키가 없어도 org_admin 전체 권한 폴백
+  const managementRoleFallback =
+    membership.role === 'org_owner' || membership.role === 'org_manager' ? templates['org_admin'] : undefined;
+  const template =
+    templates[membership.permission_template_key ?? ''] ??
+    templates[membership.role] ??
+    managementRoleFallback ??
+    ({} as PermissionSet);
   return applyOverrides(template, membership.permission_overrides, membership.permissions);
 }
 
