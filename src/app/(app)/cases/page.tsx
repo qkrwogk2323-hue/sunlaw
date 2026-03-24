@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CaseCreateForm } from '@/components/forms/case-create-form';
 import { forceDeleteCaseAction, moveCaseToDeletedAction, restoreCaseAction } from '@/lib/actions/case-actions';
 import { getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 import { getCaseClientLinkedMap, listCases } from '@/lib/queries/cases';
 import { resolveOrganizationCasePolicies } from '@/lib/case-scope';
 import { formatCurrency, formatDateTime } from '@/lib/format';
@@ -74,6 +75,9 @@ export default async function CasesPage({
   const isRestrictedScope = restrictedOrganizationIds.length > 0 && !auth.memberships.some(
     (m) => m.organization_id === currentOrganizationId && isManagementRole(m.role)
   );
+
+  // 현재 조직 기준 case_create 권한 여부 — 권한 없는 사용자에게 폼을 보여주면 제출 후 서버 오류만 보게 됨
+  const canCreateCase = hasPermission(auth, currentOrganizationId, 'case_create');
 
   // Current organization name for context display
   const currentOrgName = auth.memberships.find(
@@ -219,30 +223,39 @@ export default async function CasesPage({
       <HubContextStrip hubs={hubList.slice(0, 4)} currentLabel="사건 목록" />
 
       <div className="space-y-3">
-        <CollapsibleSettingsSection
-          title="사건 등록하기"
-          description="새 사건을 직접 등록할 때만 열어서 사용합니다."
-        >
-          <Card className="vs-mesh-card">
-            <CardContent className="pt-5">
-              <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
-            </CardContent>
-          </Card>
-        </CollapsibleSettingsSection>
-        <CollapsibleSettingsSection
-          title="CSV 일괄 등록"
-          description="양식에 맞춘 CSV 파일로 여러 사건을 한 번에 등록합니다."
-        >
-          <div>
-            <p className="mb-1 text-sm font-medium text-slate-900">대량 등록은 CSV 양식에 맞춰 올려 주세요.</p>
-            <p className="mb-3 text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 사건은 양식을 내려받아 그대로 작성한 뒤 한 번에 등록하세요.</p>
-            <BulkUploadPanel
-              mode="cases"
-              organizationId={currentOrganizationId ?? ''}
-              action={bulkUploadCasesAction}
-            />
+        {canCreateCase ? (
+          <CollapsibleSettingsSection
+            title="사건 등록하기"
+            description="새 사건을 직접 등록할 때만 열어서 사용합니다."
+          >
+            <Card className="vs-mesh-card">
+              <CardContent className="pt-5">
+                <CaseCreateForm organizations={organizations} defaultOrganizationId={currentOrganizationId} />
+              </CardContent>
+            </Card>
+          </CollapsibleSettingsSection>
+        ) : (
+          <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <span className="mt-0.5 shrink-0" aria-hidden="true">🔒</span>
+            <span>사건 등록 권한이 없습니다. 관리자에게 <strong>case_create</strong> 권한을 요청하세요.</span>
           </div>
-        </CollapsibleSettingsSection>
+        )}
+        {canCreateCase ? (
+          <CollapsibleSettingsSection
+            title="CSV 일괄 등록"
+            description="양식에 맞춘 CSV 파일로 여러 사건을 한 번에 등록합니다."
+          >
+            <div>
+              <p className="mb-1 text-sm font-medium text-slate-900">대량 등록은 CSV 양식에 맞춰 올려 주세요.</p>
+              <p className="mb-3 text-sm text-slate-500">직접 입력은 최대 5건까지 권장합니다. 더 많은 사건은 양식을 내려받아 그대로 작성한 뒤 한 번에 등록하세요.</p>
+              <BulkUploadPanel
+                mode="cases"
+                organizationId={currentOrganizationId ?? ''}
+                action={bulkUploadCasesAction}
+              />
+            </div>
+          </CollapsibleSettingsSection>
+        ) : null}
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <UnifiedListSearch

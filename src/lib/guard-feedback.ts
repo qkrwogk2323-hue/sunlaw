@@ -120,6 +120,14 @@ export function normalizeGuardFeedback(
   }
 
   if (error instanceof Error && error.message.trim()) {
+    // 프로덕션 빌드에서 Next.js는 서버 액션/컴포넌트 오류 메시지를 digest로 대체한다.
+    // digest 메시지를 사용자에게 그대로 노출하면 안 되므로 fallback blocked 값을 사용한다.
+    const isNextProductionDigest =
+      error.message.includes('An error occurred in the Server Components render') ||
+      ('digest' in error && typeof (error as any).digest === 'string');
+    if (isNextProductionDigest) {
+      return fallback;
+    }
     return {
       ...fallback,
       blocked: error.message.trim()

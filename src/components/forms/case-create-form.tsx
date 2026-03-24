@@ -100,7 +100,14 @@ export function CaseCreateForm({
   }
 
   return (
-    <ClientActionForm action={createCaseAction} successTitle="사건이 등록되었습니다." className="space-y-4">
+    <ClientActionForm
+      action={createCaseAction}
+      successTitle="사건이 등록되었습니다."
+      errorTitle="사건 등록에 실패했습니다."
+      errorCause="권한이 없거나 입력값이 올바르지 않습니다."
+      errorResolution="조직 권한과 필수 항목을 확인한 뒤 다시 시도해 주세요."
+      className="space-y-4"
+    >
       <input type="hidden" name="organizationId" value={defaultOrganization} />
       <input type="hidden" name="principalAmount" value="0" />
       <input type="hidden" name="specialNote" value="" />
