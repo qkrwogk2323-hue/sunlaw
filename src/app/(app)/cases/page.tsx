@@ -111,109 +111,101 @@ export default async function CasesPage({
   }));
 
   function renderCaseCard(item: any) {
+    const hasHub = Boolean(hubRegistrations[item.id]?.sharedHubId || caseHubMap[item.id]);
+    const hasClient = Boolean(caseClientLinkedMap[item.id]);
+    const isStale = isCaseStageStale(item.updated_at, 7);
+
     return (
-      <div key={item.id} className="vs-interactive rounded-xl border border-slate-200 bg-white/85 p-3 transition hover:border-slate-400">
-        <Link href={`/cases/${item.id}`} className="block">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="font-medium text-slate-900">{item.title}</p>
-              <p className="mt-1 text-sm text-slate-500">{item.reference_no ?? '-'} · {item.case_type}</p>
+      <div key={item.id} className="vs-interactive rounded-xl border border-slate-200 bg-white/85 transition hover:border-slate-400">
+        {/* 행 1: 제목 + 핵심 배지 + 액션 */}
+        <div className="flex items-start justify-between gap-2 px-3 pt-3">
+          <Link href={`/cases/${item.id}`} className="min-w-0 flex-1">
+            <p className="truncate font-medium text-slate-900">{item.title}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <Badge tone="blue">{getCaseStageLabel(item.stage_key)}</Badge>
+              <Badge tone="slate">{getCaseStatusLabel(item.case_status)}</Badge>
+              {isStale && <Badge tone="amber">단계 갱신 필요</Badge>}
+              {hasClient && <Badge tone="green">의뢰인</Badge>}
+              {hasHub && <Badge tone="green">허브</Badge>}
             </div>
-            <div className="flex items-center gap-1.5">
-              <Badge tone={caseClientLinkedMap[item.id] ? 'green' : 'slate'}>
-                {caseClientLinkedMap[item.id] ? '의뢰인 연동' : '의뢰인 미연동'}
-              </Badge>
-              <Badge tone={hubRegistrations[item.id]?.sharedHubId ? 'green' : 'slate'}>
-                {hubRegistrations[item.id]?.sharedHubId ? '허브 연결' : '허브 미연결'}
-              </Badge>
-            </div>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge tone={isCaseStageStale(item.updated_at, 7) ? 'amber' : 'slate'}>
-              {isCaseStageStale(item.updated_at, 7) ? '단계 갱신 필요' : '단계 최신'}
-            </Badge>
-            <Badge tone="blue">{getCaseStageLabel(item.stage_key)}</Badge>
-            <Badge tone="slate">{getCaseStatusLabel(item.case_status)}</Badge>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-500">
-            <span>{item.court_name ?? '법원 미지정'}</span>
-            <span>{item.case_number ?? '사건번호 미등록'}</span>
-            <span>{formatCurrency(item.principal_amount)}</span>
-            <span>{formatDateTime(item.updated_at)}</span>
-          </div>
-        </Link>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          {/* 허브 연동/입장 버튼 */}
-          {bucket !== 'deleted' && (
-            <CaseHubConnectButton
-              caseId={item.id}
-              caseTitle={item.title}
-              organizationId={item.organization_id ?? currentOrganizationId}
-              hasClients={Boolean(caseClientLinkedMap[item.id])}
-              hub={caseHubMap[item.id] ?? null}
-            />
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-          {bucket !== 'deleted' ? (
-            <DangerActionButton
-              action={moveCaseToDeletedAction}
-              fields={{ caseId: item.id, organizationId: item.organization_id }}
-              confirmTitle="사건을 삭제함으로 이동할까요?"
-              confirmDescription="삭제함으로 이동된 사건은 30일 후 자동으로 영구 삭제됩니다. 그 전에 삭제함에서 복원할 수 있습니다."
-              highlightedInfo={item.title}
-              confirmLabel="삭제함 이동"
-              variant="warning"
-              undoNote="삭제함으로 이동한 뒤에도 '삭제함' 탭에서 복원할 수 있습니다."
-              successTitle="삭제함으로 이동했습니다."
-              successMessage={`'${item.title}' 사건이 삭제함에 보관됩니다.`}
-              errorTitle="삭제함 이동에 실패했습니다."
-              errorCause="서버 처리 중 문제가 발생했습니다."
-              errorResolution="잠시 후 다시 시도하거나 페이지를 새로고침 해주세요."
-              buttonVariant="secondary"
-              className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-            >
-              삭제함 이동
-            </DangerActionButton>
-          ) : null}
-          {bucket === 'deleted' ? (
-            <DangerActionButton
-              action={restoreCaseAction}
-              fields={{ caseId: item.id, organizationId: item.organization_id }}
-              confirmTitle="사건을 복구할까요?"
-              confirmDescription="삭제함에 있던 사건을 다시 진행 목록으로 돌립니다."
-              highlightedInfo={item.title}
-              confirmLabel="복구"
-              variant="warning"
-              successTitle="사건을 복구했습니다."
-              successMessage={`'${item.title}' 사건을 다시 진행 목록으로 되돌렸습니다.`}
-              errorTitle="사건 복구에 실패했습니다."
-              errorCause="삭제함 상태가 아니거나 복구 권한이 없습니다."
-              errorResolution="삭제함 상태를 확인한 뒤 다시 시도해 주세요."
-              buttonVariant="secondary"
-            >
-              복구
-            </DangerActionButton>
-          ) : null}
-          {bucket === 'deleted' ? (
-            <DangerActionButton
-              action={forceDeleteCaseAction}
-              fields={{ caseId: item.id, organizationId: item.organization_id }}
-              confirmTitle="사건을 최종 보관 처리할까요?"
-              confirmDescription="이 작업을 완료하면 삭제함에서 더 이상 보이지 않습니다. 최종 보관 처리된 사건은 일반 목록과 대시보드에서 제외됩니다."
-              highlightedInfo={item.title}
-              confirmLabel="최종 보관"
-              variant="danger"
-              successTitle="사건이 최종 보관 처리되었습니다."
-              errorTitle="최종 보관 처리에 실패했습니다."
-              errorCause="삭제함 상태가 아니거나 서버 처리 중 문제가 발생했습니다."
-              errorResolution="삭제함 상태를 확인한 뒤 다시 시도하거나 관리자에게 문의해 주세요."
-              buttonVariant="destructive"
-            >
-              최종 보관
-            </DangerActionButton>
-          ) : null}
+          </Link>
+          {/* 액션 버튼 영역 */}
+          <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+            {bucket !== 'deleted' && (
+              <CaseHubConnectButton
+                caseId={item.id}
+                caseTitle={item.title}
+                organizationId={item.organization_id ?? currentOrganizationId}
+                hasClients={hasClient}
+                hub={caseHubMap[item.id] ?? null}
+              />
+            )}
+            {bucket !== 'deleted' ? (
+              <DangerActionButton
+                action={moveCaseToDeletedAction}
+                fields={{ caseId: item.id, organizationId: item.organization_id }}
+                confirmTitle="사건을 삭제함으로 이동할까요?"
+                confirmDescription="삭제함으로 이동된 사건은 30일 후 자동으로 영구 삭제됩니다. 그 전에 삭제함에서 복원할 수 있습니다."
+                highlightedInfo={item.title}
+                confirmLabel="삭제함 이동"
+                variant="warning"
+                undoNote="삭제함으로 이동한 뒤에도 '삭제함' 탭에서 복원할 수 있습니다."
+                successTitle="삭제함으로 이동했습니다."
+                successMessage={`'${item.title}' 사건이 삭제함에 보관됩니다.`}
+                errorTitle="삭제함 이동에 실패했습니다."
+                errorCause="서버 처리 중 문제가 발생했습니다."
+                errorResolution="잠시 후 다시 시도하거나 페이지를 새로고침 해주세요."
+                buttonVariant="secondary"
+                className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+              >
+                삭제함
+              </DangerActionButton>
+            ) : null}
+            {bucket === 'deleted' ? (
+              <DangerActionButton
+                action={restoreCaseAction}
+                fields={{ caseId: item.id, organizationId: item.organization_id }}
+                confirmTitle="사건을 복구할까요?"
+                confirmDescription="삭제함에 있던 사건을 다시 진행 목록으로 돌립니다."
+                highlightedInfo={item.title}
+                confirmLabel="복구"
+                variant="warning"
+                successTitle="사건을 복구했습니다."
+                successMessage={`'${item.title}' 사건을 다시 진행 목록으로 되돌렸습니다.`}
+                errorTitle="사건 복구에 실패했습니다."
+                errorCause="삭제함 상태가 아니거나 복구 권한이 없습니다."
+                errorResolution="삭제함 상태를 확인한 뒤 다시 시도해 주세요."
+                buttonVariant="secondary"
+              >
+                복구
+              </DangerActionButton>
+            ) : null}
+            {bucket === 'deleted' ? (
+              <DangerActionButton
+                action={forceDeleteCaseAction}
+                fields={{ caseId: item.id, organizationId: item.organization_id }}
+                confirmTitle="사건을 최종 보관 처리할까요?"
+                confirmDescription="이 작업을 완료하면 삭제함에서 더 이상 보이지 않습니다. 최종 보관 처리된 사건은 일반 목록과 대시보드에서 제외됩니다."
+                highlightedInfo={item.title}
+                confirmLabel="최종 보관"
+                variant="danger"
+                successTitle="사건이 최종 보관 처리되었습니다."
+                errorTitle="최종 보관 처리에 실패했습니다."
+                errorCause="삭제함 상태가 아니거나 서버 처리 중 문제가 발생했습니다."
+                errorResolution="삭제함 상태를 확인한 뒤 다시 시도하거나 관리자에게 문의해 주세요."
+                buttonVariant="destructive"
+              >
+                보관
+              </DangerActionButton>
+            ) : null}
           </div>
         </div>
+        {/* 행 2: 세부 식별 정보 */}
+        <Link href={`/cases/${item.id}`} className="block px-3 pb-3 pt-1.5">
+          <p className="text-xs text-slate-400">
+            {[item.reference_no, item.court_name, item.case_number, formatCurrency(item.principal_amount), formatDateTime(item.updated_at)].filter(Boolean).join(' · ')}
+          </p>
+        </Link>
       </div>
     );
   }
