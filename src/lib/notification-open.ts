@@ -16,6 +16,8 @@ function normalizeRelativeHref(value: string) {
   return value.startsWith('/') ? value : '/notifications';
 }
 
+import { isPlatformOnlyNotification } from '@/lib/notification-policy';
+
 function isPlatformOnlyHref(value: string) {
   return value.startsWith('/admin')
     || value.startsWith('/settings/platform')
@@ -27,7 +29,7 @@ async function getOwnedNotification(notificationId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: notification, error } = await supabase
     .from('notifications')
-    .select('id, recipient_profile_id, organization_id, read_at, status, destination_url, action_href')
+    .select('id, recipient_profile_id, organization_id, read_at, status, destination_url, action_href, notification_type')
     .eq('id', notificationId)
     .eq('recipient_profile_id', auth.user.id)
     .single();
@@ -70,7 +72,7 @@ export async function resolveNotificationOpenTarget({
   const targetHref = normalizeRelativeHref(notification.destination_url ?? notification.action_href ?? resolvedHref);
   const hasPlatformAccess = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
 
-  if (isPlatformOnlyHref(targetHref) && !hasPlatformAccess) {
+  if ((isPlatformOnlyHref(targetHref) || isPlatformOnlyNotification(notification.notification_type ?? '')) && !hasPlatformAccess) {
     await notifyPlatformBugAlert({
       actorId: auth.user.id,
       organizationId: auth.profile.default_organization_id,

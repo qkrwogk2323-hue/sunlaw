@@ -8,6 +8,7 @@ import { getCaseStageLabel } from '@/lib/case-stage';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
 import { hasPermission } from '@/lib/permissions';
+import { NOTIFICATION_TYPES } from '@/lib/notification-policy';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
@@ -117,7 +118,7 @@ async function notifyBillingStakeholders({
   title,
   body,
   payload,
-  notificationType = 'billing_notice',
+  notificationType = NOTIFICATION_TYPES.BILLING_NOTICE,
   priority = 'normal'
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -188,7 +189,7 @@ async function createBillingFollowUp({
   notificationBody,
   payload,
   scheduleKind = 'deadline',
-  notificationType = 'billing_notice',
+  notificationType = NOTIFICATION_TYPES.BILLING_NOTICE,
   priority = 'normal'
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
