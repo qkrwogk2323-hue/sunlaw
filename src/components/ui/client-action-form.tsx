@@ -72,6 +72,8 @@ export function ClientActionForm({
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // HTML5 native validation — required 필드가 비어 있으면 브라우저 기본 안내 표시 후 중단
+    if (!e.currentTarget.reportValidity()) return;
     const formData = new FormData(e.currentTarget);
     const formEl = e.currentTarget;
 

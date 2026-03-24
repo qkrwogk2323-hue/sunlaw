@@ -237,7 +237,7 @@ export default async function CasesPage({
         ) : (
           <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             <span className="mt-0.5 shrink-0" aria-hidden="true">🔒</span>
-            <span>사건 등록 권한이 없습니다. 관리자에게 <strong>case_create</strong> 권한을 요청하세요.</span>
+            <span>사건 등록 권한이 없습니다. 조직 관리자에게 사건 등록 권한을 요청하세요.</span>
           </div>
         )}
         {canCreateCase ? (

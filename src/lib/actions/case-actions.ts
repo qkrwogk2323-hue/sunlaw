@@ -319,7 +319,7 @@ function parseCreateCaseInput(formData: FormData) {
     .filter(Boolean)
     .join('\n');
 
-  return caseCreateSchema.parse({
+  const result = caseCreateSchema.safeParse({
     organizationId: formData.get('organizationId'),
     title: formData.get('title'),
     caseType: formData.get('caseType'),
@@ -331,6 +331,18 @@ function parseCreateCaseInput(formData: FormData) {
     billingPlanSummary: specialNote,
     billingFollowUpDueOn: ''
   });
+
+  if (!result.success) {
+    const fieldMessages: Record<string, string> = {
+      title: '[사건명] 사건명은 2자 이상 입력해 주세요.',
+      organizationId: '[조직] 조직 정보가 올바르지 않습니다. 페이지를 새로고침해 주세요.',
+      caseType: '[사건 유형] 올바른 사건 유형을 선택해 주세요.',
+    };
+    const firstField = result.error.issues[0]?.path[0]?.toString() ?? '';
+    throw new Error(fieldMessages[firstField] ?? `[입력 오류] ${result.error.issues[0]?.message ?? '필수 항목을 확인해 주세요.'}`);
+  }
+
+  return result.data;
 }
 
 async function createCaseCoreWrite({

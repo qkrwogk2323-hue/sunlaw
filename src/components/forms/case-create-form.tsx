@@ -104,13 +104,15 @@ export function CaseCreateForm({
       action={createCaseAction}
       successTitle="사건이 등록되었습니다."
       errorTitle="사건 등록에 실패했습니다."
-      errorCause="권한이 없거나 입력값이 올바르지 않습니다."
-      errorResolution="조직 권한과 필수 항목을 확인한 뒤 다시 시도해 주세요."
+      errorCause="입력값이 올바르지 않거나 사건 등록 권한이 없습니다."
+      errorResolution="사건명(필수)을 2자 이상 입력하고, 조직 권한을 확인한 뒤 다시 시도해 주세요."
       className="space-y-4"
     >
       <input type="hidden" name="organizationId" value={defaultOrganization} />
       <input type="hidden" name="principalAmount" value="0" />
       <input type="hidden" name="specialNote" value="" />
+
+      <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-3">
@@ -172,13 +174,21 @@ export function CaseCreateForm({
             onChange={(event) => setFields((prev) => ({ ...prev, courtName: event.target.value }))}
             placeholder="법원"
           />
-          <Input
-            name="title"
-            value={fields.title}
-            onChange={(event) => setFields((prev) => ({ ...prev, title: event.target.value }))}
-            placeholder="사건명"
-            required
-          />
+          <div className="space-y-1">
+            <label htmlFor="case-title" className="text-sm font-medium text-slate-700">
+              사건명 <span className="text-red-500" aria-hidden="true">*</span>
+            </label>
+            <Input
+              id="case-title"
+              name="title"
+              value={fields.title}
+              onChange={(event) => setFields((prev) => ({ ...prev, title: event.target.value }))}
+              placeholder="예: 홍길동 vs 김철수 손해배상"
+              required
+              aria-required="true"
+              minLength={2}
+            />
+          </div>
         </div>
       </div>
 
