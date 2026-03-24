@@ -338,6 +338,23 @@ export function getEffectiveOrganizationId(auth: AuthContext) {
   return activeMemberships[0]?.organization_id ?? auth.memberships[0]?.organization_id ?? null;
 }
 
+/**
+ * 알림 발송 시 조직 결정용. getEffectiveOrganizationId와 달리
+ * 플랫폼 관리 조직을 완전히 제외한 첫 번째 활성 멤버십 조직을 반환한다.
+ * 결과가 null이면 발신 중단.
+ */
+export function getSubjectOrganizationId(auth: AuthContext): string | null {
+  const nonPlatformActive = auth.memberships.filter(
+    (membership) =>
+      membership.status === 'active' &&
+      !isPlatformManagementOrganization(membership.organization)
+  );
+  const preferred = nonPlatformActive.find(
+    (membership) => membership.organization_id === auth.profile.default_organization_id
+  );
+  return preferred?.organization_id ?? nonPlatformActive[0]?.organization_id ?? null;
+}
+
 export function findMembership(auth: AuthContext, organizationId: string) {
   return auth.memberships.find((membership) => membership.organization_id === organizationId) ?? null;
 }

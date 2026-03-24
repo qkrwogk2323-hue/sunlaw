@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getSubjectOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 
 function startOfTodayIso() {
   const now = new Date();
@@ -10,9 +11,11 @@ function startOfTodayIso() {
 
 export async function POST() {
   const auth = await requireAuthenticatedUser();
-  const organizationId = getEffectiveOrganizationId(auth);
+  // 알림 대상 조직은 플랫폼 조직을 제외한 실제 소속 조직으로 결정한다.
+  // getEffectiveOrganizationId는 화면 컨텍스트용으로, 플랫폼 조직도 반환할 수 있어 알림에 사용 금지.
+  const organizationId = getSubjectOrganizationId(auth);
   if (!organizationId) {
-    return NextResponse.json({ ok: true, skipped: 'no_org' });
+    return NextResponse.json({ ok: true, skipped: 'no_subject_org' });
   }
 
   const admin = createSupabaseAdminClient();
@@ -54,12 +57,17 @@ export async function POST() {
 
   const { data: managers } = await admin
     .from('organization_memberships')
-    .select('profile_id')
+    .select('profile_id, organization:organizations(kind, is_platform_root)')
     .eq('organization_id', organizationId)
     .eq('status', 'active')
     .in('role', ['org_owner', 'org_manager']);
 
-  const recipients = Array.from(new Set((managers ?? []).map((item: any) => item.profile_id).filter(Boolean)));
+  // 플랫폼 관리 조직 수신자 완전 제거 (조직 onboarding 알림은 플랫폼 관리자에게 보내면 안 됨)
+  const filteredManagers = (managers ?? []).filter((item: any) => {
+    const org = Array.isArray(item.organization) ? item.organization[0] : item.organization;
+    return !isPlatformManagementOrganization(org);
+  });
+  const recipients = Array.from(new Set(filteredManagers.map((item: any) => item.profile_id).filter(Boolean)));
   if (!recipients.length) {
     return NextResponse.json({ ok: true, sent: false, reason: 'no_manager' });
   }

@@ -4,10 +4,11 @@ import type { Route } from 'next';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { findMembership, getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getSubjectOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getAuthenticatedHomePath } from '@/lib/client-account';
 import { formatResidentRegistrationNumberMasked, isValidResidentRegistrationNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
 import { encryptString } from '@/lib/pii';
+import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { profileLegalNameSchema } from '@/lib/validators';
@@ -109,13 +110,14 @@ export async function completeMemberInitialProfileAction(formData: FormData) {
     }, { onConflict: 'profile_id' });
   if (privateProfileError) throw privateProfileError;
 
-  const organizationId = getEffectiveOrganizationId(auth);
+  // 알림 대상 조직은 플랫폼 조직을 제외한 실제 소속 조직으로 결정한다.
+  const organizationId = getSubjectOrganizationId(auth);
   if (organizationId) {
     const admin = createSupabaseAdminClient();
     const [{ data: managers }, { data: existing }] = await Promise.all([
       admin
         .from('organization_memberships')
-        .select('profile_id')
+        .select('profile_id, organization:organizations(kind, is_platform_root)')
         .eq('organization_id', organizationId)
         .eq('status', 'active')
         .in('role', ['org_owner', 'org_manager']),
@@ -131,7 +133,12 @@ export async function completeMemberInitialProfileAction(formData: FormData) {
     ]);
 
     if (!existing?.id) {
-      const recipients = Array.from(new Set((managers ?? []).map((row: any) => row.profile_id).filter(Boolean)));
+      // 플랫폼 관리 조직 수신자 제거 — 조직 내부 onboarding 알림은 플랫폼 관리자에게 가면 안 됨
+      const filteredManagers = (managers ?? []).filter((row: any) => {
+        const org = Array.isArray(row.organization) ? row.organization[0] : row.organization;
+        return !isPlatformManagementOrganization(org);
+      });
+      const recipients = Array.from(new Set(filteredManagers.map((row: any) => row.profile_id).filter(Boolean)));
       const currentMembership = findMembership(auth, organizationId);
       if (recipients.length) {
         await admin.from('notifications').insert(
