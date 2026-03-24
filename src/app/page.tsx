@@ -95,7 +95,7 @@ export default async function MarketingPage({
   }
 
   const auth = await getCurrentAuth();
-  const startHref = (auth ? getDefaultAppRoute(auth) : '/start') as Route;
+  const startHref = (auth ? getDefaultAppRoute(auth) : '/demo') as Route;
   const organizationId = auth ? getEffectiveOrganizationId(auth) : null;
   const isPlatformView = auth ? isPlatformOperator(auth) : false;
   let dashboard = auth && !isPlatformView ? emptyDashboardSnapshot : null;
