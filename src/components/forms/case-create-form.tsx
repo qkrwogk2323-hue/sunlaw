@@ -102,6 +102,7 @@ export function CaseCreateForm({
       }));
     }
     if (result?.ok && result.caseId) {
+      router.refresh();
       router.push(`/cases/${result.caseId}`);
     }
   }, [router]);

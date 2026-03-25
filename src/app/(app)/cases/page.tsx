@@ -26,6 +26,8 @@ import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings
 import { ExportLinks } from '@/components/export-links';
 import { LogButton } from '@/components/ui/log-button';
 
+export const dynamic = 'force-dynamic';
+
 type BucketKey = 'active' | 'completed' | 'deleted';
 
 const BUCKET_META: Record<BucketKey, { label: string; helper: string; cardDescription: string }> = {
