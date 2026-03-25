@@ -58,7 +58,7 @@ export async function saveCreditorsFromExtraction(input: SaveCreditorsInput) {
 
   const { error } = await supabase.from('insolvency_creditors').insert(rows);
   if (error) {
-    return { ok: false as const, code: 'DB_ERROR', userMessage: `채권자 저장에 실패했습니다: ${error.message}` };
+    return { ok: false as const, code: 'DB_ERROR', userMessage: error.code === '23505' ? '이미 동일한 채권자 정보가 등록되어 있습니다.' : '채권자 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
   }
 
   revalidatePath(`/cases/${input.caseId}/bankruptcy`);
@@ -106,7 +106,7 @@ export async function updateCreditor(
     .eq('organization_id', organizationId);
 
   if (error) {
-    return { ok: false as const, code: 'DB_ERROR', userMessage: '채권자 정보 수정에 실패했습니다.' };
+    return { ok: false as const, code: 'DB_ERROR', userMessage: '채권자 정보 수정에 실패했습니다. 해당 채권자가 이미 삭제됐거나 수정 권한이 없을 수 있습니다.' };
   }
 
   revalidatePath(`/cases/${caseId}/bankruptcy`);
@@ -131,7 +131,7 @@ export async function softDeleteCreditor(creditorId: string, organizationId: str
     .eq('organization_id', organizationId);
 
   if (error) {
-    return { ok: false as const, code: 'DB_ERROR', userMessage: '채권자 삭제에 실패했습니다.' };
+    return { ok: false as const, code: 'DB_ERROR', userMessage: '채권자 삭제에 실패했습니다. 해당 채권자가 이미 삭제됐거나 삭제 권한이 없을 수 있습니다.' };
   }
 
   revalidatePath(`/cases/${caseId}/bankruptcy`);
