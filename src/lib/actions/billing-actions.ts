@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requirePlatformAdminAction } from '@/lib/auth';
+import { createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { SubscriptionState } from '@/lib/subscription-lock';
 
@@ -24,11 +25,21 @@ export async function updateOrganizationSubscriptionStateAction(formData: FormDa
   const state = `${formData.get('state') ?? ''}`.trim() as SubscriptionState;
 
   if (!organizationId) {
-    throw new Error('조직 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'SUBSCRIPTION_MISSING_ORG_ID',
+      blocked: '구독 상태 변경이 차단되었습니다.',
+      cause: '조직 식별자가 누락되었습니다.',
+      resolution: '조직을 선택한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   if (!ALLOWED_STATES.includes(state)) {
-    throw new Error('허용되지 않는 구독 상태입니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'SUBSCRIPTION_INVALID_STATE',
+      blocked: '구독 상태 변경이 차단되었습니다.',
+      cause: `허용되지 않는 구독 상태입니다. 허용값: ${ALLOWED_STATES.join(', ')}`,
+      resolution: '올바른 구독 상태를 선택해 주세요.'
+    }));
   }
 
   const supabase = await createSupabaseServerClient();

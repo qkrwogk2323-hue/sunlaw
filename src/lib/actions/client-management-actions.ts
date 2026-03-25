@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import { buildTaskPlan } from '@/lib/ai/task-planner';
 import { requireOrganizationActionAccess } from '@/lib/auth';
+import { createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { getClientDetailSummary } from '@/lib/queries/clients';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -59,7 +60,12 @@ export async function createClientSpecialNoteAction(formData: FormData) {
   const returnPath = `${formData.get('returnPath') ?? ''}`.trim();
 
   if (!organizationId || !clientKey || !noteBody) {
-    throw new Error('필수 입력값이 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_NOTE_MISSING_FIELDS',
+      blocked: '의뢰인 특이사항 등록이 차단되었습니다.',
+      cause: '조직, 의뢰인, 내용은 필수 입력 항목입니다.',
+      resolution: '모든 필수 항목을 입력한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
@@ -69,7 +75,12 @@ export async function createClientSpecialNoteAction(formData: FormData) {
 
   const detail = await getClientDetailSummary(organizationId, clientKey);
   if (!detail) {
-    throw new Error('의뢰인 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_NOT_FOUND',
+      blocked: '의뢰인 특이사항 등록이 차단되었습니다.',
+      cause: '해당 의뢰인을 찾을 수 없습니다.',
+      resolution: '의뢰인 목록을 새로고침하고 다시 시도해 주세요.'
+    }));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -107,7 +118,12 @@ export async function generateClientAiCommentAction(formData: FormData) {
   const returnPath = `${formData.get('returnPath') ?? ''}`.trim();
 
   if (!organizationId || !clientKey || !returnPath) {
-    throw new Error('필수 입력값이 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_AI_COMMENT_MISSING_FIELDS',
+      blocked: 'AI 코멘트 생성이 차단되었습니다.',
+      cause: '조직과 의뢰인 정보가 필요합니다.',
+      resolution: '의뢰인 상세 화면에서 다시 시도해 주세요.'
+    }));
   }
 
   await requireOrganizationActionAccess(organizationId, {
@@ -117,7 +133,12 @@ export async function generateClientAiCommentAction(formData: FormData) {
 
   const detail = await getClientDetailSummary(organizationId, clientKey);
   if (!detail) {
-    throw new Error('의뢰인 정보를 찾을 수 없습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_NOT_FOUND_FOR_AI',
+      blocked: 'AI 코멘트 생성이 차단되었습니다.',
+      cause: '해당 의뢰인을 찾을 수 없습니다.',
+      resolution: '의뢰인 목록을 새로고침하고 다시 시도해 주세요.'
+    }));
   }
 
   const latestActivities = detail.activities.slice(0, 8).map((item, index) => `${index + 1}. [${item.type}] ${item.title}\n${item.body}`).join('\n\n');
@@ -145,7 +166,12 @@ export async function linkRelatedClientAction(formData: FormData) {
   const returnPath = `${formData.get('returnPath') ?? ''}`.trim();
 
   if (!organizationId || !clientKey || !targetClientKey || !relation) {
-    throw new Error('필수 입력값이 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_LINK_MISSING_FIELDS',
+      blocked: '관련인 연동이 차단되었습니다.',
+      cause: '조직, 의뢰인, 대상 의뢰인, 관계 유형이 모두 필요합니다.',
+      resolution: '모든 필수 항목을 선택한 뒤 다시 시도해 주세요.'
+    }));
   }
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
@@ -157,7 +183,14 @@ export async function linkRelatedClientAction(formData: FormData) {
     getClientDetailSummary(organizationId, clientKey),
     getClientDetailSummary(organizationId, targetClientKey)
   ]);
-  if (!sourceDetail || !targetDetail) throw new Error('연동 대상 의뢰인을 찾지 못했습니다.');
+  if (!sourceDetail || !targetDetail) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_LINK_TARGET_NOT_FOUND',
+      blocked: '관련인 연동이 차단되었습니다.',
+      cause: '연동 대상 의뢰인 중 하나를 찾을 수 없습니다.',
+      resolution: '의뢰인 목록을 새로고침하고 대상을 다시 선택해 주세요.'
+    }));
+  }
 
   const supabase = await createSupabaseServerClient();
   const noteBody = `[관련인연동] 대상:${targetDetail.name}(${targetClientKey}) 관계:${relation}`;

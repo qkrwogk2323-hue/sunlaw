@@ -119,16 +119,21 @@ export default async function CasesPage({
     return (
       <div key={item.id} className="vs-interactive rounded-xl border border-slate-200 bg-white/85 transition hover:border-slate-400">
         {/* 행 1: 제목 + 핵심 배지 + 액션 */}
-        <div className="flex items-start justify-between gap-2 px-3 pt-3">
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
           <Link href={`/cases/${item.id}`} className="min-w-0 flex-1">
-            <p className="truncate font-medium text-slate-900">{item.title}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="truncate font-medium text-slate-900 text-sm leading-tight">{item.title}</span>
               <Badge tone="blue">{getCaseStageLabel(item.stage_key)}</Badge>
               <Badge tone="slate">{getCaseStatusLabel(item.case_status)}</Badge>
-              {isStale && <Badge tone="amber">단계 갱신 필요</Badge>}
+              {isStale && <Badge tone="amber">갱신필요</Badge>}
               {hasClient && <Badge tone="green">의뢰인</Badge>}
               {hasHub && <Badge tone="green">허브</Badge>}
             </div>
+            {(item.reference_no || item.court_name || item.case_number || item.principal_amount) && (
+              <p className="mt-0.5 text-xs text-slate-400 truncate">
+                {[item.reference_no, item.court_name, item.case_number, formatCurrency(item.principal_amount)].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </Link>
           {/* 액션 버튼 영역 */}
           <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
@@ -201,12 +206,6 @@ export default async function CasesPage({
             ) : null}
           </div>
         </div>
-        {/* 행 2: 세부 식별 정보 */}
-        <Link href={`/cases/${item.id}`} className="block px-3 pb-3 pt-1.5">
-          <p className="text-xs text-slate-400">
-            {[item.reference_no, item.court_name, item.case_number, formatCurrency(item.principal_amount), formatDateTime(item.updated_at)].filter(Boolean).join(' · ')}
-          </p>
-        </Link>
       </div>
     );
   }
