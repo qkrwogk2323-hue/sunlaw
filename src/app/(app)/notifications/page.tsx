@@ -212,7 +212,10 @@ export default async function NotificationsPage({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
+          <p className="mt-1 text-sm text-slate-500">업무 요청, 일정, 문서 결재 등 중요 알림을 확인하고 처리합니다.</p>
+        </div>
         <NotificationsArchiveButton archivedCount={notificationCenter.trashedNotifications.length} />
       </div>
 
