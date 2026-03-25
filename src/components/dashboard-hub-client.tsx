@@ -514,6 +514,7 @@ function useDashboardCommunicationState({
   const [selectedScenarioConversationIdState, setSelectedScenarioConversationIdState] = useState(data.organizationConversations[0]?.id ?? '');
   const [messagePending, startMessageTransition] = useTransition();
   const [coordinationPending, startCoordinationTransition] = useTransition();
+  const [orgChatMigrationNeeded, setOrgChatMigrationNeeded] = useState(false);
   const scenarioCurrentUserId = useMemo(() => {
     if (!scenarioMode) return null;
 
@@ -718,6 +719,10 @@ function useDashboardCommunicationState({
       } else {
         const errorBody = await response.json().catch(() => ({}));
         const cause = errorBody?.cause || errorBody?.message || '잠시 후 다시 시도해 주세요.';
+        // migration 0081 미적용 감지 — DB 스키마 업데이트 배너 표시
+        if (typeof cause === 'string' && cause.includes('migration 0081')) {
+          setOrgChatMigrationNeeded(true);
+        }
         onError('메시지 전송에 실패했습니다.', { message: cause });
       }
     });
@@ -911,7 +916,8 @@ function useDashboardCommunicationState({
     teamMemberNameByProfileId,
     sendMessage,
     summarizeThread,
-    commitCoordination
+    commitCoordination,
+    orgChatMigrationNeeded
   };
 }
 
@@ -1125,7 +1131,8 @@ export function DashboardHubClient({
     teamMemberNameByProfileId,
     sendMessage,
     summarizeThread,
-    commitCoordination
+    commitCoordination,
+    orgChatMigrationNeeded
   } = communication;
 
   const pendingClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'pending').length;
@@ -1725,6 +1732,12 @@ export function DashboardHubClient({
             </div>
           ) : (
             <div className={`flex ${conversationExpanded ? 'h-[42rem]' : 'h-[28rem]'} flex-col rounded-2xl border border-slate-200 bg-white p-4`}>
+              {orgChatMigrationNeeded && (
+                <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <p className="font-semibold">⚠️ DB 스키마 업데이트 필요</p>
+                  <p className="mt-1 text-xs">조직소통 대화방은 사건 연결 없이도 메시지를 보낼 수 있어야 합니다. Supabase 대시보드에서 <strong>migration 0081</strong>(<code>case_messages_optional_case</code>)을 적용해 주세요.</p>
+                </div>
+              )}
               <div className="flex flex-wrap items-center justify-end gap-3">
                 <Badge tone="slate">오늘 대화 {todayMessages.length}건</Badge>
               </div>

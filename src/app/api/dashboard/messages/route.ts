@@ -84,13 +84,13 @@ export async function POST(request: Request) {
   });
 
   if (messageError) {
-    // case_id NOT NULL 제약 위반 감지 — migration 0084 미적용 상태
+    // case_id NOT NULL 제약 위반 감지 — migration 0081(case_messages_optional_case) 미적용 상태
     const isNullViolation = messageError.message?.includes('null') && messageError.message?.includes('case_id');
     if (isNullViolation) {
       return guardConditionFailedResponse(500, {
         blocked: '조직소통 메시지 전송이 차단되었습니다.',
-        cause: 'DB 스키마 업데이트(migration 0084)가 아직 적용되지 않았습니다.',
-        resolution: 'Supabase 대시보드에서 migration 0084를 적용한 뒤 다시 시도해 주세요. (사건 연결 없이도 조직소통 메시지 전송 가능)'
+        cause: '조직소통 대화방은 사건 없이도 메시지를 보낼 수 있어야 하는데, 아직 DB 스키마가 업데이트되지 않았습니다.',
+        resolution: 'Supabase 대시보드에서 migration 0081(case_messages_optional_case)을 적용한 뒤 다시 시도해 주세요.'
       });
     }
     return guardServerErrorResponse(500, '메시지 저장에 실패해 전송이 차단되었습니다.');
