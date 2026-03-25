@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser, requireOrganizationActionAccess, requirePlatformAdminAction } from '@/lib/auth';
+import { createAccessDeniedFeedback, createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -483,7 +484,12 @@ export async function createOrganizationExitRequestAction(formData: FormData) {
     .maybeSingle();
 
   if (pending?.id) {
-    throw new Error('이미 검토 중인 조직 탈퇴 신청이 있습니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'EXIT_REQUEST_ALREADY_PENDING',
+      blocked: '조직 탈퇴 신청이 차단되었습니다.',
+      cause: '이미 검토 중인 조직 탈퇴 신청이 있습니다.',
+      resolution: '기존 신청이 처리될 때까지 기다려 주세요.'
+    }));
   }
 
   const { error } = await admin.from('organization_exit_requests').insert({
@@ -518,7 +524,12 @@ export async function reviewOrganizationExitRequestAction(formData: FormData) {
     throw requestError ?? new Error('탈퇴 신청을 찾을 수 없습니다.');
   }
   if (requestRow.status !== 'pending') {
-    throw new Error('이미 처리된 탈퇴 신청입니다.');
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'EXIT_REQUEST_ALREADY_PROCESSED',
+      blocked: '탈퇴 신청 검토가 차단되었습니다.',
+      cause: '이미 처리된 탈퇴 신청입니다.',
+      resolution: '탈퇴 신청 목록을 새로고침하여 현재 상태를 확인해 주세요.'
+    }));
   }
 
   const nextStatus = parsed.decision === 'approved' ? 'approved' : 'rejected';
@@ -596,7 +607,12 @@ export async function updateOrganizationProfileAction(formData: FormData) {
       representativeName: '대표자명'
     };
     const fieldLabel = fieldNames[firstError.path[0] as string] ?? String(firstError.path[0] ?? '입력값');
-    throw new Error(`[${fieldLabel}] ${firstError.message}`);
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'ORG_SETTINGS_VALIDATION_FAILED',
+      blocked: '조직 설정 저장이 차단되었습니다.',
+      cause: `[${fieldLabel}] ${firstError.message}`,
+      resolution: '입력 내용을 확인하고 다시 시도해 주세요.'
+    }));
   }
   const parsed = result.data;
   const auth = await assertOrgAdmin(parsed.organizationId);
@@ -615,15 +631,30 @@ export async function updateOrganizationProfileAction(formData: FormData) {
   const isPlatformRootOrganization = existingOrganization.is_platform_root === true;
 
   if (parsed.kind === 'platform_management' && !isPlatformRootOrganization) {
-    throw new Error('플랫폼 관리조직 유형은 control plane registry가 지정한 플랫폼 조직에만 허용됩니다.');
+    throwGuardFeedback(createAccessDeniedFeedback({
+      code: 'ORG_KIND_PLATFORM_RESTRICTED',
+      blocked: '조직 유형 변경이 차단되었습니다.',
+      cause: '플랫폼 관리조직 유형은 플랫폼 지정 조직에만 허용됩니다.',
+      resolution: '일반 조직 유형 중에서 선택해 주세요.'
+    }));
   }
 
   if ((isPlatformRootOrganization || isPlatformManagementOrganization(existingOrganization)) && parsed.kind !== 'platform_management') {
-    throw new Error('플랫폼 관리조직의 유형은 platform_management로 고정됩니다.');
+    throwGuardFeedback(createAccessDeniedFeedback({
+      code: 'ORG_KIND_PLATFORM_FIXED',
+      blocked: '조직 유형 변경이 차단되었습니다.',
+      cause: '플랫폼 관리조직의 유형은 변경할 수 없습니다.',
+      resolution: '플랫폼 관리조직은 유형을 변경하지 않아도 됩니다.'
+    }));
   }
 
   if (!isPlatformAdmin && existingOrganization.kind !== parsed.kind) {
-    throw new Error('조직유형 변경은 플랫폼 관리자만 가능합니다.');
+    throwGuardFeedback(createAccessDeniedFeedback({
+      code: 'ORG_KIND_CHANGE_REQUIRES_PLATFORM_ADMIN',
+      blocked: '조직 유형 변경이 차단되었습니다.',
+      cause: '조직 유형 변경은 플랫폼 관리자만 가능합니다.',
+      resolution: '플랫폼 관리자에게 유형 변경을 요청해 주세요.'
+    }));
   }
 
   const { error } = await admin
@@ -655,7 +686,12 @@ export async function deactivateOrganizationAction(formData: FormData) {
     confirmText: formData.get('confirmText')
   });
   if (parsed.confirmText !== '비활성화') {
-    throw new Error('확인 문구로 "비활성화"를 정확히 입력해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'DEACTIVATE_CONFIRM_MISMATCH',
+      blocked: '조직 비활성화가 차단되었습니다.',
+      cause: '확인 문구가 일치하지 않습니다.',
+      resolution: '입력창에 "비활성화"를 정확히 입력해 주세요.'
+    }));
   }
 
   const auth = await assertOrganizationLifecycleAccess(parsed.organizationId);
@@ -693,7 +729,12 @@ export async function deleteOrganizationAction(formData: FormData) {
     confirmText: formData.get('confirmText')
   });
   if (parsed.confirmText !== '삭제') {
-    throw new Error('확인 문구로 "삭제"를 정확히 입력해 주세요.');
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'DELETE_ORG_CONFIRM_MISMATCH',
+      blocked: '조직 삭제가 차단되었습니다.',
+      cause: '확인 문구가 일치하지 않습니다.',
+      resolution: '입력창에 "삭제"를 정확히 입력해 주세요.'
+    }));
   }
 
   const auth = await assertOrganizationLifecycleAccess(parsed.organizationId);

@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/lib/auth';
+import { createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { resolveNotificationOpenTarget } from '@/lib/notification-open';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -66,7 +67,7 @@ async function getOwnedNotification(notificationId: string) {
 export async function markNotificationReadAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('알림 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({ code: 'NOTIFICATION_ID_MISSING', blocked: '알림 액션이 차단되었습니다.', cause: '알림 식별자가 누락되었습니다.', resolution: '페이지를 새로고침하고 다시 시도해 주세요.' }));
   }
 
   const { auth, supabase, notification } = await getOwnedNotification(id);
@@ -226,7 +227,7 @@ export async function bulkNotificationTransitionAction(formData: FormData) {
 export async function markNotificationResolvedAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('알림 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({ code: 'NOTIFICATION_ID_MISSING', blocked: '알림 액션이 차단되었습니다.', cause: '알림 식별자가 누락되었습니다.', resolution: '페이지를 새로고침하고 다시 시도해 주세요.' }));
   }
 
   const { auth, supabase, notification } = await getOwnedNotification(id);
@@ -259,13 +260,13 @@ export async function markNotificationResolvedAction(formData: FormData) {
 export async function moveNotificationToTrashAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('알림 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({ code: 'NOTIFICATION_ID_MISSING', blocked: '알림 액션이 차단되었습니다.', cause: '알림 식별자가 누락되었습니다.', resolution: '페이지를 새로고침하고 다시 시도해 주세요.' }));
   }
 
   const { auth, supabase, notification } = await getOwnedNotification(id);
 
   if (notification.status !== 'resolved') {
-    throw new Error('보관은 resolved 상태에서만 가능합니다.');
+    throwGuardFeedback(createConditionFailedFeedback({ code: 'NOTIFICATION_ARCHIVE_STATUS_MISMATCH', blocked: '알림 보관이 차단되었습니다.', cause: '해결 완료된 알림만 보관할 수 있습니다.', resolution: '먼저 알림을 해결 완료 상태로 변경해 주세요.' }));
   }
 
   const now = new Date().toISOString();
@@ -297,7 +298,7 @@ export async function moveNotificationToTrashAction(formData: FormData) {
 export async function restoreNotificationAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('알림 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({ code: 'NOTIFICATION_ID_MISSING', blocked: '알림 액션이 차단되었습니다.', cause: '알림 식별자가 누락되었습니다.', resolution: '페이지를 새로고침하고 다시 시도해 주세요.' }));
   }
 
   const auth = await requireAuthenticatedUser();
@@ -350,7 +351,7 @@ export async function emptyNotificationTrashAction() {
 export async function permanentlyDeleteNotificationAction(formData: FormData) {
   const id = `${formData.get('notificationId') ?? ''}`;
   if (!id) {
-    throw new Error('알림 식별자가 누락되었습니다.');
+    throwGuardFeedback(createValidationFailedFeedback({ code: 'NOTIFICATION_ID_MISSING', blocked: '알림 액션이 차단되었습니다.', cause: '알림 식별자가 누락되었습니다.', resolution: '페이지를 새로고침하고 다시 시도해 주세요.' }));
   }
 
   const { auth, supabase, notification } = await getOwnedNotification(id);
