@@ -26,6 +26,8 @@ import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings
 import { ExportLinks } from '@/components/export-links';
 import { LogButton } from '@/components/ui/log-button';
 
+import { PageReloadOnRestore } from './page-reload-on-restore';
+
 export const dynamic = 'force-dynamic';
 
 type BucketKey = 'active' | 'completed' | 'deleted';
@@ -214,6 +216,7 @@ export default async function CasesPage({
 
   return (
     <div className="space-y-6">
+      <PageReloadOnRestore />
       <HubContextStrip hubs={hubList.slice(0, 4)} currentLabel="사건 목록" />
 
       <div className="space-y-3">
