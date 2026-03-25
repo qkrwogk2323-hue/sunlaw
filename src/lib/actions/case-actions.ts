@@ -480,11 +480,10 @@ async function runCreateCasePostProcessing({
 function finalizeCreateCase(caseId: string) {
   revalidatePath('/cases');
   revalidatePath('/dashboard');
-  redirect(`/cases/${caseId}`);
 }
 
 export type CaseActionResult = 
-  | { ok: true }
+  | { ok: true; caseId: string }
   | { ok: false; code: string; message: string; resolution: string };
 
 // 새 사건을 생성하고 기본 연결 데이터를 초기화한다.
@@ -537,7 +536,7 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
     }
 
     finalizeCreateCase(writeResult.caseId);
-    return { ok: true };
+    return { ok: true as const, caseId: writeResult.caseId };
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const feedback = parseGuardFeedback(error);

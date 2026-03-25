@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Sparkles } from 'lucide-react';
 import { createCaseAction } from '@/lib/actions/case-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -31,6 +32,7 @@ export function CaseCreateForm({
   const [isParsing, startParsing] = useTransition();
   const [parseError, setParseError] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
+  const router = useRouter();
   const intakeFileRef = useRef<HTMLInputElement | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
   const openedOnRef = useRef<HTMLInputElement | null>(null);
@@ -99,7 +101,10 @@ export function CaseCreateForm({
         resolution: result.resolution
       }));
     }
-  }, []);
+    if (result?.ok && result.caseId) {
+      router.push(`/cases/${result.caseId}`);
+    }
+  }, [router]);
 
   if (!organizations.length) {
     return <p className="text-sm text-slate-500">사건을 생성하려면 먼저 조직에 속해야 합니다.</p>;
