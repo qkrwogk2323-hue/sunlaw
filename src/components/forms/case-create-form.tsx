@@ -32,6 +32,8 @@ export function CaseCreateForm({
   const [parseError, setParseError] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
   const intakeFileRef = useRef<HTMLInputElement | null>(null);
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  const openedOnRef = useRef<HTMLInputElement | null>(null);
   const [fields, setFields] = useState<Required<ParsedIntake>>({
     title: '',
     caseNumber: '',
@@ -53,32 +55,36 @@ export function CaseCreateForm({
     const title = (formData.get('title') as string ?? '').trim();
     const openedOn = (formData.get('openedOn') as string ?? '').trim();
 
+    // 필수 항목 순서대로 체크 — 첫 번째 미입력 필드로 포커스 이동
     if (title.length < 2) {
+      titleRef.current?.focus();
       throw new Error(encodeGuardFeedback({
         type: 'validation_failed',
         code: 'CASE_CREATE_TITLE_TOO_SHORT',
-        blocked: '사건명이 너무 짧습니다.',
-        cause: '[사건명] 사건명은 2자 이상 입력해 주세요.',
-        resolution: '사건명 입력란을 확인하고 다시 시도해 주세요.'
+        blocked: '사건명을 입력해 주세요.',
+        cause: '사건명은 2자 이상 입력해야 합니다.',
+        resolution: '위 "사건명" 입력란을 채우고 다시 시도해 주세요.'
       }));
     }
 
     if (!openedOn) {
+      openedOnRef.current?.focus();
       throw new Error(encodeGuardFeedback({
         type: 'validation_failed',
         code: 'CASE_CREATE_OPENED_ON_REQUIRED',
-        blocked: '개시일이 입력되지 않았습니다.',
-        cause: '[개시일] 개시일은 필수 항목입니다.',
-        resolution: '사건이 시작된 날짜(개시일)를 입력해 주세요.'
+        blocked: '개시일을 입력해 주세요.',
+        cause: '개시일은 필수 항목입니다.',
+        resolution: '위 "개시일" 날짜 입력란을 채우고 다시 시도해 주세요.'
       }));
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(openedOn)) {
+      openedOnRef.current?.focus();
       throw new Error(encodeGuardFeedback({
         type: 'validation_failed',
         code: 'CASE_CREATE_OPENED_ON_FORMAT',
         blocked: '개시일 형식이 올바르지 않습니다.',
-        cause: `[개시일] 날짜 형식이 올바르지 않습니다. (입력값: ${openedOn})`,
+        cause: `날짜 형식이 맞지 않습니다. (입력값: ${openedOn})`,
         resolution: 'YYYY-MM-DD 형식으로 입력해 주세요.'
       }));
     }
@@ -161,9 +167,31 @@ export function CaseCreateForm({
 
       <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
 
+      {/* 필수 항목 먼저 */}
+      <div className="space-y-1">
+        <label htmlFor="case-title" className="text-sm font-medium text-slate-700">
+          사건명 <span className="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <Input
+          ref={titleRef}
+          id="case-title"
+          name="title"
+          value={fields.title}
+          onChange={(e) => setFields((prev) => ({ ...prev, title: e.target.value }))}
+          placeholder="예: 홍길동 vs 김철수 손해배상"
+          required
+          aria-required="true"
+          minLength={2}
+        />
+      </div>
+
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-3">
+        <div className="space-y-1">
+          <label htmlFor="case-type" className="text-sm font-medium text-slate-700">
+            사건 유형 <span className="text-red-500" aria-hidden="true">*</span>
+          </label>
           <select
+            id="case-type"
             name="caseType"
             defaultValue="civil"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -177,80 +205,73 @@ export function CaseCreateForm({
             <option value="advisory">자문</option>
             <option value="other">기타</option>
           </select>
-          <Input
-            name="caseNumber"
-            value={fields.caseNumber}
-            onChange={(event) => setFields((prev) => ({ ...prev, caseNumber: event.target.value }))}
-            placeholder="사건번호"
-          />
-          <Input
-            name="clientRole"
-            value={fields.clientRole}
-            onChange={(event) => setFields((prev) => ({ ...prev, clientRole: event.target.value }))}
-            placeholder="의뢰인 지위"
-          />
-          <Input
-            name="opponentRole"
-            value={fields.opponentRole}
-            onChange={(event) => setFields((prev) => ({ ...prev, opponentRole: event.target.value }))}
-            placeholder="상대방 지위"
-          />
-          <div className="space-y-1">
-            <label htmlFor="opened-on" className="text-sm font-medium text-slate-700">
-              개시일 <span className="text-red-500" aria-hidden="true">*</span>
-            </label>
-            <Input
-              id="opened-on"
-              name="openedOn"
-              type="date"
-              value={fields.openedOn}
-              onChange={(event) => setFields((prev) => ({ ...prev, openedOn: event.target.value }))}
-              required
-              aria-required="true"
-            />
-          </div>
         </div>
+
+        <div className="space-y-1">
+          <label htmlFor="opened-on" className="text-sm font-medium text-slate-700">
+            개시일 <span className="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <Input
+            ref={openedOnRef}
+            id="opened-on"
+            name="openedOn"
+            type="date"
+            value={fields.openedOn}
+            onChange={(e) => setFields((prev) => ({ ...prev, openedOn: e.target.value }))}
+            required
+            aria-required="true"
+          />
+        </div>
+      </div>
+
+      {/* 선택 항목 */}
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-3">
           <Input
             name="clientName"
             value={fields.clientName}
-            onChange={(event) => setFields((prev) => ({ ...prev, clientName: event.target.value }))}
+            onChange={(e) => setFields((prev) => ({ ...prev, clientName: e.target.value }))}
             placeholder="의뢰인"
           />
           <Input
-            name="opponentName"
-            value={fields.opponentName}
-            onChange={(event) => setFields((prev) => ({ ...prev, opponentName: event.target.value }))}
-            placeholder="상대방"
+            name="clientRole"
+            value={fields.clientRole}
+            onChange={(e) => setFields((prev) => ({ ...prev, clientRole: e.target.value }))}
+            placeholder="의뢰인 지위"
           />
           <Input
             name="courtName"
             value={fields.courtName}
-            onChange={(event) => setFields((prev) => ({ ...prev, courtName: event.target.value }))}
+            onChange={(e) => setFields((prev) => ({ ...prev, courtName: e.target.value }))}
             placeholder="법원"
           />
-          <div className="space-y-1">
-            <label htmlFor="case-title" className="text-sm font-medium text-slate-700">
-              사건명 <span className="text-red-500" aria-hidden="true">*</span>
-            </label>
-            <Input
-              id="case-title"
-              name="title"
-              value={fields.title}
-              onChange={(event) => setFields((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="예: 홍길동 vs 김철수 손해배상"
-              required
-              aria-required="true"
-              minLength={2}
-            />
-          </div>
+        </div>
+        <div className="space-y-3">
+          <Input
+            name="opponentName"
+            value={fields.opponentName}
+            onChange={(e) => setFields((prev) => ({ ...prev, opponentName: e.target.value }))}
+            placeholder="상대방"
+          />
+          <Input
+            name="opponentRole"
+            value={fields.opponentRole}
+            onChange={(e) => setFields((prev) => ({ ...prev, opponentRole: e.target.value }))}
+            placeholder="상대방 지위"
+          />
+          <Input
+            name="caseNumber"
+            value={fields.caseNumber}
+            onChange={(e) => setFields((prev) => ({ ...prev, caseNumber: e.target.value }))}
+            placeholder="사건번호"
+          />
         </div>
       </div>
 
       <Textarea
         name="summary"
         value={fields.summary}
-        onChange={(event) => setFields((prev) => ({ ...prev, summary: event.target.value }))}
+        onChange={(e) => setFields((prev) => ({ ...prev, summary: e.target.value }))}
         placeholder="사건개요"
       />
 
@@ -268,9 +289,7 @@ export function CaseCreateForm({
           />
           <button
             type="button"
-            onClick={() => {
-              void handleParseFile();
-            }}
+            onClick={() => { void handleParseFile(); }}
             disabled={isParsing}
             className="inline-flex h-10 items-center gap-1 rounded-lg border border-sky-200 bg-white px-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
