@@ -214,6 +214,28 @@ describe('server action integration', () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard');
   });
 
+  it('rejects case creation with GUARD_FEEDBACK when title is missing', async () => {
+    const formData = new FormData();
+    formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
+    // title is intentionally omitted to trigger validation failure
+    formData.set('caseType', 'debt_collection');
+    formData.set('principalAmount', '0');
+    formData.set('openedOn', '2026-03-15');
+
+    const { createCaseAction } = await import('@/lib/actions/case-actions');
+
+    await expect(createCaseAction(formData)).rejects.toSatisfy((error: unknown) => {
+      const msg = (error as Error)?.message ?? '';
+      // throwGuardFeedback encodes the error as __GUARD_FEEDBACK__:{...}
+      expect(msg).toContain('__GUARD_FEEDBACK__');
+      expect(msg).toContain('CASE_CREATE_VALIDATION_FAILED');
+      return true;
+    });
+
+    // Should not have called revalidatePath on validation failure
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith('/cases');
+  });
+
   it('creates a staff invitation through the shared manager guard', async () => {
     const writeClient = createInvitationWriteClient();
     mocks.createSupabaseServerClient.mockResolvedValue(writeClient.client);
