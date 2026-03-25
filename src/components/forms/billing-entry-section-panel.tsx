@@ -279,7 +279,8 @@ export function BillingEntrySectionPanel({
         </div>
       )) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-          현재 등록된 항목이 없습니다.
+          <p className="font-medium">아직 등록된 항목이 없습니다.</p>
+          <p className="mt-1">상단 버튼을 눌러 {createLabel}을 등록해 주세요.</p>
         </div>
       )}
     </div>

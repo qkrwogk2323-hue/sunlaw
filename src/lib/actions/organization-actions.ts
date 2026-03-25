@@ -4198,7 +4198,14 @@ export async function revokeStaffTempCredentialAction(formData: FormData) {
     .update({ credential_status: 'revoked', revoked_at: revokedAt, revoked_by: auth.user.id })
     .eq('profile_id', profileId)
     .eq('organization_id', organizationId);
-  if (error) throw new Error(`임시 계정 폐기에 실패했습니다: ${error.message}`);
+  if (error) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'STAFF_TEMP_CREDENTIAL_REVOKE_FAILED',
+      blocked: '임시 계정 폐기에 실패했습니다.',
+      cause: '이미 폐기된 계정이거나 대상 계정을 찾을 수 없습니다.',
+      resolution: '팀 관리 목록을 새로고침하고 다시 시도해 주세요.'
+    }));
+  }
 
   // 핵심 감사 로그: 직원 임시계정 폐기
   const supabase = await createSupabaseServerClient();
@@ -4228,7 +4235,14 @@ export async function revokeClientTempCredentialAction(formData: FormData) {
     .update({ credential_status: 'revoked', revoked_at: revokedAt, revoked_by: auth.user.id })
     .eq('profile_id', profileId)
     .eq('organization_id', organizationId);
-  if (error) throw new Error(`의뢰인 임시 계정 폐기에 실패했습니다: ${error.message}`);
+  if (error) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'CLIENT_TEMP_CREDENTIAL_REVOKE_FAILED',
+      blocked: '의뢰인 임시 계정 폐기에 실패했습니다.',
+      cause: '이미 폐기된 계정이거나 대상 계정을 찾을 수 없습니다.',
+      resolution: '의뢰인 목록을 새로고침하고 다시 시도해 주세요.'
+    }));
+  }
 
   // 핵심 감사 로그: 의뢰인 임시계정 폐기
   const supabase = await createSupabaseServerClient();

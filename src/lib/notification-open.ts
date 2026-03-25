@@ -117,7 +117,7 @@ export async function resolveNotificationOpenTarget({
       throwGuardFeedback(createConditionFailedFeedback({
         code: 'NOTIFICATION_ORGANIZATION_SWITCH_FAILED',
         blocked: '알림 확인 중 조직 전환을 저장하지 못했습니다.',
-        cause: profileError.message,
+        cause: '프로필 업데이트 중 문제가 발생했습니다.',
         resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
       }));
     }
@@ -136,7 +136,7 @@ export async function resolveNotificationOpenTarget({
     throwGuardFeedback(createConditionFailedFeedback({
       code: 'NOTIFICATION_MARK_READ_FAILED',
       blocked: '알림 읽음 처리를 저장하지 못했습니다.',
-      cause: notificationError.message,
+      cause: '알림 상태 업데이트 중 문제가 발생했습니다.',
       resolution: '잠시 후 다시 시도해 주세요. 반복되면 관리자에게 문의해 주세요.'
     }));
   }
