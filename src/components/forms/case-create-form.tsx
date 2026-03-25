@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { Loader2, Sparkles } from 'lucide-react';
 import { createCaseAction } from '@/lib/actions/case-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { encodeGuardFeedback } from '@/lib/guard-feedback';
 
 type ParsedIntake = {
   title?: string;
@@ -47,6 +48,43 @@ export function CaseCreateForm({
     () => defaultOrganizationId ?? organizations[0]?.id ?? '',
     [defaultOrganizationId, organizations]
   );
+
+  const guardedAction = useCallback(async (formData: FormData) => {
+    const title = (formData.get('title') as string ?? '').trim();
+    const openedOn = (formData.get('openedOn') as string ?? '').trim();
+
+    if (title.length < 2) {
+      throw new Error(encodeGuardFeedback({
+        type: 'validation_failed',
+        code: 'CASE_CREATE_TITLE_TOO_SHORT',
+        blocked: '사건명이 너무 짧습니다.',
+        cause: '[사건명] 사건명은 2자 이상 입력해 주세요.',
+        resolution: '사건명 입력란을 확인하고 다시 시도해 주세요.'
+      }));
+    }
+
+    if (!openedOn) {
+      throw new Error(encodeGuardFeedback({
+        type: 'validation_failed',
+        code: 'CASE_CREATE_OPENED_ON_REQUIRED',
+        blocked: '개시일이 입력되지 않았습니다.',
+        cause: '[개시일] 개시일은 필수 항목입니다.',
+        resolution: '사건이 시작된 날짜(개시일)를 입력해 주세요.'
+      }));
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(openedOn)) {
+      throw new Error(encodeGuardFeedback({
+        type: 'validation_failed',
+        code: 'CASE_CREATE_OPENED_ON_FORMAT',
+        blocked: '개시일 형식이 올바르지 않습니다.',
+        cause: `[개시일] 날짜 형식이 올바르지 않습니다. (입력값: ${openedOn})`,
+        resolution: 'YYYY-MM-DD 형식으로 입력해 주세요.'
+      }));
+    }
+
+    return createCaseAction(formData);
+  }, []);
 
   if (!organizations.length) {
     return <p className="text-sm text-slate-500">사건을 생성하려면 먼저 조직에 속해야 합니다.</p>;
@@ -101,11 +139,11 @@ export function CaseCreateForm({
 
   return (
     <ClientActionForm
-      action={createCaseAction}
+      action={guardedAction}
       successTitle="사건이 등록되었습니다."
       errorTitle="사건 등록에 실패했습니다."
-      errorCause="사건 등록 중 오류가 발생했습니다. 사건명(2자 이상), 사건 유형, 조직 정보를 확인해 주세요."
-      errorResolution="필수 항목을 모두 입력했는지 확인하세요. 문제가 계속되면 페이지를 새로고침하거나 관리자에게 문의하세요."
+      errorCause="사건명(2자 이상)과 개시일을 확인해 주세요."
+      errorResolution="필수 항목을 모두 입력하고 다시 시도해 주세요."
       className="space-y-4"
     >
       <input type="hidden" name="organizationId" value={defaultOrganization} />
