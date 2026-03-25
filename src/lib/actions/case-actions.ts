@@ -9,7 +9,8 @@ import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
 import { hasPermission } from '@/lib/permissions';
 import { NOTIFICATION_TYPES } from '@/lib/notification-policy';
-import { throwGuardFeedback } from '@/lib/guard-feedback';
+import { throwGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
@@ -339,6 +340,7 @@ function parseCreateCaseInput(formData: FormData) {
       title: '[사건명] 사건명은 2자 이상 입력해 주세요.',
       organizationId: '[조직] 조직 정보가 올바르지 않습니다. 페이지를 새로고침해 주세요.',
       caseType: '[사건 유형] 올바른 사건 유형을 선택해 주세요.',
+      openedOn: '[개시일] 개시일은 필수 항목입니다. YYYY-MM-DD 형식으로 입력해 주세요.',
     };
     const firstField = result.error.issues[0]?.path[0]?.toString() ?? '';
     const message = fieldMessages[firstField] ?? `[입력 오류] ${result.error.issues[0]?.message ?? '필수 항목을 확인해 주세요.'}`;
@@ -403,10 +405,10 @@ async function createCaseCoreWrite({
     p_stage_key: 'intake',
     p_module_flags: moduleFlags,
     p_principal_amount: principalAmount,
-    p_opened_on: openedOn ?? null,
-    p_court_name: courtName ?? null,
-    p_case_number: caseNumber ?? null,
-    p_summary: summary ?? null,
+    p_opened_on: openedOn || null,
+    p_court_name: courtName || null,
+    p_case_number: caseNumber || null,
+    p_summary: summary || null,
     p_actor_id: actorId,
     p_actor_name: actorName ?? null,
     p_can_manage_collection: caseType === 'debt_collection'
@@ -478,89 +480,123 @@ function finalizeCreateCase(caseId: string) {
 
 // 새 사건을 생성하고 기본 연결 데이터를 초기화한다.
 export async function createCaseAction(formData: FormData) {
-  const parsed = parseCreateCaseInput(formData);
+  try {
+    const parsed = parseCreateCaseInput(formData);
 
-  const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
-    permission: 'case_create',
-    errorMessage: '사건 생성 권한이 없습니다.'
-  });
-  const supabase = await createSupabaseServerClient();
+    const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+      permission: 'case_create',
+      errorMessage: '사건 생성 권한이 없습니다.'
+    });
+    const supabase = await createSupabaseServerClient();
 
-  const organization = auth.memberships.find((item) => item.organization_id === parsed.organizationId)?.organization;
-  const { caseId } = await createCaseCoreWrite({
-    supabase,
-    organizationId: parsed.organizationId,
-    title: parsed.title,
-    caseType: parsed.caseType,
-    principalAmount: parsed.principalAmount,
-    openedOn: parsed.openedOn,
-    courtName: parsed.courtName,
-    caseNumber: parsed.caseNumber,
-    summary: parsed.summary,
-    actorId: auth.user.id,
-    actorName: auth.profile.full_name,
-    organizationSlug: organization?.slug ?? null
-  });
+    const organization = auth.memberships.find((item) => item.organization_id === parsed.organizationId)?.organization;
+    const { caseId } = await createCaseCoreWrite({
+      supabase,
+      organizationId: parsed.organizationId,
+      title: parsed.title,
+      caseType: parsed.caseType,
+      principalAmount: parsed.principalAmount,
+      openedOn: parsed.openedOn,
+      courtName: parsed.courtName,
+      caseNumber: parsed.caseNumber,
+      summary: parsed.summary,
+      actorId: auth.user.id,
+      actorName: auth.profile.full_name,
+      organizationSlug: organization?.slug ?? null
+    });
 
-  await runCreateCasePostProcessing({
-    supabase,
-    organizationId: parsed.organizationId,
-    caseId,
-    actorId: auth.user.id,
-    actorName: auth.profile.full_name,
-    title: parsed.title,
-    billingPlanSummary: parsed.billingPlanSummary,
-    billingFollowUpDueOn: parsed.billingFollowUpDueOn
-  });
+    try {
+      await runCreateCasePostProcessing({
+        supabase,
+        organizationId: parsed.organizationId,
+        caseId,
+        actorId: auth.user.id,
+        actorName: auth.profile.full_name,
+        title: parsed.title,
+        billingPlanSummary: parsed.billingPlanSummary,
+        billingFollowUpDueOn: parsed.billingFollowUpDueOn
+      });
+    } catch (postError) {
+      // 후처리(알림, 일정 등) 실패는 사건 생성 자체를 막지 않음
+      console.error('Case creation post-processing failed:', postError);
+    }
 
-  finalizeCreateCase(caseId);
+    finalizeCreateCase(caseId);
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+
+    const existingFeedback = parseGuardFeedback(error);
+    if (existingFeedback) throw error;
+
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'CASE_CREATE_UNKNOWN_ERROR',
+      blocked: '사건 등록 중 오류가 발생했습니다.',
+      cause: error instanceof Error ? error.message : '알 수 없는 오류입니다.',
+      resolution: '입력 내용을 확인하고 다시 시도해 주세요. 문제가 지속되면 관리자에게 문의하세요.'
+    });
+  }
 }
 
 // 사건 당사자를 추가한다.
 export async function addPartyAction(caseId: string, formData: FormData) {
-  const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
-  const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
-    permission: 'case_edit',
-    errorMessage: '당사자 등록 권한이 없습니다.'
-  });
+  try {
+    const { supabase, caseRecord } = await loadCaseOrThrow(caseId);
+    const { auth } = await requireOrganizationActionAccess(caseRecord.organization_id, {
+      permission: 'case_edit',
+      errorMessage: '당사자 등록 권한이 없습니다.'
+    });
 
-  const parsed = casePartySchema.parse({
-    partyRole: formData.get('partyRole'),
-    entityType: formData.get('entityType'),
-    displayName: formData.get('displayName'),
-    companyName: formData.get('companyName'),
-    registrationNumber: formData.get('registrationNumber'),
-    residentNumber: formData.get('residentNumber'),
-    phone: formData.get('phone'),
-    email: formData.get('email'),
-    addressSummary: formData.get('addressSummary'),
-    addressDetail: formData.get('addressDetail'),
-    notes: formData.get('notes'),
-    isPrimary: formData.get('isPrimary') === 'on'
-  });
+    const parsed = casePartySchema.parse({
+      partyRole: formData.get('partyRole'),
+      entityType: formData.get('entityType'),
+      displayName: formData.get('displayName'),
+      companyName: formData.get('companyName'),
+      registrationNumber: formData.get('registrationNumber'),
+      residentNumber: formData.get('residentNumber'),
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      addressSummary: formData.get('addressSummary'),
+      addressDetail: formData.get('addressDetail'),
+      notes: formData.get('notes'),
+      isPrimary: formData.get('isPrimary') === 'on'
+    });
 
-  const { error } = await supabase.rpc('add_case_party_atomic', {
-    p_organization_id: caseRecord.organization_id,
-    p_case_id: caseRecord.id,
-    p_party_role: parsed.partyRole,
-    p_entity_type: parsed.entityType,
-    p_display_name: parsed.displayName,
-    p_company_name: parsed.companyName || null,
-    p_registration_number_masked: parsed.registrationNumber ? `${parsed.registrationNumber.slice(0, 3)}****` : null,
-    p_resident_number_last4: parsed.residentNumber ? parsed.residentNumber.slice(-4) : null,
-    p_phone: parsed.phone || null,
-    p_email: parsed.email || null,
-    p_address_summary: parsed.addressSummary || null,
-    p_notes: parsed.notes || null,
-    p_is_primary: parsed.isPrimary,
-    p_resident_number_ciphertext: parsed.residentNumber ? encryptString(parsed.residentNumber) : null,
-    p_registration_number_ciphertext: parsed.registrationNumber ? encryptString(parsed.registrationNumber) : null,
-    p_address_detail_ciphertext: parsed.addressDetail ? encryptString(parsed.addressDetail) : null
-  });
+    const { error } = await supabase.rpc('add_case_party_atomic', {
+      p_organization_id: caseRecord.organization_id,
+      p_case_id: caseRecord.id,
+      p_party_role: parsed.partyRole,
+      p_entity_type: parsed.entityType,
+      p_display_name: parsed.displayName,
+      p_company_name: parsed.companyName || null,
+      p_registration_number_masked: parsed.registrationNumber ? `${parsed.registrationNumber.slice(0, 3)}****` : null,
+      p_resident_number_last4: parsed.residentNumber ? parsed.residentNumber.slice(-4) : null,
+      p_phone: parsed.phone || null,
+      p_email: parsed.email || null,
+      p_address_summary: parsed.addressSummary || null,
+      p_notes: parsed.notes || null,
+      p_is_primary: parsed.isPrimary,
+      p_resident_number_ciphertext: parsed.residentNumber ? encryptString(parsed.residentNumber) : null,
+      p_registration_number_ciphertext: parsed.registrationNumber ? encryptString(parsed.registrationNumber) : null,
+      p_address_detail_ciphertext: parsed.addressDetail ? encryptString(parsed.addressDetail) : null
+    });
 
-  if (error) throw error;
+    if (error) throw error;
 
-  revalidatePath(`/cases/${caseId}`);
+    revalidatePath(`/cases/${caseId}`);
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    const existing = parseGuardFeedback(error);
+    if (existing) throw error;
+
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'CASE_PARTY_ADD_FAILED',
+      blocked: '당사자 등록에 실패했습니다.',
+      cause: error instanceof Error ? error.message : '알 수 없는 오류입니다.',
+      resolution: '입력값을 확인하고 다시 시도해 주세요.'
+    });
+  }
 }
 
 // 사건에 의뢰인을 연결한다.

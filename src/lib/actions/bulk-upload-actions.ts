@@ -211,12 +211,14 @@ export async function bulkUploadCasesAction(
     const principalAmount = parseFloat((row['원금'] || row['principal_amount'] || '0').replace(/,/g, '')) || 0;
     const courtName = (row['법원'] || row['법원명'] || row['court_name'] || '').trim() || null;
     const caseNumber = (row['사건번호'] || row['case_number'] || '').trim() || null;
-    const openedOn = (row['접수일'] || row['opened_on'] || '').trim() || null;
+    const openedOn = (row['개시일'] || row['접수일'] || row['opened_on'] || '').trim() || null;
     const summary = (row['요약'] || row['summary'] || '').trim() || null;
     const clientName = (row['의뢰인'] || row['의뢰인이름'] || row['client_name'] || '').trim() || null;
     const clientEmail = (row['의뢰인이메일'] || row['client_email'] || '').trim() || null;
 
-    if (!title) { errors.push({ row: rowNum, reason: '제목이 비어 있습니다.' }); skipped++; continue; }
+    if (!title) { errors.push({ row: rowNum, reason: '사건명이 비어 있습니다.' }); skipped++; continue; }
+    if (!openedOn) { errors.push({ row: rowNum, reason: `"${title}": 개시일이 비어 있습니다. YYYY-MM-DD 형식으로 입력해 주세요.` }); skipped++; continue; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(openedOn)) { errors.push({ row: rowNum, reason: `"${title}": 개시일 형식이 올바르지 않습니다. YYYY-MM-DD 형식이어야 합니다. (입력값: ${openedOn})` }); skipped++; continue; }
 
     // 사건 번호 생성
     const now = new Date();

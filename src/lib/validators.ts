@@ -148,7 +148,7 @@ export const caseCreateSchema = z.object({
   title: z.string().trim().min(2),
   caseType: caseTypeEnum,
   principalAmount: z.coerce.number().min(0).default(0),
-  openedOn: z.string().optional().or(z.literal('')),
+  openedOn: z.string().trim().min(1, '개시일은 필수 항목입니다.').regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD 이어야 합니다.'),
   courtName: z.string().trim().max(120).optional().or(z.literal('')),
   caseNumber: z.string().trim().max(120).optional().or(z.literal('')),
   summary: z.string().trim().max(3000).optional().or(z.literal('')),

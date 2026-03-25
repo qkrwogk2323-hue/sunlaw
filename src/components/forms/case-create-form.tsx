@@ -104,8 +104,8 @@ export function CaseCreateForm({
       action={createCaseAction}
       successTitle="사건이 등록되었습니다."
       errorTitle="사건 등록에 실패했습니다."
-      errorCause="입력값 검증 오류이거나 사건 등록 권한이 없습니다."
-      errorResolution="사건명(2자 이상)과 필수 항목을 확인하세요. 권한 오류라면 조직 관리자에게 case_create 권한을 요청하세요."
+      errorCause="사건 등록 중 오류가 발생했습니다. 사건명(2자 이상), 사건 유형, 조직 정보를 확인해 주세요."
+      errorResolution="필수 항목을 모두 입력했는지 확인하세요. 문제가 계속되면 페이지를 새로고침하거나 관리자에게 문의하세요."
       className="space-y-4"
     >
       <input type="hidden" name="organizationId" value={defaultOrganization} />
@@ -148,12 +148,20 @@ export function CaseCreateForm({
             onChange={(event) => setFields((prev) => ({ ...prev, opponentRole: event.target.value }))}
             placeholder="상대방 지위"
           />
-          <Input
-            name="openedOn"
-            type="date"
-            value={fields.openedOn}
-            onChange={(event) => setFields((prev) => ({ ...prev, openedOn: event.target.value }))}
-          />
+          <div className="space-y-1">
+            <label htmlFor="opened-on" className="text-sm font-medium text-slate-700">
+              개시일 <span className="text-red-500" aria-hidden="true">*</span>
+            </label>
+            <Input
+              id="opened-on"
+              name="openedOn"
+              type="date"
+              value={fields.openedOn}
+              onChange={(event) => setFields((prev) => ({ ...prev, openedOn: event.target.value }))}
+              required
+              aria-required="true"
+            />
+          </div>
         </div>
         <div className="space-y-3">
           <Input
