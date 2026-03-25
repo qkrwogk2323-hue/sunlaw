@@ -2618,7 +2618,7 @@ export async function moveCaseToDeletedAction(formData: FormData) {
   }
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
-    permission: 'case_assign',
+    permission: 'case_delete',
     errorMessage: '사건 삭제함 이동 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
@@ -2667,7 +2667,7 @@ export async function restoreCaseAction(formData: FormData) {
   }
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
-    permission: 'case_assign',
+    permission: 'case_delete',
     errorMessage: '사건 복구 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
@@ -2709,7 +2709,7 @@ export async function forceDeleteCaseAction(formData: FormData) {
   }
 
   await requireOrganizationActionAccess(organizationId, {
-    permission: 'case_assign',
+    permission: 'case_delete',
     errorMessage: '최종 보관 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();

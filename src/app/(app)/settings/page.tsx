@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsNav } from '@/components/settings-nav';
-import { getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, isPlatformOperator, requireAuthenticatedUser } from '@/lib/auth';
+import { isWorkspaceAdmin } from '@/lib/permissions';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import Link from 'next/link';
+import { LifeBuoyIcon } from 'lucide-react';
 
 export default async function SettingsIndexPage() {
   const auth = await requireAuthenticatedUser();
@@ -18,14 +21,25 @@ export default async function SettingsIndexPage() {
   }
   const data = await getSettingsAdminData(organizationId);
   const canViewPlatformControls = await hasActivePlatformAdminView(auth, getPlatformOrganizationContextId(auth));
+  const membership = findMembership(auth, organizationId);
+  const isAdmin = isWorkspaceAdmin(membership);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">설정</h1>
-        <p className="mt-2 text-sm text-slate-600">조직 운영 설정, 문구, 구독 상태, 플랫폼 제어 항목을 권한에 맞게 관리합니다.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">설정</h1>
+          <p className="mt-2 text-sm text-slate-600">조직 운영 설정, 문구, 구독 상태, 플랫폼 제어 항목을 권한에 맞게 관리합니다.</p>
+        </div>
+        <Link 
+          href="/support" // TODO: 실제 고객센터 경로 확인 필요, 현재는 /support로 가정
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+        >
+          <LifeBuoyIcon className="size-4" />
+          고객센터 문의
+        </Link>
       </div>
-      <SettingsNav currentPath="/settings" canViewPlatformControls={canViewPlatformControls} />
+      <SettingsNav currentPath="/settings" canViewPlatformControls={canViewPlatformControls} isWorkspaceAdmin={isAdmin} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">카탈로그 키 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.catalog.length}</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm font-medium text-slate-500">기본 설정 수</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-slate-900">{data.platformSettings.length}</p></CardContent></Card>
