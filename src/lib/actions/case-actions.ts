@@ -485,11 +485,10 @@ export async function createCaseAction(formData: FormData) {
     errorMessage: '사건 생성 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
 
   const organization = auth.memberships.find((item) => item.organization_id === parsed.organizationId)?.organization;
   const { caseId } = await createCaseCoreWrite({
-    supabase: admin,
+    supabase,
     organizationId: parsed.organizationId,
     title: parsed.title,
     caseType: parsed.caseType,

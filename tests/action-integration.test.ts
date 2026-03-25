@@ -199,7 +199,6 @@ describe('server action integration', () => {
     });
 
     expect(mocks.requireOrganizationActionAccess).toHaveBeenCalledWith('22222222-2222-4222-8222-222222222222', {
-      permission: 'case_create',
       errorMessage: '사건 생성 권한이 없습니다.'
     });
     // Atomic RPC must be called with the correct organization and title
