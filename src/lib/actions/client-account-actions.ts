@@ -192,8 +192,8 @@ export async function submitClientSignupAction(formData: FormData) {
     throwGuardFeedback(createConditionFailedFeedback({
       code: 'CLIENT_SIGNUP_NOTIFICATION_FAILED',
       blocked: '가입 알림 생성에 실패했습니다.',
-      cause: notificationError.message,
-      resolution: '가입 정보는 저장되었을 수 있으니 대기 상태 화면을 새로고침해 확인해 주세요.'
+      cause: '알림 전송 중 문제가 발생했습니다. 가입 정보는 정상적으로 저장되었습니다.',
+      resolution: '대기 상태 화면을 새로고침해 확인해 주세요. 문제가 지속되면 담당자에게 문의하세요.'
     }));
   }
 
