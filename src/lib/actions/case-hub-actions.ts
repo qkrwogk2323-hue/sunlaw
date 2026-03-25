@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser, requireOrganizationActionAccess } from '@/lib/auth';
+import { throwGuardFeedback } from '@/lib/guard-feedback';
 import { grantHubPinAccess, hashHubPin, revokeHubPinAccess } from '@/lib/hub-access';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -156,7 +157,13 @@ export async function createCaseHubAction(formData: FormData) {
     if (insertError.code === '23505') {
       throw new Error('이 사건에는 이미 허브가 존재합니다. 허브 입장을 이용해 주세요.');
     }
-    throw new Error(`허브 생성 검증에 실패했습니다. (${insertError.message}) 입력 조건을 확인한 뒤 다시 시도해 주세요.`);
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'HUB_CREATE_FAILED',
+      blocked: '허브 생성에 실패했습니다.',
+      cause: insertError.code === '23503' ? '사건 또는 조직 정보가 올바르지 않습니다.' : '데이터베이스 저장 중 문제가 발생했습니다.',
+      resolution: '입력 조건을 확인하고 다시 시도해 주세요. 문제가 반복되면 관리자에게 문의하세요.'
+    });
   }
 
   // 생성자를 owner로 자동 추가
@@ -229,7 +236,13 @@ export async function updateCaseHubAction(formData: FormData) {
     .eq('lifecycle_status', 'active');
 
   if (error) {
-    throw new Error(`허브 수정에 실패했습니다. (${error.message}) 잠시 후 다시 시도해 주세요.`);
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'HUB_UPDATE_FAILED',
+      blocked: '허브 수정에 실패했습니다.',
+      cause: '허브가 이미 보관됐거나 접근 권한이 없습니다.',
+      resolution: '페이지를 새로고침하고 다시 시도해 주세요.'
+    });
   }
 
   await admin.from('case_hub_activity').insert({
@@ -448,7 +461,13 @@ export async function inviteHubMemberAction(formData: FormData) {
   }, { onConflict: 'hub_id,profile_id' });
 
   if (error) {
-    throw new Error(`참여자 초대에 실패했습니다. (${error.message}) 잠시 후 다시 시도해 주세요.`);
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'HUB_MEMBER_INVITE_FAILED',
+      blocked: '참여자 초대에 실패했습니다.',
+      cause: error.code === '23505' ? '이미 허브에 참여 중인 멤버입니다.' : '허브 멤버 등록 중 문제가 발생했습니다.',
+      resolution: '허브 멤버 목록을 확인하고 다시 시도해 주세요.'
+    });
   }
 
   await admin.from('case_hub_activity').insert({
@@ -497,7 +516,13 @@ export async function updateHubMemberSeatAction(formData: FormData) {
     .eq('hub_id', hubId);
 
   if (error) {
-    throw new Error(`좌석 변경에 실패했습니다. (${error.message}) 잠시 후 다시 시도해 주세요.`);
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'HUB_SEAT_CHANGE_FAILED',
+      blocked: '좌석 변경에 실패했습니다.',
+      cause: '멤버 정보가 없거나 이미 변경된 상태입니다.',
+      resolution: '허브 멤버 목록을 새로고침하고 다시 시도해 주세요.'
+    });
   }
 
   await admin.from('case_hub_activity').insert({
@@ -541,7 +566,13 @@ export async function archiveCaseHubAction(formData: FormData) {
     .eq('lifecycle_status', 'active');
 
   if (error) {
-    throw new Error(`허브 보관에 실패했습니다. (${error.message}) 잠시 후 다시 시도해 주세요.`);
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'HUB_ARCHIVE_FAILED',
+      blocked: '허브 보관에 실패했습니다.',
+      cause: '허브가 이미 보관됐거나 접근 권한이 없습니다.',
+      resolution: '페이지를 새로고침하고 다시 시도해 주세요.'
+    });
   }
 
   await admin.from('case_hub_activity').insert({
@@ -588,7 +619,13 @@ export async function activateCaseHubAction(formData: FormData) {
     .eq('lifecycle_status', 'active');
 
   if (error) {
-    throw new Error(`협업 시작 처리에 실패했습니다. (${error.message}) 잠시 후 다시 시도해 주세요.`);
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'HUB_ACTIVATE_FAILED',
+      blocked: '협업 시작에 실패했습니다.',
+      cause: '허브가 이미 활성 상태이거나 접근 권한이 없습니다.',
+      resolution: '페이지를 새로고침하고 다시 시도해 주세요.'
+    });
   }
 
   await admin.from('case_hub_activity').insert({

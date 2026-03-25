@@ -413,7 +413,13 @@ async function createCaseCoreWrite({
   });
 
   if (error || !caseId) {
-    throw error ?? new Error('사건 생성에 실패했습니다.');
+    throwGuardFeedback({
+      type: 'condition_failed',
+      code: 'CASE_CREATE_DB_FAILED',
+      blocked: '사건 등록에 실패했습니다.',
+      cause: error?.code === '23505' ? '동일한 사건 번호 또는 제목이 이미 존재합니다.' : '데이터베이스 저장 중 문제가 발생했습니다.',
+      resolution: '입력 내용을 확인하고 다시 시도해 주세요. 문제가 반복되면 관리자에게 문의하세요.'
+    });
   }
 
   return {
