@@ -395,42 +395,85 @@ async function createCaseCoreWrite({
         : 'general-default';
   const moduleFlags = caseType === 'debt_collection' ? { billing: true, collection: true } : { billing: true };
 
-  // All three inserts (cases, case_handlers, case_organizations) run inside a single
-  // DB transaction via the create_case_atomic RPC. If any insert fails the whole
-  // transaction is rolled back — no partial rows, no compensating-delete needed.
-  const { data: caseId, error } = await supabase.rpc('create_case_atomic', {
-    p_organization_id: organizationId,
-    p_reference_no: referenceNo,
-    p_title: title,
-    p_case_type: caseType,
-    p_stage_template_key: stageTemplateKey,
-    p_stage_key: 'intake',
-    p_module_flags: moduleFlags,
-    p_principal_amount: principalAmount,
-    p_opened_on: openedOn || null,
-    p_court_name: courtName || null,
-    p_case_number: caseNumber || null,
-    p_summary: summary || null,
-    p_actor_id: actorId,
-    p_actor_name: actorName ?? null,
-    p_can_manage_collection: caseType === 'debt_collection'
-  });
+  // Step 1: Insert case
+  const { data: caseRow, error: caseError } = await supabase
+    .from('cases')
+    .insert({
+      organization_id: organizationId,
+      reference_no: referenceNo,
+      title,
+      case_type: caseType,
+      case_status: 'intake',
+      stage_template_key: stageTemplateKey,
+      stage_key: 'intake',
+      module_flags: moduleFlags,
+      principal_amount: principalAmount,
+      opened_on: openedOn || null,
+      court_name: courtName || null,
+      case_number: caseNumber || null,
+      summary: summary || null,
+      created_by: actorId,
+      updated_by: actorId,
+    })
+    .select('id')
+    .single();
 
-  if (error || !caseId) {
-    console.error('[createCaseCoreWrite] RPC error:', error);
+  if (caseError || !caseRow?.id) {
+    console.error('[createCaseCoreWrite] cases insert error:', caseError);
     return {
       ok: false,
       code: 'CASE_CREATE_DB_FAILED',
-      message: error?.code === '23505'
-        ? '동일한 사건 번호 또는 제목이 이미 존재합니다.'
-        : `데이터베이스 저장 중 문제가 발생했습니다. (코드: ${error?.code ?? 'unknown'})`,
+      message: caseError?.code === '23505'
+        ? '동일한 사건 번호가 이미 존재합니다. 잠시 후 다시 시도해 주세요.'
+        : `사건 저장 중 오류가 발생했습니다. (코드: ${caseError?.code ?? 'unknown'})`,
       resolution: '입력 내용을 확인하고 다시 시도해 주세요. 문제가 반복되면 관리자에게 문의하세요.'
     };
   }
 
+  const caseId = caseRow.id as string;
+
+  // Step 2: Insert case_handler (non-fatal if fails)
+  const { error: handlerError } = await supabase
+    .from('case_handlers')
+    .insert({
+      organization_id: organizationId,
+      case_id: caseId,
+      profile_id: actorId,
+      handler_name: actorName ?? '담당자',
+      role: '담당',
+      created_by: actorId,
+      updated_by: actorId,
+    });
+  if (handlerError) {
+    console.error('[createCaseCoreWrite] case_handlers insert error:', handlerError);
+  }
+
+  // Step 3: Insert case_organization (non-fatal if fails)
+  const { error: orgError } = await supabase
+    .from('case_organizations')
+    .insert({
+      organization_id: organizationId,
+      case_id: caseId,
+      role: 'managing_org',
+      status: 'active',
+      access_scope: 'full',
+      billing_scope: 'direct_client_billing',
+      communication_scope: 'client_visible',
+      is_lead: true,
+      can_submit_legal_requests: true,
+      can_receive_legal_requests: true,
+      can_manage_collection: caseType === 'debt_collection',
+      can_view_client_messages: true,
+      created_by: actorId,
+      updated_by: actorId,
+    });
+  if (orgError) {
+    console.error('[createCaseCoreWrite] case_organizations insert error:', orgError);
+  }
+
   return {
     ok: true as const,
-    caseId: caseId as string,
+    caseId,
     moduleFlags: moduleFlags as Record<string, boolean>
   };
 }
