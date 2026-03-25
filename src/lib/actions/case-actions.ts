@@ -12,6 +12,7 @@ import { NOTIFICATION_TYPES } from '@/lib/notification-policy';
 import { throwGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   billingEntrySchema,
   caseClientLinkSchema,
@@ -122,7 +123,7 @@ async function notifyBillingStakeholders({
   notificationType = NOTIFICATION_TYPES.BILLING_NOTICE,
   priority = 'normal'
 }: {
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  supabase: SupabaseClient;
   organizationId: string;
   caseId: string;
   actorId: string;
@@ -481,14 +482,14 @@ export async function createCaseAction(formData: FormData) {
   const parsed = parseCreateCaseInput(formData);
 
   const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
-    permission: 'case_create',
     errorMessage: '사건 생성 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
 
   const organization = auth.memberships.find((item) => item.organization_id === parsed.organizationId)?.organization;
   const { caseId } = await createCaseCoreWrite({
-    supabase,
+    supabase: admin,
     organizationId: parsed.organizationId,
     title: parsed.title,
     caseType: parsed.caseType,
@@ -2619,6 +2620,7 @@ export async function moveCaseToDeletedAction(formData: FormData) {
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
     permission: 'case_assign',
+    requireManager: true,
     errorMessage: '사건 삭제함 이동 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
@@ -2668,6 +2670,7 @@ export async function restoreCaseAction(formData: FormData) {
 
   const { auth } = await requireOrganizationActionAccess(organizationId, {
     permission: 'case_assign',
+    requireManager: true,
     errorMessage: '사건 복구 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
@@ -2710,6 +2713,7 @@ export async function forceDeleteCaseAction(formData: FormData) {
 
   await requireOrganizationActionAccess(organizationId, {
     permission: 'case_assign',
+    requireManager: true,
     errorMessage: '최종 보관 권한이 없습니다.'
   });
   const supabase = await createSupabaseServerClient();
