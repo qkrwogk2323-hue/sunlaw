@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireOrganizationActionAccess } from '@/lib/auth';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // ─── 특이사항 저장 위치 추천 (rules-first, LLM 불필요) ─────────────────────────
@@ -176,6 +175,7 @@ export async function bulkUploadCasesAction(
   csvText: string
 ): Promise<BulkUploadResult> {
   const { auth } = await requireOrganizationActionAccess(organizationId, {
+    permission: 'case_create',
     errorMessage: '사건 일괄 등록 권한이 없습니다.'
   });
 
@@ -188,7 +188,6 @@ export async function bulkUploadCasesAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
   const { data: orgRow } = await supabase
     .from('organizations')
     .select('slug')
@@ -230,7 +229,7 @@ export async function bulkUploadCasesAction(
       : caseType === 'insolvency' ? { billing: true, insolvency: true }
       : { billing: true };
 
-    const { data: caseRecord, error: caseError } = await admin
+    const { data: caseRecord, error: caseError } = await supabase
       .from('cases')
       .insert({
         organization_id: organizationId,
@@ -259,7 +258,7 @@ export async function bulkUploadCasesAction(
     }
 
     // 담당자 등록
-    await admin.from('case_handlers').insert({
+    await supabase.from('case_handlers').insert({
       organization_id: organizationId,
       case_id: caseRecord.id,
       profile_id: auth.user.id,
@@ -269,7 +268,7 @@ export async function bulkUploadCasesAction(
 
     // 의뢰인 이름이 있으면 case_clients에 임시 등록
     if (clientName) {
-      await admin.from('case_clients').insert({
+      await supabase.from('case_clients').insert({
         organization_id: organizationId,
         case_id: caseRecord.id,
         client_name: clientName,

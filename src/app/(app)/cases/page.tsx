@@ -77,13 +77,8 @@ export default async function CasesPage({
     (m) => m.organization_id === currentOrganizationId && isManagementRole(m.role)
   );
 
-  const currentMembership = auth.memberships.find(
-    (membership) => membership.organization_id === currentOrganizationId && membership.status === 'active'
-  ) ?? null;
-  // 사건 생성은 활성 조직원이면 모두 허용한다.
-  const canCreateCase = Boolean(currentMembership);
-  // 삭제/복구/최종 보관은 관리자만 허용한다.
-  const canDeleteCase = Boolean(currentMembership && isManagementRole(currentMembership.role));
+  // 현재 조직 기준 case_create 권한 여부 — 권한 없는 사용자에게 폼을 보여주면 제출 후 서버 오류만 보게 됨
+  const canCreateCase = hasPermission(auth, currentOrganizationId, 'case_create');
 
   // Current organization name for context display
   const currentOrgName = auth.memberships.find(
@@ -151,7 +146,7 @@ export default async function CasesPage({
                 hub={caseHubMap[item.id] ?? null}
               />
             )}
-            {bucket !== 'deleted' && canDeleteCase ? (
+            {bucket !== 'deleted' ? (
               <DangerActionButton
                 action={moveCaseToDeletedAction}
                 fields={{ caseId: item.id, organizationId: item.organization_id }}
@@ -172,7 +167,7 @@ export default async function CasesPage({
                 삭제함
               </DangerActionButton>
             ) : null}
-            {bucket === 'deleted' && canDeleteCase ? (
+            {bucket === 'deleted' ? (
               <DangerActionButton
                 action={restoreCaseAction}
                 fields={{ caseId: item.id, organizationId: item.organization_id }}
@@ -191,7 +186,7 @@ export default async function CasesPage({
                 복구
               </DangerActionButton>
             ) : null}
-            {bucket === 'deleted' && canDeleteCase ? (
+            {bucket === 'deleted' ? (
               <DangerActionButton
                 action={forceDeleteCaseAction}
                 fields={{ caseId: item.id, organizationId: item.organization_id }}
