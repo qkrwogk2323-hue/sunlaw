@@ -305,7 +305,11 @@ async function loadFeeAgreementForMutation(agreementId: string) {
   return { supabase, auth, caseRecord, agreement };
 }
 
-function parseCreateCaseInput(formData: FormData) {
+type ParseCreateCaseResult =
+  | { success: true; data: NonNullable<ReturnType<typeof caseCreateSchema.safeParse>['data']> }
+  | { success: false; code: string; message: string; resolution: string };
+
+function parseCreateCaseInput(formData: FormData): ParseCreateCaseResult {
   const clientName = `${formData.get('clientName') ?? ''}`.trim();
   const clientRole = `${formData.get('clientRole') ?? ''}`.trim();
   const opponentName = `${formData.get('opponentName') ?? ''}`.trim();
@@ -344,17 +348,15 @@ function parseCreateCaseInput(formData: FormData) {
     };
     const firstField = result.error.issues[0]?.path[0]?.toString() ?? '';
     const message = fieldMessages[firstField] ?? `[입력 오류] ${result.error.issues[0]?.message ?? '필수 항목을 확인해 주세요.'}`;
-    throwGuardFeedback({
-      type: 'condition_failed',
-      code: 'CASE_CREATE_VALIDATION_FAILED',
-      blocked: '사건 등록에 실패했습니다.',
-      cause: message,
-      resolution: '사건명(2자 이상)과 필수 항목을 확인하고 다시 시도해 주세요.'
-    });
+    return { success: false, code: 'CASE_CREATE_VALIDATION_FAILED', message, resolution: '사건명(2자 이상)과 개시일을 확인해 주세요.' };
   }
 
-  return result.data;
+  return { success: true, data: result.data! };
 }
+
+type CreateCaseCoreWriteResult =
+  | { ok: true; caseId: string; moduleFlags: Record<string, boolean> }
+  | { ok: false; code: string; message: string; resolution: string };
 
 async function createCaseCoreWrite({
   supabase,
@@ -382,7 +384,7 @@ async function createCaseCoreWrite({
   actorId: string;
   actorName?: string | null;
   organizationSlug?: string | null;
-}) {
+}): Promise<CreateCaseCoreWriteResult> {
   const referenceNo = buildCaseReference(organizationSlug ?? 'CASE');
   const stageTemplateKey = caseType === 'debt_collection'
     ? 'collection-default'
@@ -415,18 +417,21 @@ async function createCaseCoreWrite({
   });
 
   if (error || !caseId) {
-    throwGuardFeedback({
-      type: 'condition_failed',
+    console.error('[createCaseCoreWrite] RPC error:', error);
+    return {
+      ok: false,
       code: 'CASE_CREATE_DB_FAILED',
-      blocked: '사건 등록에 실패했습니다.',
-      cause: error?.code === '23505' ? '동일한 사건 번호 또는 제목이 이미 존재합니다.' : '데이터베이스 저장 중 문제가 발생했습니다.',
+      message: error?.code === '23505'
+        ? '동일한 사건 번호 또는 제목이 이미 존재합니다.'
+        : `데이터베이스 저장 중 문제가 발생했습니다. (코드: ${error?.code ?? 'unknown'})`,
       resolution: '입력 내용을 확인하고 다시 시도해 주세요. 문제가 반복되면 관리자에게 문의하세요.'
-    });
+    };
   }
 
   return {
+    ok: true as const,
     caseId: caseId as string,
-    moduleFlags
+    moduleFlags: moduleFlags as Record<string, boolean>
   };
 }
 
@@ -478,63 +483,73 @@ function finalizeCreateCase(caseId: string) {
   redirect(`/cases/${caseId}`);
 }
 
+export type CaseActionResult = 
+  | { ok: true }
+  | { ok: false; code: string; message: string; resolution: string };
+
 // 새 사건을 생성하고 기본 연결 데이터를 초기화한다.
-export async function createCaseAction(formData: FormData) {
+export async function createCaseAction(formData: FormData): Promise<CaseActionResult> {
   try {
     const parsed = parseCreateCaseInput(formData);
+    if (!parsed.success) {
+      return { ok: false, code: parsed.code, message: parsed.message, resolution: parsed.resolution };
+    }
 
-    const { auth } = await requireOrganizationActionAccess(parsed.organizationId, {
+    const { auth } = await requireOrganizationActionAccess(parsed.data.organizationId, {
       permission: 'case_create',
       errorMessage: '사건 생성 권한이 없습니다.'
     });
     const supabase = await createSupabaseServerClient();
 
-    const organization = auth.memberships.find((item) => item.organization_id === parsed.organizationId)?.organization;
-    const { caseId } = await createCaseCoreWrite({
+    const organization = auth.memberships.find((item) => item.organization_id === parsed.data.organizationId)?.organization;
+    const writeResult = await createCaseCoreWrite({
       supabase,
-      organizationId: parsed.organizationId,
-      title: parsed.title,
-      caseType: parsed.caseType,
-      principalAmount: parsed.principalAmount,
-      openedOn: parsed.openedOn,
-      courtName: parsed.courtName,
-      caseNumber: parsed.caseNumber,
-      summary: parsed.summary,
+      organizationId: parsed.data.organizationId,
+      title: parsed.data.title,
+      caseType: parsed.data.caseType,
+      principalAmount: parsed.data.principalAmount,
+      openedOn: parsed.data.openedOn,
+      courtName: parsed.data.courtName,
+      caseNumber: parsed.data.caseNumber,
+      summary: parsed.data.summary,
       actorId: auth.user.id,
       actorName: auth.profile.full_name,
       organizationSlug: organization?.slug ?? null
     });
 
+    if (!writeResult.ok) {
+      return { ok: false, code: writeResult.code, message: writeResult.message, resolution: writeResult.resolution };
+    }
+
     try {
       await runCreateCasePostProcessing({
         supabase,
-        organizationId: parsed.organizationId,
-        caseId,
+        organizationId: parsed.data.organizationId,
+        caseId: writeResult.caseId,
         actorId: auth.user.id,
         actorName: auth.profile.full_name,
-        title: parsed.title,
-        billingPlanSummary: parsed.billingPlanSummary,
-        billingFollowUpDueOn: parsed.billingFollowUpDueOn
+        title: parsed.data.title,
+        billingPlanSummary: parsed.data.billingPlanSummary,
+        billingFollowUpDueOn: parsed.data.billingFollowUpDueOn
       });
     } catch (postError) {
-      // 후처리(알림, 일정 등) 실패는 사건 생성 자체를 막지 않음
       console.error('Case creation post-processing failed:', postError);
     }
 
-    finalizeCreateCase(caseId);
+    finalizeCreateCase(writeResult.caseId);
+    return { ok: true };
   } catch (error) {
     if (isRedirectError(error)) throw error;
-
-    const existingFeedback = parseGuardFeedback(error);
-    if (existingFeedback) throw error;
-
-    throwGuardFeedback({
-      type: 'condition_failed',
+    const feedback = parseGuardFeedback(error);
+    if (feedback) {
+      return { ok: false, code: feedback.code, message: feedback.cause, resolution: feedback.resolution };
+    }
+    return {
+      ok: false,
       code: 'CASE_CREATE_UNKNOWN_ERROR',
-      blocked: '사건 등록 중 오류가 발생했습니다.',
-      cause: error instanceof Error ? error.message : '알 수 없는 오류입니다.',
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
       resolution: '입력 내용을 확인하고 다시 시도해 주세요. 문제가 지속되면 관리자에게 문의하세요.'
-    });
+    };
   }
 }
 

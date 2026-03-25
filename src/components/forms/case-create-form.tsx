@@ -83,7 +83,16 @@ export function CaseCreateForm({
       }));
     }
 
-    return createCaseAction(formData);
+    const result = await createCaseAction(formData);
+    if (result && !result.ok) {
+      throw new Error(encodeGuardFeedback({
+        type: 'condition_failed',
+        code: result.code,
+        blocked: result.message,
+        cause: result.message,
+        resolution: result.resolution
+      }));
+    }
   }, []);
 
   if (!organizations.length) {
