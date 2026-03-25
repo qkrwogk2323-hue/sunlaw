@@ -154,8 +154,8 @@ export default async function CasesPage({
                 successTitle="삭제함으로 이동했습니다."
                 successMessage={`'${item.title}' 사건이 삭제함에 보관됩니다.`}
                 errorTitle="삭제함 이동에 실패했습니다."
-                errorCause="서버 처리 중 문제가 발생했습니다."
-                errorResolution="잠시 후 다시 시도하거나 페이지를 새로고침 해주세요."
+                errorCause="권한이 없거나 사건 상태가 변경되었습니다."
+                errorResolution="페이지를 새로고침하고 다시 시도해 주세요."
                 buttonVariant="secondary"
                 className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
               >
