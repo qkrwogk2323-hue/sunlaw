@@ -87,6 +87,29 @@ export async function getCaseClientLinkedMap(caseIds: string[]) {
   }, {});
 }
 
+export async function getCasePartiesForList(caseIds: string[]) {
+  if (!caseIds.length) return {} as Record<string, { plaintiffs: string[]; defendants: string[] }>;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('case_parties')
+    .select('case_id, party_role, display_name')
+    .in('case_id', caseIds)
+    .in('party_role', ['plaintiff', 'defendant', 'creditor', 'debtor']);
+  const result: Record<string, { plaintiffs: string[]; defendants: string[] }> = {};
+  for (const row of data ?? []) {
+    const id = `${row.case_id}`;
+    if (!result[id]) result[id] = { plaintiffs: [], defendants: [] };
+    const name = `${row.display_name ?? ''}`.trim();
+    if (!name) continue;
+    if (row.party_role === 'plaintiff' || row.party_role === 'creditor') {
+      result[id].plaintiffs.push(name);
+    } else {
+      result[id].defendants.push(name);
+    }
+  }
+  return result;
+}
+
 export async function getCaseDetail(caseId: string) {
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();

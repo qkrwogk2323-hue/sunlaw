@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { cookies } from 'next/headers';
+import { UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { ClientsActionPanels } from '@/components/clients-action-panels';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
@@ -13,6 +15,7 @@ import { listClientRosterSummary } from '@/lib/queries/clients';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { LogButton } from '@/components/ui/log-button';
+import { removeClientFromRosterAction } from '@/lib/actions/client-management-actions';
 
 function linkStatusTone(status: string): 'green' | 'amber' | 'red' | 'slate' {
   if (status === '연결 완료') return 'green';
@@ -95,6 +98,28 @@ export default async function ClientsPage({
           <Badge tone={linkStatusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
           {item.overdueCount > 0 && <Badge tone="red">미납 {item.overdueCount}건</Badge>}
           {item.caseCount > 0 && <Badge tone="blue">사건 {item.caseCount}건</Badge>}
+          {canManage && (
+            <div className="relative z-20 ml-auto">
+              <DangerActionButton
+                action={removeClientFromRosterAction}
+                fields={{ clientId: item.id, organizationId: organizationId ?? '', source: item.source ?? 'linked' }}
+                confirmTitle="의뢰인을 명단에서 제거할까요?"
+                confirmDescription="제거된 의뢰인은 사건 연결이 해제됩니다. 나중에 다시 추가할 수 있습니다."
+                highlightedInfo={item.name}
+                confirmLabel="제거"
+                variant="warning"
+                undoNote="의뢰인 관리 화면에서 다시 추가할 수 있습니다."
+                successTitle="의뢰인이 제거되었습니다."
+                errorTitle="의뢰인 제거에 실패했습니다."
+                errorCause="권한이 없거나 이미 제거된 의뢰인입니다."
+                errorResolution="페이지를 새로고침하고 다시 시도해 주세요."
+                buttonVariant="secondary"
+                className="h-7 rounded-lg border-rose-200 bg-rose-50 px-2 text-[11px] text-rose-600 hover:bg-rose-100"
+              >
+                제거
+              </DangerActionButton>
+            </div>
+          )}
         </div>
         {/* row 2: compact details */}
         {details ? (
@@ -118,13 +143,23 @@ export default async function ClientsPage({
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           {canManage && organizationId && (
-            <LogButton
-              organizationId={organizationId}
-              surface="clients"
-              label="의뢰인 기록"
-              title="의뢰인 계정·초대 기록"
-              description="의뢰인 임시계정 발급·폐기, 초대 생성 등 의뢰인 관리 이력입니다."
-            />
+            <>
+              <a
+                href="#client-panels"
+                className={buttonStyles({ variant: 'primary', size: 'sm', className: 'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs' })}
+                aria-label="의뢰인 추가"
+              >
+                <UserPlus className="size-3.5" aria-hidden="true" />
+                의뢰인 추가
+              </a>
+              <LogButton
+                organizationId={organizationId}
+                surface="clients"
+                label="의뢰인 기록"
+                title="의뢰인 계정·초대 기록"
+                description="의뢰인 임시계정 발급·폐기, 초대 생성 등 의뢰인 관리 이력입니다."
+              />
+            </>
           )}
           <Link href={'/clients/history?tab=profiles' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 정보 변경 기록 보기
@@ -155,11 +190,13 @@ export default async function ClientsPage({
       ) : null}
 
       {canManage ? (
-        <ClientsActionPanels
-          organizationId={organizationId!}
-          cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
-          roster={roster}
-        />
+        <div id="client-panels">
+          <ClientsActionPanels
+            organizationId={organizationId!}
+            cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
+            roster={roster}
+          />
+        </div>
       ) : null}
 
       <div className="space-y-6">

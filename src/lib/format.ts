@@ -71,11 +71,10 @@ export function formatNotificationDate(value?: string | null) {
 
 export function formatCurrency(value?: number | null) {
   const amount = value ?? 0;
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW',
+  const formatted = new Intl.NumberFormat('ko-KR', {
     maximumFractionDigits: 0
   }).format(amount);
+  return `${formatted}(원)`;
 }
 
 export function normalizeBusinessNumber(value?: string | null) {

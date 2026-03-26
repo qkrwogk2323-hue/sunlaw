@@ -7,9 +7,8 @@ import { CaseCreateForm } from '@/components/forms/case-create-form';
 import { forceDeleteCaseAction, moveCaseToDeletedAction, restoreCaseAction } from '@/lib/actions/case-actions';
 import { getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { getCaseClientLinkedMap, listCases } from '@/lib/queries/cases';
+import { getCaseClientLinkedMap, getCasePartiesForList, listCases } from '@/lib/queries/cases';
 import { resolveOrganizationCasePolicies } from '@/lib/case-scope';
-import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
 import { getCaseHubList, getCaseHubsForCases } from '@/lib/queries/case-hubs';
@@ -25,6 +24,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { ExportLinks } from '@/components/export-links';
 import { LogButton } from '@/components/ui/log-button';
+import { CaseDeleteToggle, DeleteModeGuard } from '@/components/case-delete-toggle';
 
 import { PageReloadOnRestore } from './page-reload-on-restore';
 
@@ -58,6 +58,15 @@ function getCaseStatusLabel(status?: string | null) {
   if (normalized === 'closed') return '완료';
   if (normalized === 'archived') return '삭제 대기';
   return status || '상태 미설정';
+}
+
+function getCaseTypeLabel(caseType?: string | null) {
+  const map: Record<string, string> = {
+    civil: '민사', debt_collection: '채권추심', execution: '강제집행',
+    injunction: '가처분', criminal: '형사', advisory: '자문',
+    insolvency: '도산', other: '기타'
+  };
+  return map[caseType ?? ''] ?? caseType ?? '';
 }
 
 function parseBucket(input?: string): BucketKey {
@@ -106,11 +115,12 @@ export default async function CasesPage({
   });
 
   const allCaseIds = [...activeCases, ...completedCases, ...deletedCases].map((item: any) => item.id);
-  const [hubRegistrations, caseClientLinkedMap, caseHubMap, hubList] = await Promise.all([
+  const [hubRegistrations, caseClientLinkedMap, caseHubMap, hubList, casePartiesMap] = await Promise.all([
     getCaseHubRegistrations(currentOrganizationId, allCaseIds),
     getCaseClientLinkedMap(allCaseIds),
     getCaseHubsForCases(currentOrganizationId, allCaseIds),
-    getCaseHubList(currentOrganizationId)
+    getCaseHubList(currentOrganizationId),
+    getCasePartiesForList(allCaseIds)
   ]);
 
   const organizations = auth.memberships.map((membership) => ({
@@ -123,6 +133,10 @@ export default async function CasesPage({
     const hasClient = Boolean(caseClientLinkedMap[item.id]);
     const isStale = isCaseStageStale(item.updated_at, 7);
     const isHighlighted = item.id === highlightCaseId;
+    const parties = casePartiesMap[item.id];
+    const plaintiffLabel = parties?.plaintiffs?.length ? `원고 ${parties.plaintiffs[0]}` : null;
+    const defendantLabel = parties?.defendants?.length ? `피고 ${parties.defendants[0]}` : null;
+    const caseTypeLabel = getCaseTypeLabel(item.case_type);
 
     return (
       <div
@@ -130,22 +144,32 @@ export default async function CasesPage({
         id={isHighlighted ? 'newly-created-case' : undefined}
         className={`vs-interactive rounded-xl border transition hover:border-slate-400 ${isHighlighted ? 'border-blue-400 bg-blue-50/60 ring-2 ring-blue-200' : 'border-slate-200 bg-white/85'}`}
       >
-        {/* 행 1: 제목 + 핵심 배지 + 액션 */}
         <div className="flex items-center justify-between gap-2 px-3 py-2.5">
           <Link href={`/cases/${item.id}`} className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
+            {/* 행 1: 법원명 · 사건번호 */}
+            {(item.court_name || item.case_number) && (
+              <p className="text-xs font-medium text-slate-500 truncate">
+                {[item.court_name, item.case_number].filter(Boolean).join(' · ')}
+              </p>
+            )}
+            {/* 행 2: 사건명 + 원고/피고 + 배지 */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
               <span className="truncate font-medium text-slate-900 text-sm leading-tight">{item.title}</span>
+              {(plaintiffLabel || defendantLabel) && (
+                <span className="text-xs text-slate-400 truncate">
+                  {[plaintiffLabel, defendantLabel].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </div>
+            {/* 행 3: 소송유형 + 상태 배지 */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              {caseTypeLabel && <Badge tone="slate">{caseTypeLabel}</Badge>}
               <Badge tone="blue">{getCaseStageLabel(item.stage_key)}</Badge>
               <Badge tone="slate">{getCaseStatusLabel(item.case_status)}</Badge>
               {isStale && <Badge tone="amber">갱신필요</Badge>}
-              {hasClient && <Badge tone="green">의뢰인</Badge>}
-              {hasHub && <Badge tone="green">허브</Badge>}
+              {hasClient ? <Badge tone="green">의뢰인 연결</Badge> : <Badge tone="amber">의뢰인 미연결</Badge>}
+              {hasHub ? <Badge tone="green">허브 연결</Badge> : <Badge tone="amber">허브 미연결</Badge>}
             </div>
-            {(item.reference_no || item.court_name || item.case_number || item.principal_amount) && (
-              <p className="mt-0.5 text-xs text-slate-400 truncate">
-                {[item.reference_no, item.court_name, item.case_number, formatCurrency(item.principal_amount)].filter(Boolean).join(' · ')}
-              </p>
-            )}
           </Link>
           {/* 액션 버튼 영역 */}
           <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
@@ -159,25 +183,27 @@ export default async function CasesPage({
               />
             )}
             {bucket !== 'deleted' ? (
-              <DangerActionButton
-                action={moveCaseToDeletedAction}
-                fields={{ caseId: item.id, organizationId: item.organization_id }}
-                confirmTitle="사건을 삭제함으로 이동할까요?"
-                confirmDescription="삭제함으로 이동된 사건은 30일 후 자동으로 영구 삭제됩니다. 그 전에 삭제함에서 복원할 수 있습니다."
-                highlightedInfo={item.title}
-                confirmLabel="삭제함 이동"
-                variant="warning"
-                undoNote="삭제함으로 이동한 뒤에도 '삭제함' 탭에서 복원할 수 있습니다."
-                successTitle="삭제함으로 이동했습니다."
-                successMessage={`'${item.title}' 사건이 삭제함에 보관됩니다.`}
-                errorTitle="삭제함 이동에 실패했습니다."
-                errorCause="권한이 없거나 사건 상태가 변경되었습니다."
-                errorResolution="페이지를 새로고침하고 다시 시도해 주세요."
-                buttonVariant="secondary"
-                className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-              >
-                삭제함
-              </DangerActionButton>
+              <DeleteModeGuard>
+                <DangerActionButton
+                  action={moveCaseToDeletedAction}
+                  fields={{ caseId: item.id, organizationId: item.organization_id }}
+                  confirmTitle="사건을 삭제함으로 이동할까요?"
+                  confirmDescription="삭제함으로 이동된 사건은 30일 후 자동으로 영구 삭제됩니다. 그 전에 삭제함에서 복원할 수 있습니다."
+                  highlightedInfo={item.title}
+                  confirmLabel="삭제함 이동"
+                  variant="warning"
+                  undoNote="삭제함으로 이동한 뒤에도 '삭제함' 탭에서 복원할 수 있습니다."
+                  successTitle="삭제함으로 이동했습니다."
+                  successMessage={`'${item.title}' 사건이 삭제함에 보관됩니다.`}
+                  errorTitle="삭제함 이동에 실패했습니다."
+                  errorCause="권한이 없거나 사건 상태가 변경되었습니다."
+                  errorResolution="페이지를 새로고침하고 다시 시도해 주세요."
+                  buttonVariant="secondary"
+                  className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                >
+                  삭제함
+                </DangerActionButton>
+              </DeleteModeGuard>
             ) : null}
             {bucket === 'deleted' ? (
               <DangerActionButton
@@ -314,6 +340,7 @@ export default async function CasesPage({
               </span>
               <span className="flex flex-wrap items-center gap-3 text-sm font-normal text-slate-500">
                 <span>{BUCKET_META[bucket].helper}</span>
+                {bucket !== 'deleted' && <CaseDeleteToggle>{null}</CaseDeleteToggle>}
                 <Link
                   href={'/cases/history' as Route}
                   className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}

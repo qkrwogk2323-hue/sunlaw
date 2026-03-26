@@ -49,7 +49,7 @@ export function CaseHubConnectButton({ caseId, caseTitle, organizationId, hasCli
         title="의뢰인을 먼저 연결해야 허브를 생성할 수 있습니다."
       >
         <AlertCircle className="size-3.5" aria-hidden="true" />
-        의뢰인 연결 필요
+        의뢰인 미연결
       </div>
     );
   }

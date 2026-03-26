@@ -220,3 +220,38 @@ export async function linkRelatedClientAction(formData: FormData) {
     redirect(returnPath as Route);
   }
 }
+
+/**   .DS_Store .cursorrules .env.example .env.local .git .github .gitignore .next .pnpm-store .tmp .vercel CLAUDE.md IMPLEMENTATION_STATUS.md README.md docs eslint.config.mjs instrumentation-client.ts instrumentation.ts middleware.ts next-env.d.ts next.config.mjs node_modules package-lock.json package.json playwright playwright-report playwright.authenticated-prod-smoke.config.ts playwright.config.ts playwright.prod-smoke.config.ts pnpm-lock.yaml postcss.config.mjs proxy.ts public scripts sentry.client.config.ts sentry.edge.config.ts sentry.server.config.ts src supabase test-results tests tsconfig.json tsconfig.tsbuildinfo vitest.config.ts            (soft unlink) */
+export async function removeClientFromRosterAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const clientId = `${formData.get('clientId') ?? ''}`.trim();
+  const source = `${formData.get('source') ?? ''}`.trim();
+
+  if (!organizationId || !clientId) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_REMOVE_MISSING_FIELDS',
+      blocked: '의뢰인 제거가 차단되었습니다.',
+      cause: '조직 또는 의뢰인 정보가 누락되었습니다.',
+      resolution: '페이지를 새로고침하고 다시 시도해 주세요.'
+    }));
+  }
+
+  await requireOrganizationActionAccess(organizationId, {
+    permission: 'user_manage',
+    errorMessage: '의뢰인 제거 권한이 없습니다.'
+  });
+
+  const supabase = await createSupabaseServerClient();
+
+  if (source === 'invite') {
+    await supabase.from('invitations')
+      .update({ status: 'revoked', updated_at: new Date().toISOString() })
+      .eq('id', clientId);
+  } else {
+    await supabase.from('case_clients')
+      .update({ link_status: 'unlinked', detached_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', clientId);
+  }
+
+  revalidatePath('/clients');
+}
