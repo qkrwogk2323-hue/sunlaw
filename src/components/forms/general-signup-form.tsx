@@ -1,11 +1,10 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { isValidResidentRegistrationNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
 import { PLATFORM_PRIVACY_CONSENT_LABEL } from '@/lib/legal-documents';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Input } from '@/components/ui/input';
@@ -19,25 +18,35 @@ export function GeneralSignupForm() {
   const [legalName, setLegalName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [residentNumber, setResidentNumber] = useState('');
-  const [residentNumberConfirm, setResidentNumberConfirm] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [postalCode, setPostalCode] = useState('');
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const normalizedResidentNumber = normalizeResidentRegistrationNumber(residentNumber);
-  const normalizedResidentNumberConfirm = normalizeResidentRegistrationNumber(residentNumberConfirm);
-  const residentNumberMismatch = residentNumberConfirm.length > 0 && normalizedResidentNumber !== normalizedResidentNumberConfirm;
-  const residentNumberInvalid = residentNumber.length > 0 && normalizedResidentNumber.length === 13 && !isValidResidentRegistrationNumber(normalizedResidentNumber);
-  const isInvalid = residentNumberMismatch || residentNumberInvalid || !privacyConsent;
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const passwordConfirmRef = useRef<HTMLInputElement>(null);
+  const legalNameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const birthDateRef = useRef<HTMLInputElement>(null);
+
+  const passwordMismatch = passwordConfirm.length > 0 && password !== passwordConfirm;
+  const birthDateInvalid = birthDate.length > 0 && !/^\d{6}$/.test(birthDate.replace(/[^0-9]/g, ''));
+  const isInvalid = passwordMismatch || !privacyConsent;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!email.trim()) { emailRef.current?.focus(); return; }
+    if (password.length < 8) { passwordRef.current?.focus(); return; }
+    if (password !== passwordConfirm) { passwordConfirmRef.current?.focus(); return; }
+    if (!legalName.trim()) { legalNameRef.current?.focus(); return; }
+    if (!phone.trim()) { phoneRef.current?.focus(); return; }
+    if (!birthDate.trim()) { birthDateRef.current?.focus(); return; }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -52,11 +61,8 @@ export function GeneralSignupForm() {
           email,
           password,
           legalName,
-          residentNumber,
+          birthDate: birthDate.replace(/[^0-9]/g, ''),
           phone,
-          addressLine1,
-          addressLine2,
-          postalCode,
           privacyConsent,
           serviceConsent: privacyConsent
         })
@@ -89,56 +95,41 @@ export function GeneralSignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
       <div className="grid gap-4 md:grid-cols-2">
         <label htmlFor="general-signup-email" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">이메일</span>
-          <Input id="general-signup-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@veinspiral.com" />
+          <span className="font-medium text-slate-900">이메일 아이디 <span className="text-red-500" aria-hidden="true">*</span></span>
+          <Input ref={emailRef} id="general-signup-email" type="email" required aria-required="true" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@veinspiral.com" />
         </label>
         <label htmlFor="general-signup-password" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">비밀번호</span>
-          <Input id="general-signup-password" type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="8자 이상 입력해 주세요" />
+          <span className="font-medium text-slate-900">비밀번호 <span className="text-red-500" aria-hidden="true">*</span></span>
+          <Input ref={passwordRef} id="general-signup-password" type="password" required aria-required="true" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="8자 이상 입력해 주세요" />
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
+        <label htmlFor="general-signup-password-confirm" className="space-y-2 text-sm text-slate-700">
+          <span className="font-medium text-slate-900">비밀번호 확인 <span className="text-red-500" aria-hidden="true">*</span></span>
+          <Input ref={passwordConfirmRef} id="general-signup-password-confirm" type="password" required aria-required="true" minLength={8} value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} placeholder="비밀번호를 한 번 더 입력해 주세요" />
+          {passwordMismatch ? <p className="text-xs leading-6 text-rose-600">비밀번호가 일치하지 않습니다.</p> : null}
+        </label>
         <label htmlFor="general-signup-legal-name" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">이름</span>
-          <Input id="general-signup-legal-name" required value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="홍길동" />
-        </label>
-        <label htmlFor="general-signup-phone" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">연락처</span>
-          <Input id="general-signup-phone" required value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="01012345678" />
+          <span className="font-medium text-slate-900">이름 <span className="text-red-500" aria-hidden="true">*</span></span>
+          <Input ref={legalNameRef} id="general-signup-legal-name" required aria-required="true" value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="홍길동" />
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label htmlFor="general-signup-resident-number" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">주민등록번호</span>
-          <Input id="general-signup-resident-number" required value={residentNumber} onChange={(event) => setResidentNumber(event.target.value)} placeholder="생년월일 6자리와 뒤 7자리를 입력해 주세요" />
-          {residentNumberInvalid ? <p className="text-xs leading-6 text-rose-600">유효한 주민등록번호를 입력해 주세요.</p> : null}
+        <label htmlFor="general-signup-phone" className="space-y-2 text-sm text-slate-700">
+          <span className="font-medium text-slate-900">연락처 <span className="text-red-500" aria-hidden="true">*</span></span>
+          <Input ref={phoneRef} id="general-signup-phone" type="tel" required aria-required="true" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="01012345678" />
         </label>
-        <label htmlFor="general-signup-resident-number-confirm" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">주민등록번호 확인</span>
-          <Input id="general-signup-resident-number-confirm" required value={residentNumberConfirm} onChange={(event) => setResidentNumberConfirm(event.target.value)} placeholder="주민등록번호를 한 번 더 입력해 주세요" />
-          {residentNumberMismatch ? <p className="text-xs leading-6 text-rose-600">주민번호가 다릅니다.</p> : null}
-        </label>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px]">
-        <label htmlFor="general-signup-address-line1" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">주소</span>
-          <Input id="general-signup-address-line1" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} placeholder="선택 입력" />
-        </label>
-        <label htmlFor="general-signup-postal-code" className="space-y-2 text-sm text-slate-700">
-          <span className="font-medium text-slate-900">우편번호</span>
-          <Input id="general-signup-postal-code" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="선택 입력" />
+        <label htmlFor="general-signup-birth-date" className="space-y-2 text-sm text-slate-700">
+          <span className="font-medium text-slate-900">생년월일 <span className="text-red-500" aria-hidden="true">*</span></span>
+          <Input ref={birthDateRef} id="general-signup-birth-date" required aria-required="true" inputMode="numeric" maxLength={8} value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="YYMMDD (예: 900101)" />
+          {birthDateInvalid ? <p className="text-xs leading-6 text-rose-600">생년월일 6자리를 입력해 주세요. (예: 900101)</p> : null}
         </label>
       </div>
-
-      <label htmlFor="general-signup-address-line2" className="space-y-2 text-sm text-slate-700">
-        <span className="font-medium text-slate-900">상세 주소</span>
-        <Input id="general-signup-address-line2" value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} placeholder="선택 입력" />
-      </label>
 
       <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
         <label className="flex items-start gap-3">

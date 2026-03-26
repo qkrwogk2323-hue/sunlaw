@@ -95,14 +95,10 @@ export const generalSignupSchema = z.object({
   email: z.string().trim().email('이메일을 입력해 주세요.'),
   password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.').max(72, '비밀번호는 72자 이하로 입력해 주세요.'),
   legalName: z.string().trim().min(2, '이름을 입력해 주세요.').max(80),
-  residentNumber: z.string().trim().min(1, '주민등록번호를 입력해 주세요.')
-    .transform((value) => normalizeResidentRegistrationNumber(value))
-    .refine((value) => value.length === 13, '주민등록번호 13자리를 입력해 주세요.')
-    .refine((value) => isValidResidentRegistrationNumber(value), '유효한 주민등록번호를 입력해 주세요.'),
+  birthDate: z.string().trim().min(6, '생년월일 6자리를 입력해 주세요.')
+    .transform((value) => value.replace(/[^0-9]/g, ''))
+    .refine((value) => /^\d{6}$/.test(value), '생년월일 6자리를 입력해 주세요. (예: 900101)'),
   phone: z.string().trim().min(8, '연락처를 입력해 주세요.').max(30),
-  addressLine1: z.string().trim().max(200).optional().or(z.literal('')),
-  addressLine2: z.string().trim().max(200).optional().or(z.literal('')),
-  postalCode: z.string().trim().max(20).optional().or(z.literal('')),
   privacyConsent: z.literal(true, {
     errorMap: () => ({ message: '개인정보 처리 동의가 필요합니다.' })
   }),

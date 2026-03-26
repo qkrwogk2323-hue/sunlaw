@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { formatResidentRegistrationNumberMasked } from '@/lib/format';
 import { PLATFORM_PRIVACY_POLICY_VERSION, PLATFORM_TERMS_VERSION } from '@/lib/legal-documents';
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -56,7 +55,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '회원가입 계정을 생성하지 못했습니다.' }, { status: 500 });
     }
 
-    const residentNumberMasked = formatResidentRegistrationNumberMasked(parsed.residentNumber);
     const { error: profileError } = await admin.from('profiles').upsert({
       id: userId,
       email: parsed.email,
@@ -75,11 +73,8 @@ export async function POST(request: Request) {
     const { error: privateProfileError } = await admin.from('client_private_profiles').upsert({
       profile_id: userId,
       legal_name: parsed.legalName,
-      resident_number_ciphertext: encryptString(parsed.residentNumber),
-      resident_number_masked: residentNumberMasked,
-      address_line1_ciphertext: parsed.addressLine1 ? encryptString(parsed.addressLine1) : null,
-      address_line2_ciphertext: parsed.addressLine2 ? encryptString(parsed.addressLine2) : null,
-      postal_code_ciphertext: parsed.postalCode ? encryptString(parsed.postalCode) : null,
+      resident_number_ciphertext: encryptString(parsed.birthDate),
+      resident_number_masked: `${parsed.birthDate}-*******`,
       mobile_phone_ciphertext: encryptString(parsed.phone),
       created_by: userId,
       updated_by: userId
