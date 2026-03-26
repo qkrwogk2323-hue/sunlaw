@@ -52,8 +52,10 @@ const BUCKET_META: Record<BucketKey, { label: string; helper: string; cardDescri
 
 function getCaseStatusLabel(status?: string | null) {
   const normalized = `${status ?? ''}`.toLowerCase();
-  if (normalized === 'active' || normalized === 'intake' || normalized === 'in_progress') return '진행중';
-  if (normalized === 'closed' || normalized === 'completed' || normalized === 'done') return '완료';
+  if (normalized === 'active' || normalized === 'intake') return '진행중';
+  if (normalized === 'pending_review') return '검토중';
+  if (normalized === 'approved') return '승인됨';
+  if (normalized === 'closed') return '완료';
   if (normalized === 'archived') return '삭제 대기';
   return status || '상태 미설정';
 }

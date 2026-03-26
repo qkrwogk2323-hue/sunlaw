@@ -4,7 +4,7 @@ import { getCaseScopeAccess } from '@/lib/case-scope';
 
 type CaseBucket = 'active' | 'completed' | 'deleted' | 'all';
 
-const COMPLETED_CASE_STATUSES = ['closed', 'completed', 'done'];
+const COMPLETED_CASE_STATUSES = ['closed', 'archived'];
 
 export async function purgeDeletedCasesPastRetention(organizationId?: string | null, retentionDays = 30) {
   const auth = await requireAuthenticatedUser();
