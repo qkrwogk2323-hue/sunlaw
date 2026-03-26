@@ -404,6 +404,7 @@ async function createCaseCoreWrite({
       title,
       case_type: caseType,
       case_status: 'intake',
+      lifecycle_status: 'active',
       stage_template_key: stageTemplateKey,
       stage_key: 'intake',
       module_flags: moduleFlags,
