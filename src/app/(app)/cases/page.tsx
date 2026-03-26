@@ -67,13 +67,14 @@ function parseBucket(input?: string): BucketKey {
 export default async function CasesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ bucket?: string; q?: string }>;
+  searchParams?: Promise<{ bucket?: string; q?: string; highlight?: string }>;
 }) {
   const auth = await requireAuthenticatedUser();
   const currentOrganizationId = getEffectiveOrganizationId(auth);
   const resolved = searchParams ? await searchParams : undefined;
   const bucket = parseBucket(resolved?.bucket);
   const queryFilter = `${resolved?.q ?? ''}`.trim().toLowerCase();
+  const highlightCaseId = resolved?.highlight ?? null;
 
   // Determine if this user is in restricted (assigned-cases-only) scope
   const { restrictedOrganizationIds } = resolveOrganizationCasePolicies(auth, currentOrganizationId);
@@ -119,9 +120,14 @@ export default async function CasesPage({
     const hasHub = Boolean(hubRegistrations[item.id]?.sharedHubId || caseHubMap[item.id]);
     const hasClient = Boolean(caseClientLinkedMap[item.id]);
     const isStale = isCaseStageStale(item.updated_at, 7);
+    const isHighlighted = item.id === highlightCaseId;
 
     return (
-      <div key={item.id} className="vs-interactive rounded-xl border border-slate-200 bg-white/85 transition hover:border-slate-400">
+      <div
+        key={item.id}
+        id={isHighlighted ? 'newly-created-case' : undefined}
+        className={`vs-interactive rounded-xl border transition hover:border-slate-400 ${isHighlighted ? 'border-blue-400 bg-blue-50/60 ring-2 ring-blue-200' : 'border-slate-200 bg-white/85'}`}
+      >
         {/* 행 1: 제목 + 핵심 배지 + 액션 */}
         <div className="flex items-center justify-between gap-2 px-3 py-2.5">
           <Link href={`/cases/${item.id}`} className="min-w-0 flex-1">

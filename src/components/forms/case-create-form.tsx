@@ -100,8 +100,8 @@ export function CaseCreateForm({
       }));
     }
     if (result?.ok && result.caseId) {
-      // window.location.href로 전체 새로고침 이동 (bfcache 방지)
-      window.location.href = `/cases/${result.caseId}`;
+      // 목록으로 바로 이동 — 새로고침으로 캐시 우회, 앵커로 새 사건 위치 표시
+      window.location.href = `/cases?highlight=${result.caseId}`;
     }
   }, []);
 

@@ -521,8 +521,8 @@ async function runCreateCasePostProcessing({
 }
 
 function finalizeCreateCase(caseId: string) {
-  revalidatePath('/cases');
-  revalidatePath('/dashboard');
+  revalidatePath('/cases', 'layout');
+  revalidatePath('/dashboard', 'layout');
 }
 
 export type CaseActionResult = 
