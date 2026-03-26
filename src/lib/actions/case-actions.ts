@@ -522,6 +522,7 @@ async function runCreateCasePostProcessing({
 
 function finalizeCreateCase(caseId: string) {
   revalidatePath('/cases', 'layout');
+  revalidatePath(`/cases/${caseId}`, 'layout');
   revalidatePath('/dashboard', 'layout');
 }
 
@@ -579,6 +580,7 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
     }
 
     finalizeCreateCase(writeResult.caseId);
+    console.error('[createCaseAction] SUCCESS caseId:', writeResult.caseId, 'orgId:', parsed.data.organizationId);
     return { ok: true as const, caseId: writeResult.caseId };
   } catch (error) {
     if (isRedirectError(error)) throw error;

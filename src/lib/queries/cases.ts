@@ -71,7 +71,8 @@ export async function listCases(
     query = query.in('id', scope.assignedCaseIds);
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+  console.error('[listCases] orgId:', organizationId, 'bucket:', bucket, 'rows:', data?.length ?? 0, 'error:', error?.message ?? 'none', 'restricted:', scope.restrictedOrganizationIds.length);
   return data ?? [];
 }
 
