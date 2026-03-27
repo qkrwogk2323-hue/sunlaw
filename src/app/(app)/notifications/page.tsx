@@ -1,18 +1,13 @@
 import {
   emptyNotificationTrashAction,
-  markNotificationReadAction,
-  markNotificationResolvedAction,
-  moveNotificationToTrashAction,
   updateNotificationChannelPreferenceAction
 } from '@/lib/actions/notification-actions';
 import { NotificationsArchiveButton } from '@/components/notifications-archive-button';
 import { NotificationSectionWithPopup } from '@/components/notification-section-with-popup';
+import { NotificationRowCta } from '@/components/notification-row-cta';
 import { NotificationsSummaryCards } from '@/components/notifications-summary-cards';
-import Link from 'next/link';
-import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { buttonStyles } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -88,28 +83,11 @@ function QueueItemRow({ item }: { item: NotificationQueueItem }) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Link href={openHref as Route} prefetch className={buttonStyles({ size: 'sm', className: 'h-8 rounded-lg px-3 text-xs !text-white' })}>열기</Link>
-
-        {(item.status === 'active' || item.status === 'read') ? (
-          <ClientActionForm action={markNotificationResolvedAction} successTitle="해결 처리되었습니다.">
-            <input type="hidden" name="notificationId" value={item.notificationId} />
-            <SubmitButton variant="ghost" pendingLabel="처리 중..." className="h-8 px-3 text-xs">해결 처리</SubmitButton>
-          </ClientActionForm>
-        ) : null}
-
-        {item.status === 'active' ? (
-          <ClientActionForm action={markNotificationReadAction} successTitle="읽음으로 표시했습니다.">
-            <input type="hidden" name="notificationId" value={item.notificationId} />
-            <SubmitButton variant="ghost" pendingLabel="반영 중..." className="h-8 px-3 text-xs">읽음 처리</SubmitButton>
-          </ClientActionForm>
-        ) : null}
-
-        {(item.status === 'active' || item.status === 'read' || item.status === 'resolved') ? (
-          <ClientActionForm action={moveNotificationToTrashAction} successTitle="보관함으로 이동했습니다.">
-            <input type="hidden" name="notificationId" value={item.notificationId} />
-            <SubmitButton variant="ghost" pendingLabel="이동 중..." className="h-8 px-3 text-xs">보관함</SubmitButton>
-          </ClientActionForm>
-        ) : null}
+        <NotificationRowCta
+          notificationId={item.notificationId}
+          openHref={openHref}
+          status={item.status}
+        />
         {usesGenericInbox ? <Badge tone="amber">알림센터에서 확인</Badge> : null}
       </div>
     </div>

@@ -28,6 +28,8 @@ export type ActionErrorCode =
   | 'supabase-init-failed'
   | 'oauth-timeout'
   | 'oauth-start-failed'
+  | 'notification-id-missing'
+  | 'notification-action-failed'
   | 'unknown';
 
 export type RunActionResult =
@@ -43,6 +45,7 @@ export type RunActionOptions = {
   next?: string;
   forceLoginPrompt?: boolean;
   timeoutMs?: number;
+  notificationId?: string;
   onStage?: (stage: ActionStage, payload?: Record<string, unknown>) => void;
 };
 
@@ -173,6 +176,52 @@ async function runActionByActionKey(
 ): Promise<RunActionResult> {
   if (actionKey === INTERACTION_ACTION_KEYS.AUTH_LOGIN_KAKAO) {
     return runKakaoLoginAction(options);
+  }
+
+  if (
+    actionKey === INTERACTION_ACTION_KEYS.NOTIFICATIONS_MARK_READ ||
+    actionKey === INTERACTION_ACTION_KEYS.NOTIFICATIONS_RESOLVE ||
+    actionKey === INTERACTION_ACTION_KEYS.NOTIFICATIONS_ARCHIVE
+  ) {
+    const notificationId = `${options.notificationId ?? ''}`.trim();
+    if (!notificationId) {
+      return {
+        ok: false,
+        code: 'notification-id-missing',
+        message: '알림 식별자가 누락되었습니다.'
+      };
+    }
+
+    try {
+      const response = await fetch('/api/interactions/notification-actions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          actionKey,
+          notificationId
+        })
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { message?: string } | null;
+        return {
+          ok: false,
+          code: 'notification-action-failed',
+          message: body?.message ?? '알림 처리 요청에 실패했습니다.'
+        };
+      }
+
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        code: 'notification-action-failed',
+        message: error instanceof Error ? error.message : '알림 처리 요청 중 오류가 발생했습니다.',
+        cause: error
+      };
+    }
   }
 
   return {

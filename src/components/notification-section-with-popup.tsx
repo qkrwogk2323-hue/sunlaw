@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
 import type { Route } from 'next';
 import type { NotificationQueueItem } from '@/lib/queries/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { NotificationRowCta } from '@/components/notification-row-cta';
 import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
 import { ROUTES } from '@/lib/routes/registry';
 
@@ -77,14 +77,7 @@ function ItemRow({ item, colorKey }: { item: NotificationQueueItem; colorKey: Co
     <div className={`rounded-xl border p-3 ${cs.item}`}>
       <p className="text-sm font-semibold text-slate-900">{item.title}</p>
       {item.organizationName && <p className="mt-0.5 text-xs text-slate-500">{item.organizationName}</p>}
-      <div className="mt-2 flex items-center gap-2">
-        <Link
-          href={openHref}
-          className="text-xs font-medium text-slate-700 underline hover:text-slate-900"
-        >
-          열기 →
-        </Link>
-      </div>
+      <NotificationRowCta notificationId={item.notificationId} openHref={openHref} status={item.status} compact />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { executeInteractionByKey } from '@/lib/interactions/execute-interaction-by-key';
 import { NOTIFICATION_INTERACTION_KEYS } from '@/lib/interactions/registry';
+import { createBrowserNavigateAdapter } from '@/lib/navigation/navigate-adapter';
 
 type Props = {
   immediateCount: number;
@@ -11,8 +12,9 @@ type Props = {
 };
 
 function execute(key: typeof NOTIFICATION_INTERACTION_KEYS[keyof typeof NOTIFICATION_INTERACTION_KEYS]) {
+  const adapter = createBrowserNavigateAdapter();
   void executeInteractionByKey(key, {
-    navigate: (href) => window.location.assign(href)
+    navigate: adapter.navigate
   });
 }
 

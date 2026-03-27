@@ -1,5 +1,6 @@
 import type { Route } from 'next';
 import {
+  INTERACTION_TYPES,
   getInteractionDefinition,
   type InteractionKey
 } from '@/lib/interactions/registry';
@@ -20,6 +21,18 @@ export type ExecuteInteractionResult = {
   navigatedTo: string | null;
 };
 
+function contractFailure(message: string): ExecuteInteractionResult {
+  return {
+    actionResult: {
+      ok: false,
+      code: 'unknown',
+      message
+    },
+    appliedState: null,
+    navigatedTo: null
+  };
+}
+
 /**
  * 행동 단위 계약 실행 순서:
  * 1) action
@@ -32,6 +45,19 @@ export async function executeInteractionByKey(
 ): Promise<ExecuteInteractionResult> {
   const definition = getInteractionDefinition(key);
   const fallbackRoute = options.fallbackRoute ?? ROUTES.NOTIFICATIONS;
+
+  if (definition.type === INTERACTION_TYPES.NAVIGATE && !options.navigate) {
+    return contractFailure(`navigate 타입 interaction은 navigate 핸들러가 필요합니다: ${key}`);
+  }
+  if (definition.type === INTERACTION_TYPES.MUTATE && options.navigate) {
+    return contractFailure(`mutate 타입 interaction은 navigate를 직접 허용하지 않습니다: ${key}`);
+  }
+  if (definition.type === INTERACTION_TYPES.MUTATE && !definition.actionKey) {
+    return contractFailure(`mutate 타입 interaction은 actionKey가 필요합니다: ${key}`);
+  }
+  if (definition.type === INTERACTION_TYPES.MIXED && !options.navigate) {
+    return contractFailure(`mixed 타입 interaction은 navigate 핸들러가 필요합니다: ${key}`);
+  }
 
   const actionResult = await runActionByKey(key, options.actionOptions);
   if (!actionResult.ok) {
@@ -50,7 +76,10 @@ export async function executeInteractionByKey(
   }
 
   let navigatedTo: string | null = null;
-  if ((definition.route || definition.type === 'navigate' || definition.type === 'mixed') && options.navigate) {
+  if (
+    (definition.type === INTERACTION_TYPES.NAVIGATE || definition.type === INTERACTION_TYPES.MIXED) &&
+    options.navigate
+  ) {
     navigatedTo = navigateByKey(key, options.navigate, fallbackRoute);
   }
 
