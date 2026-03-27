@@ -9,6 +9,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath } from '@/lib/client-account';
+import { NAVIGATION_MAP } from '@/lib/routes/navigation-map';
 
 // audit-link-exempt: reason=로그인 진입 화면은 감사로그 대상 이력 화면이 아니다; fallback=오류와 보안 이벤트는 인증 및 플랫폼 로그에서 추적한다; expires=2026-12-31; approvedBy=Codex
 
@@ -57,7 +58,7 @@ export default async function LoginPage({
                   바로 이동
                 </Link>
                 <Link
-                  href={'/dashboard' as Route}
+                  href={NAVIGATION_MAP.loginGoDashboard}
                   className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4' })}
                 >
                   대시보드 보기
@@ -99,19 +100,19 @@ export default async function LoginPage({
               <p className="text-sm font-semibold text-slate-900">처음 이용하시나요?</p>
               <div className="mt-4 space-y-4 text-sm leading-6 text-slate-600">
                 <div>
-                  <Link href={'/start/signup' as Route} className="font-semibold text-sky-700 hover:text-sky-800">
+                  <Link href={NAVIGATION_MAP.loginSignup} className="font-semibold text-sky-700 hover:text-sky-800">
                     일반 회원가입
                   </Link>
                   <p>개인 계정을 먼저 만든 뒤 의뢰인 가입 또는 조직 신청으로 이어집니다.</p>
                 </div>
                 <div>
-                  <Link href={'/organization-request' as Route} className="font-semibold text-sky-700 hover:text-sky-800">
+                  <Link href={NAVIGATION_MAP.loginOrganizationRequest} className="font-semibold text-sky-700 hover:text-sky-800">
                     조직 개설 신청
                   </Link>
                   <p>새 조직을 등록하려는 경우 조직 개설 신청으로 바로 이동합니다.</p>
                 </div>
                 <div>
-                  <Link href={'/support' as Route} className="font-semibold text-sky-700 hover:text-sky-800">
+                  <Link href={NAVIGATION_MAP.loginSupport} className="font-semibold text-sky-700 hover:text-sky-800">
                     도움이 필요하신가요?
                   </Link>
                   <p>로그인 방식이 헷갈리거나 계정 연결이 어려우면 안내를 확인해 주세요.</p>

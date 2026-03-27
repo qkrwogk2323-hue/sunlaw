@@ -2,6 +2,7 @@ import type { Route } from 'next';
 import type { AuthContext, Profile } from '@/lib/types';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { getDefaultAppRoute } from '@/lib/auth';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const CLIENT_ACCOUNT_STATUSES = [
   'active',
@@ -50,27 +51,27 @@ export function hasCompletedLegalName(profile: Pick<Profile, 'full_name' | 'lega
 
 export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePortalLinkCount?: number }): Route {
   if (auth.profile.must_change_password) {
-    return '/start/password-reset' as Route;
+    return ROUTES.START_PASSWORD_RESET;
   }
 
   if (auth.profile.must_complete_profile) {
-    return '/start/member-profile' as Route;
+    return ROUTES.START_MEMBER_PROFILE;
   }
 
   if (!hasCompletedLegalName(auth.profile)) {
-    return '/start/profile-name' as Route;
+    return ROUTES.START_PROFILE_NAME;
   }
 
   if (isClientAccountPending(auth.profile)) {
-    return '/start/pending' as Route;
+    return ROUTES.START_PENDING;
   }
 
   if (isClientAccountActive(auth.profile)) {
     const linkCount = options?.activePortalLinkCount;
     if (linkCount !== undefined && linkCount === 0) {
-      return '/start/pending' as Route;
+      return ROUTES.START_PENDING;
     }
-    return '/portal' as Route;
+    return ROUTES.PORTAL;
   }
 
   const isPlatformOperator = auth.memberships.some(
@@ -79,7 +80,7 @@ export function getAuthenticatedHomePath(auth: AuthContext, options?: { activePo
   );
 
   if (!auth.memberships.length && !isPlatformOperator) {
-    return '/start/signup' as Route;
+    return ROUTES.START_SIGNUP;
   }
 
   return getDefaultAppRoute(auth) as Route;

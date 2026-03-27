@@ -10,6 +10,7 @@ import { resolveMembershipPermissions } from '@/lib/permissions';
 import type { AuthContext, Membership, PermissionKey, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE, normalizeActiveViewMode } from '@/lib/view-mode';
 import { notifyPlatformBugAlert } from '@/lib/platform-alerts';
+import { ROUTES } from '@/lib/routes/registry';
 
 type CoreProfile = Pick<
   Profile,
@@ -256,7 +257,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
 export async function requireAuthenticatedUser() {
   const auth = await getCurrentAuth();
   if (!auth) {
-    redirect('/login');
+    redirect(ROUTES.LOGIN);
   }
   return auth;
 }
@@ -312,7 +313,7 @@ export async function requirePlatformAdminAction(errorMessage = '플랫폼 관�
       organizationId: getEffectiveOrganizationId(auth),
       title: '일반 조직에서 플랫폼 전용 기능 실행이 시도되었습니다.',
       body: errorMessage,
-      actionHref: '/admin/audit',
+      actionHref: ROUTES.ADMIN_AUDIT,
       actionLabel: '권한 오류 기록 확인',
       resourceType: 'platform_access_violation',
       meta: {
@@ -387,15 +388,36 @@ export function hasPlatformViewForOrganization(auth: AuthContext, organizationId
 }
 
 export function getDefaultAppRoute(auth: AuthContext, organizationId?: string | null) {
-  return '/dashboard';
+  void auth;
+  void organizationId;
+  return ROUTES.DASHBOARD;
 }
 
 export function getTopLevelAppRoutes(auth: AuthContext, organizationId?: string | null): Route[] {
   if (hasPlatformViewForOrganization(auth, organizationId)) {
-    return ['/dashboard', '/admin/organization-requests', '/admin/organizations', '/admin/support', '/admin/audit', '/settings/organization'];
+    return [
+      ROUTES.DASHBOARD,
+      ROUTES.ADMIN_ORGANIZATION_REQUESTS,
+      ROUTES.ADMIN_ORGANIZATIONS,
+      ROUTES.ADMIN_SUPPORT,
+      ROUTES.ADMIN_AUDIT,
+      ROUTES.SETTINGS_ORGANIZATION
+    ];
   }
 
-  return ['/dashboard', '/inbox', '/cases', '/clients', '/organizations', '/collections', '/documents', '/notifications', '/calendar', '/reports', '/settings'];
+  return [
+    ROUTES.DASHBOARD,
+    ROUTES.INBOX,
+    ROUTES.CASES,
+    ROUTES.CLIENTS,
+    ROUTES.ORGANIZATIONS,
+    ROUTES.COLLECTIONS,
+    ROUTES.DOCUMENTS,
+    ROUTES.NOTIFICATIONS,
+    ROUTES.CALENDAR,
+    ROUTES.REPORTS,
+    ROUTES.SETTINGS
+  ];
 }
 
 export function isPathAllowedForOrganization(auth: AuthContext, pathname: string, organizationId?: string | null) {

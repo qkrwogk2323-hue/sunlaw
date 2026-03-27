@@ -24,7 +24,8 @@
     "supabase:migration:list": "./scripts/run-with-env.sh supabase migration list",
     "supabase:db:push": "./scripts/run-with-env.sh supabase db push",
     "check:rule-meta": "node ./scripts/check-rule-meta.mjs",
-    "check:ai-guardrails": "node ./scripts/check-ai-guardrails.mjs"
+    "check:ai-guardrails": "node ./scripts/check-ai-guardrails.mjs",
+    "check:navigation-consistency": "node ./scripts/check-navigation-consistency.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.45.0",

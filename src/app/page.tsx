@@ -10,6 +10,8 @@ import { signOutAction } from '@/lib/actions/auth-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { ROUTES } from '@/lib/routes/registry';
+import { NAVIGATION_MAP } from '@/lib/routes/navigation-map';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,11 +94,11 @@ export default async function MarketingPage({
       }
     }
 
-    redirect(`/auth/callback?${callbackSearchParams.toString()}` as Route);
+    redirect(`${ROUTES.AUTH_CALLBACK}?${callbackSearchParams.toString()}` as Route);
   }
 
   const auth = await getCurrentAuth();
-  const startHref = (auth ? getDefaultAppRoute(auth) : '/start') as Route;
+  const startHref = (auth ? getDefaultAppRoute(auth) : ROUTES.START) as Route;
   const organizationId = auth ? getEffectiveOrganizationId(auth) : null;
   const isPlatformView = auth ? isPlatformOperator(auth) : false;
   let dashboard = auth && !isPlatformView ? emptyDashboardSnapshot : null;
@@ -120,7 +122,7 @@ export default async function MarketingPage({
     <main className="min-h-screen overflow-hidden bg-slate-950 text-white">
       <section className={heroSectionClassName}>
         <div className="relative z-10 flex flex-col items-center gap-8 text-center">
-          <BrandBanner href={'/' as Route} className="mx-auto w-full max-w-7xl" theme="dark" />
+          <BrandBanner href={NAVIGATION_MAP.brandLogo} className="mx-auto w-full max-w-7xl" theme="dark" />
           <div className="grid w-full max-w-7xl gap-4 lg:grid-cols-[1.32fr_1fr] lg:items-center">
             <div className="grid gap-3">
               <Link
@@ -136,7 +138,7 @@ export default async function MarketingPage({
               </Link>
               {!auth ? (
                 <Link
-                  href={'/demo' as Route}
+                  href={NAVIGATION_MAP.marketingDemo}
                   className={buttonStyles({
                     variant: 'secondary',
                     className:
@@ -166,7 +168,7 @@ export default async function MarketingPage({
           {auth && isPlatformView ? (
             <div className="flex w-full max-w-5xl flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-stretch">
               <Link
-                href={'/dashboard' as Route}
+                href={NAVIGATION_MAP.marketingPlatformDashboard}
                 className="vs-pop-card flex min-h-20 w-full max-w-2xl flex-1 items-center justify-between gap-4 rounded-[1.7rem] border border-sky-300/18 bg-[linear-gradient(135deg,rgba(16,52,88,0.88),rgba(9,24,49,0.94))] px-6 py-5 text-left shadow-[0_20px_52px_rgba(14,116,144,0.24)]"
               >
                 <div className="flex items-center gap-4">
@@ -183,7 +185,7 @@ export default async function MarketingPage({
               </Link>
 
               <Link
-                href={'/admin/organization-requests' as Route}
+                href={NAVIGATION_MAP.marketingOrganizationRequests}
                 className="vs-pop-card flex min-h-20 w-full max-w-md items-center justify-between gap-4 rounded-[1.7rem] border border-white/12 bg-white/10 px-5 py-5 text-left backdrop-blur-sm"
               >
                 <div className="flex items-center gap-4">
@@ -203,7 +205,7 @@ export default async function MarketingPage({
           {auth && dashboard ? (
             <div className="flex w-full max-w-5xl flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-stretch">
               <Link
-                href={'/notifications' as Route}
+                href={NAVIGATION_MAP.marketingNotifications}
                 className="vs-pop-card flex min-h-20 w-full max-w-2xl flex-1 items-center justify-between gap-4 rounded-[1.7rem] border border-sky-300/18 bg-[linear-gradient(135deg,rgba(16,52,88,0.88),rgba(9,24,49,0.94))] px-6 py-5 text-left shadow-[0_20px_52px_rgba(14,116,144,0.24)]"
               >
                 <div className="flex items-center gap-4">
@@ -220,7 +222,7 @@ export default async function MarketingPage({
               </Link>
 
               <Link
-                href={'/cases' as Route}
+                href={NAVIGATION_MAP.marketingCases}
                 className="vs-pop-card flex min-h-20 w-full max-w-md items-center justify-between gap-4 rounded-[1.7rem] border border-white/12 bg-white/10 px-5 py-5 text-left backdrop-blur-sm"
               >
                 <div className="flex items-center gap-4">

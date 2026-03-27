@@ -1,10 +1,10 @@
-import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 import { getEffectiveOrganizationId, hasPlatformViewForOrganization, isPlatformOperator } from '@/lib/auth';
 import { hasCompletedLegalName, isClientAccountActive, isClientAccountPending } from '@/lib/client-account';
 import { enforceSubscriptionRouteAccess, getOrganizationSubscriptionSnapshot, getSubscriptionLockMessage } from '@/lib/subscription-lock';
 import { readSupportSessionCookie } from '@/lib/support-cookie';
 import type { AuthContext } from '@/lib/types';
+import { ROUTES } from '@/lib/routes/registry';
 
 /**
  * 앱 진입 시 적용되는 모든 서버 정책을 순서대로 평가합니다.
@@ -21,19 +21,19 @@ import type { AuthContext } from '@/lib/types';
  */
 export async function enforceAppEntryPolicy(auth: AuthContext) {
   if (auth.profile.must_change_password) {
-    redirect('/start/password-reset' as Route);
+    redirect(ROUTES.START_PASSWORD_RESET);
   }
   if (auth.profile.must_complete_profile) {
-    redirect('/start/member-profile' as Route);
+    redirect(ROUTES.START_MEMBER_PROFILE);
   }
   if (!hasCompletedLegalName(auth.profile)) {
-    redirect('/start/profile-name' as Route);
+    redirect(ROUTES.START_PROFILE_NAME);
   }
   if (isClientAccountPending(auth.profile)) {
-    redirect('/start/pending' as Route);
+    redirect(ROUTES.START_PENDING);
   }
   if (isClientAccountActive(auth.profile)) {
-    redirect('/portal' as Route);
+    redirect(ROUTES.PORTAL);
   }
 
   const effectiveOrganizationId = getEffectiveOrganizationId(auth);
@@ -49,7 +49,7 @@ export async function enforceAppEntryPolicy(auth: AuthContext) {
   }
 
   if (!auth.memberships.length && !isPlatformOperator(auth)) {
-    redirect('/start/signup' as Route);
+    redirect(ROUTES.START_SIGNUP);
   }
 
   return {
