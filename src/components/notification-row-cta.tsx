@@ -5,6 +5,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { executeInteractionByKey } from '@/lib/interactions/execute-interaction-by-key';
 import { NOTIFICATION_INTERACTION_KEYS } from '@/lib/interactions/registry';
 import { createBrowserNavigateAdapter } from '@/lib/navigation/navigate-adapter';
+import { GuardedLink } from '@/components/interactions/guarded-link';
 
 type Status = 'active' | 'read' | 'resolved' | 'archived' | 'deleted';
 
@@ -51,18 +52,18 @@ export function NotificationRowCta({ notificationId, openHref, status, compact =
 
   return (
     <div className={compact ? 'mt-2 flex flex-wrap items-center gap-2' : 'mt-3 flex flex-wrap items-center gap-2'}>
-      <button
-        type="button"
-        onClick={() => {
-          setErrorMessage(null);
-          void executeInteractionByKey(NOTIFICATION_INTERACTION_KEYS.OPEN, {
-            navigate: () => adapter.navigate(openHref)
-          });
-        }}
+      <GuardedLink
+        interactionKey={NOTIFICATION_INTERACTION_KEYS.OPEN}
+        navigateTarget={openHref}
         className={openClassName}
+        onExecuted={(result) => {
+          if (!result.actionResult.ok) {
+            setErrorMessage(result.actionResult.message);
+          }
+        }}
       >
         열기{compact ? ' →' : ''}
-      </button>
+      </GuardedLink>
 
       {(status === 'active' || status === 'read') ? (
         <button

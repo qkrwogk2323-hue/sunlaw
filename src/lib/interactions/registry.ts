@@ -49,6 +49,7 @@ export type InteractionDefinition = {
   state?: InteractionState;
   group: string;
   actionKey?: InteractionActionKey;
+  requiresNavigateTarget?: boolean;
 };
 
 export const INTERACTION_REGISTRY: Record<InteractionKey, InteractionDefinition> = {
@@ -61,7 +62,8 @@ export const INTERACTION_REGISTRY: Record<InteractionKey, InteractionDefinition>
   [INTERACTION_KEYS.NOTIFICATIONS_OPEN]: {
     route: ROUTES.NOTIFICATIONS,
     type: INTERACTION_TYPES.MIXED,
-    group: NOTIFICATION_GROUP_KEYS.ROW_CTA
+    group: NOTIFICATION_GROUP_KEYS.ROW_CTA,
+    requiresNavigateTarget: true
   },
   [INTERACTION_KEYS.NOTIFICATIONS_SUMMARY_IMMEDIATE]: {
     route: ROUTES.NOTIFICATIONS,

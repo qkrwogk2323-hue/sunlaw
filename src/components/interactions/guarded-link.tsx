@@ -9,10 +9,11 @@ type GuardedLinkProps = {
   interactionKey: InteractionKey;
   children: ReactNode;
   className?: string;
+  navigateTarget?: string;
   onExecuted?: (result: ExecuteInteractionResult) => void;
 };
 
-export function GuardedLink({ interactionKey, children, className, onExecuted }: GuardedLinkProps) {
+export function GuardedLink({ interactionKey, children, className, navigateTarget, onExecuted }: GuardedLinkProps) {
   const adapter = createBrowserNavigateAdapter();
 
   return (
@@ -21,7 +22,8 @@ export function GuardedLink({ interactionKey, children, className, onExecuted }:
       className={className}
       onClick={() => {
         void executeInteractionByKey(interactionKey, {
-          navigate: adapter.navigate
+          navigate: adapter.navigate,
+          navigateTarget
         }).then((result) => onExecuted?.(result));
       }}
     >
