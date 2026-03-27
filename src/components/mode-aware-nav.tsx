@@ -30,6 +30,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
+import { ROUTES } from '@/lib/routes/registry';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE } from '@/lib/view-mode';
 
@@ -127,13 +128,13 @@ function getOrganizationSections({
 
   const commonItems = mode === 'client_communication'
     ? uniqueItems([
-        { href: '/notifications', label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
-        { href: '/support', label: '고객센터', icon: MessageSquareText }
+        { href: ROUTES.NOTIFICATIONS, label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
+        { href: ROUTES.SUPPORT, label: '고객센터', icon: MessageSquareText }
       ])
     : uniqueItems([
-        { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-        { href: '/calendar', label: '일정관리', icon: CalendarRange },
-        { href: '/notifications', label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
+        { href: ROUTES.DASHBOARD, label: '대시보드', icon: LayoutDashboard },
+        { href: ROUTES.CALENDAR, label: '일정관리', icon: CalendarRange },
+        { href: ROUTES.NOTIFICATIONS, label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
       ]);
 
   const platformItems: NavItem[] = [];
@@ -143,32 +144,32 @@ function getOrganizationSections({
 
   if (isPlatformManagementOrganizationView) {
     platformItems.push(
-      { href: '/admin/organization-requests', label: '조직 신청 관리', icon: FileText },
-      { href: '/admin/organizations', label: '조직 관리', icon: Building2 },
-      { href: '/admin/audit', label: '감사 로그', icon: ShieldAlert },
-      { href: '/settings/organization', label: '조직 설정', icon: Settings }
+      { href: ROUTES.ADMIN_ORGANIZATION_REQUESTS, label: '조직 신청 관리', icon: FileText },
+      { href: ROUTES.ADMIN_ORGANIZATIONS, label: '조직 관리', icon: Building2 },
+      { href: ROUTES.ADMIN_AUDIT, label: '감사 로그', icon: ShieldAlert },
+      { href: ROUTES.SETTINGS_ORGANIZATION, label: '조직 설정', icon: Settings }
     );
   } else if (mode === 'client_communication') {
     organizationItems.push(
-      { href: '/portal', label: '의뢰인 홈', icon: LayoutDashboard },
-      { href: '/portal/cases', label: '내 사건', icon: FileText },
-      { href: '/portal/messages', label: '사건 소통', icon: MessageSquareText },
-      { href: '/portal/notifications', label: '알림 확인', icon: BellRing }
+      { href: ROUTES.PORTAL, label: '의뢰인 홈', icon: LayoutDashboard },
+      { href: ROUTES.PORTAL_CASES, label: '내 사건', icon: FileText },
+      { href: ROUTES.PORTAL_MESSAGES, label: '사건 소통', icon: MessageSquareText },
+      { href: ROUTES.PORTAL_NOTIFICATIONS, label: '알림 확인', icon: BellRing }
     );
   } else if (mode === 'collection_admin') {
     // 추심/신용정보 조직 전용 메뉴
     organizationItems.push(
-      { href: '/collections', label: '회수 활동', icon: FileText },
-      { href: '/cases', label: '채권 사건', icon: FileText },
-      { href: '/clients', label: '채무자 관리', icon: Users },
-      { href: '/billing', label: '비용 관리', icon: Receipt },
-      { href: '/calendar', label: '일정', icon: FileText }
+      { href: ROUTES.COLLECTIONS, label: '회수 활동', icon: FileText },
+      { href: ROUTES.CASES, label: '채권 사건', icon: FileText },
+      { href: ROUTES.CLIENTS, label: '채무자 관리', icon: Users },
+      { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt },
+      { href: ROUTES.CALENDAR, label: '일정', icon: FileText }
     );
   } else if (mode === 'other_admin') {
     // 일반 협업 조직 — 법률 내부 운영 메뉴 제외. 협업은 collaborationItems에 별도 표시
     organizationItems.push(
-      { href: '/documents', label: '문서 수신', icon: FileText },
-      { href: '/billing', label: '비용 확인', icon: Receipt }
+      { href: ROUTES.DOCUMENTS, label: '문서 수신', icon: FileText },
+      { href: ROUTES.BILLING, label: '비용 확인', icon: Receipt }
     );
   } else {
     // law_admin 또는 organization_staff (모든 법률/법무 조직 구성원) — 법률 기본 제품
@@ -176,24 +177,24 @@ function getOrganizationSections({
     const staffOrgKind = membership?.organization?.kind;
     if (staffOrgKind === 'collection_company') {
       organizationItems.push(
-        { href: '/collections', label: '회수 활동', icon: FileText },
-        { href: '/cases', label: '채권 사건', icon: FileText },
-        { href: '/clients', label: '채무자 관리', icon: Users },
-        { href: '/billing', label: '비용 관리', icon: Receipt },
-        { href: '/calendar', label: '일정', icon: FileText }
+        { href: ROUTES.COLLECTIONS, label: '회수 활동', icon: FileText },
+        { href: ROUTES.CASES, label: '채권 사건', icon: FileText },
+        { href: ROUTES.CLIENTS, label: '채무자 관리', icon: Users },
+        { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt },
+        { href: ROUTES.CALENDAR, label: '일정', icon: FileText }
       );
     } else if (staffOrgKind === 'other') {
       // 일반 협업 조직 직원 — 협업은 collaborationItems에 표시
       organizationItems.push(
-        { href: '/documents', label: '문서 수신', icon: FileText },
-        { href: '/billing', label: '비용 확인', icon: Receipt }
+        { href: ROUTES.DOCUMENTS, label: '문서 수신', icon: FileText },
+        { href: ROUTES.BILLING, label: '비용 확인', icon: Receipt }
       );
     } else {
       organizationItems.push(
-        { href: '/cases', label: '사건 목록', icon: FileText },
-        { href: '/clients', label: '의뢰인 관리', icon: Users },
-        { href: '/documents', label: '업로드 문서', icon: FileText },
-        { href: '/billing', label: '비용 관리', icon: Receipt }
+        { href: ROUTES.CASES, label: '사건 목록', icon: FileText },
+        { href: ROUTES.CLIENTS, label: '의뢰인 관리', icon: Users },
+        { href: ROUTES.DOCUMENTS, label: '업로드 문서', icon: FileText },
+        { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt }
       );
     }
   }
@@ -202,30 +203,30 @@ function getOrganizationSections({
   // 의뢰인(client_communication)과 플랫폼 운영 콘솔만 제외
   if (!isPlatformManagementOrganizationView && mode !== 'client_communication') {
     collaborationItems.push(
-      { href: '/case-hubs', label: '사건허브', icon: Network },
-      { href: '/inbox', label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
+      { href: ROUTES.CASE_HUBS, label: '사건허브', icon: Network },
+      { href: ROUTES.INBOX, label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
     );
   }
   if (!isPlatformManagementOrganizationView && mode !== 'client_communication') {
-    collaborationItems.push({ href: '/organizations', label: '조직 찾기', icon: Building2 });
+    collaborationItems.push({ href: ROUTES.ORGANIZATIONS, label: '조직 찾기', icon: Building2 });
   }
 
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
   if (isPlatformManagementOrganizationView) {
     companyManagementItems.push(
-      { href: '/admin/support', label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 }
+      { href: ROUTES.ADMIN_SUPPORT, label: '고객센터', icon: MessageSquareText, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 }
     );
   }
   if (!isPlatformManagementOrganizationView && (canManageMembership || mode === 'law_admin' || mode === 'collection_admin' || mode === 'other_admin')) {
     companyManagementItems.push(
-      { href: '/settings/organization', label: '조직 설정', icon: Settings },
-      { href: '/settings/team', label: '구성원 관리', icon: Building2 },
-      { href: '/settings/subscription', label: '구독 관리', icon: Receipt },
-      { href: '/support', label: '고객센터', icon: MessageSquareText }
+      { href: ROUTES.SETTINGS_ORGANIZATION, label: '조직 설정', icon: Settings },
+      { href: ROUTES.SETTINGS_TEAM, label: '구성원 관리', icon: Building2 },
+      { href: ROUTES.SETTINGS_SUBSCRIPTION, label: '구독 관리', icon: Receipt },
+      { href: ROUTES.SUPPORT, label: '고객센터', icon: MessageSquareText }
     );
     // 계약 관리는 법률/추심 조직만
     if (mode === 'law_admin' || mode === 'collection_admin') {
-      companyManagementItems.splice(2, 0, { href: '/contracts', label: '계약 관리', icon: Receipt });
+      companyManagementItems.splice(2, 0, { href: ROUTES.CONTRACTS, label: '계약 관리', icon: Receipt });
     }
   }
 
@@ -396,7 +397,7 @@ function MobileSectionBar({
                     className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors duration-150 ${
                       pathname === item.href || pathname.startsWith(`${item.href}/`)
                         ? accent.active
-                        : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === '/notifications')
+                        : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === ROUTES.NOTIFICATIONS)
                           ? 'border-amber-300 bg-amber-50/80 text-slate-900'
                           : 'border-slate-200 bg-white text-slate-700'
                     }`}
@@ -668,7 +669,7 @@ export function ModeAwareNav({
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">사용자</p>
                 <Link
-                  href={'/settings/team/self' as Route}
+                  href={ROUTES.SETTINGS_TEAM_SELF}
                   aria-label="본인 정보 변경"
                   className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                 >

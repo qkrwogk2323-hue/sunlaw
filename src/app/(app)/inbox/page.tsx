@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
+import { ROUTES } from '@/lib/routes/registry';
 
 function InboxCard({
   href,
@@ -39,7 +40,7 @@ export default async function InboxPage() {
             <p className="mt-3 text-sm leading-7 text-slate-200/88">사건허브가 열리면 담당자 초대, 의뢰인 초대, 사건 등록, 실시간 소통을 이 메뉴에서 바로 이어갈 수 있습니다.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Link href={'/organizations' as Route} className="rounded-2xl border border-sky-300/40 bg-sky-500/20 p-4 backdrop-blur-sm transition hover:bg-sky-500/30">
+            <Link href={ROUTES.ORGANIZATIONS} className="rounded-2xl border border-sky-300/40 bg-sky-500/20 p-4 backdrop-blur-sm transition hover:bg-sky-500/30">
               <ClipboardList className="size-5 text-sky-200" />
               <p className="mt-3 text-sm font-semibold text-slate-100">승인 대기 {collaboration.inboundRequests.length}건</p>
               <p className="mt-1 text-xs text-slate-200/85">
@@ -62,7 +63,7 @@ export default async function InboxPage() {
           <CardHeader><CardTitle>열린 사건허브</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {collaboration.activeHubs.length ? collaboration.activeHubs.map((hub) => (
-              <InboxCard key={hub.id} href={`/inbox/${hub.id}`}>
+              <InboxCard key={hub.id} href={`${ROUTES.INBOX}/${hub.id}`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-medium text-slate-900">{hub.partnerOrganization?.name ?? '협업 조직'} 사건허브</p>
                   <div className="flex items-center gap-2">
@@ -81,7 +82,7 @@ export default async function InboxPage() {
                 <p className="mt-2 text-xs text-slate-400">{hub.lastMessageAt ? formatDateTime(hub.lastMessageAt) : '대화 없음'}{hub.lastMessageCaseTitle ? ` · ${hub.lastMessageCaseTitle}` : ''}</p>
                 <div className="mt-3 flex justify-end">
                   <Link
-                    href={`/inbox/${hub.id}/pin` as Route}
+                    href={`${ROUTES.INBOX}/${hub.id}/pin` as Route}
                     className={`${buttonStyles({ variant: 'secondary' })} min-h-10 rounded-xl px-3 text-xs font-semibold`}
                   >
                     PIN 관리

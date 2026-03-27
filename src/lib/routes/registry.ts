@@ -22,8 +22,12 @@ export const ROUTES = {
 
   DASHBOARD: '/dashboard' as Route,
   PORTAL: '/portal' as Route,
+  PORTAL_CASES: '/portal/cases' as Route,
+  PORTAL_MESSAGES: '/portal/messages' as Route,
+  PORTAL_NOTIFICATIONS: '/portal/notifications' as Route,
 
   INBOX: '/inbox' as Route,
+  CASE_HUBS: '/case-hubs' as Route,
   CASES: '/cases' as Route,
   CLIENTS: '/clients' as Route,
   ORGANIZATIONS: '/organizations' as Route,
@@ -31,10 +35,13 @@ export const ROUTES = {
   DOCUMENTS: '/documents' as Route,
   NOTIFICATIONS: '/notifications' as Route,
   CALENDAR: '/calendar' as Route,
+  BILLING: '/billing' as Route,
+  CONTRACTS: '/contracts' as Route,
   REPORTS: '/reports' as Route,
 
   SETTINGS: '/settings' as Route,
   SETTINGS_TEAM: '/settings/team' as Route,
+  SETTINGS_TEAM_SELF: '/settings/team/self' as Route,
   SETTINGS_ORGANIZATION: '/settings/organization' as Route,
   SETTINGS_CONTENT: '/settings/content' as Route,
   SETTINGS_SUBSCRIPTION: '/settings/subscription' as Route,

@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import type { DashboardAiAssistantResponse, DashboardAiOverview, DraftAssistResponse } from '@/lib/ai/dashboard-home';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { ROUTES } from '@/lib/routes/registry';
 
 type PlatformScenarioMode = 'law_admin' | 'collection_admin' | 'other_admin';
 const PLATFORM_SCENARIO_MEMBER_STORAGE_KEY = 'vs_platform_scenario_member';
@@ -335,7 +336,7 @@ function notificationActionLabel(item: NotificationItem) {
 
 function toNotificationOpenHref(item: NotificationItem) {
   const target = (item.destination_url ?? item.action_href ?? '').trim();
-  if (!target.startsWith('/')) return '/notifications' as Route;
+  if (!target.startsWith('/')) return ROUTES.NOTIFICATIONS;
   const params = new URLSearchParams();
   params.set('href', target);
   if (item.organization_id) {
@@ -1364,7 +1365,7 @@ export function DashboardHubClient({
   const immediateNotifications = useMemo(
     () => data.actionableNotifications.filter(
       (item) => item.requires_action &&
-        (item.action_entity_type === 'schedule' || item.destination_url?.includes('/calendar'))
+        (item.action_entity_type === 'schedule' || item.destination_url?.includes(ROUTES.CALENDAR))
     ),
     [data.actionableNotifications]
   );
@@ -1373,7 +1374,7 @@ export function DashboardHubClient({
     () => data.actionableNotifications.filter(
       (item) => item.requires_action &&
         (item.action_entity_type === 'client' || item.action_entity_type === 'collaboration' ||
-          item.destination_url?.includes('/clients') || item.destination_url?.includes('/inbox'))
+          item.destination_url?.includes(ROUTES.CLIENTS) || item.destination_url?.includes(ROUTES.INBOX))
     ),
     [data.actionableNotifications]
   );
@@ -1390,17 +1391,17 @@ export function DashboardHubClient({
     {
       label: '알림',
       detail: `즉시필요 ${immediateNotifications.length}건 · 검토필요 ${confirmNotifications.length}건 · 미팅 ${meetingNotifications.length}건`,
-      href: '/notifications' as Route
+      href: ROUTES.NOTIFICATIONS
     },
     {
       label: '사건',
       detail: `진행 중 사건 ${data.activeCases}건, 요청 대기 ${data.pendingRequests}건`,
-      href: '/cases' as Route
+      href: ROUTES.CASES
     },
     {
       label: '비용',
       detail: `납부 확인 필요 ${data.pendingBillingCount}건`,
-      href: '/billing' as Route
+      href: ROUTES.BILLING
     }
   ];
 
@@ -1538,14 +1539,14 @@ export function DashboardHubClient({
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-semibold text-rose-800">즉시필요 알림</p>
-            <Link href={'/notifications?section=immediate' as Route} className="text-xs text-rose-600 underline hover:text-rose-800">전체보기 →</Link>
+            <Link href={`${ROUTES.NOTIFICATIONS}?section=immediate` as Route} className="text-xs text-rose-600 underline hover:text-rose-800">전체보기 →</Link>
           </div>
           <div className="space-y-2">
             {immediateNotifications.slice(0, 5).map(item => (
               <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
                 <p className="font-medium text-slate-900">{item.title}</p>
                 <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
-                <a href={item.destination_url ?? '/notifications'} className="mt-2 inline-flex text-xs text-rose-700 underline">열기</a>
+                <a href={item.destination_url ?? ROUTES.NOTIFICATIONS} className="mt-2 inline-flex text-xs text-rose-700 underline">열기</a>
               </div>
             ))}
             {immediateNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
@@ -1557,14 +1558,14 @@ export function DashboardHubClient({
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-semibold text-blue-800">검토필요 알림</p>
-            <Link href={'/notifications?section=confirm' as Route} className="text-xs text-blue-600 underline hover:text-blue-800">전체보기 →</Link>
+            <Link href={`${ROUTES.NOTIFICATIONS}?section=confirm` as Route} className="text-xs text-blue-600 underline hover:text-blue-800">전체보기 →</Link>
           </div>
           <div className="space-y-2">
             {confirmNotifications.slice(0, 5).map(item => (
               <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
                 <p className="font-medium text-slate-900">{item.title}</p>
                 <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
-                <a href={item.destination_url ?? '/notifications'} className="mt-2 inline-flex text-xs text-blue-700 underline">열기</a>
+                <a href={item.destination_url ?? ROUTES.NOTIFICATIONS} className="mt-2 inline-flex text-xs text-blue-700 underline">열기</a>
               </div>
             ))}
             {confirmNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
@@ -1576,14 +1577,14 @@ export function DashboardHubClient({
         <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-semibold text-violet-800">미팅알림</p>
-            <Link href={'/notifications' as Route} className="text-xs text-violet-600 underline hover:text-violet-800">전체보기 →</Link>
+            <Link href={ROUTES.NOTIFICATIONS} className="text-xs text-violet-600 underline hover:text-violet-800">전체보기 →</Link>
           </div>
           <div className="space-y-2">
             {meetingNotifications.slice(0, 5).map(item => (
               <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
                 <p className="font-medium text-slate-900">{item.title}</p>
                 <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
-                <a href={item.destination_url ?? '/notifications'} className="mt-2 inline-flex text-xs text-violet-700 underline">열기</a>
+                <a href={item.destination_url ?? ROUTES.NOTIFICATIONS} className="mt-2 inline-flex text-xs text-violet-700 underline">열기</a>
               </div>
             ))}
             {meetingNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
@@ -1595,7 +1596,7 @@ export function DashboardHubClient({
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-semibold text-slate-800">기타알림</p>
-            <Link href={'/notifications' as Route} className="text-xs text-slate-600 underline hover:text-slate-800">전체보기 →</Link>
+            <Link href={ROUTES.NOTIFICATIONS} className="text-xs text-slate-600 underline hover:text-slate-800">전체보기 →</Link>
           </div>
           <p className="py-4 text-center text-sm text-slate-500">알림센터에서 확인하세요.</p>
         </div>
@@ -2356,7 +2357,7 @@ export function DashboardHubClient({
               data.monthlyHighlights.slice(0, 6).map((item) => (
                 <Link
                   key={item.id}
-                  href={(item.case_id ? `/cases/${item.case_id}` : '/calendar') as Route}
+                  href={(item.case_id ? `${ROUTES.CASES}/${item.case_id}` : ROUTES.CALENDAR) as Route}
                   className="block rounded-2xl border border-amber-200/80 bg-white/80 px-4 py-4 transition hover:border-amber-300 hover:bg-white"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2513,19 +2514,19 @@ export function DashboardHubClient({
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Link
-            href={'/notifications' as Route}
+            href={ROUTES.NOTIFICATIONS}
             className="inline-flex items-center rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-sky-300 hover:bg-sky-50"
           >
             확인할 알림 {data.unreadNotifications}개
           </Link>
           <Link
-            href={'/cases' as Route}
+            href={ROUTES.CASES}
             className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-slate-300 hover:bg-slate-50"
           >
             확인할 사건 {data.activeCases}개
           </Link>
           <Link
-            href={'/calendar' as Route}
+            href={ROUTES.CALENDAR}
             className="inline-flex items-center rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-amber-300 hover:bg-amber-50"
           >
             일정 확인
