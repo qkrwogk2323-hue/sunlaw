@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { resolveNotificationOpenTarget } from '@/lib/notification-open';
+import { ROUTES } from '@/lib/routes/registry';
 
 function isNextRedirectError(error: unknown) {
   if (!error || typeof error !== 'object') return false;
@@ -22,6 +23,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (isNextRedirectError(error)) {
       throw error;
     }
-    return NextResponse.redirect(new URL('/notifications', request.url));
+    return NextResponse.redirect(new URL(ROUTES.NOTIFICATIONS, request.url));
   }
 }

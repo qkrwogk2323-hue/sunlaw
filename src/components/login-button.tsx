@@ -1,31 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
-import {
-  resolveSupabaseCookieDomain
-} from '@/lib/supabase/cookie-options';
-
-const POST_AUTH_NEXT_COOKIE = 'vs-post-auth-next';
-
-function resolveAuthOrigin() {
-  // PKCE code verifier/state cookie is origin-bound, so callback must stay on the same origin.
-  return window.location.origin;
-}
-
-function writePostAuthNextCookie(next?: string) {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return;
-  }
-
-  const authOrigin = resolveAuthOrigin();
-  const domain = resolveSupabaseCookieDomain(window.location.hostname);
-  const secure = authOrigin.startsWith('https://') ? '; secure' : '';
-  const domainAttribute = domain ? `; domain=${domain}` : '';
-
-  document.cookie = `${POST_AUTH_NEXT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=600; samesite=lax${domainAttribute}${secure}`;
-}
+import { type ActionErrorCode, type ActionStage } from '@/lib/actions/run-action-by-key';
+import { executeInteractionByKey } from '@/lib/interactions/execute-interaction-by-key';
+import { INTERACTION_KEYS } from '@/lib/interactions/registry';
 
 type LoginButtonProps = {
   idleLabel?: string;
@@ -33,125 +12,146 @@ type LoginButtonProps = {
   forceLoginPrompt?: boolean;
 };
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = 12000): Promise<T> {
-  let timeoutId: number | null = null;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(() => {
-      reject(new Error('카카오 인증 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.'));
-    }, timeoutMs);
-  });
+type LoginStatus =
+  | 'idle'
+  | 'requesting'
+  | 'waiting_oauth'
+  | 'timeout'
+  | 'env_error'
+  | 'oauth_error';
 
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeoutId !== null) {
-      window.clearTimeout(timeoutId);
-    }
-  }
+function statusMessage(status: LoginStatus, detail: string | null) {
+  if (status === 'requesting') return '로그인 요청 중입니다...';
+  if (status === 'waiting_oauth') return '인증 서버 응답을 기다리는 중입니다...';
+  if (status === 'timeout') return detail ?? '인증 서버 응답 지연이 발생했습니다.';
+  if (status === 'env_error') return detail ?? '환경 변수 오류로 인증 요청을 시작하지 못했습니다.';
+  if (status === 'oauth_error') return detail ?? 'OAuth 시작 실패가 발생했습니다.';
+  return null;
 }
 
-export function LoginButton({
+function classifyError(code: ActionErrorCode, message: string): LoginStatus {
+  if (code === 'oauth-timeout') return 'timeout';
+  const normalized = message.toLowerCase();
+  if (normalized.includes('supabase') && normalized.includes('url')) return 'env_error';
+  if (normalized.includes('supabase') && normalized.includes('anon')) return 'env_error';
+  if (code === 'supabase-init-failed') return 'env_error';
+  return 'oauth_error';
+}
+
+function handleStageLog(stage: ActionStage, payload?: Record<string, unknown>) {
+  if (stage === 'supabase.client.created') {
+    console.info('[login.kakao] createSupabaseBrowserClient success', payload ?? {});
+    return;
+  }
+  if (stage === 'oauth.signin.before') {
+    console.info('[login.kakao] before signInWithOAuth', payload ?? {});
+    return;
+  }
+  if (stage === 'oauth.signin.timeout') {
+    console.error('[login.kakao] timeout', payload ?? {});
+    return;
+  }
+  if (stage === 'oauth.signin.error') {
+    console.error('[login.kakao] oauth error', payload ?? {});
+    return;
+  }
+  console.info('[login.kakao] stage', stage, payload ?? {});
+}
+
+type LoginButtonInnerProps = LoginButtonProps & {
+  next?: string;
+};
+
+function LoginButtonInner({
+  next,
   idleLabel = '카카오로 로그인',
   loadingLabel = '연결 중...',
   forceLoginPrompt = true
-}: LoginButtonProps) {
-  const [loading, setLoading] = useState(false);
+}: LoginButtonInnerProps) {
+  const [status, setStatus] = useState<LoginStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const loading = status === 'requesting' || status === 'waiting_oauth';
 
   const handleLogin = async () => {
-    setLoading(true);
+    console.info('[login.kakao] click entry', { next: next ?? null, forceLoginPrompt });
+    setStatus('requesting');
     setError(null);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const redirectTo = `${resolveAuthOrigin()}/auth/callback`;
-      const { error } = await withTimeout(supabase.auth.signInWithOAuth({
-        provider: 'kakao',
-        options: {
-          redirectTo,
-          ...(forceLoginPrompt
-            ? {
-                queryParams: {
-                  prompt: 'login'
-                }
-              }
-            : {})
-        }
-      }));
 
-      if (error) {
-        throw error;
+    try {
+      const executed = await executeInteractionByKey(INTERACTION_KEYS.LOGIN_KAKAO, {
+        actionOptions: {
+          next,
+          forceLoginPrompt,
+          onStage: (stage, payload) => {
+            handleStageLog(stage, payload);
+            if (stage === 'supabase.client.created') {
+              setStatus('waiting_oauth');
+            }
+            if (stage === 'oauth.signin.timeout') {
+              setStatus('timeout');
+            }
+          }
+        }
+      });
+      const result = executed.actionResult;
+
+      if (!result.ok) {
+        const nextStatus = classifyError(result.code, result.message);
+        setStatus(nextStatus);
+        setError(result.message);
+        console.error('[login.kakao] catch', { code: result.code, cause: result.cause });
+        return;
       }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : '카카오 로그인 연결에 실패했습니다.');
-    } finally {
-      setLoading(false);
+
+      setStatus('waiting_oauth');
+      console.info('[login.kakao] oauth request started');
+    } catch (caughtError) {
+      setStatus('oauth_error');
+      const message = caughtError instanceof Error ? caughtError.message : '카카오 로그인 연결에 실패했습니다.';
+      setError(message);
+      console.error('[login.kakao] catch', caughtError);
     }
   };
 
+  const message = statusMessage(status, error);
+  const isError = status === 'timeout' || status === 'env_error' || status === 'oauth_error';
+
   return (
-    <div className="space-y-2">
-      <Button type="button" size="lg" onClick={handleLogin} isLoading={loading}>
+    <div className="space-y-3">
+      <Button type="button" size="lg" onClick={handleLogin} isLoading={loading} disabled={loading}>
         {loading ? loadingLabel : idleLabel}
       </Button>
-      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
+      <p className="text-xs text-slate-500">버튼 상태: {loading ? 'disabled(요청 중)' : 'enabled(클릭 가능)'}</p>
+      {message ? (
+        <div
+          role={isError ? 'alert' : 'status'}
+          className={isError
+            ? 'rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700'
+            : 'rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700'}
+        >
+          {message}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-type LoginButtonWithNextProps = LoginButtonProps & {
-  next?: string;
-};
+export function LoginButton(props: LoginButtonProps) {
+  return <LoginButtonInner {...props} />;
+}
 
 export function LoginButtonWithNext({
   next,
   idleLabel = '카카오로 로그인',
   loadingLabel = '연결 중...',
   forceLoginPrompt = true
-}: LoginButtonWithNextProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleLogin = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const redirectUrl = new URL('/auth/callback', resolveAuthOrigin());
-      writePostAuthNextCookie(next);
-      if (next) {
-        redirectUrl.searchParams.set('next', next);
-      }
-
-      const { error } = await withTimeout(supabase.auth.signInWithOAuth({
-        provider: 'kakao',
-        options: {
-          redirectTo: redirectUrl.toString(),
-          ...(forceLoginPrompt
-            ? {
-                queryParams: {
-                  prompt: 'login'
-                }
-              }
-            : {})
-        }
-      }));
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : '카카오 로그인 연결에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+}: LoginButtonProps & { next?: string }) {
   return (
-    <div className="space-y-2">
-      <Button type="button" size="lg" onClick={handleLogin} isLoading={loading}>
-        {loading ? loadingLabel : idleLabel}
-      </Button>
-      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
-    </div>
+    <LoginButtonInner
+      next={next}
+      idleLabel={idleLabel}
+      loadingLabel={loadingLabel}
+      forceLoginPrompt={forceLoginPrompt}
+    />
   );
 }

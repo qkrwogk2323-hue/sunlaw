@@ -5,6 +5,8 @@ import type { Route } from 'next';
 import type { NotificationQueueItem } from '@/lib/queries/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
+import { ROUTES } from '@/lib/routes/registry';
 
 type ColorKey = 'rose' | 'blue' | 'violet' | 'slate';
 type ToneKey = 'red' | 'blue' | 'green' | 'slate';
@@ -64,13 +66,20 @@ const colorStyles = {
 
 function ItemRow({ item, colorKey }: { item: NotificationQueueItem; colorKey: ColorKey }) {
   const cs = colorStyles[colorKey];
+  const destinationHref = resolveSafeInternalHref(item.destinationUrl, ROUTES.NOTIFICATIONS);
+  const params = new URLSearchParams();
+  params.set('href', destinationHref);
+  if (item.organizationId) {
+    params.set('organizationId', item.organizationId);
+  }
+  const openHref = `/notifications/open/${item.notificationId}?${params.toString()}` as Route;
   return (
     <div className={`rounded-xl border p-3 ${cs.item}`}>
       <p className="text-sm font-semibold text-slate-900">{item.title}</p>
       {item.organizationName && <p className="mt-0.5 text-xs text-slate-500">{item.organizationName}</p>}
       <div className="mt-2 flex items-center gap-2">
         <Link
-          href={`/notifications/open/${item.notificationId}?href=${encodeURIComponent(item.destinationUrl)}&organizationId=${item.organizationId ?? ''}` as Route}
+          href={openHref}
           className="text-xs font-medium text-slate-700 underline hover:text-slate-900"
         >
           열기 →

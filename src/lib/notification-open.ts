@@ -6,6 +6,8 @@ import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAu
 import { createAccessDeniedFeedback, createConditionFailedFeedback, createValidationFailedFeedback, throwGuardFeedback } from '@/lib/guard-feedback';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { notifyPlatformBugAlert } from '@/lib/platform-alerts';
+import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
+import { ROUTES } from '@/lib/routes/registry';
 
 function revalidateNotificationViews() {
   revalidatePath('/notifications');
@@ -13,7 +15,7 @@ function revalidateNotificationViews() {
 }
 
 function normalizeRelativeHref(value: string) {
-  return value.startsWith('/') ? value : '/notifications';
+  return resolveSafeInternalHref(value, ROUTES.NOTIFICATIONS);
 }
 
 import { isPlatformOnlyNotification } from '@/lib/notification-policy';

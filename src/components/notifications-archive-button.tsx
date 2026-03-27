@@ -2,9 +2,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { ROUTES } from '@/lib/routes/registry';
 
 export function NotificationsArchiveButton({ archivedCount }: { archivedCount: number }) {
   const [open, setOpen] = useState(false);
+  const archivedParams = new URLSearchParams();
+  archivedParams.set('state', 'archived');
+  const archivedHref = `${ROUTES.NOTIFICATIONS}?${archivedParams.toString()}` as Route;
   return (
     <div className="relative">
       <button
@@ -25,7 +29,7 @@ export function NotificationsArchiveButton({ archivedCount }: { archivedCount: n
             </div>
             <p className="mt-1 text-xs text-slate-500">보관된 알림 {archivedCount}건</p>
             <Link
-              href={'/notifications?state=archived' as Route}
+              href={archivedHref}
               className="mt-3 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-700 hover:bg-slate-100"
               onClick={() => setOpen(false)}
             >

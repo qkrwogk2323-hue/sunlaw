@@ -7,6 +7,7 @@ import {
 } from '@/lib/actions/notification-actions';
 import { NotificationsArchiveButton } from '@/components/notifications-archive-button';
 import { NotificationSectionWithPopup } from '@/components/notification-section-with-popup';
+import { NotificationsSummaryCards } from '@/components/notifications-summary-cards';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,12 +21,15 @@ import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings
 import { formatNotificationDate } from '@/lib/format';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
+import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
+import { ROUTES } from '@/lib/routes/registry';
 
 type NotificationCategoryKey = 'immediate' | 'confirm' | 'meeting' | 'other';
 
 function notificationOpenHref(notificationId: string, href: string, organizationId?: string | null) {
+  const safeHref = resolveSafeInternalHref(href, ROUTES.NOTIFICATIONS);
   const params = new URLSearchParams();
-  params.set('href', href);
+  params.set('href', safeHref);
   if (organizationId) {
     params.set('organizationId', organizationId);
   }
@@ -187,16 +191,6 @@ export default async function NotificationsPage({
   const keyword = `${resolved?.q ?? ''}`.trim();
   const state = `${resolved?.state ?? 'active'}` as 'active' | 'archived';
   const pageSize = 30;
-  const buildFilterHref = ({
-    nextState = state
-  }: {
-    nextState?: 'active' | 'archived';
-  }) => {
-    const params = new URLSearchParams();
-    if (keyword) params.set('q', keyword);
-    params.set('state', nextState);
-    return `/notifications?${params.toString()}`;
-  };
 
   const [notificationCenter, channelPreferences] = await Promise.all([
     getNotificationCenter(pageSize),
@@ -219,40 +213,16 @@ export default async function NotificationsPage({
         <NotificationsArchiveButton archivedCount={notificationCenter.trashedNotifications.length} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Link href={buildFilterHref({ nextState: 'active' }) as Route}
-          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center transition hover:bg-rose-100"
-          aria-label={`즉시필요 알림 ${queueView.categories.immediate.length}건`}>
-          <p className="text-xs font-semibold text-rose-700">즉시필요</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">{queueView.categories.immediate.length}</p>
-          <p className="mt-1 text-[10px] text-rose-600">업무일정 임박</p>
-        </Link>
-        <Link href={'#confirm' as Route}
-          className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center transition hover:bg-blue-100"
-          aria-label={`검토필요 알림 ${queueView.categories.confirm.length}건`}>
-          <p className="text-xs font-semibold text-blue-700">검토필요</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-blue-800">{queueView.categories.confirm.length}</p>
-          <p className="mt-1 text-[10px] text-blue-600">요청·협업 알림</p>
-        </Link>
-        <Link href={'#meeting' as Route}
-          className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-center transition hover:bg-violet-100"
-          aria-label={`미팅알림 ${queueView.categories.meeting.length}건`}>
-          <p className="text-xs font-semibold text-violet-700">미팅알림</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-violet-800">{queueView.categories.meeting.length}</p>
-          <p className="mt-1 text-[10px] text-violet-600">미팅 일정</p>
-        </Link>
-        <Link href={'#other' as Route}
-          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center transition hover:bg-slate-100"
-          aria-label={`기타알림 ${queueView.categories.other.length}건`}>
-          <p className="text-xs font-semibold text-slate-700">기타알림</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{queueView.categories.other.length}</p>
-          <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
-        </Link>
-      </div>
+      <NotificationsSummaryCards
+        immediateCount={queueView.categories.immediate.length}
+        confirmCount={queueView.categories.confirm.length}
+        meetingCount={queueView.categories.meeting.length}
+        otherCount={queueView.categories.other.length}
+      />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
         <UnifiedListSearch
-          action="/notifications"
+          action={ROUTES.NOTIFICATIONS}
           defaultValue={keyword}
           placeholder="알림 제목 검색"
           ariaLabel="알림 센터 목록 검색"
@@ -278,7 +248,7 @@ export default async function NotificationsPage({
             priority: 'low',
             status: 'archived',
             destinationType: `${item.destination_type ?? 'internal_route'}`,
-            destinationUrl: `${item.destination_url ?? '/notifications'}`,
+            destinationUrl: `${item.destination_url ?? ROUTES.NOTIFICATIONS}`,
             createdAt: item.created_at,
             title: item.title,
             actionLabel: `${item.action_label ?? '열기'}`,

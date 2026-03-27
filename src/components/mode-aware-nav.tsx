@@ -29,13 +29,24 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { useToast } from '@/components/ui/toast-provider';
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { switchDefaultOrganizationAction } from '@/lib/actions/organization-actions';
+import { INTERACTION_KEYS, type InteractionKey } from '@/lib/interactions/registry';
+import { executeInteractionByKey } from '@/lib/interactions/execute-interaction-by-key';
+import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { ROUTES } from '@/lib/routes/registry';
 import type { Membership, OrganizationOption, Profile } from '@/lib/types';
 import { ACTIVE_VIEW_MODE_COOKIE } from '@/lib/view-mode';
 
 type NavBadge = { count: number; variant?: 'default' | 'urgent' };
-type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: NavBadge | null; pulse?: boolean; emphasize?: boolean };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  interactionKey?: InteractionKey;
+  badge?: NavBadge | null;
+  pulse?: boolean;
+  emphasize?: boolean;
+};
 type NavSection = { id: string; label: string; items: NavItem[] };
 type NavUnreadCounts = { unreadCount: number; actionRequiredCount: number; unreadConversationCount: number };
 
@@ -128,13 +139,28 @@ function getOrganizationSections({
 
   const commonItems = mode === 'client_communication'
     ? uniqueItems([
-        { href: ROUTES.NOTIFICATIONS, label: '알림 확인', icon: BellRing, badge: notificationBadge, pulse: pulseNotification },
+        {
+          href: ROUTES.NOTIFICATIONS,
+          label: '알림 확인',
+          icon: BellRing,
+          interactionKey: INTERACTION_KEYS.NOTIFICATIONS_OPEN,
+          badge: notificationBadge,
+          pulse: pulseNotification
+        },
         { href: ROUTES.SUPPORT, label: '고객센터', icon: MessageSquareText }
       ])
     : uniqueItems([
         { href: ROUTES.DASHBOARD, label: '대시보드', icon: LayoutDashboard },
-        { href: ROUTES.CALENDAR, label: '일정관리', icon: CalendarRange },
-        { href: ROUTES.NOTIFICATIONS, label: '알림 센터', icon: BellRing, badge: notificationBadge, pulse: pulseNotification, emphasize: unreadNotificationCount > 0 },
+        { href: ROUTES.CALENDAR, label: '일정관리', icon: CalendarRange, interactionKey: INTERACTION_KEYS.CALENDAR_OPEN },
+        {
+          href: ROUTES.NOTIFICATIONS,
+          label: '알림 센터',
+          icon: BellRing,
+          interactionKey: INTERACTION_KEYS.NOTIFICATIONS_OPEN,
+          badge: notificationBadge,
+          pulse: pulseNotification,
+          emphasize: unreadNotificationCount > 0
+        },
       ]);
 
   const platformItems: NavItem[] = [];
@@ -178,10 +204,10 @@ function getOrganizationSections({
     if (staffOrgKind === 'collection_company') {
       organizationItems.push(
         { href: ROUTES.COLLECTIONS, label: '회수 활동', icon: FileText },
-        { href: ROUTES.CASES, label: '채권 사건', icon: FileText },
+        { href: ROUTES.CASES, label: '채권 사건', icon: FileText, interactionKey: INTERACTION_KEYS.CASES_LIST },
         { href: ROUTES.CLIENTS, label: '채무자 관리', icon: Users },
         { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt },
-        { href: ROUTES.CALENDAR, label: '일정', icon: FileText }
+        { href: ROUTES.CALENDAR, label: '일정', icon: FileText, interactionKey: INTERACTION_KEYS.CALENDAR_OPEN }
       );
     } else if (staffOrgKind === 'other') {
       // 일반 협업 조직 직원 — 협업은 collaborationItems에 표시
@@ -191,7 +217,7 @@ function getOrganizationSections({
       );
     } else {
       organizationItems.push(
-        { href: ROUTES.CASES, label: '사건 목록', icon: FileText },
+        { href: ROUTES.CASES, label: '사건 목록', icon: FileText, interactionKey: INTERACTION_KEYS.CASES_LIST },
         { href: ROUTES.CLIENTS, label: '의뢰인 관리', icon: Users },
         { href: ROUTES.DOCUMENTS, label: '업로드 문서', icon: FileText },
         { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt }
@@ -208,7 +234,7 @@ function getOrganizationSections({
     );
   }
   if (!isPlatformManagementOrganizationView && mode !== 'client_communication') {
-    collaborationItems.push({ href: ROUTES.ORGANIZATIONS, label: '조직 찾기', icon: Building2 });
+    collaborationItems.push({ href: ROUTES.ORGANIZATIONS, label: '조직 찾기', icon: Building2, interactionKey: INTERACTION_KEYS.ORGANIZATIONS_LIST });
   }
 
   const canManageMembership = Boolean(membership && isManagementRole(membership.role));
@@ -242,15 +268,18 @@ function getOrganizationSections({
 
 function ModeNavItem({
   href,
+  interactionKey,
   label,
   icon: Icon,
   active,
   sectionId,
   badge,
   pulse = false,
-  emphasize = false
+  emphasize = false,
+  onNavigateByKey
 }: {
   href: string;
+  interactionKey?: InteractionKey;
   label: string;
   icon: React.ComponentType<any>;
   active: boolean;
@@ -258,11 +287,18 @@ function ModeNavItem({
   badge?: NavBadge | null;
   pulse?: boolean;
   emphasize?: boolean;
+  onNavigateByKey?: (key: InteractionKey) => void;
 }) {
   const accent = sectionAccent[sectionId as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
+  const safeHref = resolveSafeInternalHref(href, ROUTES.NOTIFICATIONS);
   return (
     <Link
-      href={href as Route}
+      href={safeHref}
+      onClick={(event) => {
+        if (!interactionKey || !onNavigateByKey) return;
+        event.preventDefault();
+        onNavigateByKey(interactionKey);
+      }}
       className={`inline-flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors duration-150 ${
         active
           ? accent.active
@@ -303,7 +339,8 @@ function MobileSectionBar({
   organizationOptions,
   hasUnreadNotifications,
   collapsedSectionIds,
-  onToggleSection
+  onToggleSection,
+  onNavigateByKey
 }: {
   sections: NavSection[];
   pathname: string;
@@ -314,6 +351,7 @@ function MobileSectionBar({
   hasUnreadNotifications: boolean;
   collapsedSectionIds: string[];
   onToggleSection: (sectionId: string) => void;
+  onNavigateByKey: (key: InteractionKey) => void;
 }) {
   const derivedSectionId = useMemo(
     () => resolveSectionIdByPath(sections, pathname),
@@ -389,15 +427,22 @@ function MobileSectionBar({
               {!isActiveSectionCollapsed ? activeSection.items.map((item) => {
                 const accent = sectionAccent[activeSection.id as keyof typeof sectionAccent] ?? sectionAccent['common-menu'];
                 const badge = item.badge;
+                const safeHref = resolveSafeInternalHref(item.href, ROUTES.NOTIFICATIONS);
                 return (
                   <Link
                     key={item.href}
-                    href={item.href as Route}
-                    onClick={() => setDrawerOpen(false)}
+                    href={safeHref as Route}
+                    onClick={(event) => {
+                      if (item.interactionKey) {
+                        event.preventDefault();
+                        onNavigateByKey(item.interactionKey);
+                      }
+                      setDrawerOpen(false);
+                    }}
                     className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors duration-150 ${
-                      pathname === item.href || pathname.startsWith(`${item.href}/`)
+                      pathname === safeHref || pathname.startsWith(`${safeHref}/`)
                         ? accent.active
-                        : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && item.href === ROUTES.NOTIFICATIONS)
+                        : item.emphasize || (hasUnreadNotifications && activeSection.id === 'common-menu' && safeHref === ROUTES.NOTIFICATIONS)
                           ? 'border-amber-300 bg-amber-50/80 text-slate-900'
                           : 'border-slate-200 bg-white text-slate-700'
                     }`}
@@ -608,6 +653,11 @@ export function ModeAwareNav({
     ));
   };
   const currentPathWithSearch = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
+  const handleNavigateByKey = (key: InteractionKey) => {
+    void executeInteractionByKey(key, {
+      navigate: (href) => window.location.assign(href)
+    });
+  };
 
   return (
     <div className="space-y-3">
@@ -621,6 +671,7 @@ export function ModeAwareNav({
         hasUnreadNotifications={hasUnreadNotifications}
         collapsedSectionIds={collapsedSectionIds}
         onToggleSection={toggleSection}
+        onNavigateByKey={handleNavigateByKey}
       />
 
       <div className="hidden lg:block lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
@@ -729,18 +780,23 @@ export function ModeAwareNav({
                   </div>
                   {!collapsedSectionIds.includes(section.id) ? (
                     <div className="mt-1 space-y-1">
-                      {section.items.map((item) => (
+                      {section.items.map((item) => {
+                        const safeHref = resolveSafeInternalHref(item.href, ROUTES.NOTIFICATIONS);
+                        return (
                         <ModeNavItem
                           key={item.href}
-                          href={item.href}
+                          href={safeHref}
+                          interactionKey={item.interactionKey}
                           label={item.label}
                           icon={item.icon}
                           sectionId={section.id}
-                          active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                          active={pathname === safeHref || pathname.startsWith(`${safeHref}/`)}
                           pulse={Boolean(item.pulse)}
                           emphasize={Boolean(item.emphasize)}
+                          onNavigateByKey={handleNavigateByKey}
                         />
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : null}
                 </div>

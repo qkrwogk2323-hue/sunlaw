@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import type { DashboardAiAssistantResponse, DashboardAiOverview, DraftAssistResponse } from '@/lib/ai/dashboard-home';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { isSafeInternalHref, resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
 import { ROUTES } from '@/lib/routes/registry';
 
 type PlatformScenarioMode = 'law_admin' | 'collection_admin' | 'other_admin';
@@ -334,15 +335,12 @@ function notificationActionLabel(item: NotificationItem) {
   return '알림 보기';
 }
 
-function toNotificationOpenHref(item: NotificationItem) {
-  const target = (item.destination_url ?? item.action_href ?? '').trim();
-  if (!target.startsWith('/')) return ROUTES.NOTIFICATIONS;
-  const params = new URLSearchParams();
-  params.set('href', target);
-  if (item.organization_id) {
-    params.set('organizationId', item.organization_id);
-  }
-  return `/notifications/open/${item.id}?${params.toString()}` as Route;
+function getNotificationTargetHref(item: NotificationItem) {
+  return resolveSafeInternalHref(item.destination_url ?? item.action_href, ROUTES.NOTIFICATIONS);
+}
+
+function hasNotificationTargetHref(item: NotificationItem) {
+  return isSafeInternalHref(item.destination_url ?? item.action_href);
 }
 
 function scenarioMessageStorageKey(mode: PlatformScenarioMode) {
@@ -1365,7 +1363,7 @@ export function DashboardHubClient({
   const immediateNotifications = useMemo(
     () => data.actionableNotifications.filter(
       (item) => item.requires_action &&
-        (item.action_entity_type === 'schedule' || item.destination_url?.includes(ROUTES.CALENDAR))
+        (item.action_entity_type === 'schedule' || getNotificationTargetHref(item).includes(ROUTES.CALENDAR))
     ),
     [data.actionableNotifications]
   );
@@ -1374,7 +1372,7 @@ export function DashboardHubClient({
     () => data.actionableNotifications.filter(
       (item) => item.requires_action &&
         (item.action_entity_type === 'client' || item.action_entity_type === 'collaboration' ||
-          item.destination_url?.includes(ROUTES.CLIENTS) || item.destination_url?.includes(ROUTES.INBOX))
+          getNotificationTargetHref(item).includes(ROUTES.CLIENTS) || getNotificationTargetHref(item).includes(ROUTES.INBOX))
     ),
     [data.actionableNotifications]
   );
@@ -1382,7 +1380,7 @@ export function DashboardHubClient({
   const meetingNotifications = useMemo(
     () => data.actionableNotifications.filter(
       (item) => item.action_entity_type === 'schedule' &&
-        (item.destination_url?.includes('meeting') || item.title?.toLowerCase().includes('미팅'))
+        (getNotificationTargetHref(item).includes('meeting') || item.title?.toLowerCase().includes('미팅'))
     ),
     [data.actionableNotifications]
   );
@@ -1545,8 +1543,8 @@ export function DashboardHubClient({
             {immediateNotifications.slice(0, 5).map(item => (
               <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
                 <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
-                <a href={item.destination_url ?? ROUTES.NOTIFICATIONS} className="mt-2 inline-flex text-xs text-rose-700 underline">열기</a>
+                <p className="mt-1 text-xs text-slate-500">{hasNotificationTargetHref(item) ? '열기 가능' : '확인 필요'}</p>
+                <a href={getNotificationTargetHref(item)} className="mt-2 inline-flex text-xs text-rose-700 underline">열기</a>
               </div>
             ))}
             {immediateNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
@@ -1564,8 +1562,8 @@ export function DashboardHubClient({
             {confirmNotifications.slice(0, 5).map(item => (
               <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
                 <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
-                <a href={item.destination_url ?? ROUTES.NOTIFICATIONS} className="mt-2 inline-flex text-xs text-blue-700 underline">열기</a>
+                <p className="mt-1 text-xs text-slate-500">{hasNotificationTargetHref(item) ? '열기 가능' : '확인 필요'}</p>
+                <a href={getNotificationTargetHref(item)} className="mt-2 inline-flex text-xs text-blue-700 underline">열기</a>
               </div>
             ))}
             {confirmNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
@@ -1583,8 +1581,8 @@ export function DashboardHubClient({
             {meetingNotifications.slice(0, 5).map(item => (
               <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
                 <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{item.destination_url ? '열기 가능' : '확인 필요'}</p>
-                <a href={item.destination_url ?? ROUTES.NOTIFICATIONS} className="mt-2 inline-flex text-xs text-violet-700 underline">열기</a>
+                <p className="mt-1 text-xs text-slate-500">{hasNotificationTargetHref(item) ? '열기 가능' : '확인 필요'}</p>
+                <a href={getNotificationTargetHref(item)} className="mt-2 inline-flex text-xs text-violet-700 underline">열기</a>
               </div>
             ))}
             {meetingNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
