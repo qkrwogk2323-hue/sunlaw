@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { Receipt } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getPortalActionQueue } from '@/lib/queries/portal';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { getPortalBillingQueue } from '@/lib/queries/portal';
+import { formatDateTime } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PortalBillingPage() {
-  const queue = await getPortalActionQueue();
-  const billingItems = queue.filter((item: any) => item.kind === 'billing');
+  const billingItems = await getPortalBillingQueue();
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">

@@ -117,9 +117,10 @@ async function ensureProfileExists(user: {
   return true;
 }
 
-async function getProfileWithScopedFields(userId: string): Promise<Profile | null> {
-  const supabase = await createSupabaseServerClient();
-
+async function getProfileWithScopedFields(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+): Promise<Profile | null> {
   // Single combined query — avoids a second round-trip to the profiles table.
   const { data: fullProfile, error: fullProfileError } = await supabase
     .from('profiles')
@@ -193,7 +194,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
   // misleading redirect to /login ("false logout").
   const supabase = await createSupabaseServerClient();
 
-  let profile = await withTimeoutRetry(() => getProfileWithScopedFields(userId), 9000, 1);
+  let profile = await withTimeoutRetry(() => getProfileWithScopedFields(supabase, userId), 9000, 1);
 
   if (!profile) {
     const recovered = await withTimeoutRetry(
@@ -202,7 +203,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthContext | null> => {
       0
     );
     if (recovered) {
-      profile = await withTimeoutRetry(() => getProfileWithScopedFields(userId), 9000, 1);
+      profile = await withTimeoutRetry(() => getProfileWithScopedFields(supabase, userId), 9000, 1);
     }
   }
 

@@ -15,7 +15,7 @@ import { hasVerifiedHubPin } from '@/lib/hub-access';
 import { isClientAccountActive } from '@/lib/client-account';
 import { formatDateTime } from '@/lib/format';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
-import { getOrganizationWorkspace } from '@/lib/queries/organizations';
+import { getOrganizationWorkspaceSummary } from '@/lib/queries/organizations';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { Input } from '@/components/ui/input';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -39,7 +39,7 @@ export default async function CollaborationHubPage({
 
   const [hub, workspace] = await Promise.all([
     getCollaborationHubDetail(hubId, organizationId, searchQuery),
-    organizationId ? getOrganizationWorkspace(organizationId) : Promise.resolve(null)
+    organizationId ? getOrganizationWorkspaceSummary(organizationId) : Promise.resolve(null)
   ]);
 
   if (!organizationId || isClientAccountActive(auth.profile)) {

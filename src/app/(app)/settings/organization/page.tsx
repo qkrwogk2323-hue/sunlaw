@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { findMembership, getEffectiveOrganizationId, getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { isWorkspaceAdmin } from '@/lib/permissions';
-import { getOrganizationWorkspace } from '@/lib/queries/organizations';
+import { getOrganizationProfile } from '@/lib/queries/organizations';
 import { getLatestOrganizationExitRequest } from '@/lib/queries/organization-requests';
 import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { OrganizationSettingForm } from '@/components/forms/organization-setting-form';
@@ -63,12 +63,12 @@ export default async function OrganizationSettingsPage({
       />
     );
   }
-  const [workspace, data, latestExitRequest] = await Promise.all([
-    getOrganizationWorkspace(organizationId),
+  const [organization, data, latestExitRequest] = await Promise.all([
+    getOrganizationProfile(organizationId),
     getSettingsAdminData(organizationId),
     getLatestOrganizationExitRequest(organizationId)
   ]);
-  if (!workspace) {
+  if (!organization) {
     return (
       <AccessDeniedBlock
         blocked="조직 정보를 불러오지 못해 설정 화면이 차단되었습니다."
@@ -81,7 +81,7 @@ export default async function OrganizationSettingsPage({
   const orgMap = new Map(data.organizationSettings.map((row: any) => [row.key, row.value_json]));
   const platformContextId = getPlatformOrganizationContextId(auth);
   const isPlatformAdmin = await hasActivePlatformAdminView(auth, platformContextId);
-  const isPlatformManagementOrganizationView = isPlatformManagementOrganization(workspace.organization);
+  const isPlatformManagementOrganizationView = isPlatformManagementOrganization(organization);
   const resolved = searchParams ? await searchParams : undefined;
   const section = `${resolved?.section ?? 'intro'}`.trim();
   const activeSection = section === 'info' || section === 'env' ? section : 'intro';
@@ -154,12 +154,12 @@ export default async function OrganizationSettingsPage({
                 >
                   <input type="hidden" name="organizationId" value={organizationId} />
                   <label htmlFor="organization-name" className="text-sm text-slate-600">회사명
-                    <input id="organization-name" name="name" defaultValue={workspace.organization.name ?? ''} required aria-required="true" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-name" name="name" defaultValue={organization.name ?? ''} required aria-required="true" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <div className="text-sm text-slate-600">
-                    <input type="hidden" name="kind" value={workspace.organization.kind ?? 'law_firm'} />
+                    <input type="hidden" name="kind" value={organization.kind ?? 'law_firm'} />
                     <div className="mt-1 flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
-                      {kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-'}
+                      {kindLabel[organization.kind] ?? organization.kind ?? '-'}
                       <span className="ml-auto text-xs text-slate-400">   </span>
                     </div>
                   </div>
@@ -167,29 +167,29 @@ export default async function OrganizationSettingsPage({
                     <input
                       type="checkbox"
                       name="isDirectoryPublic"
-                      defaultChecked={workspace.organization.is_directory_public !== false}
+                      defaultChecked={organization.is_directory_public !== false}
                       className="size-4"
                     />
                     협업 조직 목록에 노출
                   </label>
                   <label htmlFor="organization-representative-name" className="text-sm text-slate-600">대표자명
-                    <input id="organization-representative-name" name="representativeName" defaultValue={workspace.organization.representative_name ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-representative-name" name="representativeName" defaultValue={organization.representative_name ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label htmlFor="organization-representative-title" className="text-sm text-slate-600">대표자 직책
-                    <input id="organization-representative-title" name="representativeTitle" defaultValue={workspace.organization.representative_title ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-representative-title" name="representativeTitle" defaultValue={organization.representative_title ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label htmlFor="organization-phone" className="text-sm text-slate-600">연락처
-                    <input id="organization-phone" name="phone" defaultValue={workspace.organization.phone ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-phone" name="phone" defaultValue={organization.phone ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label htmlFor="organization-email" className="text-sm text-slate-600">이메일
-                    <input id="organization-email" name="email" type="email" defaultValue={workspace.organization.email ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-email" name="email" type="email" defaultValue={organization.email ?? ''} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <label htmlFor="organization-website-url" className="text-sm text-slate-600 md:col-span-2">웹사이트
-                    <input id="organization-website-url" name="websiteUrl" defaultValue={workspace.organization.website_url ?? ''} placeholder="https://example.com" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
+                    <input id="organization-website-url" name="websiteUrl" defaultValue={organization.website_url ?? ''} placeholder="https://example.com" className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900" />
                   </label>
                   <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                    <span>조직 식별값: {workspace.organization.slug ?? '-'}</span>
-                    <span>현재 유형: {isPlatformManagementOrganizationView ? kindLabel.platform_management : (kindLabel[workspace.organization.kind] ?? workspace.organization.kind ?? '-')}</span>
+                    <span>조직 식별값: {organization.slug ?? '-'}</span>
+                    <span>현재 유형: {isPlatformManagementOrganizationView ? kindLabel.platform_management : (kindLabel[organization.kind] ?? organization.kind ?? '-')}</span>
                   </div>
                   {isPlatformAdmin && isPlatformManagementOrganizationView ? (
                     <div className="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-950">

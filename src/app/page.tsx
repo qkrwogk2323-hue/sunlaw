@@ -9,7 +9,7 @@ import { getCurrentAuth, getDefaultAppRoute, getEffectiveOrganizationId, isPlatf
 import { signOutAction } from '@/lib/actions/auth-actions';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { getDashboardSnapshot } from '@/lib/queries/dashboard';
+import { getDashboardInitialSnapshot } from '@/lib/queries/dashboard';
 import { ROUTES } from '@/lib/routes/registry';
 import { NAVIGATION_MAP } from '@/lib/routes/navigation-map';
 
@@ -48,7 +48,7 @@ const expertMindMap = [
   }
 ];
 
-type DashboardSnapshot = Awaited<ReturnType<typeof getDashboardSnapshot>>;
+type DashboardSnapshot = Awaited<ReturnType<typeof getDashboardInitialSnapshot>>;
 
 function greetingLabel(fullName?: string | null) {
   const name = fullName?.trim() || '고객';
@@ -105,9 +105,9 @@ export default async function MarketingPage({
 
   if (auth && !isPlatformView) {
     try {
-      dashboard = await getDashboardSnapshot(organizationId);
+      dashboard = await getDashboardInitialSnapshot(organizationId);
     } catch (error) {
-      console.error('[home] getDashboardSnapshot failed', {
+      console.error('[home] getDashboardInitialSnapshot failed', {
         organizationId,
         userId: auth.user.id,
         error

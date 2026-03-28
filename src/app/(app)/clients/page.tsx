@@ -1,17 +1,16 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { cookies } from 'next/headers';
-import { UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
-import { ClientsActionPanels } from '@/components/clients-action-panels';
+import { ClientAddModal } from '@/components/client-add-modal';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { listCases } from '@/lib/queries/cases';
-import { listClientRosterSummary } from '@/lib/queries/clients';
+import { getCasePickerOptions } from '@/lib/queries/cases';
+import { listClientPageRoster } from '@/lib/queries/clients';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { LogButton } from '@/components/ui/log-button';
@@ -48,8 +47,8 @@ export default async function ClientsPage({
   );
 
   const [roster, cases, resolvedSearchParams, cookieStore] = await Promise.all([
-    listClientRosterSummary(organizationId),
-    canManage && organizationId ? listCases(organizationId) : Promise.resolve([]),
+    listClientPageRoster(organizationId),
+    canManage && organizationId ? getCasePickerOptions(organizationId) : Promise.resolve([]),
     searchParams ? searchParams : Promise.resolve(undefined),
     cookies()
   ]);
@@ -75,16 +74,11 @@ export default async function ClientsPage({
   })();
   const filteredRoster = roster.filter((item: any) => {
     if (!queryFilter) return true;
-    const haystack = `${item.name ?? ''} ${item.email ?? ''} ${item.contactPhone ?? ''} ${item.addressSummary ?? ''}`.toLowerCase();
+    const haystack = `${item.name ?? ''} ${item.email ?? ''}`.toLowerCase();
     return haystack.includes(queryFilter);
   });
 
   function renderRosterCard(item: any) {
-    const details = [
-      item.residentNumberMasked ? `주민번호 ${item.residentNumberMasked}` : null,
-      item.contactPhone ? `연락처 ${item.contactPhone}` : null,
-      item.addressSummary ? item.addressSummary : null,
-    ].filter(Boolean).join(' · ');
     return (
       <div key={item.id} className="relative rounded-xl border border-slate-200 bg-white p-3.5 hover:border-sky-300 transition-colors">
         <Link
@@ -97,7 +91,6 @@ export default async function ClientsPage({
           <span className="font-medium text-slate-900">{item.name}</span>
           <Badge tone={linkStatusTone(item.caseLinkStatus)}>{item.caseLinkStatus}</Badge>
           {item.overdueCount > 0 && <Badge tone="red">미납 {item.overdueCount}건</Badge>}
-          {item.caseCount > 0 && <Badge tone="blue">사건 {item.caseCount}건</Badge>}
           {canManage && (
             <div className="relative z-20 ml-auto">
               <DangerActionButton
@@ -122,9 +115,7 @@ export default async function ClientsPage({
           )}
         </div>
         {/* row 2: compact details */}
-        {details ? (
-          <p className="relative z-10 mt-1 truncate text-xs text-slate-500">{details}</p>
-        ) : null}
+        {item.email ? <p className="relative z-10 mt-1 truncate text-xs text-slate-500">{item.email}</p> : null}
         {canManage && item.source === 'invite' && item.invitationId ? (
           <div className="relative z-20 mt-2">
             <ResendInvitationForm invitationId={item.invitationId} />
@@ -144,14 +135,11 @@ export default async function ClientsPage({
         <div className="flex flex-wrap gap-2 text-sm">
           {canManage && organizationId && (
             <>
-              <a
-                href="#client-panels"
-                className={buttonStyles({ variant: 'primary', size: 'sm', className: 'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs' })}
-                aria-label="의뢰인 추가"
-              >
-                <UserPlus className="size-3.5" aria-hidden="true" />
-                의뢰인 추가
-              </a>
+              <ClientAddModal
+                organizationId={organizationId}
+                cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
+                roster={roster}
+              />
               <LogButton
                 organizationId={organizationId}
                 surface="clients"
@@ -186,16 +174,6 @@ export default async function ClientsPage({
             {issuedOrgName}에서 초대했어요! 임시아이디 : <code className="font-mono">{issuedClientLoginId}</code> 비밀번호 : <code className="font-mono">{issuedClientTempPassword}</code>, 조직명 : <code className="font-mono">{issuedOrgName}</code>
           </p>
           <p className="mt-1 text-xs text-amber-700">로그인하시고 아이디와 비밀번호를 수정해주세요.</p>
-        </div>
-      ) : null}
-
-      {canManage ? (
-        <div id="client-panels">
-          <ClientsActionPanels
-            organizationId={organizationId!}
-            cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
-            roster={roster}
-          />
         </div>
       ) : null}
 

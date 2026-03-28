@@ -454,6 +454,74 @@ export async function getNotificationCenter(limit = 20) {
   };
 }
 
+export async function getNotificationArchiveMeta() {
+  const auth = await getCurrentAuth();
+  if (!auth) {
+    return {
+      archivedCount: 0,
+      supportsTrash: true,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const upgraded = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient_profile_id', auth.user.id)
+    .not('trashed_at', 'is', null);
+
+  if (!upgraded.error) {
+    return {
+      archivedCount: upgraded.count ?? 0,
+      supportsTrash: true,
+    };
+  }
+
+  if (!isMissingColumnError(upgraded.error)) {
+    console.error('[getNotificationArchiveMeta] upgraded query error:', upgraded.error.message);
+  }
+
+  return {
+    archivedCount: 0,
+    supportsTrash: false,
+  };
+}
+
+export async function getArchivedNotificationItems(limit = 30) {
+  const auth = await getCurrentAuth();
+  if (!auth) {
+    return {
+      items: [] as NotificationItem[],
+      supportsTrash: true
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const upgraded = await supabase
+    .from('notifications')
+    .select(upgradedNotificationSelect)
+    .eq('recipient_profile_id', auth.user.id)
+    .not('trashed_at', 'is', null)
+    .order('trashed_at', { ascending: false })
+    .limit(limit);
+
+  if (!upgraded.error) {
+    return {
+      items: ((upgraded.data ?? []) as NotificationRecord[]).map(normalizeNotification),
+      supportsTrash: true
+    };
+  }
+
+  if (!isMissingColumnError(upgraded.error)) {
+    console.error('[getArchivedNotificationItems] upgraded query error:', upgraded.error.message);
+  }
+
+  return {
+    items: [] as NotificationItem[],
+    supportsTrash: false
+  };
+}
+
 export async function getPortalNotifications(limit = 20) {
   const auth = await getCurrentAuth();
   if (!auth) return [];
@@ -654,8 +722,8 @@ export async function getDashboardRecentNotifications(organizationId?: string | 
     .from('notifications')
     .select(queueSummarySelect)
     .eq('recipient_profile_id', auth.user.id)
-    .neq('status', 'deleted')
-    .in('status', ['active', 'read'])
+    .is('trashed_at', null)
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(Math.max(20, limit * 4));
 

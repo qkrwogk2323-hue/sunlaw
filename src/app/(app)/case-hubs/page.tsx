@@ -23,7 +23,7 @@ export default async function CaseHubsPage({
   const resolved = searchParams ? await searchParams : undefined;
   const query = `${resolved?.q ?? ''}`.trim();
 
-  const hubs = await getCaseHubList(organizationId);
+  const hubs = await getCaseHubList(organizationId, 40);
 
   return (
     <div className="space-y-8">

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { decryptString } from '@/lib/pii';
+import { decodeInvitationNote } from '@/lib/invitation-metadata';
 
 export async function listClients(organizationId?: string | null) {
   const supabase = await createSupabaseServerClient();
@@ -84,30 +85,6 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     }
   }
 
-  const profileIds = [...new Set([
-    ...(caseClients ?? []).map((row: any) => row.profile_id).filter(Boolean),
-    ...(tempCredentials ?? []).map((row: any) => row.profile_id).filter(Boolean)
-  ])];
-  const [{ data: profileRows }, { data: privateRows }] = await Promise.all([
-    profileIds.length
-      ? supabase.from('profiles').select('id, phone_e164').in('id', profileIds)
-      : Promise.resolve({ data: [] as any[] }),
-    profileIds.length
-      ? supabase.from('client_private_profiles').select('profile_id, resident_number_masked, address_line1_ciphertext').in('profile_id', profileIds)
-      : Promise.resolve({ data: [] as any[] })
-  ]);
-  const phoneByProfile = new Map((profileRows ?? []).map((row: any) => [row.id, row.phone_e164 ?? null]));
-  const privateByProfile = new Map((privateRows ?? []).map((row: any) => [row.profile_id, row]));
-
-  const addressSummaryByProfile = new Map<string, string | null>();
-  for (const row of privateRows ?? []) {
-    try {
-      addressSummaryByProfile.set(row.profile_id, row.address_line1_ciphertext ? decryptString(row.address_line1_ciphertext) : null);
-    } catch {
-      addressSummaryByProfile.set(row.profile_id, null);
-    }
-  }
-
   const linkedRows = (caseClients ?? []).map((row: any) => ({
     id: `linked:${row.id}`,
     clientKey: `caseclient-${row.id}`,
@@ -118,9 +95,9 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     email: row.client_email_snapshot ?? null,
     caseId: row.case_id ?? null,
     caseTitle: Array.isArray(row.cases) ? row.cases[0]?.title ?? null : row.cases?.title ?? null,
-    residentNumberMasked: row.profile_id ? (privateByProfile.get(row.profile_id)?.resident_number_masked ?? null) : null,
-    addressSummary: row.profile_id ? (addressSummaryByProfile.get(row.profile_id) ?? null) : null,
-    contactPhone: row.profile_id ? (phoneByProfile.get(row.profile_id) ?? null) : null,
+    residentNumberMasked: null,
+    addressSummary: null,
+    contactPhone: null,
     signupStatus: row.is_portal_enabled ? '가입 완료' : '가입 전',
     inviteStatus: row.is_portal_enabled ? '완료' : '미발송',
     caseLinkStatus: caseLinkStatusLabel(row.link_status ?? 'linked', Boolean(row.case_id)),
@@ -166,9 +143,9 @@ export async function listClientRosterSummary(organizationId?: string | null) {
     email: item.contact_email ?? null,
     caseId: item.case_id ?? null,
     caseTitle: null,
-    residentNumberMasked: item.profile_id ? (privateByProfile.get(item.profile_id)?.resident_number_masked ?? null) : null,
-    addressSummary: item.profile_id ? (addressSummaryByProfile.get(item.profile_id) ?? null) : null,
-    contactPhone: item.profile_id ? (phoneByProfile.get(item.profile_id) ?? item.contact_phone ?? null) : (item.contact_phone ?? null),
+    residentNumberMasked: null,
+    addressSummary: null,
+    contactPhone: null,
     signupStatus: item.must_change_password ? '가입 전' : '가입 완료',
     inviteStatus: '임시계정 발급',
     caseLinkStatus: item.case_id ? '연결 완료' : '미연결',
@@ -179,6 +156,150 @@ export async function listClientRosterSummary(organizationId?: string | null) {
   }));
 
   return [...pendingRows, ...tempRows, ...linkedRows];
+}
+
+export async function listClientPageRoster(organizationId?: string | null) {
+  const supabase = await createSupabaseServerClient();
+
+  let caseClientsQuery = supabase
+    .from('case_clients')
+    .select('id, organization_id, case_id, profile_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, link_status, orphan_reason, review_deadline, created_at')
+    .order('created_at', { ascending: false })
+    .limit(120);
+
+  let invitationsQuery = supabase
+    .from('invitations')
+    .select('id, organization_id, case_id, email, invited_name, status, created_at, expires_at, note, token_hint')
+    .eq('kind', 'client_invite')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  let tempCredentialsQuery = supabase
+    .from('client_temp_credentials')
+    .select('profile_id, organization_id, case_id, login_id, created_at, contact_email, must_change_password, profile:profiles(full_name, must_change_password, must_complete_profile)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (organizationId) {
+    caseClientsQuery = caseClientsQuery.eq('organization_id', organizationId);
+    invitationsQuery = invitationsQuery.eq('organization_id', organizationId);
+    tempCredentialsQuery = tempCredentialsQuery.eq('organization_id', organizationId);
+  }
+
+  const [{ data: caseClients }, { data: invitations }, { data: tempCredentials }] = await Promise.all([
+    caseClientsQuery,
+    invitationsQuery,
+    tempCredentialsQuery
+  ]);
+
+  const linkedCaseIds = [...new Set((caseClients ?? []).map((row: any) => row.case_id).filter(Boolean))];
+  const overdueByCase = new Map<string, number>();
+  if (linkedCaseIds.length) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: overdueEntries } = await supabase
+      .from('billing_entries')
+      .select('case_id, id')
+      .in('case_id', linkedCaseIds)
+      .eq('status', 'pending')
+      .lt('due_on', today)
+      .is('deleted_at', null);
+    for (const entry of overdueEntries ?? []) {
+      if (entry.case_id) overdueByCase.set(entry.case_id, (overdueByCase.get(entry.case_id) ?? 0) + 1);
+    }
+  }
+
+  const staffInvitations = (invitations ?? []).map((invite: any) => ({ ...invite, ...decodeInvitationNote(invite.note) }));
+  const activeMemberEmailSet = new Set(
+    (caseClients ?? [])
+      .map((member: any) => `${member.client_email_snapshot ?? ''}`.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  const inviteOnlyRows = staffInvitations
+    .filter((invite: any) => invite.status === 'pending' && !activeMemberEmailSet.has(`${invite.email ?? ''}`.trim().toLowerCase()))
+    .map((invite: any) => ({
+      id: `invite:${invite.id}`,
+      clientKey: `invite-${invite.id}`,
+      source: 'invite',
+      invitationId: invite.id,
+      name: invite.invited_name ?? '이름 미입력',
+      email: invite.email ?? null,
+      signupStatus: invite.status === 'accepted' ? '가입 완료' : '가입 전',
+      inviteStatus: inviteStatusLabel(invite),
+      caseLinkStatus: invite.case_id ? '연결 대기' : '미연결',
+      activeStatus: '가입 전'
+    }));
+
+  const linkedRows = (caseClients ?? []).map((row: any) => ({
+    id: `linked:${row.id}`,
+    clientKey: `caseclient-${row.id}`,
+    caseClientId: row.id,
+    source: 'linked',
+    name: row.client_name ?? '이름 미입력',
+    email: row.client_email_snapshot ?? null,
+    signupStatus: row.is_portal_enabled ? '가입 완료' : '가입 전',
+    inviteStatus: row.is_portal_enabled ? '완료' : '미발송',
+    caseLinkStatus: caseLinkStatusLabel(row.link_status ?? 'linked', Boolean(row.case_id)),
+    linkStatus: row.link_status ?? 'linked',
+    orphanReason: row.orphan_reason ?? null,
+    reviewDeadline: row.review_deadline ?? null,
+    overdueCount: row.case_id ? (overdueByCase.get(row.case_id) ?? 0) : 0,
+  }));
+
+  const tempRows = (tempCredentials ?? []).map((item: any) => ({
+    id: `temp:${item.profile_id}`,
+    clientKey: `profile-${item.profile_id}`,
+    source: 'temp',
+    name: item.profile?.full_name ?? '이름 미입력',
+    email: item.contact_email ?? null,
+    signupStatus: item.must_change_password ? '가입 전' : '가입 완료',
+    inviteStatus: '임시계정 발급',
+    caseLinkStatus: item.case_id ? '연결 완료' : '미연결',
+    activeStatus: item.must_change_password ? '가입 전' : '활성'
+  }));
+
+  return [...inviteOnlyRows, ...tempRows, ...linkedRows];
+}
+
+export async function listClientRelationCandidates(organizationId: string) {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: caseClients }, { data: invitations }, { data: tempCredentials }] = await Promise.all([
+    supabase
+      .from('case_clients')
+      .select('id, client_name')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(120),
+    supabase
+      .from('invitations')
+      .select('id, invited_name')
+      .eq('organization_id', organizationId)
+      .eq('kind', 'client_invite')
+      .order('created_at', { ascending: false })
+      .limit(80),
+    supabase
+      .from('client_temp_credentials')
+      .select('profile_id, profile:profiles(full_name)')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(80)
+  ]);
+
+  return [
+    ...(caseClients ?? []).map((item: any) => ({
+      clientKey: `caseclient-${item.id}`,
+      name: item.client_name ?? '이름 미입력'
+    })),
+    ...(invitations ?? []).map((item: any) => ({
+      clientKey: `invite-${item.id}`,
+      name: item.invited_name ?? '이름 미입력'
+    })),
+    ...(tempCredentials ?? []).map((item: any) => ({
+      clientKey: `profile-${item.profile_id}`,
+      name: item.profile?.full_name ?? '이름 미입력'
+    }))
+  ].filter((item, index, list) => list.findIndex((candidate) => candidate.clientKey === item.clientKey) === index);
 }
 
 function parseClientKey(clientKey: string) {
@@ -267,7 +388,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
           .eq('organization_id', organizationId)
           .or(noteOrFilters)
           .order('created_at', { ascending: false })
-          .limit(120)
+          .limit(60)
       : Promise.resolve({ data: [] as any[], error: null }),
     caseId
       ? supabase
@@ -276,7 +397,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
           .eq('case_id', caseId)
           .eq('client_visible', true)
           .order('created_at', { ascending: false })
-          .limit(80)
+          .limit(40)
       : Promise.resolve({ data: [] as any[], error: null }),
     caseId
       ? supabase
@@ -285,7 +406,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
           .eq('case_id', caseId)
           .eq('is_internal', false)
           .order('created_at', { ascending: false })
-          .limit(80)
+          .limit(40)
       : Promise.resolve({ data: [] as any[], error: null }),
     profileId
       ? supabase
@@ -294,7 +415,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
           .eq('organization_id', organizationId)
           .eq('profile_id', profileId)
           .order('created_at', { ascending: false })
-          .limit(60)
+          .limit(30)
       : Promise.resolve({ data: [] as any[], error: null }),
     caseId
       ? supabase
@@ -302,7 +423,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
           .select('id, body, created_at')
           .eq('case_id', caseId)
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(30)
       : Promise.resolve({ data: [] as any[], error: null })
   ]);
 

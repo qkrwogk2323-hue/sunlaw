@@ -38,13 +38,26 @@ export function resolveSupabaseCookieDomain(hostname?: string | null) {
   return undefined;
 }
 
-export function getSupabaseCookieOptions(hostname?: string | null) {
+function shouldUseSecureCookies(hostname?: string | null, protocol?: string | null) {
+  const normalizedHostname = hostname?.trim() ?? '';
+  if (normalizedHostname && isLocalHost(normalizedHostname)) {
+    return false;
+  }
+  if (protocol) {
+    return protocol === 'https:';
+  }
+
+  const canonicalOrigin = resolveCanonicalAuthOrigin();
+  return canonicalOrigin?.startsWith('https://') ?? false;
+}
+
+export function getSupabaseCookieOptions(hostname?: string | null, protocol?: string | null) {
   const canonicalOrigin = resolveCanonicalAuthOrigin();
   return {
     name: DEFAULT_AUTH_COOKIE_NAME,
     path: '/',
     sameSite: 'lax' as const,
-    secure: canonicalOrigin?.startsWith('https://') ?? false,
+    secure: shouldUseSecureCookies(hostname, protocol),
     domain: resolveSupabaseCookieDomain(hostname)
   };
 }

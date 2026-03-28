@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight, Bell, FileText, FolderOpen, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
-import { getPortalCases, getPortalActionQueue } from '@/lib/queries/portal';
+import { getPortalHomeSnapshot } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ function progressSentence(text?: string | null) {
 export default async function PortalHomePage() {
   const auth = await getCurrentAuth();
   if (!auth) redirect('/login');
-  const [cases, actionQueue] = await Promise.all([getPortalCases(), getPortalActionQueue()]);
+  const { cases, actionQueue } = await getPortalHomeSnapshot();
   const requiredNow = actionQueue.filter((item: any) => item.kind === 'request' && item.status === 'waiting_client');
   const needCheck = actionQueue.filter((item: any) => item.kind === 'request' && item.status !== 'waiting_client');
   const references = actionQueue.filter((item: any) => item.kind === 'billing');

@@ -155,6 +155,85 @@ export async function getOrganizationWorkspace(organizationId: string) {
   };
 }
 
+export async function getOrganizationWorkspaceSummary(organizationId: string) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: organization, error: organizationError } = await supabase
+    .from('organizations')
+    .select('id, name, slug, business_number, representative_name, email, phone, address_line1, address_line2')
+    .eq('id', organizationId)
+    .maybeSingle();
+
+  if (organizationError) {
+    console.error('[getOrganizationWorkspaceSummary] organization error:', organizationError.message);
+    return null;
+  }
+
+  if (!organization) return null;
+
+  const [
+    { data: members, error: membersError },
+    { data: cases, error: casesError },
+    { count: caseCount, error: caseCountError }
+  ] = await Promise.all([
+    supabase
+      .from('organization_memberships')
+      .select('id, role, title, profile:profiles(id, full_name, email)')
+      .eq('organization_id', organizationId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('cases')
+      .select('id, title, reference_no, case_type, case_status, principal_amount, updated_at')
+      .eq('organization_id', organizationId)
+      .order('updated_at', { ascending: false })
+      .limit(8),
+    supabase
+      .from('cases')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .neq('lifecycle_status', 'soft_deleted')
+  ]);
+
+  if (membersError || casesError || caseCountError) {
+    console.error('[getOrganizationWorkspaceSummary] related query error:', {
+      members: membersError?.message ?? null,
+      cases: casesError?.message ?? null,
+      caseCount: caseCountError?.message ?? null
+    });
+
+    return {
+      organization,
+      members: [],
+      recentCases: [],
+      caseCount: 0
+    };
+  }
+
+  return {
+    organization,
+    members: members ?? [],
+    recentCases: cases ?? [],
+    caseCount: caseCount ?? 0
+  };
+}
+
+export async function getOrganizationProfile(organizationId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('id, name, slug, kind, is_directory_public, representative_name, representative_title, phone, email, website_url')
+    .eq('id', organizationId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[getOrganizationProfile] query error:', error.message);
+    return null;
+  }
+
+  return data;
+}
+
 export async function listMySignupRequests() {
   const auth = await getCurrentAuth();
   if (!auth) return [];

@@ -5,7 +5,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { getBillingHubSnapshot } from '@/lib/queries/billing';
+import { getBillingHistorySnapshot } from '@/lib/queries/billing';
 
 /**
  * @rule-meta-start
@@ -43,7 +43,7 @@ export default async function BillingHistoryPage({
   const resolved = searchParams ? await searchParams : undefined;
   const tab = parseTab(resolved?.tab);
   const query = `${resolved?.q ?? ''}`.trim().toLowerCase();
-  const billing = await getBillingHubSnapshot(organizationId);
+  const billing = await getBillingHistorySnapshot(organizationId);
 
   const remunerationEntries = billing.entries.filter((item: any) => ['retainer_fee', 'flat_fee', 'success_fee', 'service_fee', 'adjustment', 'discount'].includes(item.entry_kind));
   const publicChargeEntries = billing.entries.filter((item: any) => ['expense', 'court_fee'].includes(item.entry_kind));

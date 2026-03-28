@@ -64,7 +64,7 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     .gte('scheduled_start', visibleGridStart.toISOString())
     .lte('scheduled_start', visibleGridEnd.toISOString())
     .order('scheduled_start', { ascending: true })
-    .limit(80);
+    .limit(60);
 
   let requestsQuery = supabase
     .from('case_requests')
@@ -73,7 +73,7 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     .lte('due_at', visibleGridEnd.toISOString())
     .in('status', ['open', 'in_review', 'waiting_client'])
     .order('due_at', { ascending: true })
-    .limit(60);
+    .limit(40);
 
   let billingQuery = supabase
     .from('billing_entries')
@@ -83,7 +83,7 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     .in('status', ['draft', 'issued', 'partial'])
     .is('deleted_at', null)
     .order('due_on', { ascending: true })
-    .limit(60);
+    .limit(40);
 
   if (organizationId) {
     schedulesQuery = schedulesQuery.eq('organization_id', organizationId);
@@ -123,7 +123,7 @@ export async function getCalendarWorklogSnapshot(organizationId?: string | null)
     .from('case_schedule_activity_logs')
     .select('id, case_id, case_schedule_id, actor_name, action_type, summary, schedule_title, schedule_scheduled_start, created_at, cases(title)')
     .order('created_at', { ascending: false })
-    .limit(200);
+    .limit(50);
 
   if (organizationId) {
     query = query.eq('organization_id', organizationId);

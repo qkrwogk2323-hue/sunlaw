@@ -5,9 +5,6 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { Network, LogIn, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { HubMetricBadge } from '@/components/hub-metric-badge';
-import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
-import type { CaseHubSummary } from '@/lib/queries/case-hubs';
 import { CaseHubCreateSheet } from '@/components/case-hub-create-sheet';
 
 interface Props {
@@ -15,30 +12,22 @@ interface Props {
   caseTitle: string;
   organizationId: string;
   hasClients: boolean;
-  hub: CaseHubSummary | null;
+  hubId: string | null;
 }
 
-export function CaseHubConnectButton({ caseId, caseTitle, organizationId, hasClients, hub }: Props) {
+export function CaseHubConnectButton({ caseId, caseTitle, organizationId, hasClients, hubId }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  if (hub) {
+  if (hubId) {
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <HubMetricBadge label="협업" value={`${hub.collaboratorCount}/${hub.collaboratorLimit}`} tone="blue" />
-          <HubMetricBadge label="열람" value={`${hub.viewerCount}/${hub.viewerLimit}`} tone="violet" />
-          <HubMetricBadge label="미읽음" value={`${hub.unreadCount}`} tone="amber" />
-          <HubMetricBadge label="최근 활동" value={formatHubRelativeActivity(hub.lastActivityAt)} tone="slate" />
-        </div>
-        <Link
-          href={`/case-hubs/${hub.id}` as Route}
-          className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
-          aria-label={`${caseTitle} 허브 입장`}
-        >
-          <LogIn className="size-3.5" aria-hidden="true" />
-          허브 입장
-        </Link>
-      </div>
+      <Link
+        href={`/case-hubs/${hubId}` as Route}
+        className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+        aria-label={`${caseTitle} 허브 입장`}
+      >
+        <LogIn className="size-3.5" aria-hidden="true" />
+        허브 입장
+      </Link>
     );
   }
 

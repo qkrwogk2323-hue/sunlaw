@@ -9,7 +9,7 @@ import { CollaborationRejectForm, CollaborationReviewForm } from '@/components/f
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
-import { getOrganizationWorkspace } from '@/lib/queries/organizations';
+import { getOrganizationWorkspaceSummary } from '@/lib/queries/organizations';
 
 function requestStatusTone(status: string) {
   if (status === 'approved') return 'green';
@@ -43,7 +43,7 @@ export default async function OrganizationDetailPage({
   const query = searchParams ? await searchParams : undefined;
 
   const [workspace, collaboration] = await Promise.all([
-    getOrganizationWorkspace(organizationId),
+    getOrganizationWorkspaceSummary(organizationId),
     getCollaborationOverview(currentOrganizationId)
   ]);
 

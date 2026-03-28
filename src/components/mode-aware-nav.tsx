@@ -560,7 +560,6 @@ export function ModeAwareNav({
 
   useEffect(() => {
     let cancelled = false;
-    let intervalId: number | null = null;
 
     const syncUnreadCounts = async () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
@@ -607,14 +606,18 @@ export function ModeAwareNav({
       }
     };
 
-    void syncUnreadCounts();
-    intervalId = window.setInterval(() => {
+    const handleVisibilityOrFocus = () => {
       void syncUnreadCounts();
-    }, 45000);
+    };
+
+    void syncUnreadCounts();
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
 
     return () => {
       cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
     };
   }, [success]);
 

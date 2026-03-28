@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
 import { getCaseScopeAccess } from '@/lib/case-scope';
-import { getDashboardRecentNotifications } from '@/lib/queries/notifications';
+import { classifyNotificationCategory, getDashboardRecentNotifications } from '@/lib/queries/notifications';
 
 export type DashboardSummary = {
   activeCases: number;
@@ -85,6 +85,7 @@ export type DashboardNotificationItem = {
   organization_id: string | null;
   action_label: string;
   created_at: string | null;
+  category: 'immediate' | 'confirm' | 'meeting' | 'other';
 };
 
 export type DashboardActionableNotificationItem = {
@@ -99,6 +100,7 @@ export type DashboardActionableNotificationItem = {
   resolved_at: null;
   organization_id: string | null;
   created_at: string | null;
+  category: 'immediate' | 'confirm' | 'meeting' | 'other';
 };
 
 export type DashboardClientAccessItem = {
@@ -184,72 +186,58 @@ export type DashboardWorkItem = {
   }>;
 };
 
-const getDashboardSections = cache(async (organizationId?: string | null) => {
+const EMPTY_SUMMARY: DashboardSummary = {
+  activeCases: 0,
+  pendingDocuments: 0,
+  pendingRequests: 0,
+  recentMessages: 0,
+  pendingBillingCount: 0,
+  unreadNotifications: 0
+};
+
+const EMPTY_QUEUES: DashboardQueues = {
+  urgentSchedules: [],
+  recentCases: [],
+  caseOptions: [],
+  recentRequests: [],
+  recentMessageItems: [],
+  monthlyHighlights: [],
+  upcomingBilling: [],
+  unreadNotificationItems: [],
+  clientAccessQueue: [],
+  actionableNotifications: []
+};
+
+const EMPTY_SECONDARY: DashboardSecondaryPanels = {
+  teamMembers: [],
+  clientContacts: [],
+  partnerContacts: [],
+  organizationConversations: [],
+  recentWorkItems: []
+};
+
+type DashboardQueryContext = {
+  auth: NonNullable<Awaited<ReturnType<typeof getCurrentAuth>>>;
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  organizationId?: string | null;
+  allowedCaseIds: string[];
+  hasRestrictedScope: boolean;
+  canViewPartnerContacts: boolean;
+  now: Date;
+  inSevenDays: string;
+  inThirtyDays: string;
+};
+
+const getDashboardQueryContext = cache(async (organizationId?: string | null): Promise<DashboardQueryContext | null> => {
   const auth = await getCurrentAuth();
   if (!auth) {
-    return {
-      summary: {
-        activeCases: 0,
-        pendingDocuments: 0,
-        pendingRequests: 0,
-        recentMessages: 0,
-        pendingBillingCount: 0,
-        unreadNotifications: 0
-      },
-      queues: {
-        urgentSchedules: [],
-        recentCases: [],
-        caseOptions: [],
-        recentRequests: [],
-        recentMessageItems: [],
-        monthlyHighlights: [],
-        upcomingBilling: [],
-        unreadNotificationItems: [],
-        clientAccessQueue: [],
-        actionableNotifications: []
-      },
-      secondary: {
-        teamMembers: [],
-        clientContacts: [],
-        partnerContacts: [],
-        organizationConversations: [],
-        recentWorkItems: []
-      }
-    };
+    return null;
   }
   const caseScope = await getCaseScopeAccess(auth, organizationId);
   const hasRestrictedScope = caseScope.restrictedOrganizationIds.length > 0;
   const allowedCaseIds = caseScope.assignedCaseIds;
   if (hasRestrictedScope && !allowedCaseIds.length) {
-    return {
-      summary: {
-        activeCases: 0,
-        pendingDocuments: 0,
-        pendingRequests: 0,
-        recentMessages: 0,
-        pendingBillingCount: 0,
-        unreadNotifications: 0
-      },
-      queues: {
-        urgentSchedules: [],
-        recentCases: [],
-        caseOptions: [],
-        recentRequests: [],
-        recentMessageItems: [],
-        monthlyHighlights: [],
-        upcomingBilling: [],
-        unreadNotificationItems: [],
-        clientAccessQueue: [],
-        actionableNotifications: []
-      },
-      secondary: {
-        teamMembers: [],
-        clientContacts: [],
-        partnerContacts: [],
-        organizationConversations: [],
-        recentWorkItems: []
-      }
-    };
+    return null;
   }
   const canViewPartnerContacts = Boolean(
     auth
@@ -258,8 +246,37 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
   );
   const supabase = await createSupabaseServerClient();
   const now = new Date();
-  const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  return {
+    auth,
+    supabase,
+    organizationId,
+    allowedCaseIds,
+    hasRestrictedScope,
+    canViewPartnerContacts,
+    now,
+    inSevenDays: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    inThirtyDays: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  };
+});
+
+const getDashboardCoreSections = cache(async (organizationId?: string | null) => {
+  const context = await getDashboardQueryContext(organizationId);
+  if (!context) {
+    return {
+      summary: EMPTY_SUMMARY,
+      queues: EMPTY_QUEUES
+    };
+  }
+
+  const {
+    auth,
+    supabase,
+    allowedCaseIds,
+    hasRestrictedScope,
+    now,
+    inSevenDays,
+    inThirtyDays
+  } = context;
 
   let casesCountQuery = supabase
     .from('cases')
@@ -350,6 +367,9 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
   let unreadNotificationsQuery = supabase
     .from('notifications')
     .select('*', { count: 'exact', head: true })
+    .eq('recipient_profile_id', auth.user.id)
+    .is('trashed_at', null)
+    .eq('status', 'active')
     .is('read_at', null);
 
   const unreadNotificationItemsPromise = getDashboardRecentNotifications(organizationId, 5);
@@ -404,7 +424,6 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     { data: recentRequests },
     { data: messageItems },
     { data: monthlyHighlights },
-    { data: teamMembers },
     { count: pendingBillingCount },
     { data: upcomingBilling },
     { count: unreadNotifications },
@@ -421,7 +440,6 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     recentRequestsQuery,
     recentMessagesQuery,
     monthlyHighlightsQuery,
-    teamMembersQuery,
     pendingBillingCountQuery,
     upcomingBillingQuery,
     unreadNotificationsQuery,
@@ -429,18 +447,124 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
     clientAccessQueueQuery
   ]);
 
-  const availableCaseIds = (caseOptions ?? []).map((item) => item.id).filter(Boolean);
+  const summary: DashboardSummary = {
+    activeCases: activeCases ?? 0,
+    pendingDocuments: pendingDocuments ?? 0,
+    pendingRequests: pendingRequests ?? 0,
+    recentMessages: recentMessages ?? 0,
+    pendingBillingCount: pendingBillingCount ?? 0,
+    unreadNotifications: unreadNotifications ?? 0
+  };
 
+  const normalizedDashboardNotifications = (unreadNotificationItems ?? []).map((item) => ({
+    id: item.notificationId,
+    title: item.title,
+    destination_url: item.destinationUrl,
+    priority: item.priority,
+    status: item.status,
+    entity_type: item.entityType,
+    entity_id: item.entityId,
+    organization_id: item.organizationId,
+    action_label: item.actionLabel,
+    created_at: item.createdAt,
+    category: classifyNotificationCategory(item)
+  }));
+
+  const queues: DashboardQueues = {
+    urgentSchedules: immutableDeadlines ?? [],
+    recentCases: recentCases ?? [],
+    caseOptions: caseOptions ?? [],
+    recentRequests: recentRequests ?? [],
+    recentMessageItems: messageItems ?? [],
+    monthlyHighlights: monthlyHighlights ?? [],
+    upcomingBilling: upcomingBilling ?? [],
+    unreadNotificationItems: normalizedDashboardNotifications,
+    clientAccessQueue: clientAccessQueue ?? [],
+    actionableNotifications: normalizedDashboardNotifications
+      .slice(0, 6)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        body: '',
+        action_label: item.action_label,
+        action_href: item.destination_url,
+        destination_url: item.destination_url,
+        action_entity_type: item.entity_type,
+        requires_action: item.priority === 'urgent',
+        resolved_at: null,
+        organization_id: item.organization_id ?? null,
+        created_at: item.created_at ?? null,
+        category: item.category
+      }))
+  };
+
+  return {
+    summary,
+    queues
+  };
+});
+
+export async function getDashboardSummary(organizationId?: string | null) {
+  return (await getDashboardCoreSections(organizationId)).summary;
+}
+
+export async function getDashboardQueues(organizationId?: string | null) {
+  return (await getDashboardCoreSections(organizationId)).queues;
+}
+
+export async function getDashboardSecondaryPanels(organizationId?: string | null) {
+  const context = await getDashboardQueryContext(organizationId);
+  if (!context) {
+    return EMPTY_SECONDARY;
+  }
+
+  const {
+    supabase,
+    canViewPartnerContacts,
+    hasRestrictedScope,
+    allowedCaseIds
+  } = context;
+
+  let teamMembersQuery = supabase
+    .from('organization_memberships')
+    .select('id, role, actor_category, title, profile:profiles(id, full_name, email)')
+    .eq('status', 'active')
+    .order('created_at', { ascending: true })
+    .limit(20);
+
+  let caseOptionsQuery = supabase
+    .from('cases')
+    .select('id')
+    .neq('lifecycle_status', 'soft_deleted')
+    .order('updated_at', { ascending: false })
+    .limit(20);
+
+  if (organizationId) {
+    teamMembersQuery = teamMembersQuery.eq('organization_id', organizationId);
+    caseOptionsQuery = caseOptionsQuery.eq('organization_id', organizationId);
+  }
+
+  if (hasRestrictedScope) {
+    caseOptionsQuery = caseOptionsQuery.in('id', allowedCaseIds);
+  }
+
+  const [{ data: teamMembers }, { data: caseOptions }] = await Promise.all([
+    teamMembersQuery,
+    caseOptionsQuery
+  ]);
+
+  const availableCaseIds = (caseOptions ?? []).map((item) => item.id).filter(Boolean);
   let clientContacts: DashboardClientContactItem[] = [];
   let partnerContacts: DashboardPartnerContactItem[] = [];
+  let recentWorkItems: DashboardWorkItem[] = [];
 
   if (organizationId && availableCaseIds.length) {
     const { data: caseClients } = await supabase
-        .from('case_clients')
-        .select('id, case_id, profile_id, client_name, relation_label, cases(title)')
-        .eq('organization_id', organizationId)
-        .in('case_id', availableCaseIds)
-        .order('created_at', { ascending: false });
+      .from('case_clients')
+      .select('id, case_id, profile_id, client_name, relation_label, cases(title)')
+      .eq('organization_id', organizationId)
+      .in('case_id', availableCaseIds)
+      .order('created_at', { ascending: false });
 
     clientContacts = caseClients ?? [];
 
@@ -453,8 +577,6 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
         .neq('organization_id', organizationId)
         .eq('status', 'active');
 
-      // Supabase admin client may infer the organization field as never for nested select.
-      // Use explicit cast to work around type inference limitation.
       type CaseOrgRow = {
         id: string;
         case_id: string | null;
@@ -462,84 +584,23 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
         role: string | null;
         organization: { id: string; name: string } | { id: string; name: string }[] | null;
       };
+
       const typedRows = (caseOrganizations ?? []) as unknown as CaseOrgRow[];
-
-      const partnerOrgIds = [...new Set(typedRows.map((item) => item.organization_id).filter((id): id is string => Boolean(id)))];
-
-      if (partnerOrgIds.length) {
-        partnerContacts = typedRows.map((caseOrganization) => ({
-          case_organization_id: caseOrganization.id,
-          case_id: caseOrganization.case_id,
-          organization_id: caseOrganization.organization_id,
-          organization_name: Array.isArray(caseOrganization.organization)
-            ? caseOrganization.organization[0]?.name ?? '협업사'
-            : (caseOrganization.organization as { name: string } | null)?.name ?? '협업사',
-          role: caseOrganization.role,
-          membership_id: caseOrganization.id,
-          member_role: caseOrganization.role,
-          profile: null
-        }));
-      }
+      partnerContacts = typedRows.map((caseOrganization) => ({
+        case_organization_id: caseOrganization.id,
+        case_id: caseOrganization.case_id,
+        organization_id: caseOrganization.organization_id,
+        organization_name: Array.isArray(caseOrganization.organization)
+          ? caseOrganization.organization[0]?.name ?? '협업사'
+          : (caseOrganization.organization as { name: string } | null)?.name ?? '협업사',
+        role: caseOrganization.role,
+        membership_id: caseOrganization.id,
+        member_role: caseOrganization.role,
+        profile: null
+      }));
     }
   }
 
-  const summary: DashboardSummary = {
-    activeCases: activeCases ?? 0,
-    pendingDocuments: pendingDocuments ?? 0,
-    pendingRequests: pendingRequests ?? 0,
-    recentMessages: recentMessages ?? 0,
-    pendingBillingCount: pendingBillingCount ?? 0,
-    unreadNotifications: unreadNotifications ?? 0
-  };
-
-  const queues: DashboardQueues = {
-    urgentSchedules: immutableDeadlines ?? [],
-    recentCases: recentCases ?? [],
-    caseOptions: caseOptions ?? [],
-    recentRequests: recentRequests ?? [],
-    recentMessageItems: messageItems ?? [],
-    monthlyHighlights: monthlyHighlights ?? [],
-    upcomingBilling: upcomingBilling ?? [],
-    unreadNotificationItems: (unreadNotificationItems ?? []).map((item) => ({
-      id: item.notificationId,
-      title: item.title,
-      destination_url: item.destinationUrl,
-      priority: item.priority,
-      status: item.status,
-      entity_type: item.entityType,
-      entity_id: item.entityId,
-      organization_id: item.organizationId,
-      action_label: '열기',
-      created_at: item.createdAt
-    })),
-    clientAccessQueue: clientAccessQueue ?? [],
-    actionableNotifications: (unreadNotificationItems ?? [])
-      .filter((item) => item.status === 'active' && item.priority === 'urgent')
-      .slice(0, 6)
-      .map((item) => ({
-        id: item.notificationId,
-        title: item.title,
-        body: '',
-        action_label: '열기',
-        action_href: item.destinationUrl,
-        destination_url: item.destinationUrl,
-        action_entity_type: item.entityType,
-        requires_action: item.priority === 'urgent',
-        resolved_at: null,
-        organization_id: item.organizationId ?? null,
-        created_at: item.createdAt ?? null
-      }))
-  };
-
-  const secondary: DashboardSecondaryPanels = {
-    teamMembers: teamMembers ?? [],
-    clientContacts,
-    partnerContacts,
-    organizationConversations: [],
-    recentWorkItems: []
-  };
-
-  // 조직 업무 항목 최근 20개 조회 (open/in_progress 우선)
   if (organizationId) {
     const { data: workItemRows } = await supabase
       .from('organization_work_items')
@@ -553,55 +614,55 @@ const getDashboardSections = cache(async (organizationId?: string | null) => {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (workItemRows) {
-      secondary.recentWorkItems = workItemRows.map((row) => ({
-        id: row.id,
-        item_type: row.item_type as DashboardWorkItem['item_type'],
-        title: row.title ?? null,
-        body: row.body,
-        status: row.status as DashboardWorkItem['status'],
-        priority: row.priority as DashboardWorkItem['priority'],
-        assigned_profile_id: row.assigned_profile_id ?? null,
-        created_by: row.created_by,
-        completed_by: row.completed_by ?? null,
-        completed_at: row.completed_at ?? null,
-        due_at: row.due_at ?? null,
-        created_at: row.created_at,
-        links: (Array.isArray(row.organization_work_item_links) ? row.organization_work_item_links : []).map((l: { id: string; link_type: string; target_id: string; display_label: string | null }) => ({
-          id: l.id,
-          link_type: l.link_type,
-          target_id: l.target_id,
-          display_label: l.display_label,
-        })),
-      }));
-    }
+    recentWorkItems = (workItemRows ?? []).map((row) => ({
+      id: row.id,
+      item_type: row.item_type as DashboardWorkItem['item_type'],
+      title: row.title ?? null,
+      body: row.body,
+      status: row.status as DashboardWorkItem['status'],
+      priority: row.priority as DashboardWorkItem['priority'],
+      assigned_profile_id: row.assigned_profile_id ?? null,
+      created_by: row.created_by,
+      completed_by: row.completed_by ?? null,
+      completed_at: row.completed_at ?? null,
+      due_at: row.due_at ?? null,
+      created_at: row.created_at,
+      links: (Array.isArray(row.organization_work_item_links) ? row.organization_work_item_links : []).map((l: { id: string; link_type: string; target_id: string; display_label: string | null }) => ({
+        id: l.id,
+        link_type: l.link_type,
+        target_id: l.target_id,
+        display_label: l.display_label
+      }))
+    }));
   }
 
   return {
-    summary,
-    queues,
-    secondary
+    teamMembers: teamMembers ?? [],
+    clientContacts,
+    partnerContacts,
+    organizationConversations: [],
+    recentWorkItems
   };
-});
-
-export async function getDashboardSummary(organizationId?: string | null) {
-  return (await getDashboardSections(organizationId)).summary;
-}
-
-export async function getDashboardQueues(organizationId?: string | null) {
-  return (await getDashboardSections(organizationId)).queues;
-}
-
-export async function getDashboardSecondaryPanels(organizationId?: string | null) {
-  return (await getDashboardSections(organizationId)).secondary;
 }
 
 export async function getDashboardSnapshot(organizationId?: string | null) {
-  const sections = await getDashboardSections(organizationId);
+  const [core, secondary] = await Promise.all([
+    getDashboardCoreSections(organizationId),
+    getDashboardSecondaryPanels(organizationId)
+  ]);
   return {
-    ...sections.summary,
-    ...sections.queues,
-    ...sections.secondary
+    ...core.summary,
+    ...core.queues,
+    ...secondary
+  };
+}
+
+export async function getDashboardInitialSnapshot(organizationId?: string | null) {
+  const core = await getDashboardCoreSections(organizationId);
+  return {
+    ...core.summary,
+    ...core.queues,
+    ...EMPTY_SECONDARY
   };
 }
 

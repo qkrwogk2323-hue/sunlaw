@@ -163,10 +163,10 @@ export async function getCollaborationOverview(organizationId?: string | null): 
     hubIds.length
       ? admin
           .from('organization_collaboration_messages')
-          .select('id, hub_id, body, case_id, created_at')
+          .select('id, hub_id, organization_id, body, case_id, created_at')
           .in('hub_id', hubIds)
           .order('created_at', { ascending: false })
-          .limit(120)
+          .limit(80)
           : Promise.resolve({ data: [], error: null }),
         hubIds.length
           ? admin
@@ -306,7 +306,7 @@ export async function getCollaborationHubDetail(hubId: string, organizationId?: 
       .select('id, organization_id, sender_profile_id, body, case_id, created_at, metadata')
       .eq('hub_id', hubId)
       .order('created_at', { ascending: false })
-      .limit(80),
+      .limit(60),
     admin
       .from('organization_collaboration_case_shares')
       .select('id, case_id, shared_by_organization_id, permission_scope, note, case:cases(id, title, reference_no, case_status, updated_at)')

@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { MessageSquareText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getPortalActionQueue } from '@/lib/queries/portal';
+import { getPortalRequestQueue } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PortalMessagesPage() {
-  const queue = await getPortalActionQueue();
-  const requestItems = queue.filter((item: any) => item.kind === 'request');
+  const requestItems = await getPortalRequestQueue();
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">

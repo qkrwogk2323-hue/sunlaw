@@ -5,8 +5,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { BillingEntrySectionPanel } from '@/components/forms/billing-entry-section-panel';
 import { InstallmentAgreementSectionPanel } from '@/components/forms/installment-agreement-section-panel';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
-import { getBillingHubSnapshot } from '@/lib/queries/billing';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getBillingCaseOptions, getBillingPageSnapshot } from '@/lib/queries/billing';
 import { LogButton } from '@/components/ui/log-button';
 
 export default async function BillingPage() {
@@ -14,21 +13,9 @@ export default async function BillingPage() {
   const organizationId = getEffectiveOrganizationId(auth);
   const membership = organizationId ? findMembership(auth, organizationId) : null;
   const isManager = Boolean(membership && isManagementRole(membership.role));
-  const supabase = await createSupabaseServerClient();
-  const [billing, { data: caseRows }, { data: caseClientRows }] = await Promise.all([
-    getBillingHubSnapshot(organizationId),
-    supabase
-      .from('cases')
-      .select('id, title')
-      .eq('organization_id', organizationId)
-      .order('updated_at', { ascending: false })
-      .limit(150),
-    supabase
-      .from('case_clients')
-      .select('id, case_id, client_name')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
-      .limit(400)
+  const [billing, caseOptions] = await Promise.all([
+    getBillingPageSnapshot(organizationId),
+    getBillingCaseOptions(organizationId)
   ]);
 
   const openStatuses = new Set(['draft', 'issued', 'partial']);
@@ -37,22 +24,6 @@ export default async function BillingPage() {
   const remunerationEntries = billing.entries.filter((entry: any) => ['retainer_fee', 'flat_fee', 'success_fee', 'service_fee', 'adjustment', 'discount'].includes(entry.entry_kind));
   const publicChargeEntries = billing.entries.filter((entry: any) => ['expense', 'court_fee'].includes(entry.entry_kind));
   const installmentAgreements = billing.agreements.filter((agreement: any) => agreement.agreement_type === 'installment_plan' && agreement.is_active);
-  const { data: realCaseOrganizationRows } = await supabase
-    .from('case_organizations')
-    .select('id, case_id, organization:organizations(name)')
-    .in('case_id', (caseRows ?? []).map((item: any) => item.id));
-
-  const caseOptions = (caseRows ?? []).map((item: any) => ({
-    id: item.id,
-    title: item.title,
-    clients: (caseClientRows ?? [])
-      .filter((client: any) => client.case_id === item.id)
-      .map((client: any) => ({ id: client.id, name: client.client_name })),
-    organizations: (realCaseOrganizationRows ?? [])
-      .filter((row: any) => row.case_id === item.id)
-      .map((row: any) => ({ id: row.id, name: row.organization?.name ?? '참여 조직' }))
-  }));
-
   const remunerationTypeOptions = [
     { value: 'retainer_fee', label: '착수금' },
     { value: 'flat_fee', label: '정액 보수' },

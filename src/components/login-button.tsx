@@ -121,7 +121,6 @@ function LoginButtonInner({
       <Button type="button" size="lg" onClick={handleLogin} isLoading={loading} disabled={loading}>
         {loading ? loadingLabel : idleLabel}
       </Button>
-      <p className="text-xs text-slate-500">버튼 상태: {loading ? 'disabled(요청 중)' : 'enabled(클릭 가능)'}</p>
       {message ? (
         <div
           role={isError ? 'alert' : 'status'}

@@ -4,10 +4,10 @@ import { answerDashboardAssistant, type BillingGuidanceSnapshot } from '@/lib/ai
 import { getAiFeaturePolicy } from '@/lib/ai/feature-catalog';
 import { sanitizeAiText } from '@/lib/ai/guardrails';
 import { guardAccessDeniedResponse, guardServerErrorResponse, guardValidationFailedResponse } from '@/lib/api-guard-response';
-import { getDashboardSnapshot } from '@/lib/queries/dashboard';
-import { getBillingHubSnapshot } from '@/lib/queries/billing';
+import { getDashboardInitialSnapshot } from '@/lib/queries/dashboard';
+import { getBillingHistorySnapshot } from '@/lib/queries/billing';
 
-function buildBillingGuidanceSnapshot(billing: Awaited<ReturnType<typeof getBillingHubSnapshot>>): BillingGuidanceSnapshot {
+function buildBillingGuidanceSnapshot(billing: Awaited<ReturnType<typeof getBillingHistorySnapshot>>): BillingGuidanceSnapshot {
   const confirmedPayments = (billing.payments ?? []).filter((item: any) => item.payment_status === 'confirmed');
   const records = (billing.agreements ?? [])
     .filter((agreement: any) => Number(agreement.fixed_amount ?? 0) > 0)
@@ -85,8 +85,8 @@ export async function POST(request: Request) {
 
   try {
     const [snapshot, billing] = await Promise.all([
-      getDashboardSnapshot(organizationId),
-      getBillingHubSnapshot(organizationId)
+      getDashboardInitialSnapshot(organizationId),
+      getBillingHistorySnapshot(organizationId)
     ]);
     const response = answerDashboardAssistant({
       organizationId,

@@ -117,6 +117,43 @@ async function listAccessibleCaseHubIds(
   return listLegacyCaseHubIds(admin, organizationId);
 }
 
+export async function getCaseHubLinkMap(
+  organizationId: string,
+  caseIds: string[]
+): Promise<Record<string, { id: string } | null>> {
+  const empty: Record<string, { id: string } | null> = Object.fromEntries(
+    caseIds.map((id) => [id, null])
+  );
+  if (!caseIds.length) return empty;
+
+  const auth = await getCurrentAuth();
+  if (!auth) return empty;
+  if (!auth.memberships.some((membership) => membership.organization_id === organizationId)) {
+    return empty;
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from('case_hubs')
+    .select('id, case_id')
+    .eq('organization_id', organizationId)
+    .eq('lifecycle_status', 'active')
+    .in('case_id', caseIds);
+
+  if (error) {
+    console.error('[getCaseHubLinkMap] query error:', error.message);
+    return empty;
+  }
+
+  const result = { ...empty };
+  for (const row of (data ?? []) as Array<{ id: string; case_id: string | null }>) {
+    if (row.case_id) {
+      result[row.case_id] = { id: row.id };
+    }
+  }
+  return result;
+}
+
 // ────────────────────────────────────────────────────────────────────
 // getCaseHubsForCases: 사건목록용 – case_id → 허브 기본 정보 맵
 // ────────────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import { revokeClientTempCredentialAction } from '@/lib/actions/organization-act
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { hasPermission } from '@/lib/permissions';
-import { getClientDetailSummary, listClientRosterSummary } from '@/lib/queries/clients';
+import { getClientDetailSummary, listClientRelationCandidates } from '@/lib/queries/clients';
 
 export default async function ClientDetailPage({
   params,
@@ -35,7 +35,7 @@ export default async function ClientDetailPage({
 
   const [detail, roster] = await Promise.all([
     getClientDetailSummary(organizationId, clientKey),
-    listClientRosterSummary(organizationId)
+    listClientRelationCandidates(organizationId)
   ]);
   if (!detail) notFound();
   const relationCandidates = roster

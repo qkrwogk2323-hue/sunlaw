@@ -28,18 +28,12 @@ type DocumentItem = {
   cases?: {
     id?: string | null;
     title?: string | null;
-    case_clients?: Array<{ client_name?: string | null }> | { client_name?: string | null } | null;
   } | null;
 };
 
 function caseSourceLabel(item: DocumentItem): string {
   if (!item.cases) return '사건 연결 없음';
-  const caseTitle = item.cases.title ?? '(제목 없음)';
-  const clients = item.cases.case_clients;
-  if (!clients) return caseTitle;
-  const clientArr = Array.isArray(clients) ? clients : [clients];
-  const names = clientArr.map((c) => c?.client_name).filter(Boolean);
-  return names.length ? `${caseTitle} · ${names.join(', ')}` : caseTitle;
+  return item.cases.title ?? '(제목 없음)';
 }
 
 export function DocumentsClient({ documents }: { documents: DocumentItem[] }) {

@@ -12,6 +12,6 @@ export function createSupabaseBrowserClient() {
   }
 
   return createBrowserClient(url, anonKey, {
-    cookieOptions: getSupabaseCookieOptions(window.location.hostname)
+    cookieOptions: getSupabaseCookieOptions(window.location.hostname, window.location.protocol)
   });
 }

@@ -16,7 +16,6 @@ import { useToast } from '@/components/ui/toast-provider';
 import type { DashboardAiAssistantResponse, DashboardAiOverview, DraftAssistResponse } from '@/lib/ai/dashboard-home';
 import { getCaseStageLabel } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { isSafeInternalHref, resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
 import { ROUTES } from '@/lib/routes/registry';
 
 type PlatformScenarioMode = 'law_admin' | 'collection_admin' | 'other_admin';
@@ -108,6 +107,7 @@ type NotificationItem = {
   requires_action?: boolean | null;
   resolved_at?: string | null;
   organization_id?: string | null;
+  category?: 'immediate' | 'confirm' | 'meeting' | 'other';
 };
 
 type ClientAccessQueueItem = {
@@ -257,6 +257,11 @@ type DashboardSnapshot = {
   recentWorkItems: WorkItem[];
 };
 
+type DashboardSecondarySnapshot = Pick<
+  DashboardSnapshot,
+  'teamMembers' | 'clientContacts' | 'partnerContacts' | 'organizationConversations' | 'recentWorkItems'
+>;
+
 function isManagementRole(role?: string | null) {
   return role === 'org_owner' || role === 'org_manager';
 }
@@ -326,21 +331,6 @@ function clientAccessStatusLabel(status: string) {
   if (status === 'pending') return '승인 대기';
   if (status === 'approved') return '사건 연결 대기';
   return '요청';
-}
-
-function notificationActionLabel(item: NotificationItem) {
-  if (item.action_label) return item.action_label;
-  if (item.action_entity_type === 'client_access_request') return '의뢰인 관리 열기';
-  if (item.action_entity_type === 'support_access_request') return '지원 요청 보기';
-  return '알림 보기';
-}
-
-function getNotificationTargetHref(item: NotificationItem) {
-  return resolveSafeInternalHref(item.destination_url ?? item.action_href, ROUTES.NOTIFICATIONS);
-}
-
-function hasNotificationTargetHref(item: NotificationItem) {
-  return isSafeInternalHref(item.destination_url ?? item.action_href);
 }
 
 function scenarioMessageStorageKey(mode: PlatformScenarioMode) {
@@ -1058,18 +1048,59 @@ export function DashboardHubClient({
 }) {
   const router = useRouter();
   const { success: toastSuccess, error: toastError } = useToast();
+  const [secondaryPanels, setSecondaryPanels] = useState<DashboardSecondarySnapshot>({
+    teamMembers: data.teamMembers,
+    clientContacts: data.clientContacts,
+    partnerContacts: data.partnerContacts,
+    organizationConversations: data.organizationConversations,
+    recentWorkItems: data.recentWorkItems
+  });
+  const liveData = useMemo(
+    () => ({ ...data, ...secondaryPanels }),
+    [data, secondaryPanels]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSecondaryPanels = async () => {
+      if (!organizationId) return;
+
+      try {
+        const response = await fetch(`/api/dashboard/secondary?organizationId=${encodeURIComponent(organizationId)}`, {
+          cache: 'no-store'
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json() as DashboardSecondarySnapshot;
+        if (!cancelled) {
+          setSecondaryPanels(payload);
+        }
+      } catch {
+        // Keep the primary dashboard visible even if secondary panels fail.
+      }
+    };
+
+    void loadSecondaryPanels();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
+
   const communication = useDashboardCommunicationState({
     organizationId,
     currentUserId,
     scenarioMode,
-    data,
+    data: liveData,
     router,
     onSuccess: toastSuccess,
     onError: toastError
   });
   const planner = useDashboardPlannerState({
     organizationId,
-    caseOptions: data.caseOptions,
+    caseOptions: liveData.caseOptions,
     memberOptions: communication.memberOptions,
     router,
     onSuccess: toastSuccess,
@@ -1137,12 +1168,16 @@ export function DashboardHubClient({
   const pendingClientAccessCount = data.clientAccessQueue.filter((item) => item.status === 'pending').length;
 
   // 조직 업무 항목 로컬 상태 (서버 refetch 없이 낙관적 체크)
-  const [workItems, setWorkItems] = useState<WorkItem[]>(data.recentWorkItems ?? []);
+  const [workItems, setWorkItems] = useState<WorkItem[]>(liveData.recentWorkItems ?? []);
   const [workItemType, setWorkItemType] = useState<'message' | 'task' | 'request'>('message');
   const [workItemLinks, setWorkItemLinks] = useState<WorkItemLink[]>([]);
   const [workItemDueAt, setWorkItemDueAt] = useState('');
   const [workItemAssignee, setWorkItemAssignee] = useState('');
   const [workItemPending, startWorkItemTransition] = useTransition();
+
+  useEffect(() => {
+    setWorkItems(liveData.recentWorkItems ?? []);
+  }, [liveData.recentWorkItems]);
 
   const sendWorkItem = () => {
     if (!messageInput.trim()) return;
@@ -1300,7 +1335,6 @@ export function DashboardHubClient({
   const [nowText, setNowText] = useState(() => formatDateTime(new Date().toISOString()));
   const [activeAiDialog, setActiveAiDialog] = useState<null | 'assistant' | 'todo'>(null);
   const [aiSectionCollapsed, setAiSectionCollapsed] = useState(true);
-  const [expandedNotifCard, setExpandedNotifCard] = useState<null | 'immediate' | 'confirm' | 'meeting' | 'other'>(null);
   const [conversationExpanded, setConversationExpanded] = useState(false);
   const startOfTodayIso = useMemo(() => {
     const now = new Date();
@@ -1361,28 +1395,18 @@ export function DashboardHubClient({
   }, [data.caseOptions, messageCaseId, setMessageCaseId]);
 
   const immediateNotifications = useMemo(
-    () => data.actionableNotifications.filter(
-      (item) => item.requires_action &&
-        (item.action_entity_type === 'schedule' || getNotificationTargetHref(item).includes(ROUTES.CALENDAR))
-    ),
-    [data.actionableNotifications]
+    () => data.unreadNotificationItems.filter((item) => item.category === 'immediate'),
+    [data.unreadNotificationItems]
   );
 
   const confirmNotifications = useMemo(
-    () => data.actionableNotifications.filter(
-      (item) => item.requires_action &&
-        (item.action_entity_type === 'client' || item.action_entity_type === 'collaboration' ||
-          getNotificationTargetHref(item).includes(ROUTES.CLIENTS) || getNotificationTargetHref(item).includes(ROUTES.INBOX))
-    ),
-    [data.actionableNotifications]
+    () => data.unreadNotificationItems.filter((item) => item.category === 'confirm'),
+    [data.unreadNotificationItems]
   );
 
   const meetingNotifications = useMemo(
-    () => data.actionableNotifications.filter(
-      (item) => item.action_entity_type === 'schedule' &&
-        (getNotificationTargetHref(item).includes('meeting') || item.title?.toLowerCase().includes('미팅'))
-    ),
-    [data.actionableNotifications]
+    () => data.unreadNotificationItems.filter((item) => item.category === 'meeting'),
+    [data.unreadNotificationItems]
   );
 
   const summaryRows = [
@@ -1487,118 +1511,43 @@ export function DashboardHubClient({
     <div className="space-y-6">
       {/* 알림-일정 연동 요약 스트립 */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <button
-          type="button"
-          onClick={() => setExpandedNotifCard(expandedNotifCard === 'immediate' ? null : 'immediate')}
-          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'immediate' ? 'border-rose-400 bg-rose-100 ring-2 ring-rose-300' : 'border-rose-200 bg-rose-50 hover:bg-rose-100'}`}
-          aria-label={`즉시필요 알림 ${immediateNotifications.length}건`}
-          aria-expanded={expandedNotifCard === 'immediate'}
+        <Link
+          href={`${ROUTES.NOTIFICATIONS}#immediate` as Route}
+          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center transition hover:bg-rose-100"
+          aria-label={`즉시필요 알림 ${immediateNotifications.length}건 보기`}
         >
           <p className="text-xs font-semibold text-rose-700">즉시필요</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">{immediateNotifications.length}</p>
           <p className="mt-1 text-[10px] text-rose-600">업무일정 임박</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpandedNotifCard(expandedNotifCard === 'confirm' ? null : 'confirm')}
-          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'confirm' ? 'border-blue-400 bg-blue-100 ring-2 ring-blue-300' : 'border-blue-200 bg-blue-50 hover:bg-blue-100'}`}
-          aria-label={`검토필요 알림 ${confirmNotifications.length}건`}
-          aria-expanded={expandedNotifCard === 'confirm'}
+        </Link>
+        <Link
+          href={`${ROUTES.NOTIFICATIONS}#confirm` as Route}
+          className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center transition hover:bg-blue-100"
+          aria-label={`검토필요 알림 ${confirmNotifications.length}건 보기`}
         >
           <p className="text-xs font-semibold text-blue-700">검토필요</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-blue-800">{confirmNotifications.length}</p>
           <p className="mt-1 text-[10px] text-blue-600">요청·협업 알림</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpandedNotifCard(expandedNotifCard === 'meeting' ? null : 'meeting')}
-          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'meeting' ? 'border-violet-400 bg-violet-100 ring-2 ring-violet-300' : 'border-violet-200 bg-violet-50 hover:bg-violet-100'}`}
-          aria-label={`미팅알림 ${meetingNotifications.length}건`}
-          aria-expanded={expandedNotifCard === 'meeting'}
+        </Link>
+        <Link
+          href={`${ROUTES.NOTIFICATIONS}#meeting` as Route}
+          className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-center transition hover:bg-violet-100"
+          aria-label={`미팅알림 ${meetingNotifications.length}건 보기`}
         >
           <p className="text-xs font-semibold text-violet-700">미팅알림</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-violet-800">{meetingNotifications.length}</p>
           <p className="mt-1 text-[10px] text-violet-600">미팅 일정</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpandedNotifCard(expandedNotifCard === 'other' ? null : 'other')}
-          className={`rounded-xl border px-3 py-2 text-center transition ${expandedNotifCard === 'other' ? 'border-slate-400 bg-slate-100 ring-2 ring-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
-          aria-label={`기타알림 ${Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}건`}
-          aria-expanded={expandedNotifCard === 'other'}
+        </Link>
+        <Link
+          href={`${ROUTES.NOTIFICATIONS}#other` as Route}
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center transition hover:bg-slate-100"
+          aria-label={`기타알림 ${Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}건 보기`}
         >
           <p className="text-xs font-semibold text-slate-700">기타알림</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-slate-800">{Math.max(0, data.unreadNotifications - immediateNotifications.length - confirmNotifications.length - meetingNotifications.length)}</p>
           <p className="mt-1 text-[10px] text-slate-500">비용·기타</p>
-        </button>
+        </Link>
       </div>
-
-      {expandedNotifCard === 'immediate' && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="font-semibold text-rose-800">즉시필요 알림</p>
-            <Link href={`${ROUTES.NOTIFICATIONS}?section=immediate` as Route} className="text-xs text-rose-600 underline hover:text-rose-800">전체보기 →</Link>
-          </div>
-          <div className="space-y-2">
-            {immediateNotifications.slice(0, 5).map(item => (
-              <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
-                <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{hasNotificationTargetHref(item) ? '열기 가능' : '확인 필요'}</p>
-                <a href={getNotificationTargetHref(item)} className="mt-2 inline-flex text-xs text-rose-700 underline">열기</a>
-              </div>
-            ))}
-            {immediateNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
-          </div>
-        </div>
-      )}
-
-      {expandedNotifCard === 'confirm' && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="font-semibold text-blue-800">검토필요 알림</p>
-            <Link href={`${ROUTES.NOTIFICATIONS}?section=confirm` as Route} className="text-xs text-blue-600 underline hover:text-blue-800">전체보기 →</Link>
-          </div>
-          <div className="space-y-2">
-            {confirmNotifications.slice(0, 5).map(item => (
-              <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
-                <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{hasNotificationTargetHref(item) ? '열기 가능' : '확인 필요'}</p>
-                <a href={getNotificationTargetHref(item)} className="mt-2 inline-flex text-xs text-blue-700 underline">열기</a>
-              </div>
-            ))}
-            {confirmNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
-          </div>
-        </div>
-      )}
-
-      {expandedNotifCard === 'meeting' && (
-        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="font-semibold text-violet-800">미팅알림</p>
-            <Link href={ROUTES.NOTIFICATIONS} className="text-xs text-violet-600 underline hover:text-violet-800">전체보기 →</Link>
-          </div>
-          <div className="space-y-2">
-            {meetingNotifications.slice(0, 5).map(item => (
-              <div key={item.id} className="rounded-xl border border-white bg-white p-3 text-sm">
-                <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{hasNotificationTargetHref(item) ? '열기 가능' : '확인 필요'}</p>
-                <a href={getNotificationTargetHref(item)} className="mt-2 inline-flex text-xs text-violet-700 underline">열기</a>
-              </div>
-            ))}
-            {meetingNotifications.length === 0 && <p className="py-4 text-center text-sm text-slate-500">현재 표시할 알림이 없습니다.</p>}
-          </div>
-        </div>
-      )}
-
-      {expandedNotifCard === 'other' && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="font-semibold text-slate-800">기타알림</p>
-            <Link href={ROUTES.NOTIFICATIONS} className="text-xs text-slate-600 underline hover:text-slate-800">전체보기 →</Link>
-          </div>
-          <p className="py-4 text-center text-sm text-slate-500">알림센터에서 확인하세요.</p>
-        </div>
-      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1830,7 +1779,7 @@ export function DashboardHubClient({
                           className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
                         />
                       </div>
-                      {data.teamMembers.length > 0 && (
+                      {liveData.teamMembers.length > 0 && (
                         <div className="flex items-center gap-1.5">
                           <label htmlFor="work-item-assignee" className="text-xs text-slate-500 whitespace-nowrap">담당자</label>
                           <select
@@ -1840,7 +1789,7 @@ export function DashboardHubClient({
                             className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
                           >
                             <option value="">미지정</option>
-                            {data.teamMembers.map((member) => {
+                            {liveData.teamMembers.map((member) => {
                               const profile = profileRecord(member.profile);
                               const profileId = profile?.id ?? member.id;
                               const name = profile?.full_name ?? profile?.email ?? '(이름 없음)';

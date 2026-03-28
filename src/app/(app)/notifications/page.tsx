@@ -15,7 +15,7 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { formatNotificationDate } from '@/lib/format';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { getNotificationCenter, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
+import { getArchivedNotificationItems, getNotificationArchiveMeta, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
 import { ROUTES } from '@/lib/routes/registry';
 
@@ -170,8 +170,9 @@ export default async function NotificationsPage({
   const state = `${resolved?.state ?? 'active'}` as 'active' | 'archived';
   const pageSize = 30;
 
-  const [notificationCenter, channelPreferences] = await Promise.all([
-    getNotificationCenter(pageSize),
+  const [archivedItems, archiveMeta, channelPreferences] = await Promise.all([
+    state === 'archived' ? getArchivedNotificationItems(pageSize) : Promise.resolve(null),
+    getNotificationArchiveMeta(),
     getNotificationChannelPreferences()
   ]);
 
@@ -188,7 +189,7 @@ export default async function NotificationsPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">알림센터</h1>
           <p className="mt-1 text-sm text-slate-500">업무 요청, 일정, 문서 결재 등 중요 알림을 확인하고 처리합니다.</p>
         </div>
-        <NotificationsArchiveButton archivedCount={notificationCenter.trashedNotifications.length} />
+        <NotificationsArchiveButton archivedCount={archivedItems?.items.length ?? archiveMeta.archivedCount} />
       </div>
 
       <NotificationsSummaryCards
@@ -213,12 +214,12 @@ export default async function NotificationsPage({
 
 
 
-      {state === 'archived' ? (
+      {state === 'archived' && archivedItems ? (
         <NotificationListSection
           title="보관함"
           tone="slate"
           colorKey="slate"
-          items={notificationCenter.trashedNotifications.map((item: any) => ({
+          items={archivedItems.items.map((item: any) => ({
             notificationId: item.id,
             type: `${item.notification_type ?? item.kind ?? 'generic'}`,
             entityType: 'collaboration',
@@ -293,13 +294,13 @@ export default async function NotificationsPage({
         </ClientActionForm>
       </CollapsibleSettingsSection>
 
-      {state === 'archived' && notificationCenter.capabilities?.supportsTrash !== false ? (
+      {state === 'archived' && archivedItems?.supportsTrash !== false ? (
         <div className="flex justify-end">
           <DangerActionButton
             action={emptyNotificationTrashAction}
             fields={{}}
             confirmTitle="보관함을 비울까요?"
-            confirmDescription={`보관함의 알림 ${notificationCenter.trashedNotifications.length}건이 영구 삭제됩니다.`}
+            confirmDescription={`보관함의 알림 ${archivedItems?.items.length ?? 0}건이 영구 삭제됩니다.`}
             confirmLabel="보관함 비우기"
             variant="danger"
             successTitle="보관함을 비웠습니다."

@@ -25,7 +25,7 @@ import { requestDocumentReviewAction, updateCaseStageAction } from '@/lib/action
 import { CASE_STAGE_OPTIONS, getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { hasPermission, isWorkspaceAdmin } from '@/lib/permissions';
-import { getCaseDetail } from '@/lib/queries/cases';
+import { getCaseBaseDetail, getCaseDetailSections } from '@/lib/queries/cases';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
 import { ExportLinks } from '@/components/export-links';
 import { CaseDocumentChecklist } from '@/components/case-document-checklist';
@@ -260,10 +260,16 @@ export default async function CaseDetailPage({
 }) {
   const { caseId } = await params;
   const { tab = 'overview', clientInvite } = searchParams ? await searchParams : { tab: 'overview', clientInvite: undefined };
+  const currentTab: TabKey = (tab === 'collection' ? 'collection' : (tabs.includes(tab as any) ? (tab as TabKey) : 'overview'));
   const auth = await requireAuthenticatedUser();
-  const caseDetail = await getCaseDetail(caseId);
+  const caseBase = await getCaseBaseDetail(caseId);
 
-  if (!caseDetail) notFound();
+  if (!caseBase) notFound();
+
+  const showCollectionModule = Boolean(caseBase.module_flags?.collection || caseBase.case_type === 'debt_collection');
+  const collectionFocused = showCollectionModule || caseBase.case_type === 'debt_collection';
+  const caseSections = await getCaseDetailSections(caseId, currentTab, collectionFocused);
+  const caseDetail = { ...caseBase, ...caseSections };
 
   const membership = findMembership(auth, caseDetail.organization_id);
   const canManage = Boolean(membership);
@@ -274,9 +280,6 @@ export default async function CaseDetailPage({
   const canCollection = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'collection_view'));
   const canManageStage = Boolean(membership && hasPermission(auth, caseDetail.organization_id, 'case_stage_manage'));
   const stageStale = isCaseStageStale(caseDetail.updated_at, 7);
-  const currentTab: TabKey = (tab === 'collection' ? 'collection' : (tabs.includes(tab as any) ? (tab as TabKey) : 'overview'));
-  const showCollectionModule = Boolean(caseDetail.module_flags?.collection || caseDetail.case_type === 'debt_collection');
-  const collectionFocused = showCollectionModule || caseDetail.case_type === 'debt_collection';
   const recoveredAmount = caseDetail.recoveryActivities.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
   const paymentAmount = caseDetail.payments.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
   const pendingSettlementAmount = caseDetail.orgSettlements

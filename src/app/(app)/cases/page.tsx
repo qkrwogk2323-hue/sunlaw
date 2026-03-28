@@ -7,11 +7,11 @@ import { CaseCreateForm } from '@/components/forms/case-create-form';
 import { forceDeleteCaseAction, moveCaseToDeletedAction, restoreCaseAction } from '@/lib/actions/case-actions';
 import { getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { getCaseClientLinkedMap, getCasePartiesForList, listCases } from '@/lib/queries/cases';
+import { getCaseClientLinkedMap, getCasesPageBuckets } from '@/lib/queries/cases';
 import { resolveOrganizationCasePolicies } from '@/lib/case-scope';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
-import { getCaseHubList, getCaseHubsForCases } from '@/lib/queries/case-hubs';
+import { getCaseHubLinkMap, getCaseHubList } from '@/lib/queries/case-hubs';
 import { CaseHubConnectButton } from '@/components/case-hub-connect-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
@@ -101,26 +101,19 @@ export default async function CasesPage({
     (m) => m.organization_id === currentOrganizationId
   )?.organization?.name ?? null;
 
-  const [activeCases, completedCases, deletedCases] = await Promise.all([
-    listCases(currentOrganizationId, { bucket: 'active' }),
-    listCases(currentOrganizationId, { bucket: 'completed' }),
-    listCases(currentOrganizationId, { bucket: 'deleted' })
-  ]);
-
-  const selectedCases = bucket === 'active' ? activeCases : bucket === 'completed' ? completedCases : deletedCases;
+  const { selectedCases, counts } = await getCasesPageBuckets(currentOrganizationId, bucket);
   const filteredCases = selectedCases.filter((item: any) => {
     if (!queryFilter) return true;
     const haystack = `${item.title ?? ''} ${item.reference_no ?? ''} ${item.case_number ?? ''}`.toLowerCase();
     return haystack.includes(queryFilter);
   });
 
-  const allCaseIds = [...activeCases, ...completedCases, ...deletedCases].map((item: any) => item.id);
-  const [hubRegistrations, caseClientLinkedMap, caseHubMap, hubList, casePartiesMap] = await Promise.all([
-    getCaseHubRegistrations(currentOrganizationId, allCaseIds),
-    getCaseClientLinkedMap(allCaseIds),
-    getCaseHubsForCases(currentOrganizationId, allCaseIds),
-    getCaseHubList(currentOrganizationId),
-    getCasePartiesForList(allCaseIds)
+  const selectedCaseIds = selectedCases.map((item: any) => item.id);
+  const [hubRegistrations, caseClientLinkedMap, caseHubLinkMap, hubList] = await Promise.all([
+    getCaseHubRegistrations(currentOrganizationId, selectedCaseIds),
+    getCaseClientLinkedMap(selectedCaseIds),
+    getCaseHubLinkMap(currentOrganizationId, selectedCaseIds),
+    getCaseHubList(currentOrganizationId)
   ]);
 
   const organizations = auth.memberships.map((membership) => ({
@@ -129,13 +122,11 @@ export default async function CasesPage({
   }));
 
   function renderCaseCard(item: any) {
-    const hasHub = Boolean(hubRegistrations[item.id]?.sharedHubId || caseHubMap[item.id]);
+    const hubId = caseHubLinkMap[item.id]?.id ?? hubRegistrations[item.id]?.sharedHubId ?? null;
+    const hasHub = Boolean(hubId);
     const hasClient = Boolean(caseClientLinkedMap[item.id]);
     const isStale = isCaseStageStale(item.updated_at, 7);
     const isHighlighted = item.id === highlightCaseId;
-    const parties = casePartiesMap[item.id];
-    const plaintiffLabel = parties?.plaintiffs?.length ? `원고 ${parties.plaintiffs[0]}` : null;
-    const defendantLabel = parties?.defendants?.length ? `피고 ${parties.defendants[0]}` : null;
     const caseTypeLabel = getCaseTypeLabel(item.case_type);
 
     return (
@@ -155,11 +146,6 @@ export default async function CasesPage({
             {/* 행 2: 사건명 + 원고/피고 + 배지 */}
             <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
               <span className="truncate font-medium text-slate-900 text-sm leading-tight">{item.title}</span>
-              {(plaintiffLabel || defendantLabel) && (
-                <span className="text-xs text-slate-400 truncate">
-                  {[plaintiffLabel, defendantLabel].filter(Boolean).join(' · ')}
-                </span>
-              )}
             </div>
             {/* 행 3: 소송유형 + 상태 배지 */}
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -179,7 +165,7 @@ export default async function CasesPage({
                 caseTitle={item.title}
                 organizationId={item.organization_id ?? currentOrganizationId}
                 hasClients={hasClient}
-                hub={caseHubMap[item.id] ?? null}
+                hubId={hubId}
               />
             )}
             {bucket !== 'deleted' ? (
@@ -323,8 +309,8 @@ export default async function CasesPage({
       {bucket === 'active' ? (
         <CasesBulkConnectPanel
           organizationId={currentOrganizationId}
-          unlinkedClientCaseIds={activeCases.filter((c: { id: string }) => !caseClientLinkedMap[c.id]).map((c: { id: string }) => c.id)}
-          unlinkedHubCaseIds={activeCases.filter((c: { id: string }) => !hubRegistrations[c.id]?.sharedHubId).map((c: { id: string }) => c.id)}
+          unlinkedClientCaseIds={selectedCases.filter((c: { id: string }) => !caseClientLinkedMap[c.id]).map((c: { id: string }) => c.id)}
+          unlinkedHubCaseIds={selectedCases.filter((c: { id: string }) => !hubRegistrations[c.id]?.sharedHubId).map((c: { id: string }) => c.id)}
         />
       ) : null}
 
@@ -379,7 +365,7 @@ export default async function CasesPage({
         {/* 우측 작은 박스: 사건 분류 탐색 */}
         <div className="space-y-2">
           {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
-            const count = key === 'active' ? activeCases.length : key === 'completed' ? completedCases.length : deletedCases.length;
+            const count = counts[key];
             const isActive = key === bucket;
             const href = `/cases?bucket=${key}${queryFilter ? `&q=${encodeURIComponent(queryFilter)}` : ''}` as Route;
             return (

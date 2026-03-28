@@ -145,3 +145,18 @@ export async function getCollectionsWorkspace(organizationId?: string | null, pe
     trend
   };
 }
+
+export async function getCollectionsCaseCount(organizationId?: string | null) {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from('cases')
+    .select('id', { count: 'exact', head: true })
+    .eq('case_type', 'debt_collection');
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { count } = await query;
+  return count ?? 0;
+}

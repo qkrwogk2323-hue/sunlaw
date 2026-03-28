@@ -15,7 +15,7 @@ import {
 } from '@/lib/legal-documents';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { getBillingHubSnapshot } from '@/lib/queries/billing';
+import { getBillingCaseOptions, getContractWorkspace } from '@/lib/queries/billing';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export default async function ContractsPage({
@@ -28,8 +28,8 @@ export default async function ContractsPage({
   const supabase = await createSupabaseServerClient();
   const resolved = searchParams ? await searchParams : undefined;
   const caseId = `${resolved?.caseId ?? ''}`.trim() || null;
-  const billing = await getBillingHubSnapshot(organizationId);
-  const agreements = caseId ? billing.agreements.filter((item: any) => item.case_id === caseId) : billing.agreements;
+  const allAgreements = await getContractWorkspace(organizationId);
+  const agreements = caseId ? allAgreements.filter((item: any) => item.case_id === caseId) : allAgreements;
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -38,19 +38,8 @@ export default async function ContractsPage({
   const privacyConsentVersion = typeof metadata.privacy_consent_version === 'string' ? metadata.privacy_consent_version : PLATFORM_PRIVACY_POLICY_VERSION;
   const serviceConsentVersion = typeof metadata.service_consent_version === 'string' ? metadata.service_consent_version : PLATFORM_TERMS_VERSION;
   const agreementCaseIds = [...new Set(agreements.map((item: any) => item.case_id).filter(Boolean))];
-  const [{ data: caseRows }, { data: caseClientRows }, { data: contractDocumentRows }, { data: organizationRow }] = await Promise.all([
-    supabase
-      .from('cases')
-      .select('id, title')
-      .eq('organization_id', organizationId)
-      .order('updated_at', { ascending: false })
-      .limit(120),
-    supabase
-      .from('case_clients')
-      .select('id, case_id, client_name')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
-      .limit(300),
+  const [caseOptions, { data: contractDocumentRows }, { data: organizationRow }] = await Promise.all([
+    getBillingCaseOptions(organizationId),
     agreementCaseIds.length
       ? supabase
           .from('case_documents')
@@ -76,16 +65,6 @@ export default async function ContractsPage({
     }
   }
 
-  const caseOptions = (caseRows ?? []).map((item: any) => ({
-    id: item.id,
-    title: item.title,
-    clients: (caseClientRows ?? [])
-      .filter((client: any) => client.case_id === item.id)
-      .map((client: any) => ({
-        id: client.id,
-        name: client.client_name
-      }))
-  }));
   const organizationProfile = {
     name: organizationRow?.name ?? '현재 조직',
     representativeName: organizationRow?.representative_name ?? '',

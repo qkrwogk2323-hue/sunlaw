@@ -1,22 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getDashboardStats } from '@/lib/queries/dashboard';
-import { getCollectionsWorkspace } from '@/lib/queries/collections';
+import { getCollectionsCaseCount } from '@/lib/queries/collections';
 import { ExportLinks } from '@/components/export-links';
 
 export default async function ReportsPage() {
   const auth = await requireAuthenticatedUser();
   const organizationId = getEffectiveOrganizationId(auth);
-  const [stats, collections] = await Promise.all([
+  const [stats, collectionCaseCount] = await Promise.all([
     getDashboardStats(organizationId),
-    getCollectionsWorkspace(organizationId)
+    getCollectionsCaseCount(organizationId)
   ]);
 
   const statRows = [
     ['진행 중 사건', stats.activeCases],
     ['결재 대기 문서', stats.pendingDocuments],
     ['미처리 요청', stats.pendingRequests],
-    ['추심 사건', collections.collectionCases.length]
+    ['추심 사건', collectionCaseCount]
   ];
 
   return (

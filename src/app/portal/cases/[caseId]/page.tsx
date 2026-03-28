@@ -6,7 +6,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { PortalContractSignatureForm } from '@/components/forms/portal-contract-signature-form';
 import { getCurrentAuth } from '@/lib/auth';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel } from '@/lib/case-stage';
-import { getPortalActionQueue, getPortalCaseDetail } from '@/lib/queries/portal';
+import { getPortalCaseDetail } from '@/lib/queries/portal';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -58,9 +58,24 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
   const auth = await getCurrentAuth();
   if (!auth) redirect('/login');
   const { caseId } = await params;
-  const [detail, actionQueue] = await Promise.all([getPortalCaseDetail(caseId), getPortalActionQueue()]);
+  const detail = await getPortalCaseDetail(caseId);
   if (!detail) notFound();
-  const caseActions = actionQueue.filter((item: any) => item.caseId === caseId);
+  const caseActions = [
+    ...(detail.requests ?? [])
+      .filter((item: any) => ['open', 'in_review', 'waiting_client'].includes(item.status))
+      .map((item: any) => ({
+        id: `request:${item.id}`,
+        kind: 'request' as const,
+        title: item.title ?? '요청 확인'
+      })),
+    ...(detail.billingEntries ?? [])
+      .filter((item: any) => ['issued', 'partial'].includes(item.status))
+      .map((item: any) => ({
+        id: `billing:${item.id}`,
+        kind: 'billing' as const,
+        title: item.title ?? '청구 확인'
+      }))
+  ];
   const stageIndex = CASE_STAGE_OPTIONS.findIndex((item) => item.key === detail.stage_key);
   const insolvencyCreditors = detail.insolvency?.creditors ?? [];
   const latestPlan = detail.insolvency?.latestPlan ?? null;
