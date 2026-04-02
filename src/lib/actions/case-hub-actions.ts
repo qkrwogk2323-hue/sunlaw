@@ -134,26 +134,31 @@ export async function createCaseHubAction(formData: FormData) {
     resolvedPrimaryClientCaseClientId = clients[0].id ?? null;
   }
 
+  const hasPinSet = accessPin.length === 4;
+  const insertPayload: Record<string, unknown> = {
+    organization_id: organizationId,
+    case_id: caseId,
+    primary_client_id: resolvedPrimaryClientId,
+    primary_case_client_id: resolvedPrimaryClientCaseClientId,
+    title,
+    status: 'setup_required',
+    collaborator_limit: collaboratorLimit,
+    viewer_limit: viewerLimit,
+    visibility_scope: ['organization', 'private', 'custom'].includes(visibilityScope)
+      ? visibilityScope
+      : 'organization',
+    created_by: auth.profile.id,
+    lifecycle_status: 'active'
+  };
+  if (hasPinSet) {
+    insertPayload.access_pin_enabled = true;
+    insertPayload.access_pin_hash = hashHubPin(accessPin);
+    insertPayload.access_pin_expires_at = pinExpiresAt();
+  }
+
   const { data: hub, error: insertError } = await admin
     .from('case_hubs')
-    .insert({
-      organization_id: organizationId,
-      case_id: caseId,
-      primary_client_id: resolvedPrimaryClientId,
-      primary_case_client_id: resolvedPrimaryClientCaseClientId,
-      title,
-      status: 'setup_required',
-      collaborator_limit: collaboratorLimit,
-      viewer_limit: viewerLimit,
-      visibility_scope: ['organization', 'private', 'custom'].includes(visibilityScope)
-        ? visibilityScope
-        : 'organization',
-      access_pin_enabled: accessPin.length === 4,
-      access_pin_hash: accessPin.length === 4 ? hashHubPin(accessPin) : null,
-      access_pin_expires_at: accessPin.length === 4 ? pinExpiresAt() : null,
-      created_by: auth.profile.id,
-      lifecycle_status: 'active'
-    })
+    .insert(insertPayload)
     .select('id')
     .single();
 
@@ -232,18 +237,23 @@ export async function updateCaseHubAction(formData: FormData) {
   if (!hubRecord || hubRecord.lifecycle_status !== 'active') {
     throw new Error('현재 조직에서 접근 가능한 허브가 아닙니다. 허브 연결 상태를 확인해 주세요.');
   }
+  const hasPinUpdate = accessPin.length === 4;
+  const updatePayload: Record<string, unknown> = {
+    title,
+    collaborator_limit: collaboratorLimit,
+    viewer_limit: viewerLimit,
+    ...(status && validStatuses.includes(status) ? { status } : {}),
+    updated_at: new Date().toISOString()
+  };
+  if (hasPinUpdate) {
+    updatePayload.access_pin_enabled = true;
+    updatePayload.access_pin_hash = hashHubPin(accessPin);
+    updatePayload.access_pin_expires_at = pinExpiresAt();
+  }
+
   const { error } = await admin
     .from('case_hubs')
-    .update({
-      title,
-      collaborator_limit: collaboratorLimit,
-      viewer_limit: viewerLimit,
-      access_pin_enabled: accessPin.length === 4,
-      access_pin_hash: accessPin.length === 4 ? hashHubPin(accessPin) : null,
-      access_pin_expires_at: accessPin.length === 4 ? pinExpiresAt() : null,
-      ...(status && validStatuses.includes(status) ? { status } : {}),
-      updated_at: new Date().toISOString()
-    })
+    .update(updatePayload)
     .eq('id', hubId)
     .eq('lifecycle_status', 'active');
 
