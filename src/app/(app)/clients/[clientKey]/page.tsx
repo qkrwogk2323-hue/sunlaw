@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
@@ -57,13 +58,9 @@ export default async function ClientDetailPage({
       <Card>
         <CardHeader><CardTitle>기본정보</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <p className="text-sm text-slate-700">이름: <span className="font-medium text-slate-900">{detail.name}</span></p>
-          <p className="text-sm text-slate-700">주민번호: <span className="font-medium text-slate-900">{detail.residentNumberMasked ?? '-'}</span></p>
-          <p className="text-sm text-slate-700">주소: <span className="font-medium text-slate-900">{detail.addressSummary ?? '-'}</span></p>
-          <p className="text-sm text-slate-700">연락처: <span className="font-medium text-slate-900">{detail.contactPhone ?? '-'}</span></p>
           <p className="text-sm text-slate-700 md:col-span-2">이메일: <span className="font-medium text-slate-900">{detail.email ?? '-'}</span></p>
           <p className="text-sm text-slate-700">연결 사건: <span className="font-medium text-slate-900">{detail.caseTitle ?? '미연결'}</span></p>
-          <p className="text-sm text-slate-700">관계/지위: <span className="font-medium text-slate-900">{detail.relationLabel ?? '-'}</span></p>
+          <p className="text-sm text-slate-700">구분: <span className="font-medium text-slate-900">{detail.relationLabel ?? '기타'}</span></p>
           <div className="md:col-span-2 flex flex-wrap gap-2">
             <Badge tone={detail.isPortalEnabled ? 'green' : 'amber'}>{detail.isPortalEnabled ? '포털 활성' : '포털 대기'}</Badge>
             {detail.linkStatus === 'pending_unlink' ? <Badge tone="amber">연결 해제 대기</Badge> : null}
@@ -84,6 +81,21 @@ export default async function ClientDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {canManage && detail.source === 'invite' && detail.invitationId && detail.invitationStatus === 'pending' ? (
+        <Card>
+          <CardHeader><CardTitle>초대 관리</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-900">아직 연결되지 않은 초대입니다.</p>
+              <p className="mt-1 text-sm text-slate-600">의뢰인이 연결을 완료하기 전까지만 초대 링크를 다시 발송할 수 있습니다.</p>
+            </div>
+            <div className="shrink-0">
+              <ResendInvitationForm invitationId={detail.invitationId} />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <section className="space-y-6">
         <Card>
@@ -146,7 +158,7 @@ export default async function ClientDetailPage({
                 <details className="group">
                   <summary className="list-none">
                     <span className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 group-open:bg-slate-100">
-                      관련인 연동
+                      관련인 연결 버튼
                     </span>
                   </summary>
                   <ClientActionForm

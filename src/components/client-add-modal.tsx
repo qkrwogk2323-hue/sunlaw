@@ -22,11 +22,9 @@ type CaseOption = {
 export function ClientAddModal({
   organizationId,
   cases,
-  roster,
 }: {
   organizationId: string;
   cases: CaseOption[];
-  roster: RosterItem[];
 }) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -80,7 +78,7 @@ export function ClientAddModal({
               의뢰인 추가
             </h2>
             <p id="client-add-modal-desc" className="mt-1 text-sm text-slate-600">
-              초대 링크 발송, CSV 일괄 등록, 임시 계정 발급을 한 곳에서 처리합니다.
+              단건 등록, CSV 일괄 등록, 임시 계정 발급을 한 곳에서 처리합니다.
             </p>
           </div>
           <button
@@ -94,7 +92,7 @@ export function ClientAddModal({
         </div>
 
         <div className="max-h-[78vh] overflow-y-auto px-6 py-5">
-          <ClientsActionPanels organizationId={organizationId} cases={cases} roster={roster} />
+          <ClientsActionPanels organizationId={organizationId} cases={cases} />
         </div>
       </dialog>
     </>

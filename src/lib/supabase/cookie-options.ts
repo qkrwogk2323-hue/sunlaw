@@ -1,10 +1,13 @@
 const DEFAULT_AUTH_COOKIE_NAME = 'sb-hyfdebinoirtluwpfmqx-auth-token';
 
-function normalizeHostname(hostname: string) {
-  return hostname.trim().replace(/^www\./, '');
+function normalizeHostname(hostnameOrHost: string) {
+  const trimmed = hostnameOrHost.trim();
+  const withoutPort = trimmed.replace(/:\d+$/, '');
+  return withoutPort.replace(/^www\./, '');
 }
 
-function isLocalHost(hostname: string) {
+function isLocalHost(hostnameOrHost: string) {
+  const hostname = normalizeHostname(hostnameOrHost);
   return hostname === 'localhost' || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
 }
 

@@ -51,6 +51,65 @@ async function notifyOrgManagers(
   );
 }
 
+// 의뢰인을 웹에서 바로 단건 등록한다.
+export async function createClientRosterEntryAction(formData: FormData) {
+  const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
+  const name = `${formData.get('name') ?? ''}`.trim();
+  const email = `${formData.get('email') ?? ''}`.trim();
+  const phone = `${formData.get('phone') ?? ''}`.trim();
+  const caseId = `${formData.get('caseId') ?? ''}`.trim();
+  const relationLabel = `${formData.get('relationLabel') ?? '기타'}`.trim() || '기타';
+
+  if (!organizationId || !name) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_CREATE_MISSING_FIELDS',
+      blocked: '의뢰인 추가가 차단되었습니다.',
+      cause: '조직과 이름은 필수 입력 항목입니다.',
+      resolution: '필수 항목을 입력한 뒤 다시 시도해 주세요.'
+    }));
+  }
+
+  if (!email && !phone) {
+    throwGuardFeedback(createValidationFailedFeedback({
+      code: 'CLIENT_CREATE_CONTACT_REQUIRED',
+      blocked: '의뢰인 추가가 차단되었습니다.',
+      cause: '이메일 또는 연락처 중 하나는 필요합니다.',
+      resolution: '이메일이나 연락처를 입력한 뒤 다시 시도해 주세요.'
+    }));
+  }
+
+  const { auth } = await requireOrganizationActionAccess(organizationId, {
+    permission: 'user_manage',
+    errorMessage: '의뢰인을 추가할 권한이 없습니다.'
+  });
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('case_clients').insert({
+    organization_id: organizationId,
+    case_id: caseId || null,
+    client_name: name,
+    client_email_snapshot: email || null,
+    relation_label: relationLabel,
+    link_status: caseId ? 'linked' : 'orphan_review',
+    is_portal_enabled: false,
+    created_by: auth.user.id,
+    updated_by: auth.user.id
+  });
+
+  if (error) throw error;
+
+  await notifyOrgManagers(
+    organizationId,
+    auth.user.id,
+    `[의뢰인] 신규 등록: ${name}`,
+    `${name} 의뢰인이 ${caseId ? '사건에 연결된 상태로' : '미연결 상태로'} 등록되었습니다.`,
+    '/clients',
+    { source: 'client_created', client_name: name, case_id: caseId || null }
+  );
+
+  revalidatePath('/clients');
+}
+
 // 의뢰인 상세 화면에 특이사항 메모를 등록한다.
 export async function createClientSpecialNoteAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();

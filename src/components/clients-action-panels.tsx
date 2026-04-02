@@ -1,19 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { ClientStructuredInviteForm } from '@/components/forms/client-structured-invite-form';
+import { ClientRosterEntryForm } from '@/components/forms/client-roster-entry-form';
 import { ClientPreRegisterForm } from '@/components/forms/client-pre-register-form';
-import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { BulkUploadPanel } from '@/components/bulk-upload-panel';
 import { bulkUploadClientsAction } from '@/lib/actions/bulk-upload-actions';
 
-type PanelId = 'invite' | 'csv' | 'preregister' | 'resend';
+type PanelId = 'create' | 'csv' | 'invite';
 
 const PANELS: { id: PanelId; title: string; description: string }[] = [
   {
-    id: 'invite',
-    title: '기존의뢰인초대',
-    description: '의뢰인 초대 링크를 만들거나 CSV로 여러 명을 한 번에 준비합니다.'
+    id: 'create',
+    title: '의뢰인 추가',
+    description: '웹에서 바로 의뢰인 정보를 등록하고 목록에 올립니다.'
   },
   {
     id: 'csv',
@@ -21,14 +20,9 @@ const PANELS: { id: PanelId; title: string; description: string }[] = [
     description: '양식에 맞춘 CSV 파일로 의뢰인 정보를 한 번에 올립니다.'
   },
   {
-    id: 'preregister',
-    title: '임시 계정 직접 발급',
-    description: '예외적으로 직접 계정을 만들어 바로 전달해야 할 때 사용합니다.'
-  },
-  {
-    id: 'resend',
-    title: '초대 링크 재발송',
-    description: '이미 만든 초대 링크를 다시 전달해야 할 때 이 목록에서 재발송합니다.'
+    id: 'invite',
+    title: '의뢰인 초대',
+    description: '임시 계정을 직접 발급해 바로 전달해야 할 때 사용합니다.'
   }
 ];
 
@@ -44,12 +38,10 @@ type CaseOption = { id: string; title: string; referenceNo?: string | null };
 
 export function ClientsActionPanels({
   organizationId,
-  cases,
-  roster
+  cases
 }: {
   organizationId: string;
   cases: CaseOption[];
-  roster: RosterItem[];
 }) {
   const [activePanel, setActivePanel] = useState<PanelId | null>(null);
 
@@ -57,12 +49,9 @@ export function ClientsActionPanels({
     setActivePanel((prev) => (prev === id ? null : id));
   }
 
-  const resendItems = roster.filter((item) => item.source === 'invite' && item.invitationId);
-
   return (
     <div>
-      {/* 4개 카드 — 가로 한 줄 */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {PANELS.map((panel) => {
           const isOpen = activePanel === panel.id;
           return (
@@ -96,14 +85,13 @@ export function ClientsActionPanels({
         })}
       </div>
 
-      {/* 열린 패널 — 카드 아래 자연스럽게 펼침 */}
       {activePanel && (
         <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          {activePanel === 'invite' && (
-            <ClientStructuredInviteForm
-              organizationId={organizationId}
-              cases={cases}
-            />
+          {activePanel === 'create' && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">한 명씩 바로 등록해 목록과 상세 화면에서 이어서 관리합니다.</p>
+              <ClientRosterEntryForm organizationId={organizationId} cases={cases} />
+            </div>
           )}
 
           {activePanel === 'csv' && (
@@ -117,28 +105,10 @@ export function ClientsActionPanels({
             </div>
           )}
 
-          {activePanel === 'preregister' && (
+          {activePanel === 'invite' && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-600">비밀번호 직접 전달이 필요한 예외 상황에서만 사용합니다.</p>
+              <p className="text-sm text-slate-600">임시아이디와 비밀번호를 직접 전달해야 하는 경우에 사용합니다.</p>
               <ClientPreRegisterForm organizationId={organizationId} cases={cases} />
-            </div>
-          )}
-
-          {activePanel === 'resend' && (
-            <div className="space-y-2">
-              {resendItems.length ? (
-                resendItems.slice(0, 5).map((item) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
-                    <div className="text-sm">
-                      <p className="font-medium text-slate-900">{item.name}</p>
-                      <p className="text-slate-500">{item.email ?? '-'}</p>
-                    </div>
-                    <ResendInvitationForm invitationId={item.invitationId!} compact />
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">재발송 가능한 초대가 없습니다.</p>
-              )}
             </div>
           )}
         </div>

@@ -227,7 +227,8 @@ export async function listClientPageRoster(organizationId?: string | null) {
       signupStatus: invite.status === 'accepted' ? '가입 완료' : '가입 전',
       inviteStatus: inviteStatusLabel(invite),
       caseLinkStatus: invite.case_id ? '연결 대기' : '미연결',
-      activeStatus: '가입 전'
+      activeStatus: '가입 전',
+      overdueCount: 0,
     }));
 
   const linkedRows = (caseClients ?? []).map((row: any) => ({
@@ -255,7 +256,8 @@ export async function listClientPageRoster(organizationId?: string | null) {
     signupStatus: item.must_change_password ? '가입 전' : '가입 완료',
     inviteStatus: '임시계정 발급',
     caseLinkStatus: item.case_id ? '연결 완료' : '미연결',
-    activeStatus: item.must_change_password ? '가입 전' : '활성'
+    activeStatus: item.must_change_password ? '가입 전' : '활성',
+    overdueCount: 0,
   }));
 
   return [...inviteOnlyRows, ...tempRows, ...linkedRows];
@@ -493,6 +495,8 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
   return {
     organizationId,
     clientKey,
+    source: parsed.kind,
+    invitationId: invitation?.id ?? null,
     profileId,
     caseId,
     caseClientId,
@@ -509,6 +513,7 @@ export async function getClientDetailSummary(organizationId: string, clientKey: 
     caseTitle: (Array.isArray(caseClient?.cases) ? caseClient?.cases[0]?.title : caseClient?.cases?.title)
       ?? (Array.isArray(invitation?.cases) ? invitation?.cases[0]?.title : invitation?.cases?.title)
       ?? null,
+    invitationStatus: invitation?.status ?? null,
     activities,
     relatedPeople
   };

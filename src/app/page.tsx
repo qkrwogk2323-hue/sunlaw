@@ -6,6 +6,7 @@ import { BrandBanner } from '@/components/brand-banner';
 import { HomepageDemoVideo } from '@/components/homepage-demo-video';
 import { buttonStyles } from '@/components/ui/button';
 import { getCurrentAuth, getDefaultAppRoute } from '@/lib/auth';
+import { BRAND } from '@/lib/brand';
 import { ROUTES } from '@/lib/routes/registry';
 import { NAVIGATION_MAP } from '@/lib/routes/navigation-map';
 
@@ -120,7 +121,7 @@ export default async function MarketingPage({
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/72">전문가 협업 마인드맵</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">필요한 전문가들이 한 사건에 모이고, 의뢰인과의 소통까지 하나로 이어집니다.</h2>
             <p className="mx-auto mt-3 max-w-4xl text-sm leading-7 text-slate-300">
-              법률, 추심, 보험, 금융, 부동산 실무는 실제 현장에서 자주 함께 움직입니다. VEIN SPIRAL은 이 연결을 한 사건 안으로 모아,
+              법률, 추심, 보험, 금융, 부동산 실무는 실제 현장에서 자주 함께 움직입니다. {BRAND.marketingNarrativeName}은 이 연결을 한 사건 안으로 모아,
               전문가 간 협업과 의뢰인과의 사건 진행 소통이 끊기지 않게 이어지도록 설계됩니다.
             </p>
           </div>

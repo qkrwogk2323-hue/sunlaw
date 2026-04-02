@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
-import { ResendInvitationForm } from '@/components/forms/resend-invitation-form';
 import { ClientAddModal } from '@/components/client-add-modal';
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
@@ -56,7 +55,8 @@ export default async function ClientsPage({
   const queryFilter = `${resolvedSearchParams?.q ?? ''}`.trim().toLowerCase();
   const issuedClientLoginId = resolvedSearchParams?.issuedClientLoginId;
   const issuedClientTempPassword = cookieStore.get('_vs_issued_pw')?.value ?? null;
-  if (issuedClientTempPassword) cookieStore.delete('_vs_issued_pw');
+  // NOTE: cookie 삭제는 Server Component에서 불가 — Server Action 또는 Route Handler에서 처리해야 함
+  // cookieStore.delete()를 여기서 호출하면 Server Components 렌더링 에러 발생
   const clientInviteSummaryRaw = cookieStore.get('_vs_client_invite_summary')?.value ?? null;
   const issuedOrgName = resolvedSearchParams?.issuedOrgName ?? (organizationId ? (auth.memberships.find((membership) => membership.organization_id === organizationId)?.organization?.name ?? '현재 조직') : '현재 조직');
   const clientInviteSummary = (() => {
@@ -116,11 +116,6 @@ export default async function ClientsPage({
         </div>
         {/* row 2: compact details */}
         {item.email ? <p className="relative z-10 mt-1 truncate text-xs text-slate-500">{item.email}</p> : null}
-        {canManage && item.source === 'invite' && item.invitationId ? (
-          <div className="relative z-20 mt-2">
-            <ResendInvitationForm invitationId={item.invitationId} />
-          </div>
-        ) : null}
       </div>
     );
   }
@@ -138,7 +133,6 @@ export default async function ClientsPage({
               <ClientAddModal
                 organizationId={organizationId}
                 cases={cases.map((item: any) => ({ id: item.id, title: item.title, referenceNo: item.reference_no ?? null }))}
-                roster={roster}
               />
               <LogButton
                 organizationId={organizationId}
@@ -245,7 +239,7 @@ export default async function ClientsPage({
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
                   <p className="text-sm font-medium text-slate-700">의뢰인 데이터가 없습니다.</p>
-                  <p className="mt-2 text-sm text-slate-500">상단 작업 버튼에서 기본 초대, 임시 계정 발급, CSV 등록 중 필요한 방식으로 첫 의뢰인을 등록해 주세요.</p>
+                  <p className="mt-2 text-sm text-slate-500">상단 작업 버튼에서 의뢰인 추가, 임시 계정 발급, CSV 등록 중 필요한 방식으로 첫 의뢰인을 등록해 주세요.</p>
                 </div>
               )}
             </CardContent>

@@ -9,10 +9,10 @@ export function ClientPreRegisterForm({ organizationId, cases }: { organizationI
   return (
     <ClientActionForm action={createClientPreRegisteredInvitationAction} successTitle="의뢰인 임시 계정이 발급되었습니다." successMessage="생성된 아이디와 비밀번호를 의뢰인에게 전달해 주세요." className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="relationLabel" value="기타" />
       <Input name="name" placeholder="이름" required />
       <Input name="email" type="email" placeholder="연락 이메일(선택)" />
       <Input name="phone" placeholder="연락처(선택)" />
-      <Input name="relationLabel" placeholder="관계(선택)" />
       <div className="md:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">연결 예정 사건(선택)</label>
         <select name="caseId" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
