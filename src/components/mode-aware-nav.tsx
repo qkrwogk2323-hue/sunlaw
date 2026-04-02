@@ -294,6 +294,7 @@ function ModeNavItem({
   return (
     <Link
       href={safeHref}
+      prefetch={false}
       onClick={(event) => {
         if (!interactionKey || !onNavigateByKey) return;
         event.preventDefault();
@@ -432,6 +433,7 @@ function MobileSectionBar({
                   <Link
                     key={item.href}
                     href={safeHref as Route}
+                    prefetch={false}
                     onClick={(event) => {
                       if (item.interactionKey) {
                         event.preventDefault();
@@ -724,6 +726,7 @@ export function ModeAwareNav({
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">사용자</p>
                 <Link
                   href={ROUTES.SETTINGS_TEAM_SELF}
+                  prefetch={false}
                   aria-label="본인 정보 변경"
                   className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                 >
