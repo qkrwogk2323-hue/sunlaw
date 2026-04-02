@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, ScrollText, Sparkles, ThumbsDown } from 'lucide-react';
 import { addScheduleAction, updateScheduleAction, updateScheduleCompletionAction, updateScheduleCancellationAction } from '@/lib/actions/case-actions';
+import { fetchCalendarMonthAction } from '@/lib/actions/calendar-actions';
 import type { ScheduleBriefing } from '@/lib/ai/schedule-briefing';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { billingStatusLabel, labelFrom } from '@/lib/status-labels';
@@ -408,15 +409,28 @@ export function CalendarBoardClient({
   briefing?: ScheduleBriefing;
   bulkUploadAction: (organizationId: string, csvText: string) => Promise<import('@/lib/actions/bulk-upload-actions').BulkUploadResult>;
 }) {
+  const [liveSnapshot, setLiveSnapshot] = useState(snapshot);
+  const [isNavigating, startNavTransition] = useTransition();
   const [kindFilter, setKindFilter] = useState<'all' | 'work' | 'meeting' | 'other'>('all');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [createCaseId, setCreateCaseId] = useState(caseOptions[0]?.id ?? '');
   const [createTitle, setCreateTitle] = useState('');
   const [createKind, setCreateKind] = useState('');
   const [createFormOpen, setCreateFormOpen] = useState(false);
-  const [createScheduledStart, setCreateScheduledStart] = useState(() => toDateInput(snapshot.schedules[0]?.scheduled_start) || toDateTimeInputFromDateKey(toLocalDateKey(new Date())));
-  const [monthJump, setMonthJump] = useState(snapshot.focusMonth);
+  const [createScheduledStart, setCreateScheduledStart] = useState(() => toDateInput(liveSnapshot.schedules[0]?.scheduled_start) || toDateTimeInputFromDateKey(toLocalDateKey(new Date())));
+  const [monthJump, setMonthJump] = useState(liveSnapshot.focusMonth);
   const [currentMoment] = useState(() => new Date());
+
+  const navigateMonth = (targetMonth: string) => {
+    startNavTransition(async () => {
+      const result = await fetchCalendarMonthAction(targetMonth);
+      if (result.ok) {
+        setLiveSnapshot(result.snapshot as unknown as Snapshot);
+        setMonthJump(targetMonth);
+        window.history.replaceState(null, '', `/calendar?month=${targetMonth}`);
+      }
+    });
+  };
   const [recentEntryCutoff] = useState(() => Date.now() - 1000 * 60 * 60 * 48);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [aiHelperOpen, setAiHelperOpen] = useState(false);
@@ -431,7 +445,7 @@ export function CalendarBoardClient({
   }, [currentMoment]);
 
   const entries = useMemo<UnifiedEntry[]>(() => {
-    const scheduleEntries = snapshot.schedules.map((item) => {
+    const scheduleEntries = liveSnapshot.schedules.map((item) => {
       const updatedSource = item.updated_at || item.created_at || item.scheduled_start;
       const isNew = Boolean(item.case_id) && new Date(updatedSource || item.scheduled_start).getTime() >= recentEntryCutoff;
       return {
@@ -456,7 +470,7 @@ export function CalendarBoardClient({
       };
     });
 
-    const requestEntries = snapshot.requests
+    const requestEntries = liveSnapshot.requests
       .filter((item) => item.due_at)
       .map((item) => ({
         id: item.id,
@@ -475,7 +489,7 @@ export function CalendarBoardClient({
         completedByName: null
       }));
 
-    const billingEntries = snapshot.billingEntries
+    const billingEntries = liveSnapshot.billingEntries
       .filter((item) => item.due_on)
       .map((item) => ({
         id: item.id,
@@ -495,7 +509,7 @@ export function CalendarBoardClient({
       }));
 
     return [...scheduleEntries, ...requestEntries, ...billingEntries].sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
-  }, [currentUserId, recentEntryCutoff, snapshot.billingEntries, snapshot.requests, snapshot.schedules]);
+  }, [currentUserId, recentEntryCutoff, liveSnapshot.billingEntries, liveSnapshot.requests, liveSnapshot.schedules]);
 
   const summary = {
     today: entries.filter((entry) => toLocalDateKey(entry.when) === todayKey).length,
@@ -504,8 +518,8 @@ export function CalendarBoardClient({
     new: entries.filter((entry) => entry.isNew).length
   };
 
-  const prevMonth = monthShift(snapshot.focusMonth, -1);
-  const nextMonth = monthShift(snapshot.focusMonth, 1);
+  const prevMonth = monthShift(liveSnapshot.focusMonth, -1);
+  const nextMonth = monthShift(liveSnapshot.focusMonth, 1);
   const createScheduleAction = createCaseId ? addScheduleAction.bind(null, createCaseId) : async () => {};
   const startOfToday = useMemo(() => {
     const date = new Date(currentMoment);
@@ -906,15 +920,15 @@ export function CalendarBoardClient({
               />
             </label>
             <div className="mt-3 flex gap-2">
-              <Link href={`/calendar?month=${prevMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+              <button type="button" disabled={isNavigating} onClick={() => navigateMonth(prevMonth)} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 disabled:opacity-50" aria-label="이전 월">
                 <ChevronLeft className="size-4" />
-              </Link>
-              <Link href={`/calendar?month=${monthJump}` as Route} className="inline-flex h-9 flex-[2] items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
-                보기
-              </Link>
-              <Link href={`/calendar?month=${nextMonth}` as Route} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700">
+              </button>
+              <button type="button" disabled={isNavigating} onClick={() => navigateMonth(monthJump)} className="inline-flex h-9 flex-[2] items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 disabled:opacity-50" aria-label="선택한 월로 이동">
+                {isNavigating ? '이동 중…' : '보기'}
+              </button>
+              <button type="button" disabled={isNavigating} onClick={() => navigateMonth(nextMonth)} className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 disabled:opacity-50" aria-label="다음 월">
                 <ChevronRight className="size-4" />
-              </Link>
+              </button>
             </div>
           </div>
           <button

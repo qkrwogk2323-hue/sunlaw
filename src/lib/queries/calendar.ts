@@ -91,11 +91,10 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     billingQuery = billingQuery.eq('organization_id', organizationId);
   }
 
-  const [{ data: schedules }, { data: requests }, { data: billingEntries }] = await Promise.all([
-    schedulesQuery,
-    requestsQuery,
-    billingQuery
-  ]);
+  // 직렬 실행: Vercel Hobby 동시 함수 제한에 걸리지 않도록
+  const { data: schedules } = await schedulesQuery;
+  const { data: requests } = await requestsQuery;
+  const { data: billingEntries } = await billingQuery;
 
   return {
     focusMonth: `${focusMonth.getFullYear()}-${`${focusMonth.getMonth() + 1}`.padStart(2, '0')}`,

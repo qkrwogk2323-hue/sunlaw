@@ -24,10 +24,9 @@ export default async function CalendarPage({
     )
   );
 
-  const [calendarSnapshot, caseOptions] = await Promise.all([
-    getCalendarBoardSnapshot(organizationId, month),
-    getCaseOptionsForCalendar(organizationId),
-  ]);
+  // 직렬 실행: Vercel Hobby 동시 함수 제한 회피
+  const calendarSnapshot = await getCalendarBoardSnapshot(organizationId, month);
+  const caseOptions = await getCaseOptionsForCalendar(organizationId);
 
   const briefing = buildScheduleBriefing(
     calendarSnapshot.schedules,
