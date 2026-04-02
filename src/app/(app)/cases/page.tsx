@@ -7,7 +7,7 @@ import { CaseCreateForm } from '@/components/forms/case-create-form';
 import { forceDeleteCaseAction, moveCaseToDeletedAction, restoreCaseAction } from '@/lib/actions/case-actions';
 import { getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { getCaseClientLinkedMap, getCasesPageBuckets } from '@/lib/queries/cases';
+import { getCaseClientLinkedMap, getCasesPageBucketsForAuth } from '@/lib/queries/cases';
 import { resolveOrganizationCasePolicies } from '@/lib/case-scope';
 import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
@@ -101,7 +101,7 @@ export default async function CasesPage({
     (m) => m.organization_id === currentOrganizationId
   )?.organization?.name ?? null;
 
-  const { selectedCases, counts } = await getCasesPageBuckets(currentOrganizationId, bucket);
+  const { selectedCases, counts } = await getCasesPageBucketsForAuth(auth, currentOrganizationId, bucket);
   const filteredCases = selectedCases.filter((item: any) => {
     if (!queryFilter) return true;
     const haystack = `${item.title ?? ''} ${item.reference_no ?? ''} ${item.case_number ?? ''}`.toLowerCase();

@@ -1,16 +1,21 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { requireAuthenticatedUser } from '@/lib/auth';
+import type { AuthContext } from '@/lib/types';
 import { getCaseScopeAccess } from '@/lib/case-scope';
 
 type CaseBucket = 'active' | 'completed' | 'deleted' | 'all';
 
 const COMPLETED_CASE_STATUSES = ['closed', 'archived'];
 
-async function getCaseListContext(organizationId?: string | null) {
-  const auth = await requireAuthenticatedUser();
+async function buildCaseListContext(auth: AuthContext, organizationId?: string | null) {
   const scope = await getCaseScopeAccess(auth, organizationId);
   const supabase = await createSupabaseServerClient();
   return { auth, scope, supabase };
+}
+
+async function getCaseListContext(organizationId?: string | null) {
+  const auth = await requireAuthenticatedUser();
+  return buildCaseListContext(auth, organizationId);
 }
 
 function applyCaseBucketFilters(query: any, bucket: CaseBucket) {
@@ -108,11 +113,12 @@ export async function countCasesByBucket(
   return count ?? 0;
 }
 
-export async function getCasesPageBuckets(
+async function loadCasesPageBuckets(
+  context: Awaited<ReturnType<typeof buildCaseListContext>>,
   organizationId?: string | null,
   selectedBucket: Exclude<CaseBucket, 'all'> = 'active'
 ) {
-  const { scope, supabase } = await getCaseListContext(organizationId);
+  const { scope, supabase } = context;
 
   const buildListQuery = (bucket: CaseBucket) => {
     let query = applyCaseBucketFilters(supabase
@@ -169,6 +175,21 @@ export async function getCasesPageBuckets(
       deleted: deletedCount ?? 0,
     }
   };
+}
+
+export async function getCasesPageBuckets(
+  organizationId?: string | null,
+  selectedBucket: Exclude<CaseBucket, 'all'> = 'active'
+) {
+  return loadCasesPageBuckets(await getCaseListContext(organizationId), organizationId, selectedBucket);
+}
+
+export async function getCasesPageBucketsForAuth(
+  auth: AuthContext,
+  organizationId?: string | null,
+  selectedBucket: Exclude<CaseBucket, 'all'> = 'active'
+) {
+  return loadCasesPageBuckets(await buildCaseListContext(auth, organizationId), organizationId, selectedBucket);
 }
 
 export async function getCaseClientLinkedMap(caseIds: string[]) {

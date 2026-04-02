@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import type { AuthContext } from '@/lib/types';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
@@ -217,7 +218,7 @@ const EMPTY_SECONDARY: DashboardSecondaryPanels = {
 };
 
 type DashboardQueryContext = {
-  auth: NonNullable<Awaited<ReturnType<typeof getCurrentAuth>>>;
+  auth: AuthContext;
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   organizationId?: string | null;
   allowedCaseIds: string[];
@@ -228,11 +229,10 @@ type DashboardQueryContext = {
   inThirtyDays: string;
 };
 
-const getDashboardQueryContext = cache(async (organizationId?: string | null): Promise<DashboardQueryContext | null> => {
-  const auth = await getCurrentAuth();
-  if (!auth) {
-    return null;
-  }
+async function buildDashboardQueryContext(
+  auth: AuthContext,
+  organizationId?: string | null
+): Promise<DashboardQueryContext | null> {
   const caseScope = await getCaseScopeAccess(auth, organizationId);
   const hasRestrictedScope = caseScope.restrictedOrganizationIds.length > 0;
   const allowedCaseIds = caseScope.assignedCaseIds;
@@ -257,10 +257,17 @@ const getDashboardQueryContext = cache(async (organizationId?: string | null): P
     inSevenDays: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     inThirtyDays: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
   };
+}
+
+const getDashboardQueryContext = cache(async (organizationId?: string | null): Promise<DashboardQueryContext | null> => {
+  const auth = await getCurrentAuth();
+  if (!auth) {
+    return null;
+  }
+  return buildDashboardQueryContext(auth, organizationId);
 });
 
-const getDashboardCoreSections = cache(async (organizationId?: string | null) => {
-  const context = await getDashboardQueryContext(organizationId);
+async function loadDashboardCoreSections(context: DashboardQueryContext | null) {
   if (!context) {
     return {
       summary: EMPTY_SUMMARY,
@@ -271,6 +278,7 @@ const getDashboardCoreSections = cache(async (organizationId?: string | null) =>
   const {
     auth,
     supabase,
+    organizationId,
     allowedCaseIds,
     hasRestrictedScope,
     now,
@@ -313,27 +321,27 @@ const getDashboardCoreSections = cache(async (organizationId?: string | null) =>
     .select('id, title, reference_no, case_status, case_type, stage_key, updated_at, principal_amount')
     .neq('lifecycle_status', 'soft_deleted')
     .order('updated_at', { ascending: false })
-    .limit(6);
+    .limit(5);
 
   let caseOptionsQuery = supabase
     .from('cases')
     .select('id, title, reference_no, case_status')
     .neq('lifecycle_status', 'soft_deleted')
     .order('updated_at', { ascending: false })
-    .limit(20);
+    .limit(12);
 
   let recentRequestsQuery = supabase
     .from('case_requests')
     .select('id, title, body, status, request_kind, due_at, case_id, cases(title)')
     .in('status', ['open', 'in_review', 'waiting_client'])
     .order('created_at', { ascending: false })
-    .limit(6);
+    .limit(4);
 
   let recentMessagesQuery = supabase
     .from('case_messages')
     .select('id, body, is_internal, created_at, sender_role, sender_profile_id, case_id, cases(title), sender:profiles(full_name)')
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(20);
 
   let monthlyHighlightsQuery = supabase
     .from('case_schedules')
@@ -341,7 +349,7 @@ const getDashboardCoreSections = cache(async (organizationId?: string | null) =>
     .gte('scheduled_start', now.toISOString())
     .lte('scheduled_start', inThirtyDays)
     .order('scheduled_start', { ascending: true })
-    .limit(8);
+    .limit(6);
 
   let teamMembersQuery = supabase
     .from('organization_memberships')
@@ -362,7 +370,7 @@ const getDashboardCoreSections = cache(async (organizationId?: string | null) =>
     .is('deleted_at', null)
     .in('status', ['draft', 'issued', 'partial'])
     .order('due_on', { ascending: true, nullsFirst: false })
-    .limit(5);
+    .limit(4);
 
   let unreadNotificationsQuery = supabase
     .from('notifications')
@@ -372,7 +380,7 @@ const getDashboardCoreSections = cache(async (organizationId?: string | null) =>
     .eq('status', 'active')
     .is('read_at', null);
 
-  const unreadNotificationItemsPromise = getDashboardRecentNotifications(organizationId, 5);
+  const unreadNotificationItemsPromise = getDashboardRecentNotifications(organizationId, 4);
 
   let clientAccessQueueQuery = supabase
     .from('client_access_requests')
@@ -502,6 +510,11 @@ const getDashboardCoreSections = cache(async (organizationId?: string | null) =>
     summary,
     queues
   };
+}
+
+const getDashboardCoreSections = cache(async (organizationId?: string | null) => {
+  const context = await getDashboardQueryContext(organizationId);
+  return loadDashboardCoreSections(context);
 });
 
 export async function getDashboardSummary(organizationId?: string | null) {
@@ -642,6 +655,15 @@ export async function getDashboardSecondaryPanels(organizationId?: string | null
     partnerContacts,
     organizationConversations: [],
     recentWorkItems
+  };
+}
+
+export async function getDashboardInitialSnapshotForAuth(auth: AuthContext, organizationId?: string | null) {
+  const core = await loadDashboardCoreSections(await buildDashboardQueryContext(auth, organizationId));
+  return {
+    ...core.summary,
+    ...core.queues,
+    ...EMPTY_SECONDARY
   };
 }
 

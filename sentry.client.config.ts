@@ -1,23 +1,5 @@
-import * as Sentry from '@sentry/nextjs';
-
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  environment: process.env.NEXT_PUBLIC_APP_ENV ?? 'development',
-
-  // 프로덕션에서만 에러 전송
-  enabled: process.env.NODE_ENV === 'production',
-
-  // 성능 트레이싱: 10% 샘플링
-  tracesSampleRate: 0.1,
-
-  // 세션 리플레이: 에러 발생 시만 녹화
-  replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0,
-
-  integrations: [
-    Sentry.replayIntegration({
-      maskAllText: true,      // PII 마스킹 (주민번호 등 노출 방지)
-      blockAllMedia: true,
-    }),
-  ],
-});
+// Sentry 클라이언트 초기화는 instrumentation-client.ts에서 수행합니다.
+// 이 파일에서 중복 초기화하면 "Multiple Sentry Session Replay instances"
+// 에러가 발생하여 React 하이드레이션이 깨집니다.
+//
+// 참고: Next.js 16에서는 instrumentation-client.ts가 공식 클라이언트 초기화 경로입니다.
