@@ -1280,19 +1280,23 @@ export async function addScheduleAction(caseId: string, formData: FormData) {
   }
 
   if (parsed.isImportant || parsed.scheduleKind === 'hearing' || parsed.scheduleKind === 'deadline') {
-    await notifyBillingStakeholders({
-      supabase,
-      organizationId: caseRecord.organization_id,
-      caseId,
-      actorId: auth.user.id,
-      title: `[일정] ${parsed.title}`,
-      body: `${caseRecord.title} 사건에 ${parsed.scheduleKind === 'hearing' ? '기일' : parsed.scheduleKind === 'deadline' ? '기한' : '중요 일정'}이 등록되었습니다: ${parsed.title}${parsed.scheduledStart ? ` · ${parsed.scheduledStart}` : ''}`,
-      payload: {
-        source: 'schedule_created',
-        schedule_kind: parsed.scheduleKind,
-        scheduled_start: parsed.scheduledStart
-      }
-    });
+    try {
+      await notifyBillingStakeholders({
+        supabase,
+        organizationId: caseRecord.organization_id,
+        caseId,
+        actorId: auth.user.id,
+        title: `[일정] ${parsed.title}`,
+        body: `${caseRecord.title} 사건에 ${parsed.scheduleKind === 'hearing' ? '기일' : parsed.scheduleKind === 'deadline' ? '기한' : '중요 일정'}이 등록되었습니다: ${parsed.title}${parsed.scheduledStart ? ` · ${parsed.scheduledStart}` : ''}`,
+        payload: {
+          source: 'schedule_created',
+          schedule_kind: parsed.scheduleKind,
+          scheduled_start: parsed.scheduledStart
+        }
+      });
+    } catch (notifyError) {
+      console.error('[addScheduleAction] 일정 알림 발송 실패 (일정 생성은 완료됨):', notifyError);
+    }
   }
 
   revalidatePath(`/cases/${caseId}`);

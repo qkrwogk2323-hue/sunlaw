@@ -166,23 +166,30 @@ export async function createCaseHubAction(formData: FormData) {
     });
   }
 
-  // 생성자를 owner로 자동 추가
-  await admin.from('case_hub_members').insert({
-    hub_id: hub.id,
-    profile_id: auth.profile.id,
-    membership_role: 'owner',
-    access_level: 'full',
-    seat_kind: 'collaborator',
-    is_ready: false
-  });
+  // 생성자를 owner로 자동 추가 + 활동 로그 (병렬 실행)
+  const [memberResult, activityResult] = await Promise.all([
+    admin.from('case_hub_members').insert({
+      hub_id: hub.id,
+      profile_id: auth.profile.id,
+      membership_role: 'owner',
+      access_level: 'full',
+      seat_kind: 'collaborator',
+      is_ready: false
+    }),
+    admin.from('case_hub_activity').insert({
+      hub_id: hub.id,
+      actor_profile_id: auth.profile.id,
+      action: 'hub_created',
+      payload: { title, collaborator_limit: collaboratorLimit, viewer_limit: viewerLimit }
+    })
+  ]);
 
-  // 활동 로그
-  await admin.from('case_hub_activity').insert({
-    hub_id: hub.id,
-    actor_profile_id: auth.profile.id,
-    action: 'hub_created',
-    payload: { title, collaborator_limit: collaboratorLimit, viewer_limit: viewerLimit }
-  });
+  if (memberResult.error) {
+    console.error('[createCaseHubAction] 허브 멤버 추가 실패:', memberResult.error);
+  }
+  if (activityResult.error) {
+    console.error('[createCaseHubAction] 활동 로그 기록 실패:', activityResult.error);
+  }
 
   revalidatePath('/cases');
   revalidatePath('/case-hubs');

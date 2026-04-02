@@ -2789,6 +2789,19 @@ export async function createOrganizationCollaborationRequestAction(formData: For
 
   const sourceOrganization = sourceOrgResponse.data;
 
+  // 같은 사용자가 대상 조직의 관리자인 경우 차단
+  const isTargetOrgMember = auth.memberships.some(
+    (m) => m.organization_id === parsed.targetOrganizationId
+  );
+  if (isTargetOrgMember) {
+    throwGuardFeedback(createConditionFailedFeedback({
+      code: 'COLLABORATION_SELF_MEMBER',
+      blocked: '본인이 소속된 조직에는 협업 제안을 보낼 수 없습니다.',
+      cause: '현재 사용자가 대상 조직의 구성원입니다.',
+      resolution: '다른 조직을 선택하거나, 대상 조직의 관리자에게 직접 요청해 주세요.'
+    }));
+  }
+
   if (existingHub?.id) {
     throwGuardFeedback(createConditionFailedFeedback({
       code: 'COLLABORATION_HUB_ALREADY_EXISTS',

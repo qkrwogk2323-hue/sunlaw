@@ -97,7 +97,13 @@ export async function POST() {
   }));
 
   const { error } = await admin.from('notifications').insert(rows);
-  if (error) throw error;
+  if (error) {
+    // 유니크 인덱스 위반(23505)이면 이미 당일 발송된 것 — 중복 무시
+    if (error.code === '23505') {
+      return NextResponse.json({ ok: true, sent: false, reason: 'already_sent_today' });
+    }
+    throw error;
+  }
 
   return NextResponse.json({ ok: true, sent: true, recipients: recipients.length });
 }
