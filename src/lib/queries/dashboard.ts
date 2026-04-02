@@ -721,16 +721,15 @@ export async function getDashboardStats(organizationId?: string | null): Promise
       .neq('lifecycle_status', 'soft_deleted')
       .in('case_status', ['active', 'pending']),
     supabase
-      .from('documents')
+      .from('case_documents')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
-      .neq('lifecycle_status', 'soft_deleted')
+      .is('deleted_at', null)
       .in('approval_status', ['pending', 'draft']),
     supabase
-      .from('requests')
+      .from('case_requests')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
-      .neq('lifecycle_status', 'soft_deleted')
       .in('status', ['pending', 'open']),
     supabase
       .from('billing_entries')

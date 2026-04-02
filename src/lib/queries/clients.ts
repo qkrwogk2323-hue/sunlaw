@@ -7,7 +7,8 @@ export async function listClients(organizationId?: string | null) {
   let query = supabase
     .from('case_clients')
     .select('id, organization_id, case_id, client_name, client_email_snapshot, relation_label, is_portal_enabled, link_status, created_at, cases(title)')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (organizationId) query = query.eq('organization_id', organizationId);
 

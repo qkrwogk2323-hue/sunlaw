@@ -65,6 +65,7 @@ export async function getCollectionsWorkspace(organizationId?: string | null, pe
     .from('cases')
     .select('id, title, reference_no, case_status, stage_key, principal_amount, updated_at, module_flags')
     .eq('case_type', 'debt_collection')
+    .neq('lifecycle_status', 'soft_deleted')
     .order('updated_at', { ascending: false })
     .limit(50);
 
