@@ -288,24 +288,24 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
 
   let casesCountQuery = supabase
     .from('cases')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .not('case_status', 'in', '(closed,archived)')
     .neq('lifecycle_status', 'soft_deleted');
 
   let pendingDocumentsQuery = supabase
     .from('case_documents')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('approval_status', 'pending_review')
     .is('deleted_at', null);
 
   let requestCountQuery = supabase
     .from('case_requests')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .in('status', ['open', 'in_review', 'waiting_client']);
 
   let messageCountQuery = supabase
     .from('case_messages')
-    .select('*', { count: 'exact', head: true });
+    .select('id', { count: 'exact', head: true });
 
   let immutableDeadlinesQuery = supabase
     .from('case_schedules')
@@ -360,7 +360,7 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
 
   let pendingBillingCountQuery = supabase
     .from('billing_entries')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .is('deleted_at', null)
     .in('status', ['draft', 'issued', 'partial']);
 
