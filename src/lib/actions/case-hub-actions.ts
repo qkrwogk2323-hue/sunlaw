@@ -88,26 +88,29 @@ export async function createCaseHubAction(formData: FormData) {
     throw new Error('해당 사건을 찾을 수 없습니다. 사건 정보를 확인해 주세요.');
   }
 
-  // 의뢰인 연결 확인
+  // 의뢰인 연결 확인 (linked/pending_unlink만 유효)
   const { data: clients } = await admin
     .from('case_clients')
-    .select('id, profile_id')
+    .select('id, profile_id, link_status')
     .eq('case_id', caseId)
+    .in('link_status', ['linked', 'pending_unlink'])
     .limit(1);
 
   if (!clients?.length) {
     throw new Error('사건에 연결된 의뢰인이 없습니다. 먼저 의뢰인을 연결해 주세요.');
   }
 
-  // 중복 허브 확인 (case_id UNIQUE)
+  // 중복 허브 확인 (case_id UNIQUE — soft_deleted 포함)
   const { data: existing } = await admin
     .from('case_hubs')
-    .select('id')
+    .select('id, lifecycle_status')
     .eq('case_id', caseId)
-    .eq('lifecycle_status', 'active')
     .maybeSingle();
 
   if (existing) {
+    if (existing.lifecycle_status === 'soft_deleted') {
+      throw new Error('이 사건에 삭제된 허브가 존재합니다. 보관함에서 복구하거나 관리자에게 문의해 주세요.');
+    }
     throw new Error('이 사건에는 이미 허브가 존재합니다. 허브 입장을 이용해 주세요.');
   }
 
@@ -120,6 +123,7 @@ export async function createCaseHubAction(formData: FormData) {
       .select('id, profile_id')
       .eq('case_id', caseId)
       .eq('profile_id', primaryClientProfileId)
+      .in('link_status', ['linked', 'pending_unlink'])
       .maybeSingle();
     resolvedPrimaryClientId = clientRow?.profile_id ?? null;
     resolvedPrimaryClientCaseClientId = clientRow?.id ?? null;
@@ -154,6 +158,7 @@ export async function createCaseHubAction(formData: FormData) {
     .single();
 
   if (insertError) {
+    console.error('[createCaseHubAction] 허브 insert 실패:', JSON.stringify(insertError));
     if (insertError.code === '23505') {
       throw new Error('이 사건에는 이미 허브가 존재합니다. 허브 입장을 이용해 주세요.');
     }

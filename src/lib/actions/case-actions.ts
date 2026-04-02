@@ -1252,9 +1252,9 @@ export async function addScheduleAction(caseId: string, formData: FormData) {
     title: formData.get('title'),
     scheduleKind: formData.get('scheduleKind'),
     scheduledStart: formData.get('scheduledStart'),
-    scheduledEnd: formData.get('scheduledEnd'),
-    location: formData.get('location'),
-    notes: formData.get('notes'),
+    scheduledEnd: formData.get('scheduledEnd') ?? undefined,
+    location: formData.get('location') ?? undefined,
+    notes: formData.get('notes') ?? undefined,
     clientVisibility: formData.get('clientVisibility'),
     isImportant: formData.get('isImportant') === 'on'
   });
@@ -1326,9 +1326,9 @@ export async function updateScheduleAction(scheduleId: string, formData: FormDat
     title: formData.get('title'),
     scheduleKind: formData.get('scheduleKind'),
     scheduledStart: formData.get('scheduledStart'),
-    scheduledEnd: formData.get('scheduledEnd'),
-    location: formData.get('location'),
-    notes: formData.get('notes'),
+    scheduledEnd: formData.get('scheduledEnd') ?? undefined,
+    location: formData.get('location') ?? undefined,
+    notes: formData.get('notes') ?? undefined,
     clientVisibility: formData.get('clientVisibility'),
     isImportant: formData.get('isImportant') === 'on'
   });
