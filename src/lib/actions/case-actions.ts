@@ -370,7 +370,8 @@ async function createCaseCoreWrite({
   summary,
   actorId,
   actorName,
-  organizationSlug
+  organizationSlug,
+  insolvencySubtype
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   organizationId: string;
@@ -384,6 +385,7 @@ async function createCaseCoreWrite({
   actorId: string;
   actorName?: string | null;
   organizationSlug?: string | null;
+  insolvencySubtype?: string | null;
 }): Promise<CreateCaseCoreWriteResult> {
   const referenceNo = buildCaseReference(organizationSlug ?? 'CASE');
   const stageTemplateKey = caseType === 'debt_collection'
@@ -392,30 +394,41 @@ async function createCaseCoreWrite({
       ? 'civil-default'
       : caseType === 'criminal'
         ? 'criminal-default'
-        : 'general-default';
-  const moduleFlags = caseType === 'debt_collection' ? { billing: true, collection: true } : { billing: true };
+        : caseType === 'insolvency'
+          ? 'general-default'
+          : 'general-default';
+  const moduleFlags: Record<string, boolean> = caseType === 'debt_collection'
+    ? { billing: true, collection: true }
+    : caseType === 'insolvency'
+      ? { billing: true, insolvency: true }
+      : { billing: true };
 
   // Step 1: Insert case
+  const insertPayload: Record<string, unknown> = {
+    organization_id: organizationId,
+    reference_no: referenceNo,
+    title,
+    case_type: caseType,
+    case_status: 'intake',
+    lifecycle_status: 'active',
+    stage_template_key: stageTemplateKey,
+    stage_key: 'intake',
+    module_flags: moduleFlags,
+    principal_amount: principalAmount,
+    opened_on: openedOn || null,
+    court_name: courtName || null,
+    case_number: caseNumber || null,
+    summary: summary || null,
+    created_by: actorId,
+    updated_by: actorId,
+  };
+  if (insolvencySubtype) {
+    insertPayload.insolvency_subtype = insolvencySubtype;
+  }
+
   const { data: caseRow, error: caseError } = await supabase
     .from('cases')
-    .insert({
-      organization_id: organizationId,
-      reference_no: referenceNo,
-      title,
-      case_type: caseType,
-      case_status: 'intake',
-      lifecycle_status: 'active',
-      stage_template_key: stageTemplateKey,
-      stage_key: 'intake',
-      module_flags: moduleFlags,
-      principal_amount: principalAmount,
-      opened_on: openedOn || null,
-      court_name: courtName || null,
-      case_number: caseNumber || null,
-      summary: summary || null,
-      created_by: actorId,
-      updated_by: actorId,
-    })
+    .insert(insertPayload)
     .select('id')
     .single();
 
@@ -546,6 +559,9 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
     const supabase = await createSupabaseServerClient();
 
     const organization = auth.memberships.find((item) => item.organization_id === parsed.data.organizationId)?.organization;
+    const insolvencySubtype = parsed.data.caseType === 'insolvency'
+      ? `${formData.get('insolvencySubtype') ?? ''}`.trim() || null
+      : null;
     const writeResult = await createCaseCoreWrite({
       supabase,
       organizationId: parsed.data.organizationId,
@@ -558,7 +574,8 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
       summary: parsed.data.summary,
       actorId: auth.user.id,
       actorName: auth.profile.full_name,
-      organizationSlug: organization?.slug ?? null
+      organizationSlug: organization?.slug ?? null,
+      insolvencySubtype
     });
 
     if (!writeResult.ok) {

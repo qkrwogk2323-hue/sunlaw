@@ -46,6 +46,7 @@ export function CaseCreateForm({
     summary: ''
   });
 
+  const [caseType, setCaseType] = useState('civil');
   const defaultOrganization = useMemo(
     () => defaultOrganizationId ?? organizations[0]?.id ?? '',
     [defaultOrganizationId, organizations]
@@ -196,7 +197,8 @@ export function CaseCreateForm({
           <select
             id="case-type"
             name="caseType"
-            defaultValue="civil"
+            value={caseType}
+            onChange={(e) => setCaseType(e.target.value)}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             aria-label="사건 유형"
           >
@@ -205,6 +207,7 @@ export function CaseCreateForm({
             <option value="execution">민사집행</option>
             <option value="injunction">가처분·보전</option>
             <option value="criminal">형사</option>
+            <option value="insolvency">도산(회생·파산)</option>
             <option value="advisory">자문</option>
             <option value="other">기타</option>
           </select>
@@ -226,6 +229,26 @@ export function CaseCreateForm({
           />
         </div>
       </div>
+
+      {caseType === 'insolvency' && (
+        <div className="space-y-1">
+          <label htmlFor="insolvency-subtype" className="text-sm font-medium text-slate-700">
+            도산 세부유형 <span className="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="insolvency-subtype"
+            name="insolvencySubtype"
+            defaultValue="individual_rehabilitation"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            aria-label="도산 세부유형"
+          >
+            <option value="individual_rehabilitation">개인회생</option>
+            <option value="individual_bankruptcy">개인파산</option>
+            <option value="corporate_rehabilitation">법인회생</option>
+            <option value="corporate_bankruptcy">법인파산</option>
+          </select>
+        </div>
+      )}
 
       {/* 선택 항목 */}
       <div className="grid gap-3 md:grid-cols-2">

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { formatResidentRegistrationNumberMasked, isValidKoreanBusinessNumber, isValidResidentRegistrationNumber, normalizeBusinessNumber, normalizeResidentRegistrationNumber } from '@/lib/format';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 
-const caseTypeEnum = z.enum(['civil', 'debt_collection', 'execution', 'injunction', 'criminal', 'advisory', 'other']);
+const caseTypeEnum = z.enum(['civil', 'debt_collection', 'execution', 'injunction', 'criminal', 'advisory', 'insolvency', 'other']);
 const maxSignupDocumentSize = 10 * 1024 * 1024;
 const allowedSignupDocumentMimeTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 const allowedSignupDocumentExtensions = new Set(['pdf', 'png', 'jpg', 'jpeg']);
