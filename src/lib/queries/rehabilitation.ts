@@ -6,20 +6,64 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /** DB → 폼 필드 역매핑 (신청서) */
 function mapApplicationDbToForm(row: Record<string, unknown>) {
-  const addr = (row.registered_address as Record<string, string>) || {};
+  // ─── 주소 jsonb 파싱 헬퍼 ───
+  const parseAddr = (raw: unknown) => {
+    if (!raw || typeof raw !== 'object') return { address: '', detail: '', postal_code: '' };
+    const obj = raw as Record<string, string>;
+    return { address: obj.address || '', detail: obj.detail || '', postal_code: obj.postal_code || '' };
+  };
+
+  const regAddr = parseAddr(row.registered_address);
+  const curAddr = parseAddr(row.current_address);
+  const offAddr = parseAddr(row.office_address);
+  const svcAddr = parseAddr(row.service_address);
+  const agtAddr = parseAddr(row.agent_address);
+
   return {
     ...row,
-    // 폼에서 사용하는 필드명으로 매핑
+    // 인적사항
     resident_front: row.resident_number_front || '',
     resident_back: '', // 해시값은 폼에 노출하지 않음
     phone: row.phone_mobile || '',
-    address: addr.address || '',
-    detail_address: addr.detail || '',
-    postal_code: addr.postal_code || '',
+    phone_home: row.phone_home || '',
     email: row.agent_email || '',
+
+    // 주민등록상 주소
+    reg_address: regAddr.address,
+    reg_detail: regAddr.detail,
+    reg_postal_code: regAddr.postal_code,
+    // 하위호환
+    address: regAddr.address,
+    detail_address: regAddr.detail,
+    postal_code: regAddr.postal_code,
+
+    // 현주소
+    cur_address: curAddr.address,
+    cur_detail: curAddr.detail,
+    cur_postal_code: curAddr.postal_code,
+
+    // 직장주소
+    off_address: offAddr.address,
+    off_detail: offAddr.detail,
+    off_postal_code: offAddr.postal_code,
+
+    // 송달주소
+    svc_address: svcAddr.address,
+    svc_detail: svcAddr.detail,
+    svc_postal_code: svcAddr.postal_code,
+
+    // 대리인 주소
+    agt_address: agtAddr.address,
+    agt_detail: agtAddr.detail,
+    agt_postal_code: agtAddr.postal_code,
+    agent_email_addr: row.agent_email || '',
+
+    // 소득/직업
     occupation: row.position || '',
     employer_phone: row.phone_home || '',
     employment_start_date: row.work_period || '',
+
+    // 신청
     filing_date: row.application_date || '',
     filing_purpose: '원금균등변제',
   };

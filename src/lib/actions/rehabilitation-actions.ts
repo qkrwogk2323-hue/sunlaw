@@ -3,28 +3,76 @@
 import { revalidatePath } from 'next/cache';
 import { requireAuthenticatedUser, findMembership } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { generateDocument, type DocumentType, type DocumentData } from '@/lib/rehabilitation/document-generator';
+import { getRehabModuleData } from '@/lib/queries/rehabilitation';
 
 // ─── 폼 → DB 필드 매핑 (신청서) ───
 
 function mapApplicationFormToDb(form: Record<string, unknown>) {
-  return {
+  // ─── 주소 jsonb 헬퍼 ───
+  const addr = (prefix: string) => ({
+    address: (form[`${prefix}_address`] as string) || '',
+    detail: (form[`${prefix}_detail`] as string) || '',
+    postal_code: (form[`${prefix}_postal_code`] as string) || '',
+  });
+
+  const mapped: Record<string, unknown> = {
+    // 인적사항
     applicant_name: form.applicant_name || null,
     resident_number_front: form.resident_front || null,
     resident_number_hash: form.resident_back || null,
     phone_mobile: form.phone || null,
-    registered_address: {
-      address: form.address || '',
-      detail: form.detail_address || '',
-      postal_code: form.postal_code || '',
-    },
+    phone_home: form.phone_home || null,
+
+    // 주소 (4종)
+    registered_address: addr('reg'),
+    current_address: addr('cur'),
+    office_address: addr('off'),
+    service_address: addr('svc'),
+    service_recipient: form.service_recipient || null,
+
+    // 반환계좌
+    return_account: form.return_account || null,
+
+    // 소득/직업
+    income_type: form.income_type || null,
     employer_name: form.employer_name || null,
     position: form.occupation || null,
     work_period: form.employment_start_date || null,
+    has_extra_income: form.has_extra_income ?? false,
+    extra_income_name: form.extra_income_name || null,
+    extra_income_source: form.extra_income_source || null,
+
+    // 신청/사건
     court_name: form.court_name || null,
+    court_detail: form.court_detail || null,
+    judge_division: form.judge_division || null,
+    case_year: form.case_year || null,
+    case_number: form.case_number || null,
     application_date: form.filing_date || null,
-    agent_email: form.email || null,
-    phone_home: form.employer_phone || null,
+    repayment_start_date: form.repayment_start_date || null,
+    repayment_start_uncertain: form.repayment_start_uncertain ?? false,
+    repayment_start_day: form.repayment_start_day || 0,
+
+    // 개인회생위원 계좌
+    trustee_bank_name: form.trustee_bank_name || null,
+    trustee_bank_account: form.trustee_bank_account || null,
+
+    // 대리인
+    agent_type: form.agent_type || null,
+    agent_name: form.agent_name || null,
+    agent_phone: form.agent_phone || null,
+    agent_email: form.agent_email_addr || form.email || null,
+    agent_fax: form.agent_fax || null,
+    agent_address: addr('agt'),
+
+    // 문서 옵션
+    info_request_form: form.info_request_form ?? false,
+    ecourt_agreement: form.ecourt_agreement ?? false,
+    delegation_form: form.delegation_form ?? false,
   };
+
+  return mapped;
 }
 
 // ─── 신청서 (Application) ───
@@ -528,5 +576,40 @@ export async function upsertRehabPropertyDeduction(
   } catch (e) {
     console.error('[upsertRehabPropertyDeduction]', e);
     return { ok: false, code: 'UNEXPECTED', userMessage: '공제 금액 저장 중 오류가 발생했습니다.' };
+  }
+}
+
+// ─── 문서 생성 ───
+
+export async function generateRehabDocument(
+  caseId: string,
+  organizationId: string,
+  documentType: DocumentType,
+): Promise<{ ok: true; html: string } | { ok: false; code: string; userMessage: string }> {
+  try {
+    const auth = await requireAuthenticatedUser();
+    const membership = findMembership(auth, organizationId);
+    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+
+    const moduleData = await getRehabModuleData(caseId);
+
+    const docData: DocumentData = {
+      application: moduleData.application as Record<string, any> | null,
+      creditorSettings: moduleData.creditorSettings as Record<string, any> | null,
+      creditors: (moduleData.creditors ?? []) as Record<string, any>[],
+      securedProperties: (moduleData.securedProperties ?? []) as Record<string, any>[],
+      properties: (moduleData.properties ?? []) as Record<string, any>[],
+      propertyDeductions: (moduleData.propertyDeductions ?? []) as Record<string, any>[],
+      familyMembers: (moduleData.familyMembers ?? []) as Record<string, any>[],
+      incomeSettings: moduleData.incomeSettings as Record<string, any> | null,
+      affidavit: moduleData.affidavit as Record<string, any> | null,
+      planSections: (moduleData.planSections ?? []) as Record<string, any>[],
+    };
+
+    const html = generateDocument(documentType, docData);
+    return { ok: true, html };
+  } catch (e) {
+    console.error('[generateRehabDocument]', e);
+    return { ok: false, code: 'UNEXPECTED', userMessage: '문서 생성 중 오류가 발생했습니다.' };
   }
 }
