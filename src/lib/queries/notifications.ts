@@ -216,14 +216,14 @@ export async function getNavUnreadCounts(): Promise<NavUnreadCounts> {
   const [unread, actionRequired] = await Promise.all([
     supabase
       .from('notifications')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('recipient_profile_id', auth.user.id)
       .is('trashed_at', null)
       .eq('status', 'active')
       .is('read_at', null),
     supabase
       .from('notifications')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('recipient_profile_id', auth.user.id)
       .is('trashed_at', null)
       .eq('status', 'active')

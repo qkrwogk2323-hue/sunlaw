@@ -374,7 +374,7 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
 
   let unreadNotificationsQuery = supabase
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('recipient_profile_id', auth.user.id)
     .is('trashed_at', null)
     .eq('status', 'active')
