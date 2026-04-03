@@ -24,9 +24,11 @@ export default async function CalendarPage({
     )
   );
 
-  // 직렬 실행: Vercel Hobby 동시 함수 제한 회피
-  const calendarSnapshot = await getCalendarBoardSnapshot(organizationId, month);
-  const caseOptions = await getCaseOptionsForCalendar(organizationId);
+  // 동일 서버리스 함수 내 Supabase REST 병렬 호출 — Vercel 함수 동시성과 무관
+  const [calendarSnapshot, caseOptions] = await Promise.all([
+    getCalendarBoardSnapshot(organizationId, month),
+    getCaseOptionsForCalendar(organizationId),
+  ]);
 
   const briefing = buildScheduleBriefing(
     calendarSnapshot.schedules,

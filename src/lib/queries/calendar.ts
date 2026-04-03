@@ -91,10 +91,12 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
     billingQuery = billingQuery.eq('organization_id', organizationId);
   }
 
-  // 직렬 실행: Vercel Hobby 동시 함수 제한에 걸리지 않도록
-  const { data: schedules } = await schedulesQuery;
-  const { data: requests } = await requestsQuery;
-  const { data: billingEntries } = await billingQuery;
+  // 동일 서버리스 함수 내 Supabase REST 병렬 호출 — Vercel 함수 동시성과 무관
+  const [
+    { data: schedules },
+    { data: requests },
+    { data: billingEntries }
+  ] = await Promise.all([schedulesQuery, requestsQuery, billingQuery]);
 
   return {
     focusMonth: `${focusMonth.getFullYear()}-${`${focusMonth.getMonth() + 1}`.padStart(2, '0')}`,

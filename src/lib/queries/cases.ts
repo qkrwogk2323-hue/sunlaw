@@ -196,7 +196,7 @@ export async function getCasesPageBucketsForAuth(
 export async function getCaseClientLinkedMap(caseIds: string[]) {
   if (!caseIds.length) return {} as Record<string, boolean>;
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from('case_clients').select('case_id').in('case_id', caseIds);
+  const { data } = await supabase.from('case_clients').select('case_id').in('case_id', caseIds).limit(1000);
   const linkedIds = new Set((data ?? []).map((row: any) => `${row.case_id ?? ''}`));
   return caseIds.reduce<Record<string, boolean>>((acc, caseId) => {
     acc[caseId] = linkedIds.has(caseId);
@@ -211,7 +211,8 @@ export async function getCasePartiesForList(caseIds: string[]) {
     .from('case_parties')
     .select('case_id, party_role, display_name')
     .in('case_id', caseIds)
-    .in('party_role', ['plaintiff', 'defendant', 'creditor', 'debtor']);
+    .in('party_role', ['plaintiff', 'defendant', 'creditor', 'debtor'])
+    .limit(1000);
   const result: Record<string, { plaintiffs: string[]; defendants: string[] }> = {};
   for (const row of data ?? []) {
     const id = `${row.case_id}`;

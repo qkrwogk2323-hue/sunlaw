@@ -406,12 +406,22 @@ export default async function CaseDetailPage({
         <TabLink caseId={caseId} tab="cover" current={currentTab}>{getTabLabel('cover', collectionFocused)}</TabLink>
         {showCollectionModule ? <TabLink caseId={caseId} tab="collection" current={currentTab}>{getTabLabel('collection', collectionFocused)}</TabLink> : null}
         {(caseDetail.case_type === 'insolvency' || caseDetail.module_flags?.insolvency) ? (
-          <Link
-            href={`/cases/${caseId}/bankruptcy` as never}
-            className="rounded-full px-4 py-2 text-sm font-medium bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-          >
-            🏛 도산 모듈
-          </Link>
+          <>
+            <Link
+              href={`/cases/${caseId}/bankruptcy` as never}
+              className="rounded-full px-4 py-2 text-sm font-medium bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+            >
+              🏛 도산 모듈
+            </Link>
+            {caseDetail.insolvency_subtype === 'individual_rehabilitation' && (
+              <Link
+                href={`/cases/${caseId}/rehabilitation` as never}
+                className="rounded-full px-4 py-2 text-sm font-medium bg-white text-blue-600 ring-1 ring-blue-200 hover:bg-blue-50"
+              >
+                📋 개인회생 자동작성
+              </Link>
+            )}
+          </>
         ) : null}
       </div>
 
