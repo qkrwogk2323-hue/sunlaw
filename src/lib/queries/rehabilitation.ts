@@ -4,6 +4,27 @@
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+/** DB → 폼 필드 역매핑 (신청서) */
+function mapApplicationDbToForm(row: Record<string, unknown>) {
+  const addr = (row.registered_address as Record<string, string>) || {};
+  return {
+    ...row,
+    // 폼에서 사용하는 필드명으로 매핑
+    resident_front: row.resident_number_front || '',
+    resident_back: '', // 해시값은 폼에 노출하지 않음
+    phone: row.phone_mobile || '',
+    address: addr.address || '',
+    detail_address: addr.detail || '',
+    postal_code: addr.postal_code || '',
+    email: row.agent_email || '',
+    occupation: row.position || '',
+    employer_phone: row.phone_home || '',
+    employment_start_date: row.work_period || '',
+    filing_date: row.application_date || '',
+    filing_purpose: '원금균등변제',
+  };
+}
+
 /** 개인회생 신청서 기본 정보 조회 */
 export async function getRehabApplication(caseId: string) {
   const supabase = await createSupabaseServerClient();
@@ -12,7 +33,7 @@ export async function getRehabApplication(caseId: string) {
     .select('*')
     .eq('case_id', caseId)
     .maybeSingle();
-  return data;
+  return data ? mapApplicationDbToForm(data as Record<string, unknown>) : null;
 }
 
 /** 채권자 설정 조회 */

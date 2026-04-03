@@ -4,6 +4,29 @@ import { revalidatePath } from 'next/cache';
 import { requireAuthenticatedUser, findMembership } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+// ─── 폼 → DB 필드 매핑 (신청서) ───
+
+function mapApplicationFormToDb(form: Record<string, unknown>) {
+  return {
+    applicant_name: form.applicant_name || null,
+    resident_number_front: form.resident_front || null,
+    resident_number_hash: form.resident_back || null,
+    phone_mobile: form.phone || null,
+    registered_address: {
+      address: form.address || '',
+      detail: form.detail_address || '',
+      postal_code: form.postal_code || '',
+    },
+    employer_name: form.employer_name || null,
+    position: form.occupation || null,
+    work_period: form.employment_start_date || null,
+    court_name: form.court_name || null,
+    application_date: form.filing_date || null,
+    agent_email: form.email || null,
+    phone_home: form.employer_phone || null,
+  };
+}
+
 // ─── 신청서 (Application) ───
 
 export async function upsertRehabApplication(
@@ -17,6 +40,7 @@ export async function upsertRehabApplication(
     if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
 
     const supabase = await createSupabaseServerClient();
+    const dbData = mapApplicationFormToDb(data);
 
     // 기존 데이터 확인
     const { data: existing } = await supabase
@@ -28,18 +52,24 @@ export async function upsertRehabApplication(
     if (existing) {
       const { error } = await supabase
         .from('rehabilitation_applications')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update({ ...dbData, updated_at: new Date().toISOString() })
         .eq('id', existing.id);
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '신청서 저장에 실패했습니다.' };
+      if (error) {
+        console.error('[upsertRehabApplication] update error:', error);
+        return { ok: false, code: 'DB_ERROR', userMessage: '신청서 저장에 실패했습니다.' };
+      }
     } else {
       const { error } = await supabase
         .from('rehabilitation_applications')
         .insert({
           case_id: caseId,
           organization_id: organizationId,
-          ...data,
+          ...dbData,
         });
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '신청서 생성에 실패했습니다.' };
+      if (error) {
+        console.error('[upsertRehabApplication] insert error:', error);
+        return { ok: false, code: 'DB_ERROR', userMessage: '신청서 생성에 실패했습니다.' };
+      }
     }
 
     revalidatePath(`/cases/${caseId}/rehabilitation`);
