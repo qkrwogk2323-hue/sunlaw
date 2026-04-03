@@ -80,7 +80,17 @@ export async function upsertRehabApplication(
   }
 }
 
-// ─── 채권자 설정 ───
+// ─── 채권자 설정 (폼→DB 매핑) ───
+
+function mapCreditorSettingsFormToDb(form: Record<string, unknown>) {
+  return {
+    list_date: form.base_date || null,
+    bond_date: form.bond_date || null,
+    repay_type: form.repay_type || 'sequential',
+    summary_table: form.summary_table ?? false,
+    copy_with_evidence: form.copy_with_evidence ?? false,
+  };
+}
 
 export async function upsertRehabCreditorSettings(
   caseId: string,
@@ -93,6 +103,7 @@ export async function upsertRehabCreditorSettings(
     if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
 
     const supabase = await createSupabaseServerClient();
+    const dbData = mapCreditorSettingsFormToDb(data);
 
     const { data: existing } = await supabase
       .from('rehabilitation_creditor_settings')
@@ -103,14 +114,14 @@ export async function upsertRehabCreditorSettings(
     if (existing) {
       const { error } = await supabase
         .from('rehabilitation_creditor_settings')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update({ ...dbData, updated_at: new Date().toISOString() })
         .eq('id', existing.id);
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '채권자 설정 저장에 실패했습니다.' };
+      if (error) { console.error('[upsertRehabCreditorSettings]', error); return { ok: false, code: 'DB_ERROR', userMessage: '채권자 설정 저장에 실패했습니다.' }; }
     } else {
       const { error } = await supabase
         .from('rehabilitation_creditor_settings')
-        .insert({ case_id: caseId, organization_id: organizationId, ...data });
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '채권자 설정 생성에 실패했습니다.' };
+        .insert({ case_id: caseId, ...dbData });
+      if (error) { console.error('[upsertRehabCreditorSettings]', error); return { ok: false, code: 'DB_ERROR', userMessage: '채권자 설정 생성에 실패했습니다.' }; }
     }
 
     revalidatePath(`/cases/${caseId}/rehabilitation`);
@@ -227,7 +238,7 @@ export async function upsertRehabSecuredProperty(
     } else {
       const { error } = await supabase
         .from('rehabilitation_secured_properties')
-        .insert({ case_id: caseId, organization_id: organizationId, ...data });
+        .insert({ case_id: caseId, ...data });
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '담보물건 추가에 실패했습니다.' };
     }
 
@@ -264,7 +275,7 @@ export async function upsertRehabProperty(
     } else {
       const { error } = await supabase
         .from('rehabilitation_properties')
-        .insert({ case_id: caseId, organization_id: organizationId, ...data });
+        .insert({ case_id: caseId, ...data });
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '재산 추가에 실패했습니다.' };
     }
 
@@ -328,7 +339,7 @@ export async function upsertRehabFamilyMember(
     } else {
       const { error } = await supabase
         .from('rehabilitation_family_members')
-        .insert({ case_id: caseId, organization_id: organizationId, ...data });
+        .insert({ case_id: caseId, ...data });
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '가족 정보 추가에 실패했습니다.' };
     }
 
@@ -369,6 +380,21 @@ export async function softDeleteRehabFamilyMember(
 
 // ─── 소득 설정 ───
 
+/** 폼 → DB 필드 매핑 (소득 설정) */
+function mapIncomeFormToDb(form: Record<string, unknown>) {
+  const mapped: Record<string, unknown> = {
+    median_income_year: form.income_year ?? new Date().getFullYear(),
+    net_salary: form.monthly_income ?? 0,
+    living_cost: form.living_cost ?? 0,
+    extra_living_cost: form.extra_living_cost ?? 0,
+    child_support: form.child_support ?? 0,
+    trustee_comm_rate: form.trustee_comm_rate ?? 0,
+    dispose_amount: form.dispose_amount ?? 0,
+  };
+  // dependent_count는 DB 컬럼에 없으므로 제거
+  return mapped;
+}
+
 export async function upsertRehabIncomeSettings(
   caseId: string,
   organizationId: string,
@@ -380,6 +406,7 @@ export async function upsertRehabIncomeSettings(
     if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
 
     const supabase = await createSupabaseServerClient();
+    const dbData = mapIncomeFormToDb(data);
 
     const { data: existing } = await supabase
       .from('rehabilitation_income_settings')
@@ -390,13 +417,13 @@ export async function upsertRehabIncomeSettings(
     if (existing) {
       const { error } = await supabase
         .from('rehabilitation_income_settings')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update({ ...dbData, updated_at: new Date().toISOString() })
         .eq('id', existing.id);
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '소득 설정 저장에 실패했습니다.' };
     } else {
       const { error } = await supabase
         .from('rehabilitation_income_settings')
-        .insert({ case_id: caseId, organization_id: organizationId, ...data });
+        .insert({ case_id: caseId, ...dbData });
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '소득 설정 생성에 실패했습니다.' };
     }
 
@@ -410,6 +437,17 @@ export async function upsertRehabIncomeSettings(
 
 // ─── 진술서 ───
 
+/** 폼 → DB 필드 매핑 (진술서) */
+function mapAffidavitFormToDb(form: Record<string, unknown>) {
+  return {
+    debt_history: form.debt_reason || null,
+    property_change: form.debt_increase_reason || null,
+    income_change: form.repay_effort || null,
+    living_situation: form.current_situation || null,
+    repay_feasibility: [form.future_plan, form.reflection].filter(Boolean).join('\n\n') || null,
+  };
+}
+
 export async function upsertRehabAffidavit(
   caseId: string,
   organizationId: string,
@@ -421,6 +459,7 @@ export async function upsertRehabAffidavit(
     if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
 
     const supabase = await createSupabaseServerClient();
+    const dbData = mapAffidavitFormToDb(data);
 
     const { data: existing } = await supabase
       .from('rehabilitation_affidavits')
@@ -431,13 +470,13 @@ export async function upsertRehabAffidavit(
     if (existing) {
       const { error } = await supabase
         .from('rehabilitation_affidavits')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update({ ...dbData, updated_at: new Date().toISOString() })
         .eq('id', existing.id);
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '진술서 저장에 실패했습니다.' };
     } else {
       const { error } = await supabase
         .from('rehabilitation_affidavits')
-        .insert({ case_id: caseId, organization_id: organizationId, ...data });
+        .insert({ case_id: caseId, ...dbData });
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '진술서 생성에 실패했습니다.' };
     }
 
@@ -480,7 +519,7 @@ export async function upsertRehabPropertyDeduction(
     } else {
       const { error } = await supabase
         .from('rehabilitation_property_deductions')
-        .insert({ case_id: caseId, organization_id: organizationId, category, deduction_amount: deductionAmount });
+        .insert({ case_id: caseId, category, deduction_amount: deductionAmount });
       if (error) return { ok: false, code: 'DB_ERROR', userMessage: '공제 금액 저장에 실패했습니다.' };
     }
 

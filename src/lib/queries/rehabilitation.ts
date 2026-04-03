@@ -36,6 +36,14 @@ export async function getRehabApplication(caseId: string) {
   return data ? mapApplicationDbToForm(data as Record<string, unknown>) : null;
 }
 
+/** DB → 폼 필드 역매핑 (채권자 설정) */
+function mapCreditorSettingsDbToForm(row: Record<string, unknown>) {
+  return {
+    ...row,
+    base_date: row.list_date || '',
+  };
+}
+
 /** 채권자 설정 조회 */
 export async function getRehabCreditorSettings(caseId: string) {
   const supabase = await createSupabaseServerClient();
@@ -44,7 +52,7 @@ export async function getRehabCreditorSettings(caseId: string) {
     .select('*')
     .eq('case_id', caseId)
     .maybeSingle();
-  return data;
+  return data ? mapCreditorSettingsDbToForm(data as Record<string, unknown>) : null;
 }
 
 /** 채권자 목록 조회 (soft delete 제외) */
@@ -110,6 +118,15 @@ export async function getRehabFamilyMembers(caseId: string) {
   return data ?? [];
 }
 
+/** DB → 폼 필드 역매핑 (소득 설정) */
+function mapIncomeDbToForm(row: Record<string, unknown>) {
+  return {
+    ...row,
+    income_year: row.median_income_year || new Date().getFullYear(),
+    monthly_income: row.net_salary || 0,
+  };
+}
+
 /** 소득 설정 조회 */
 export async function getRehabIncomeSettings(caseId: string) {
   const supabase = await createSupabaseServerClient();
@@ -118,7 +135,22 @@ export async function getRehabIncomeSettings(caseId: string) {
     .select('*')
     .eq('case_id', caseId)
     .maybeSingle();
-  return data;
+  return data ? mapIncomeDbToForm(data as Record<string, unknown>) : null;
+}
+
+/** DB → 폼 필드 역매핑 (진술서) */
+function mapAffidavitDbToForm(row: Record<string, unknown>) {
+  const repayFeasibility = (row.repay_feasibility as string) || '';
+  const parts = repayFeasibility.split('\n\n');
+  return {
+    ...row,
+    debt_reason: row.debt_history || '',
+    debt_increase_reason: row.property_change || '',
+    repay_effort: row.income_change || '',
+    current_situation: row.living_situation || '',
+    future_plan: parts[0] || '',
+    reflection: parts.slice(1).join('\n\n') || '',
+  };
 }
 
 /** 진술서 조회 */
@@ -129,7 +161,7 @@ export async function getRehabAffidavit(caseId: string) {
     .select('*')
     .eq('case_id', caseId)
     .maybeSingle();
-  return data;
+  return data ? mapAffidavitDbToForm(data as Record<string, unknown>) : null;
 }
 
 /** 변제계획 섹션 목록 조회 */
