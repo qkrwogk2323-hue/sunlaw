@@ -94,8 +94,7 @@ function esc(s: string | null | undefined): string {
 /**
  * 기본 스타일시트 생성
  */
-function baseStyles(orientation: 'portrait' | 'landscape' = 'portrait'): string {
-  const pageSize = orientation === 'landscape' ? 'A4 landscape' : 'A4 portrait';
+function baseStyles(): string {
   return `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
@@ -114,7 +113,7 @@ function baseStyles(orientation: 'portrait' | 'landscape' = 'portrait'): string 
     }
 
     @page {
-      size: ${pageSize};
+      size: A4 portrait;
       margin: 20mm;
     }
 
@@ -130,7 +129,7 @@ function baseStyles(orientation: 'portrait' | 'landscape' = 'portrait'): string 
 
     .document {
       width: 100%;
-      max-width: ${orientation === 'landscape' ? '29.7cm' : '21cm'};
+      max-width: 21cm;
       margin: 0 auto;
       padding: 40px;
       background: white;
@@ -189,7 +188,7 @@ function baseStyles(orientation: 'portrait' | 'landscape' = 'portrait'): string 
     }
 
     th {
-      background: #f0f0f0;
+      background: #fff;
       font-weight: bold;
       text-align: center;
     }
@@ -250,13 +249,39 @@ function baseStyles(orientation: 'portrait' | 'landscape' = 'portrait'): string 
     li {
       margin: 5px 0;
     }
+
+    .header-line {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 11pt;
+    }
+
+    .summary-box {
+      margin: 15px 0;
+      border: 1px solid #000;
+    }
+
+    .two-col {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+    }
+
+    .col-left {
+      flex: 1;
+    }
+
+    .col-right {
+      flex: 1;
+      text-align: right;
+    }
   `;
 }
 
 /**
  * HTML 문서 래퍼 (head + body)
  */
-function wrapDocument(content: string, title: string, orientation: 'portrait' | 'landscape' = 'portrait'): string {
+function wrapDocument(content: string, title: string): string {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -264,7 +289,7 @@ function wrapDocument(content: string, title: string, orientation: 'portrait' | 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(title)}</title>
   <style>
-    ${baseStyles(orientation)}
+    ${baseStyles()}
   </style>
 </head>
 <body>
@@ -289,187 +314,50 @@ function generateApplication(data: DocumentData): string {
   const agentPhone = app.agent_phone || '';
   const agentEmail = app.agent_email || '';
 
-  // 주소 정보
-  const regAddress = app.reg_address || '';
-  const regDetail = app.reg_detail || '';
-  const regPostal = app.reg_postal_code || '';
-  const curAddress = app.cur_address || '';
-  const curDetail = app.cur_detail || '';
-  const curPostal = app.cur_postal_code || '';
-  const offAddress = app.off_address || '';
-  const offDetail = app.off_detail || '';
-  const offPostal = app.off_postal_code || '';
-  const svcAddress = app.svc_address || '';
-  const svcDetail = app.svc_detail || '';
-  const svcPostal = app.svc_postal_code || '';
-
-  // 대리인 정보
-  const agentAddress = app.agt_address || '';
-  const agentDetail = app.agt_detail || '';
-  const agentPostal = app.agt_postal_code || '';
-
-  // 직업/소득
-  const occupation = app.occupation || '';
-  const incomeType = app.income_type || '자영업';
-  const employer = app.employer || '';
-
-  // 신청이유
-  const filingReason = app.filing_reason || '';
-  const informationConsent = app.information_consent === true || app.information_consent === 'true';
-
   const content = `
-    <!-- Cover Page -->
-    <div class="text-center" style="page-break-after: always; padding-top: 100px;">
-      <h1 style="font-size: 20pt; margin-bottom: 60px;">개인회생절차 개시신청서</h1>
+    <div class="header-line">
+      수원회생법원 ${caseNumber} 개회 호
     </div>
 
-    <!-- Main Application -->
-    <h2 style="margin-top: 0;">개인회생 개시신청서</h2>
+    <h1>개 시 신 청 서</h1>
 
-    <table style="width: 100%; margin-bottom: 20px;">
-      <tr>
-        <td style="width: 25%; font-weight: bold;">사건번호</td>
-        <td style="width: 75%;">${esc(caseNumber)}</td>
-      </tr>
-      <tr>
-        <td style="font-weight: bold;">채무자</td>
-        <td>${esc(debtorName)}</td>
-      </tr>
-      <tr>
-        <td style="font-weight: bold;">대리인</td>
-        <td>${esc(agentName)}</td>
-      </tr>
-    </table>
-
-    <h3>1. 채무자 인적사항</h3>
-    <table>
-      <tr>
-        <th style="width: 25%;">성명</th>
-        <td style="width: 75%;">${esc(debtorName)}</td>
-      </tr>
-      <tr>
-        <th>주민등록번호</th>
-        <td>${esc(debtorBirth)}-*</td>
-      </tr>
-      <tr>
-        <th>주민등록상 주소</th>
-        <td>[${esc(regPostal)}] ${esc(regAddress)} ${esc(regDetail)}</td>
-      </tr>
-      <tr>
-        <th>현 주소</th>
-        <td>[${esc(curPostal)}] ${esc(curAddress)} ${esc(curDetail)}</td>
-      </tr>
-      <tr>
-        <th>직장 주소</th>
-        <td>[${esc(offPostal)}] ${esc(offAddress)} ${esc(offDetail)}</td>
-      </tr>
-      <tr>
-        <th>송달 주소</th>
-        <td>[${esc(svcPostal)}] ${esc(svcAddress)} ${esc(svcDetail)}</td>
-      </tr>
-    </table>
-
-    <h3>2. 직업 및 소득 정보</h3>
-    <table>
-      <tr>
-        <th style="width: 25%;">소득 구분</th>
-        <td style="width: 75%;">${esc(incomeType)}</td>
-      </tr>
-      <tr>
-        <th>직업</th>
-        <td>${esc(occupation)}</td>
-      </tr>
-      <tr>
-        <th>직장명 / 사업명</th>
-        <td>${esc(employer)}</td>
-      </tr>
-    </table>
-
-    <h3>3. 대리인 정보</h3>
-    <table>
-      <tr>
-        <th style="width: 25%;">대리인 구분</th>
-        <td style="width: 75%;">변호사</td>
-      </tr>
-      <tr>
-        <th>성명</th>
-        <td>${esc(agentName)}</td>
-      </tr>
-      <tr>
-        <th>전화</th>
-        <td>${esc(agentPhone)}</td>
-      </tr>
-      <tr>
-        <th>이메일</th>
-        <td>${esc(agentEmail)}</td>
-      </tr>
-      <tr>
-        <th>주소</th>
-        <td>[${esc(agentPostal)}] ${esc(agentAddress)} ${esc(agentDetail)}</td>
-      </tr>
-    </table>
-
-    <h3>4. 신청 이유</h3>
-    <div class="info-box" style="min-height: 100px;">
-      ${esc(filingReason).replace(/\n/g, '<br>')}
+    <div class="section">
+      <h3>신청서</h3>
+      <table>
+        <tr>
+          <td style="width: 30%;">채무자</td>
+          <td>${esc(debtorName)}</td>
+        </tr>
+        <tr>
+          <td>주민번호</td>
+          <td>${esc(debtorBirth)}-*******</td>
+        </tr>
+      </table>
     </div>
 
-    <h3>5. 첨부 서류</h3>
-    <ol>
-      <li>신청인 주민등록등본 1통</li>
-      <li>혼인관계증명서 1통</li>
-      <li>재산목록 1부</li>
-      <li>수입 및 지출 목록 1부</li>
-      <li>채권자 목록 1부</li>
-      <li>진술서 1부</li>
-      <li>개인신용조회 동의서 1부</li>
-      <li>금융기관 기본정보 양식</li>
-      <li>위임장 1부</li>
-      <li>인감증명서 1부 (대리인이 있는 경우)</li>
-    </ol>
-
-    ${informationConsent ? `
-    <div class="page-break"></div>
-    <h2>개인정보 수신 신청서</h2>
-
-    <p style="margin-bottom: 20px;">본인은 법원으로부터 개인회생절차에 관한 정보를 전자우편으로 수신하기를 신청합니다.</p>
-
-    <table>
-      <tr>
-        <th style="width: 25%;">성명</th>
-        <td style="width: 75%;">${esc(debtorName)}</td>
-      </tr>
-      <tr>
-        <th>이메일</th>
-        <td>${esc(app.email || '')}</td>
-      </tr>
-      <tr>
-        <th>휴대전화</th>
-        <td>${esc(app.phone_mobile || '')}</td>
-      </tr>
-    </table>
+    <div class="section">
+      <h3>대리인</h3>
+      <p>법 무 법 인: ${esc(agentName)}</p>
+      <p>전 화: ${esc(agentPhone)}</p>
+      <p>전자메일: ${esc(agentEmail)}</p>
+    </div>
 
     <div class="signature-area">
-      <div style="margin-bottom: 30px;">위 사항이 사실임을 확인합니다.</div>
-      <div class="signature-line"></div>
-      <div>${esc(debtorName)}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
-    ` : ''}
-
-    <div class="signature-area" style="margin-top: 50px;">
-      <div style="margin-bottom: 30px;">위 사항이 사실임을 확인합니다.</div>
-      <div class="signature-line"></div>
-      <div>${esc(debtorName)}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
-
-    <div class="footer">
-      <p style="margin-top: 40px;">대한민국 법원</p>
+      <p>2026년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+      <div style="margin-top: 40px;">
+        <div style="display: inline-block; margin: 0 30px;">
+          <p>채무자</p>
+          <div class="signature-line"></div>
+        </div>
+        <div style="display: inline-block; margin: 0 30px;">
+          <p>대리인</p>
+          <div class="signature-line"></div>
+        </div>
+      </div>
     </div>
   `;
 
-  return wrapDocument(content, '개인회생절차 개시신청서');
+  return wrapDocument(content, '개시신청서');
 }
 
 /**
@@ -479,84 +367,36 @@ function generateDelegation(data: DocumentData): string {
   const app = data.application || {};
   const debtorName = app.debtor_name || '';
   const debtorBirth = app.resident_number_front || '';
-  const debtorAddress = `${app.reg_address || ''} ${app.reg_detail || ''}`.trim();
-
   const agentName = app.agent_name || '';
-  const agentId = app.agent_id || '';
-  const agentAddress = `${app.agt_address || ''} ${app.agt_detail || ''}`.trim();
 
   const content = `
-    <h1 style="letter-spacing: 0.3em; margin: 80px 0 60px 0;">위 임 장</h1>
+    <h1>위 임 장</h1>
 
-    <h3 style="text-align: center; margin-top: 40px;">위임인 (채무자)</h3>
-    <table style="margin-bottom: 30px;">
-      <tr>
-        <th style="width: 25%;">성명</th>
-        <td style="width: 75%;">${esc(debtorName)}</td>
-      </tr>
-      <tr>
-        <th>주민등록번호</th>
-        <td>${esc(debtorBirth)}-*</td>
-      </tr>
-      <tr>
-        <th>주소</th>
-        <td>${esc(debtorAddress)}</td>
-      </tr>
-    </table>
-
-    <h3 style="text-align: center; margin-top: 40px;">수임인 (대리인)</h3>
-    <table style="margin-bottom: 30px;">
-      <tr>
-        <th style="width: 25%;">구분</th>
-        <td style="width: 75%;">변호사</td>
-      </tr>
-      <tr>
-        <th>성명</th>
-        <td>${esc(agentName)}</td>
-      </tr>
-      <tr>
-        <th>변호사 등록번호</th>
-        <td>${esc(agentId)}</td>
-      </tr>
-      <tr>
-        <th>주소</th>
-        <td>${esc(agentAddress)}</td>
-      </tr>
-    </table>
-
-    <h3 style="text-align: center; margin-top: 40px;">위임 사항</h3>
-    <div class="info-box">
-      <p>위임인은 수임인에게 다음 사항을 위임합니다:</p>
-      <ol style="margin-left: 20px;">
-        <li>법원에 개인회생절차 개시신청서 제출</li>
-        <li>법원과 채권자에 대한 법률상담 및 대리</li>
-        <li>법원에 제출할 모든 서류의 작성 및 제출</li>
-        <li>채권자와의 협상 및 조정</li>
-        <li>변제계획안의 작성 및 제출</li>
-        <li>기타 개인회생절차 진행에 필요한 모든 법률 업무</li>
-      </ol>
+    <div class="section">
+      <p>본인은 아래의 개인회생절차에 관련하여 ${esc(agentName)}을(를) 본인의 법정대리인으로 위임합니다.</p>
     </div>
 
-    <div style="text-align: center; margin-top: 60px;">
-      <p style="margin: 20px 0; font-weight: bold;">위의 사항을 위임합니다.</p>
+    <div class="section">
+      <table>
+        <tr>
+          <td style="width: 30%;">위임자</td>
+          <td>${esc(debtorName)}</td>
+        </tr>
+        <tr>
+          <td>주민번호</td>
+          <td>${esc(debtorBirth)}-*******</td>
+        </tr>
+        <tr>
+          <td>위임대리인</td>
+          <td>${esc(agentName)}</td>
+        </tr>
+      </table>
     </div>
 
-    <div class="signature-area" style="margin-top: 60px;">
-      <div style="margin-bottom: 10px;">위임인 (인감 날인)</div>
+    <div class="signature-area">
+      <p>위임자</p>
       <div class="signature-line"></div>
-      <div>${esc(debtorName)}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
-
-    <div class="signature-area" style="margin-top: 60px;">
-      <div style="margin-bottom: 10px;">수임인 (서명)</div>
-      <div class="signature-line"></div>
-      <div>${esc(agentName)}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
-
-    <div class="footer">
-      <p style="margin-top: 80px;">대한민국 법원</p>
+      <p style="margin-top: 20px;">2026년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
     </div>
   `;
 
@@ -564,177 +404,168 @@ function generateDelegation(data: DocumentData): string {
 }
 
 /**
- * 3. 채권자목록 생성 (가로 방향)
+ * 3. 채권자목록 생성 (Portrait)
  */
 function generateCreditorList(data: DocumentData): string {
   const app = data.application || {};
+  const creditorSettings = data.creditorSettings || {};
+  const creditors = data.creditors || [];
+
   const debtorName = app.debtor_name || '';
   const debtorBirth = app.resident_number_front || '';
-  const debtorAddress = `${app.cur_address || ''} ${app.cur_detail || ''}`.trim();
-  const svcAddress = `${app.svc_address || ''} ${app.svc_detail || ''}`.trim();
+  const courtCode = '수원회생법원';
+  const caseNumber = app.case_number || '2026 개회 호';
+  const assessmentDate = creditorSettings.assessment_date || '';
+  const listDate = creditorSettings.list_date || new Date().toISOString().split('T')[0];
 
-  const creditors = data.creditors || [];
-  const securedProperties = data.securedProperties || [];
-
-  // 채권 현재액 합계, 담보부/무담보부 계산
-  let totalCurrent = 0;
+  // 채권액 계산
+  let totalCapital = 0;
+  let totalInterest = 0;
   let securedTotal = 0;
   let unsecuredTotal = 0;
 
-  creditors.forEach(c => {
-    const current = (c.capital || 0) + (c.interest || 0);
-    totalCurrent += current;
-    if (c.is_secured) {
-      securedTotal += current;
+  creditors.forEach((cred: any) => {
+    const capital = cred.capital || 0;
+    const interest = cred.interest || 0;
+    totalCapital += capital;
+    totalInterest += interest;
+
+    if (cred.is_secured) {
+      securedTotal += capital;
     } else {
-      unsecuredTotal += current;
+      unsecuredTotal += capital;
     }
   });
 
-  // 채권자 행 생성
+  const totalAmount = totalCapital + totalInterest;
+
+  const headerLine = `${courtCode} ${caseNumber}  채무자 ${esc(debtorName)}(${esc(debtorBirth)}-*****)`;
+
   let creditorRows = '';
-  creditors.forEach((c, idx) => {
-    const bondNum = c.bond_number || (idx + 1);
-    const name = c.creditor_name || '';
-    const address = c.address || '';
-    const phone = c.phone || '';
-    const fax = c.fax || '';
-    const cause = c.bond_cause || '';
-    const causeDate = formatDate(c.cause_date);
-    const capital = c.capital || 0;
-    const capitalCompute = c.capital_compute || '';
-    const interest = c.interest || 0;
-    const interestCompute = c.interest_compute || '';
-    const current = capital + interest;
-    const isSecured = c.is_secured ? '있음' : '없음';
-    const guarantor = c.guarantor_name || '';
+  creditors.forEach((cred: any, idx: number) => {
+    const bondNumber = cred.bond_number || String(idx + 1);
+    const creditorName = cred.creditor_name || '';
+    const cause = cred.bond_cause || '';
+    const causeDateStr = cred.cause_date || '';
+    const address = cred.address || '';
+    const phone = cred.phone || '';
+    const fax = cred.fax || '';
+    const mobile = cred.mobile || '';
+    const capital = cred.capital || 0;
+    const interest = cred.interest || 0;
+    const attachments = cred.attachments || [];
+    const attachmentYn = attachments.length > 0 ? '■' : '□';
+
+    const addressLine = [address, phone && `(전화)${phone}`, fax && `(팩스)${fax}`, mobile && `(휴대전화)${mobile}`]
+      .filter(Boolean)
+      .join(' ');
 
     creditorRows += `
       <tr>
-        <td class="center">${bondNum}</td>
-        <td>${esc(name)}</td>
-        <td>${esc(address)}<br>${esc(phone)}<br>${esc(fax)}</td>
-        <td>${esc(cause)}<br>(${causeDate})</td>
-        <td class="number">${formatAmountNoUnit(capital)}<br><span style="font-size: 10pt;">${esc(capitalCompute)}</span></td>
-        <td class="number">${formatAmountNoUnit(interest)}<br><span style="font-size: 10pt;">${esc(interestCompute)}</span></td>
-        <td class="number">${formatAmountNoUnit(current)}</td>
-        <td class="center">${isSecured}</td>
-        <td>${esc(guarantor)}</td>
+        <td style="width: 5%; text-align: center;">${esc(bondNumber)}</td>
+        <td style="width: 15%; text-align: center;">${esc(creditorName)}</td>
+        <td style="width: 15%; text-align: center;">${esc(cause)}<br/>${esc(causeDateStr)}</td>
+        <td style="width: 20%;">${esc(addressLine)}</td>
+        <td style="width: 25%;">원리금<br/>부속서류 ${attachmentYn}</td>
+        <td style="width: 20%; text-align: right;">-</td>
+      </tr>
+      <tr>
+        <td colspan="2">금 ${formatAmountNoUnit(capital)}원</td>
+        <td colspan="3">부채증명서 참조(산정기준일: ${formatDate(assessmentDate)})</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td colspan="2">이자 ${formatAmountNoUnit(interest)}원</td>
+        <td colspan="3">부채증명서 참조(산정기준일: ${formatDate(assessmentDate)})</td>
         <td></td>
       </tr>
     `;
-
-    // 보증인이 있으면 서브 행 추가
-    if (guarantor && c.guarantor_amount) {
-      creditorRows += `
-        <tr style="background: #f9f9f9;">
-          <td class="center">${bondNum}-1</td>
-          <td colspan="2">${esc(guarantor)} (보증인)</td>
-          <td></td>
-          <td class="number">${formatAmountNoUnit(c.guarantor_amount)}</td>
-          <td></td>
-          <td class="number">${formatAmountNoUnit(c.guarantor_amount)}</td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-      `;
-    }
   });
 
   const content = `
-    <h1>채 권 자 목 록</h1>
+    <div class="header-line">${esc(headerLine)}</div>
 
-    <h3>채무자 정보</h3>
-    <table style="font-size: 11pt;">
-      <tr>
-        <td style="width: 20%; font-weight: bold;">성명</td>
-        <td style="width: 80%;">${esc(debtorName)}</td>
-      </tr>
-      <tr>
-        <td style="font-weight: bold;">주민등록번호</td>
-        <td>${esc(debtorBirth)}-*</td>
-      </tr>
-      <tr>
-        <td style="font-weight: bold;">현 주소</td>
-        <td>${esc(debtorAddress)}</td>
-      </tr>
-      <tr>
-        <td style="font-weight: bold;">송달장소</td>
-        <td>${esc(svcAddress)}</td>
-      </tr>
-    </table>
+    <h1>개 인 회 생 채 권 자 목 록</h1>
 
-    <h3 style="margin-top: 20px;">채권 요약</h3>
-    <table style="font-size: 11pt;">
-      <tr>
-        <th style="width: 25%;">항목</th>
-        <th style="width: 25%;">담보부</th>
-        <th style="width: 25%;">무담보부</th>
-        <th style="width: 25%;">합계</th>
-      </tr>
-      <tr>
-        <td style="font-weight: bold;">채권현재액</td>
-        <td class="number">${formatAmount(securedTotal)}</td>
-        <td class="number">${formatAmount(unsecuredTotal)}</td>
-        <td class="number" style="font-weight: bold;">${formatAmount(totalCurrent)}</td>
-      </tr>
-    </table>
-
-    <h3 style="margin-top: 20px;">채권자 목록</h3>
-    <table style="font-size: 10pt; margin-top: 10px;">
-      <thead>
-        <tr style="text-align: center;">
-          <th style="width: 5%;">번호</th>
-          <th style="width: 12%;">채권자명</th>
-          <th style="width: 15%;">주소/전화/팩스</th>
-          <th style="width: 12%;">채권원인<br>(발생일)</th>
-          <th style="width: 10%;">원금<br>(산정근거)</th>
-          <th style="width: 10%;">이자<br>(산정근거)</th>
-          <th style="width: 10%;">현재액</th>
-          <th style="width: 8%;">담보</th>
-          <th style="width: 10%;">보증인</th>
-          <th style="width: 8%;">부속<br>서류</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${creditorRows}
-      </tbody>
-    </table>
-
-    <h3 style="margin-top: 30px;">부속서류</h3>
-    <p style="margin: 10px 0;">1. 별제권부채권</p>
-    ${securedProperties.length > 0 ? `
-      <table style="font-size: 11pt;">
-        <thead>
-          <tr>
-            <th style="width: 15%;">담보물건</th>
-            <th style="width: 20%;">설명</th>
-            <th style="width: 20%;">시가</th>
-            <th style="width: 20%;">평가율</th>
-            <th style="width: 25%;">청산가치</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${securedProperties.map(p => `
-            <tr>
-              <td>${esc(p.property_type || '')}</td>
-              <td>${esc(p.description || '')}</td>
-              <td class="number">${formatAmount(p.market_value)}</td>
-              <td class="number">${((p.valuation_rate || 0) * 100).toFixed(1)}%</td>
-              <td class="number">${formatAmount((p.market_value || 0) * (p.valuation_rate || 0))}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    ` : '<p style="margin-left: 20px;">별제권부채권 없음</p>'}
-
-    <div class="footer">
-      <p style="margin-top: 40px;">대한민국 법원</p>
+    <div class="two-col">
+      <div class="col-left">
+        채권현재액 산정기준일: ${formatDate(assessmentDate)}
+      </div>
+      <div class="col-right">
+        목록작성일: ${formatDate(listDate)}
+      </div>
     </div>
+
+    <div class="summary-box">
+      <table>
+        <tr>
+          <td style="width: 20%; text-align: center; font-weight: bold;">채권현재액</td>
+          <td style="width: 20%; text-align: right;">합계 ${formatAmount(totalAmount)}</td>
+          <td style="width: 30%; text-align: right;">담보부 회생 ${formatAmount(securedTotal)}</td>
+          <td style="width: 30%; text-align: right;">무담보 회생 ${formatAmount(unsecuredTotal)}</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: bold;"></td>
+          <td style="text-align: right;">원금 ${formatAmount(totalCapital)}</td>
+          <td colspan="2" style="text-align: right;">채권액의 합계</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: bold;"></td>
+          <td style="text-align: right;">이자 ${formatAmount(totalInterest)}</td>
+          <td colspan="2" style="text-align: right;"></td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="font-size: 10pt; margin: 15px 0;">
+      ※ 개시후이자 등: 아래 각 채권의 개시결정일 이후의 이자·지연손해금 등은 채무자 회생 및 파산에 관한 법률
+      제581조 제2항, 제446조 제1항 제1, 2호의 후순위채권입니다.
+    </p>
+
+    <table>
+      <tr>
+        <th rowspan="2" style="width: 5%;">채권번호</th>
+        <th rowspan="2" style="width: 15%;">채권자</th>
+        <th rowspan="2" style="width: 15%;">채권의 원인<br/>채권현재액<br/>(원금/이자)</th>
+        <th rowspan="2" style="width: 20%;">주소 및 연락처</th>
+        <th colspan="2" style="width: 45%;">채권의 내용 및 부속서류</th>
+      </tr>
+      <tr>
+        <th style="width: 25%;">기재사항</th>
+        <th style="width: 20%;">부속서류 유무</th>
+      </tr>
+      ${creditorRows}
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3>부속서류 1. 별제권부채권 및 이에 준하는 채권의 내역</h3>
+
+    <table>
+      <tr>
+        <th style="width: 8%; text-align: center;">채권번호</th>
+        <th style="width: 15%; text-align: center;">채권자</th>
+        <th style="width: 18%; text-align: center;">①채권현재액<br/>(원금/이자)</th>
+        <th style="width: 18%; text-align: center;">③별제권행사등으로<br/>변제가 예상되는<br/>채권액</th>
+        <th style="width: 18%; text-align: center;">④별제권행사등으로도<br/>변제받을 수 없을<br/>채권액</th>
+        <th style="width: 14%; text-align: center;">⑤담보부<br/>회생채권액</th>
+      </tr>
+      <tr>
+        <td colspan="6" style="height: 60px;"></td>
+      </tr>
+      <tr>
+        <td colspan="6" style="text-align: center; font-weight: bold;">⑥별제권 등의 내용 및 목적물</td>
+      </tr>
+      <tr>
+        <td colspan="6" style="height: 40px;"></td>
+      </tr>
+      <tr>
+        <td colspan="6" style="text-align: center; font-weight: bold;">합 계</td>
+      </tr>
+    </table>
   `;
 
-  return wrapDocument(content, '채권자목록', 'landscape');
+  return wrapDocument(content, '채권자목록');
 }
 
 /**
@@ -742,97 +573,57 @@ function generateCreditorList(data: DocumentData): string {
  */
 function generatePropertyList(data: DocumentData): string {
   const properties = data.properties || [];
-  const deductions = data.propertyDeductions || [];
+  let totalValue = 0;
 
-  // 카테고리 정의
-  const categories: { id: string; name: string }[] = [
-    { id: 'cash', name: '현금' },
-    { id: 'deposit', name: '예금' },
-    { id: 'insurance', name: '보험' },
-    { id: 'car', name: '자동차' },
-    { id: 'lease', name: '임차보증금' },
-    { id: 'realestate', name: '부동산' },
-    { id: 'equipment', name: '사업용설비' },
-    { id: 'loan', name: '대여금채권' },
-    { id: 'sales', name: '매출금채권' },
-    { id: 'retirement', name: '예상퇴직금' },
-    { id: 'seizure', name: '압류적립금' },
-    { id: 'consignment', name: '공탁금' },
-    { id: 'etc', name: '기타' },
-  ];
-
-  // 카테고리별 재산 정렬
-  const propByCategory: Record<string, any[]> = {};
-  categories.forEach(cat => {
-    propByCategory[cat.id] = properties.filter((p: any) => p.category === cat.id);
-  });
-
-  // 합계 계산
-  let totalAmount = 0;
   properties.forEach((p: any) => {
-    totalAmount += p.amount || 0;
+    totalValue += p.amount || 0;
   });
-
-  const deductionAmount = deductions.reduce((sum, d: any) => sum + (d.amount || 0), 0);
-  const deductionName = deductions.length > 0 ? (deductions[0].reason || '면제재산') : '면제재산';
 
   let propertyRows = '';
-  categories.forEach(cat => {
-    const items = propByCategory[cat.id] || [];
-    if (items.length > 0) {
-      items.forEach((item, idx) => {
-        propertyRows += `
-          <tr>
-            <td style="width: 20%;">${idx === 0 ? esc(cat.name) : ''}</td>
-            <td style="width: 30%;">${esc(item.detail || '')}</td>
-            <td class="number" style="width: 20%;">${formatAmount(item.amount)}</td>
-            <td style="width: 15%;">${esc(item.seizure || '없음')}</td>
-            <td style="width: 15%;">${esc(item.repay_use || '')}</td>
-          </tr>
-        `;
-      });
-    }
+  properties.forEach((prop: any) => {
+    const name = prop.name || '';
+    const amount = prop.amount || 0;
+    const hasSeizure = prop.has_seizure ? '있음' : '없음';
+    const notes = prop.notes || '';
+
+    propertyRows += `
+      <tr>
+        <td style="width: 25%; text-align: left;">${esc(name)}</td>
+        <td style="width: 20%; text-align: right;">${formatAmount(amount)}</td>
+        <td style="width: 15%; text-align: center;">${esc(hasSeizure)}</td>
+        <td style="width: 40%; text-align: left;">${esc(notes)}</td>
+      </tr>
+    `;
   });
 
   const content = `
     <h1>재 산 목 록</h1>
 
-    <table style="margin-top: 20px;">
-      <thead>
-        <tr>
-          <th style="width: 20%;">카테고리</th>
-          <th style="width: 30%;">명칭</th>
-          <th style="width: 20%;">금액 또는 시가</th>
-          <th style="width: 15%;">압류등유무</th>
-          <th style="width: 15%;">비고</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${propertyRows}
-        <tr style="font-weight: bold; background: #f0f0f0;">
-          <td colspan="2">합계</td>
-          <td class="number">${formatAmount(totalAmount)}</td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td colspan="2">${esc(deductionName)} 결정신청 금액</td>
-          <td class="number">${formatAmount(deductionAmount)}</td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr style="font-weight: bold; background: #f0f0f0;">
-          <td colspan="2">청산가치</td>
-          <td class="number">${formatAmount(Math.max(0, totalAmount - deductionAmount))}</td>
-          <td></td>
-          <td></td>
-        </tr>
-      </tbody>
+    <table>
+      <tr>
+        <th style="width: 25%; text-align: center;">명 칭</th>
+        <th style="width: 20%; text-align: center;">금액 또는 시가<br/>(단위:원)</th>
+        <th style="width: 15%; text-align: center;">압류등유무</th>
+        <th style="width: 40%; text-align: center;">비 고</th>
+      </tr>
+      ${propertyRows}
+      <tr>
+        <td style="font-weight: bold;">합 계</td>
+        <td style="text-align: right; font-weight: bold;">${formatAmount(totalValue)}</td>
+        <td colspan="2"></td>
+      </tr>
+      <tr>
+        <td colspan="4" style="height: 40px;">면제재산 결정신청 금액 (1. 설명)</td>
+      </tr>
+      <tr>
+        <td colspan="4" style="height: 40px;">면제재산 결정신청 금액 (2. 설명)</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">청산가치</td>
+        <td style="text-align: right; font-weight: bold;">${formatAmount(totalValue)}</td>
+        <td colspan="2"></td>
+      </tr>
     </table>
-
-    <div class="footer">
-      <p style="margin-top: 40px;">대한민국 법원</p>
-    </div>
   `;
 
   return wrapDocument(content, '재산목록');
@@ -842,29 +633,34 @@ function generatePropertyList(data: DocumentData): string {
  * 5. 수입및지출목록 생성
  */
 function generateIncomeStatement(data: DocumentData): string {
-  const income = data.incomeSettings || {};
-  const family = data.familyMembers || [];
-  const app = data.application || {};
+  const incomeSettings = data.incomeSettings || {};
+  const familyMembers = data.familyMembers || [];
 
-  const monthlyIncome = income.net_salary || 0;
-  const incomeType = app.income_type || '자영업';
-  const occupation = app.occupation || '';
-  const employer = app.employer || '';
-
-  const medianIncome = income.median_income_60percent || 0;
+  const annualIncome = incomeSettings.annual_income || 0;
+  const monthlyIncome = annualIncome / 12;
+  const livingExpense = incomeSettings.living_expense || 0;
 
   let familyRows = '';
-  family.forEach((member, idx) => {
+  familyMembers.forEach((member: any) => {
+    const relationship = member.relationship || '';
+    const name = member.name || '';
+    const age = member.age || '';
+    const cohabitation = member.cohabitation_status || '';
+    const job = member.job || '';
+    const monthlyIncome = member.monthly_income || 0;
+    const totalProperty = member.total_property || 0;
+    const isSupportDependent = member.is_support_dependent ? '있음' : '없음';
+
     familyRows += `
       <tr>
-        <td>${esc(member.relation || '')}</td>
-        <td>${esc(member.member_name || '')}</td>
-        <td class="center">${member.age || ''}</td>
-        <td>${esc(member.cohabitation || '')}</td>
-        <td>${esc(member.occupation || '')}</td>
-        <td class="number">${formatAmount(member.monthly_income)}</td>
-        <td class="number">${formatAmount(member.total_property)}</td>
-        <td class="center">${member.is_dependent ? '○' : '×'}</td>
+        <td style="width: 12%; text-align: center;">${esc(relationship)}</td>
+        <td style="width: 12%; text-align: center;">${esc(name)}</td>
+        <td style="width: 8%; text-align: center;">${esc(age)}</td>
+        <td style="width: 18%; text-align: center;">${esc(cohabitation)}</td>
+        <td style="width: 15%; text-align: center;">${esc(job)}</td>
+        <td style="width: 12%; text-align: right;">${formatAmount(monthlyIncome)}</td>
+        <td style="width: 12%; text-align: right;">${formatAmount(totalProperty)}</td>
+        <td style="width: 11%; text-align: center;">${esc(isSupportDependent)}</td>
       </tr>
     `;
   });
@@ -872,75 +668,60 @@ function generateIncomeStatement(data: DocumentData): string {
   const content = `
     <h1>수입 및 지출에 관한 목록</h1>
 
-    <h3>I. 현재의 수입 목록</h3>
-    <table style="font-size: 11pt;">
+    <h3>I. 현재의 수입목록 (단위 : 원)</h3>
+
+    <table>
       <tr>
-        <th style="width: 20%;">항목</th>
-        <th style="width: 80%;">내용</th>
+        <th style="width: 25%;">수입상황</th>
+        <th style="width: 25%;">자영(상호)</th>
+        <th style="width: 25%;">고용(직장명)</th>
+        <th style="width: 25%;">-</th>
       </tr>
       <tr>
-        <td style="font-weight: bold;">수입 상황</td>
-        <td>${esc(incomeType)} - ${esc(occupation)} (${esc(employer)})</td>
+        <td colspan="4" style="height: 60px;"></td>
       </tr>
     </table>
 
-    <table style="font-size: 11pt; margin-top: 15px;">
-      <thead>
-        <tr>
-          <th style="width: 20%;">소득 항목</th>
-          <th style="width: 20%;">기간</th>
-          <th style="width: 20%;">금액</th>
-          <th style="width: 20%;">연간환산금액</th>
-          <th style="width: 20%;">압류여부</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>월 급여/매출</td>
-          <td>월</td>
-          <td class="number">${formatAmount(monthlyIncome)}</td>
-          <td class="number">${formatAmount(monthlyIncome * 12)}</td>
-          <td class="center">없음</td>
-        </tr>
-        <tr style="font-weight: bold; background: #f0f0f0;">
-          <td colspan="2">연수입</td>
-          <td class="number" colspan="3">${formatAmount(monthlyIncome * 12)}</td>
-        </tr>
-        <tr style="font-weight: bold; background: #f0f0f0;">
-          <td colspan="2">월평균소득</td>
-          <td class="number" colspan="3">${formatAmount(monthlyIncome)}</td>
-        </tr>
-      </tbody>
+    <table>
+      <tr>
+        <th style="width: 15%; text-align: center;">명목</th>
+        <th style="width: 20%; text-align: center;">기간구분</th>
+        <th style="width: 20%; text-align: center;">금액</th>
+        <th style="width: 20%; text-align: center;">연간환산금액</th>
+        <th style="width: 25%; text-align: center;">압류, 가압류 등 유무</th>
+      </tr>
+      <tr>
+        <td style="text-align: center;">급여소득</td>
+        <td colspan="4" style="height: 60px;"></td>
+      </tr>
     </table>
 
-    <h3 style="margin-top: 30px;">II. 변제계획 수행시의 예상 지출 목록</h3>
-    <div class="info-box">
-      <p>중위소득 60% 기준: ${formatAmount(medianIncome)} (월)</p>
-      <p style="margin-top: 10px; font-size: 11pt;">변제계획 수행 기간 동안 위 금액 범위 내에서 필수 생활비를 지출할 수 있습니다.</p>
-    </div>
+    <p style="margin-top: 15px;">
+      연 수입 ${formatAmount(annualIncome)} / 월 평균소득 ${formatAmount(monthlyIncome)}
+    </p>
 
-    <h3 style="margin-top: 30px;">III. 가족 관계</h3>
-    <table style="font-size: 11pt;">
-      <thead>
-        <tr>
-          <th style="width: 12%;">관계</th>
-          <th style="width: 12%;">성명</th>
-          <th style="width: 12%;">연령</th>
-          <th style="width: 15%;">동거여부<br>및 기간</th>
-          <th style="width: 13%;">직업</th>
-          <th style="width: 13%;">월수입</th>
-          <th style="width: 13%;">재산<br>총액</th>
-          <th style="width: 8%;">부양<br>유무</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${familyRows}
-      </tbody>
+    <h3>II. 변제계획 수행시의 예상지출목록</h3>
+
+    <p>
+      ■채무자가 예상하는 생계비가 보건복지부 공표 기준 중위소득의 100분의 60 이하인 경우<br/>
+      보건복지부 공표 (1)인 가구 기준 중위 소득 (2,564,238)원의 약 (60)%인 (1,538,543)원을 지출할 것으로 예상됩니다.
+    </p>
+
+    <h3>III. 가족관계</h3>
+
+    <table>
+      <tr>
+        <th style="width: 12%; text-align: center;">관계</th>
+        <th style="width: 12%; text-align: center;">성 명</th>
+        <th style="width: 8%; text-align: center;">연령</th>
+        <th style="width: 18%; text-align: center;">동거여부 및 기간</th>
+        <th style="width: 15%; text-align: center;">직 업</th>
+        <th style="width: 12%; text-align: center;">월 수입</th>
+        <th style="width: 12%; text-align: center;">재산총액</th>
+        <th style="width: 11%; text-align: center;">부양유무</th>
+      </tr>
+      ${familyRows}
     </table>
-
-    <div class="footer">
-      <p style="margin-top: 40px;">대한민국 법원</p>
-    </div>
   `;
 
   return wrapDocument(content, '수입및지출목록');
@@ -953,211 +734,328 @@ function generateAffidavit(data: DocumentData): string {
   const affidavit = data.affidavit || {};
   const app = data.application || {};
 
-  const debtReason = affidavit.debt_history || '';
-  const debtIncreaseReason = affidavit.property_change || '';
-  const repayEffort = affidavit.income_change || '';
-  const currentSituation = affidavit.living_situation || '';
-  const futurePlan = affidavit.repay_feasibility || '';
+  const finalEducation = affidavit.final_education || '';
+  const currentHousing = affidavit.current_housing || '';
+  const housingDetails = affidavit.housing_details || '';
+  const litigationExperience = affidavit.litigation_experience || '없음';
+  const debtCircumstances = affidavit.debt_circumstances || '';
+  const pastProcedures = affidavit.past_procedures || '';
 
   const content = `
-    <h1 style="letter-spacing: 0.2em; margin-bottom: 50px;">진 술 서</h1>
+    <h1>진 술 서</h1>
 
     <h3>I. 경력</h3>
 
-    <h4 style="font-weight: bold; margin: 15px 0 10px 0;">1. 최종 학력</h4>
-    <div class="info-box" style="min-height: 40px;">
-      ${esc(affidavit.final_education || '')}
-    </div>
+    <ol style="margin-left: 20px;">
+      <li>최종학력: ${affidavit.education_year || 'YYYY'}년도 : ${esc(finalEducation)} (졸업)</li>
+      <li>과거 경력 (최근 경력부터 기재하여 주십시오)
+        <table style="margin-top: 10px;">
+          <tr>
+            <th style="width: 20%; text-align: center;">기간</th>
+            <th style="width: 20%; text-align: center;">업종</th>
+            <th style="width: 25%; text-align: center;">직장명</th>
+            <th style="width: 35%; text-align: center;">직위</th>
+          </tr>
+          <tr>
+            <td style="height: 40px;"></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </table>
+      </li>
+      <li>과거 결혼, 이혼 경력: 와( )</li>
+    </ol>
 
-    <h4 style="font-weight: bold; margin: 15px 0 10px 0;">2. 과거 경력</h4>
-    <table style="font-size: 11pt;">
-      <thead>
-        <tr>
-          <th style="width: 20%;">근무 기간</th>
-          <th style="width: 20%;">업종</th>
-          <th style="width: 30%;">직장명</th>
-          <th style="width: 30%;">직위</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="height: 40px; vertical-align: top;"></td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td style="height: 40px; vertical-align: top;"></td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td style="height: 40px; vertical-align: top;"></td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-      </tbody>
+    <h3>II. 현재 주거상황</h3>
+
+    <p>거주를 시작한 시점 ( ${affidavit.housing_start_date || 'YYYY.MM.DD'} )</p>
+
+    <table style="margin-top: 10px;">
+      <tr>
+        <th style="width: 15%; text-align: center;">거주관계</th>
+        <th style="width: 85%; text-align: center;">상세 내역</th>
+      </tr>
+      <tr>
+        <td style="text-align: center;">■① 신청인 소유의 주택</td>
+        <td>${esc(housingDetails)}</td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□② 사택 또는 기숙사</td>
+        <td style="height: 40px;"></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□③ 임차(전월·세) 주택</td>
+        <td style="height: 40px;"></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□④ 친족 소유 주택에 무상 거주</td>
+        <td style="height: 40px;"></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□⑤ 친족외 소유 주택에 무상 거주</td>
+        <td style="height: 40px;"></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□⑥ 기타( )</td>
+        <td style="height: 40px;"></td>
+      </tr>
     </table>
 
-    <h4 style="font-weight: bold; margin: 15px 0 10px 0;">3. 결혼 및 이혼 경력</h4>
-    <div class="info-box" style="min-height: 40px;">
-      ${esc(affidavit.marriage_history || '')}
-    </div>
+    <h3>III. 부채 상황</h3>
 
-    <h3 style="margin-top: 30px;">II. 현재 주거 상황</h3>
+    <ol style="margin-left: 20px;">
+      <li>채권자로부터 소송, 지급명령, 전부명령, 압류, 가압류 등을 받은 경험( ${esc(litigationExperience)} )
+        <table style="margin-top: 10px;">
+          <tr>
+            <th style="width: 25%; text-align: center;">내 역</th>
+            <th style="width: 25%; text-align: center;">채권자</th>
+            <th style="width: 25%; text-align: center;">관할법원</th>
+            <th style="width: 25%; text-align: center;">사건번호</th>
+          </tr>
+          <tr>
+            <td style="height: 40px;"></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </table>
+      </li>
+      <li>개인회생절차에 이르게 된 사정(여러 항목 중복 선택 가능)
+        <p style="margin-top: 10px;">
+          ☐사업의 실패·부진 / ☐실직·전업 / ☐급여감소 / ☐의료비 증가 / ☐금리 상승 / ☐기타( )
+        </p>
+      </li>
+      <li>상세 사정 기재<br/>
+        <div style="border: 1px solid #000; padding: 10px; min-height: 100px; margin-top: 10px;">
+          ${esc(debtCircumstances)}
+        </div>
+      </li>
+    </ol>
 
-    <h4 style="font-weight: bold; margin: 10px 0;">거주 시작 시점</h4>
-    <div style="margin: 10px 0;">${esc(affidavit.residence_start_date || '')}</div>
+    <h3>IV. 과거 면책절차 등의 이용 상황</h3>
 
-    <h4 style="font-weight: bold; margin: 15px 0 10px 0;">거주 관계</h4>
-    <div class="info-box">
-      ${esc(affidavit.residence_type || '')}
-    </div>
-
-    <h3 style="margin-top: 30px;">III. 부채 상황</h3>
-
-    <h4 style="font-weight: bold; margin: 10px 0;">1. 소송 경험</h4>
-    <div class="info-box" style="min-height: 40px;">
-      ${esc(affidavit.litigation_history || '없음')}
-    </div>
-
-    <h4 style="font-weight: bold; margin: 15px 0 10px 0;">2. 개인회생 사유</h4>
-    <div class="info-box" style="min-height: 60px;">
-      <p style="margin: 0 0 5px 0;">☐ 사업 실패 또는 부진</p>
-      <p style="margin: 5px 0;">☐ 실직 또는 소득 감소</p>
-      <p style="margin: 5px 0;">☐ 의료비 및 질병 관련</p>
-      <p style="margin: 5px 0;">☐ 신용카드 남용</p>
-      <p style="margin: 5px 0;">☐ 보증채무</p>
-      <p style="margin: 5px 0;">☐ 기타</p>
-    </div>
-
-    <h4 style="font-weight: bold; margin: 15px 0 10px 0;">3. 상세 사정 기재</h4>
-    <div class="info-box" style="min-height: 100px;">
-      ${esc(debtReason).replace(/\n/g, '<br>')}
-    </div>
-
-    <h3 style="margin-top: 30px;">IV. 부채 증가 경위</h3>
-    <div class="info-box" style="min-height: 80px;">
-      ${esc(debtIncreaseReason).replace(/\n/g, '<br>')}
-    </div>
-
-    <h3 style="margin-top: 30px;">V. 변제 노력 및 현재 상황</h3>
-    <div class="info-box" style="min-height: 80px;">
-      ${esc(repayEffort).replace(/\n/g, '<br>')}
-    </div>
-
-    <h3 style="margin-top: 30px;">VI. 변제 계획 및 향후 계획</h3>
-    <div class="info-box" style="min-height: 80px;">
-      ${esc(futurePlan).replace(/\n/g, '<br>')}
-    </div>
-
-    <h3 style="margin-top: 30px;">VII. 과거 면책절차 등의 이용 상황</h3>
-    <table style="font-size: 11pt;">
-      <thead>
-        <tr>
-          <th style="width: 20%;">절차명</th>
-          <th style="width: 20%;">신청 연도</th>
-          <th style="width: 20%;">결과</th>
-          <th style="width: 40%;">비고</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr style="height: 40px;">
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-      </tbody>
+    <table>
+      <tr>
+        <th style="width: 25%; text-align: center;">절차</th>
+        <th style="width: 25%; text-align: center;">법원 또는 기관</th>
+        <th style="width: 25%; text-align: center;">신청시기</th>
+        <th style="width: 25%; text-align: center;">현재까지 진행상황</th>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□ 파산·면책절차</td>
+        <td style="height: 40px;"></td>
+        <td></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□ 화의·회생·개인회생절차</td>
+        <td style="height: 40px;"></td>
+        <td></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□ 신용회복위원회 워크아웃</td>
+        <td style="height: 40px;">( )회</td>
+        <td></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="text-align: center;">□ 배드뱅크</td>
+        <td style="height: 40px;">( )원 변제</td>
+        <td></td>
+        <td></td>
+      </tr>
     </table>
-
-    <div class="signature-area" style="margin-top: 50px;">
-      <div style="margin-bottom: 30px;">위 진술이 거짓이 아님을 선서합니다.</div>
-      <div class="signature-line"></div>
-      <div>${esc(app.debtor_name || '')}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
-
-    <div class="footer">
-      <p style="margin-top: 40px;">대한민국 법원</p>
-    </div>
   `;
 
   return wrapDocument(content, '진술서');
 }
 
 /**
- * 7. 변제계획안 제출서 생성
+ * 7. 변제계획안 생성
  */
 function generateRepaymentPlan(data: DocumentData): string {
   const app = data.application || {};
-  const caseNumber = app.case_number || '';
+  const planSections = data.planSections || [];
+  const incomeSettings = data.incomeSettings || {};
+  const creditorSettings = data.creditorSettings || {};
+
   const debtorName = app.debtor_name || '';
+  const debtorBirth = app.resident_number_front || '';
   const agentName = app.agent_name || '';
+  const agentFirm = app.agent_firm || '';
+  const caseNumber = app.case_number || '2026 개회 호';
+
+  const annualIncome = incomeSettings.annual_income || 0;
+  const monthlyIncome = annualIncome / 12;
+  const livingExpense = incomeSettings.living_expense || 0;
+  const availableIncome = monthlyIncome - livingExpense;
+
+  const planStartDate = planSections[0]?.start_date || '';
+  const planEndDate = planSections[0]?.end_date || '';
+  const planDurationMonths = planSections[0]?.duration_months || 36;
+
+  let creditorTableRows = '';
+  (data.creditors || []).forEach((cred: any, idx: number) => {
+    const bondNumber = cred.bond_number || String(idx + 1);
+    const creditorName = cred.creditor_name || '';
+    const principalAmount = cred.capital || 0;
+    const monthlyPayment = (principalAmount / planDurationMonths) || 0;
+    const totalPayment = monthlyPayment * planDurationMonths;
+
+    creditorTableRows += `
+      <tr>
+        <td style="text-align: center;">${esc(bondNumber)}</td>
+        <td style="text-align: center;">${esc(creditorName)}</td>
+        <td style="text-align: right;">${formatAmount(principalAmount)}</td>
+        <td style="text-align: right;">${formatAmount(monthlyPayment)}</td>
+        <td style="text-align: right;">${formatAmount(totalPayment)}</td>
+      </tr>
+    `;
+  });
 
   const content = `
-    <h1 style="letter-spacing: 0.2em; margin-bottom: 60px;">변 제 계 획 안 제 출 서</h1>
+    <h1>변 제 계 획(안)</h1>
 
-    <table style="margin-bottom: 30px;">
+    <p style="text-align: center; margin-bottom: 30px;">
+      사 건: ${esc(caseNumber)} 개인회생<br/>
+      채 무 자: ${esc(debtorName)}<br/>
+      대 리 인: ${esc(agentFirm)} / 변호사 ${esc(agentName)}
+    </p>
+
+    <p style="text-align: center; margin-bottom: 20px;">
+      채무자는 별지와 같이 변제계획안을 작성하여 제출하니 인가하여 주시기 바랍니다.
+    </p>
+
+    <div class="signature-area">
+      <p style="margin-top: 40px;">2026년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+      <div style="display: inline-block; margin: 20px 30px;">
+        <p>채무자</p>
+        <div class="signature-line"></div>
+      </div>
+      <div style="display: inline-block; margin: 20px 30px;">
+        <p>대리인</p>
+        <div class="signature-line"></div>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h1>변 제 계 획(안)</h1>
+
+    <p style="text-align: right; margin-bottom: 20px;">
+      ${formatDate(new Date().toISOString())} 작성
+    </p>
+
+    <h3>1. 변제기간</h3>
+    <p>
+      [ ${new Date(planStartDate).getFullYear()} ]년 [ ${String(new Date(planStartDate).getMonth() + 1).padStart(2, '0')} ]월 [ ${String(new Date(planStartDate).getDate()).padStart(2, '0')} ]일부터
+      [ ${new Date(planEndDate).getFullYear()} ]년 [ ${String(new Date(planEndDate).getMonth() + 1).padStart(2, '0')} ]월 [ ${String(new Date(planEndDate).getDate()).padStart(2, '0')} ]일까지
+      [ ${planDurationMonths} ]개월간
+    </p>
+
+    <h3>2. 변제에 제공되는 소득 또는 재산</h3>
+
+    <p><strong>가. 소득</strong></p>
+    <table style="margin: 10px 0;">
       <tr>
-        <td style="width: 25%; font-weight: bold;">사건번호</td>
-        <td style="width: 75%;">${esc(caseNumber)}</td>
+        <th style="width: 50%; text-align: center;">항목</th>
+        <th style="width: 50%; text-align: center;">금액</th>
       </tr>
       <tr>
-        <td style="font-weight: bold;">채무자</td>
-        <td>${esc(debtorName)}</td>
+        <td>(1) 수입</td>
+        <td style="text-align: right;">${formatAmount(annualIncome)}/년</td>
       </tr>
       <tr>
-        <td style="font-weight: bold;">대리인</td>
-        <td>${esc(agentName)}</td>
+        <td>(2) 생계비</td>
+        <td style="text-align: right;">${formatAmount(livingExpense)}/월</td>
+      </tr>
+      <tr>
+        <td>(3) 가용소득</td>
+        <td style="text-align: right;">${formatAmount(availableIncome)}/월</td>
       </tr>
     </table>
 
-    <div class="info-box" style="margin: 40px 0; padding: 30px; min-height: 100px;">
-      <p style="text-align: center; line-height: 2;">채무자는 별지와 같이 변제계획안을 작성하여 제출하니</p>
-      <p style="text-align: center; line-height: 2; font-weight: bold;">인가하여 주시기 바랍니다.</p>
-    </div>
+    <p style="margin-top: 15px;"><strong>나. 기타 개인회생재단채권</strong> [ 해당있음 □ / 해당없음 ■ ]</p>
 
-    <div class="signature-area" style="margin-top: 80px;">
-      <div style="margin-bottom: 30px;">위의 사항이 사실임을 확인합니다.</div>
-      <div class="signature-line"></div>
-      <div>${esc(debtorName)}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
+    <h3>3. 기타 개인회생재단채권에 대한 변제</h3>
+    <p style="height: 40px;"></p>
 
-    <div class="signature-area" style="margin-top: 60px;">
-      <div style="margin-bottom: 30px;">대리인 (서명)</div>
-      <div class="signature-line"></div>
-      <div>${esc(agentName)}</div>
-      <div class="date-line">${formatDate(new Date())}</div>
-    </div>
+    <h3>4. 일반의 우선권 있는 개인회생채권에 대한 변제</h3>
+    <p style="height: 40px;"></p>
 
-    <div class="footer">
-      <p style="margin-top: 80px;">대한민국 법원</p>
-    </div>
+    <h3>5. 별제권부 채권 및 이에 준하는 채권의 처리</h3>
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+
+    <p><strong>가. 채권의 내용</strong></p>
+    <table style="margin: 10px 0;">
+      <tr>
+        <th style="width: 15%; text-align: center;">채권번호</th>
+        <th style="width: 25%; text-align: center;">채권자</th>
+        <th style="width: 20%; text-align: center;">채권액</th>
+        <th style="width: 20%; text-align: center;">월변제액</th>
+        <th style="width: 20%; text-align: center;">총변제액</th>
+      </tr>
+      ${creditorTableRows}
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3>개인회생채권 변제예정액표</h3>
+
+    <h4>1. 기초사항</h4>
+    <p><strong>가. 채무자의 가용소득</strong></p>
+    <table style="margin: 10px 0;">
+      <tr>
+        <th style="width: 30%; text-align: center;">항목</th>
+        <th style="width: 20%; text-align: center;">월액</th>
+        <th style="width: 20%; text-align: center;">연액</th>
+        <th style="width: 30%; text-align: center;">비고</th>
+      </tr>
+      <tr>
+        <td style="text-align: center;">가용소득</td>
+        <td style="text-align: right;">${formatAmount(availableIncome)}</td>
+        <td style="text-align: right;">${formatAmount(availableIncome * 12)}</td>
+        <td></td>
+      </tr>
+    </table>
+
+    <h4>2. 채권자별 변제예정액의 산정내역 및 변제율</h4>
+    <p style="height: 60px; border: 1px solid #000;"></p>
+
+    <h4>3. 청산가치와의 비교</h4>
+    <p style="height: 60px; border: 1px solid #000;"></p>
+
+    <div class="page-break"></div>
+
+    <h3>별표(1) 가용소득에 의한 변제 내역</h3>
+
+    <table style="font-size: 10pt;">
+      <tr>
+        <th style="width: 8%; text-align: center;">회차</th>
+        <th style="width: 15%; text-align: center;">채권번호</th>
+        <th style="width: 20%; text-align: center;">채권자</th>
+        <th style="width: 15%; text-align: center;">(D)개인회생<br/>채권액</th>
+        <th style="width: 15%; text-align: center;">(E)월변제<br/>예정액</th>
+        <th style="width: 15%; text-align: center;">(F)총변제<br/>예정액</th>
+        <th style="width: 12%; text-align: center;">비고</th>
+      </tr>
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 40px 0;">
+          [36회차 변제 일정표]
+        </td>
+      </tr>
+    </table>
   `;
 
-  return wrapDocument(content, '변제계획안 제출서');
+  return wrapDocument(content, '변제계획안');
 }
 
-// ─── 메인 생성 함수 ───
+// ─── 메인 문서 생성 함수 ───
 
 /**
- * 문서 타입에 따라 HTML 문서를 생성합니다.
- *
- * @param type 문서 타입
- * @param data 문서 생성에 필요한 전체 데이터
- * @returns 완성된 HTML 문서 (<!DOCTYPE html>로 시작하는 전체 문서)
- *
- * @example
- * const html = generateDocument('application', {
- *   application: {...},
- *   creditors: [...],
- *   // ...
- * });
- * // 이 HTML을 브라우저에서 print-to-PDF 또는 인쇄할 수 있습니다.
+ * 문서 타입에 따라 해당 HTML 문서를 생성합니다.
  */
 export function generateDocument(type: DocumentType, data: DocumentData): string {
   switch (type) {
