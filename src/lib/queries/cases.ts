@@ -125,7 +125,8 @@ async function loadCasesPageBuckets(
     let query = applyCaseBucketFilters(supabase
       .from('cases')
       .select('id, organization_id, reference_no, title, case_type, case_status, stage_key, stage_template_key, principal_amount, opened_on, updated_at, court_name, case_number, lifecycle_status, module_flags')
-      .order('updated_at', { ascending: false }), bucket);
+      .order('updated_at', { ascending: false })
+      .limit(200), bucket);
 
     if (organizationId) {
       query = query.eq('organization_id', organizationId);

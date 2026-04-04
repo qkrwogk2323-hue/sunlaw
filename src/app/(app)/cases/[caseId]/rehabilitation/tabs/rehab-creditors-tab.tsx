@@ -57,9 +57,10 @@ type CreditorForm = {
   expanded: boolean;
 };
 
+let _creditorSeq = 0;
 function initCreditor(c: Record<string, unknown>): CreditorForm {
   return {
-    id: (c.id as string) || `new-${Date.now()}`,
+    id: (c.id as string) || `new-${++_creditorSeq}`,
     bond_number: (c.bond_number as number) || 0,
     classify: (c.classify as string) || '법인',
     creditor_name: (c.creditor_name as string) || '',
@@ -147,7 +148,7 @@ export function RehabCreditorsTab({
       ...prev,
       {
         ...initCreditor({}),
-        id: `new-${Date.now()}`,
+        id: `new-${++_creditorSeq}`,
         bond_number: nextBondNumber,
         delay_rate: settings.delay_interest_rate,
         isNew: true,
@@ -163,7 +164,7 @@ export function RehabCreditorsTab({
         ...prev,
         {
           ...initCreditor({}),
-          id: `new-${Date.now()}`,
+          id: `new-${++_creditorSeq}`,
           bond_number: nextBondNumber,
           classify: fi.classify,
           creditor_name: fi.name,

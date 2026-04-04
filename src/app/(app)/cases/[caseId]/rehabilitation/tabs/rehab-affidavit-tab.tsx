@@ -123,7 +123,7 @@ export function RehabAffidavitTab({
       ...prev,
       careers: [
         ...prev.careers,
-        { id: `new-${Date.now()}`, from: '', to: '', company: '', position: '직원', salary: '', reason: '퇴사' },
+        { id: `new-${crypto.randomUUID()}`, from: '', to: '', company: '', position: '직원', salary: '', reason: '퇴사' },
       ],
     }));
   }, []);

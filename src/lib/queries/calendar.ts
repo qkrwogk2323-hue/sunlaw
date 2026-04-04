@@ -49,8 +49,9 @@ export async function getCalendarBoardSnapshot(organizationId?: string | null, m
   const visibleGridEnd = endOfWeek(monthEnd);
   const yearStart = new Date(focusMonth.getFullYear(), 0, 1);
   const yearEnd = new Date(focusMonth.getFullYear() + 1, 0, 0, 23, 59, 59, 999);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // 한국 시간(KST, UTC+9) 기준 오늘 날짜
+  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = new Date(nowKst.getUTCFullYear(), nowKst.getUTCMonth(), nowKst.getUTCDate());
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
   const weekStart = startOfWeek(today);

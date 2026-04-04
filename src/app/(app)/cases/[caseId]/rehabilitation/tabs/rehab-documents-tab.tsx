@@ -67,10 +67,14 @@ export function RehabDocumentsTab({
           const a = document.createElement('a');
           a.href = url;
           a.download = `${label}.html`;
+          a.style.display = 'none';
           document.body.appendChild(a);
           a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          // 비동기로 정리하여 parentNode null 방지
+          setTimeout(() => {
+            a.remove();
+            URL.revokeObjectURL(url);
+          }, 100);
         } else {
           setError(result.userMessage);
         }

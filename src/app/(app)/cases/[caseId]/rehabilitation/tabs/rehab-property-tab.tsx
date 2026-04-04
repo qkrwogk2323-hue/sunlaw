@@ -92,7 +92,7 @@ export function RehabPropertyTab({
     setItems((prev) => [
       ...prev,
       {
-        id: `new-${Date.now()}`,
+        id: `new-${crypto.randomUUID()}`,
         category: activeCategory,
         detail: '',
         amount: 0,

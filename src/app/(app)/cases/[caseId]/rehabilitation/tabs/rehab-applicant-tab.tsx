@@ -227,7 +227,7 @@ export function RehabApplicantTab({
     setFamilyMembers((prev) => [
       ...prev,
       {
-        id: `new-${Date.now()}`,
+        id: `new-${crypto.randomUUID()}`,
         relation: '',
         member_name: '',
         age: '',
