@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useTransition } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
+import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
 import {
   calculateRepayment,
   calculateSecuredAllocations,
@@ -44,8 +45,11 @@ export function RehabPlanTab({
   familyMembers,
 }: RehabPlanTabProps) {
   const { success, error } = useToast();
+  const [isSaving, startSaveTransition] = useTransition();
 
-  const [repayOption, setRepayOption] = useState<RepayPeriodOption>('both60');
+  const initialOption = (incomeSettings?.repay_period_option as RepayPeriodOption) || 'both60';
+  const initialMonths = (incomeSettings?.repay_months as number) || 60;
+  const [repayOption, setRepayOption] = useState<RepayPeriodOption>(initialOption);
   const [repayType, setRepayType] = useState<RepayType>('sequential');
 
   // 데이터 변환
@@ -163,6 +167,25 @@ export function RehabPlanTab({
 
     return calculateRepayment(input);
   }, [creditors, securedResults, monthlyIncome, livingCost, extraLivingCost, childSupport, trusteeCommRate, disposeAmount, repayOption, liquidationValue]);
+
+  const handleSavePlan = useCallback(() => {
+    if (!repaymentResult) return;
+    startSaveTransition(async () => {
+      const result = await upsertRehabIncomeSettings(caseId, organizationId, {
+        repay_period_option: repayOption,
+        repay_months: repaymentResult.repayMonths,
+        monthly_available: repaymentResult.monthlyAvailable,
+        monthly_repay: repaymentResult.monthlyRepay,
+        total_repay_amount: repaymentResult.totalRepayAmount,
+        repay_rate: repaymentResult.repayRate,
+      });
+      if (result.ok) {
+        success('변제계획 저장 완료', { message: '문서 출력에 반영됩니다.' });
+      } else {
+        error('저장 실패', { message: result.userMessage || '변제계획 저장에 실패했습니다.' });
+      }
+    });
+  }, [caseId, organizationId, repayOption, repaymentResult, success, error, startSaveTransition]);
 
   // 변제 스케줄
   const schedule = useMemo(() => {
@@ -347,6 +370,22 @@ export function RehabPlanTab({
             </table>
           </div>
         </section>
+      )}
+
+      {/* 저장 버튼 */}
+      {repaymentResult && (
+        <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+          <button
+            type="button"
+            onClick={handleSavePlan}
+            disabled={isSaving}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            aria-label="변제계획 저장"
+          >
+            {isSaving ? '저장 중...' : '변제계획 저장'}
+          </button>
+          <p className="mt-1 text-center text-xs text-slate-500">저장해야 문서 출력에 반영됩니다</p>
+        </div>
       )}
 
       {/* 별제권 배분 결과 */}
