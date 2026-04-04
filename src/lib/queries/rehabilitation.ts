@@ -106,7 +106,7 @@ export async function getRehabCreditors(caseId: string) {
     .from('rehabilitation_creditors')
     .select('*')
     .eq('case_id', caseId)
-    .is('deleted_at', null)
+    .neq('lifecycle_status', 'soft_deleted')
     .order('bond_number')
     .limit(200);
   return data ?? [];
@@ -119,7 +119,7 @@ export async function getRehabSecuredProperties(caseId: string) {
     .from('rehabilitation_secured_properties')
     .select('*')
     .eq('case_id', caseId)
-    .is('deleted_at', null)
+    .neq('lifecycle_status', 'soft_deleted')
     .order('created_at')
     .limit(100);
   return data ?? [];
@@ -132,7 +132,7 @@ export async function getRehabProperties(caseId: string) {
     .from('rehabilitation_properties')
     .select('*')
     .eq('case_id', caseId)
-    .is('deleted_at', null)
+    .neq('lifecycle_status', 'soft_deleted')
     .order('category, created_at')
     .limit(500);
   return data ?? [];
@@ -156,7 +156,7 @@ export async function getRehabFamilyMembers(caseId: string) {
     .from('rehabilitation_family_members')
     .select('*')
     .eq('case_id', caseId)
-    .is('deleted_at', null)
+    .neq('lifecycle_status', 'soft_deleted')
     .order('created_at')
     .limit(20);
   return data ?? [];

@@ -214,7 +214,7 @@ export async function upsertRehabCreditor(
         .from('rehabilitation_creditors')
         .select('bond_number')
         .eq('case_id', caseId)
-        .is('deleted_at', null)
+        .neq('lifecycle_status', 'soft_deleted')
         .order('bond_number', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -256,7 +256,7 @@ export async function softDeleteRehabCreditor(
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
       .from('rehabilitation_creditors')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ lifecycle_status: 'soft_deleted', updated_at: new Date().toISOString() })
       .eq('id', creditorId)
       .eq('case_id', caseId);
 
@@ -357,7 +357,7 @@ export async function softDeleteRehabProperty(
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
       .from('rehabilitation_properties')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ lifecycle_status: 'soft_deleted', updated_at: new Date().toISOString() })
       .eq('id', propertyId)
       .eq('case_id', caseId);
 
@@ -421,7 +421,7 @@ export async function softDeleteRehabFamilyMember(
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
       .from('rehabilitation_family_members')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ lifecycle_status: 'soft_deleted', updated_at: new Date().toISOString() })
       .eq('id', memberId)
       .eq('case_id', caseId);
 
