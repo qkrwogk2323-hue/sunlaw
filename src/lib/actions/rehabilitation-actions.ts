@@ -195,13 +195,19 @@ export async function upsertRehabCreditor(
 
     const supabase = await createSupabaseServerClient();
 
+    // 클라이언트 전용 필드 및 무효 id 제거
+    const { id: _formId, bond_number: _bn, ...cleanData } = creditorData as Record<string, unknown> & { id?: string; bond_number?: number };
+
     if (creditorId) {
       const { error } = await supabase
         .from('rehabilitation_creditors')
-        .update({ ...creditorData, updated_at: new Date().toISOString() })
+        .update({ ...cleanData, updated_at: new Date().toISOString() })
         .eq('id', creditorId)
         .eq('case_id', caseId);
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '채권자 수정에 실패했습니다.' };
+      if (error) {
+        console.error('[upsertRehabCreditor] update error', error);
+        return { ok: false, code: 'DB_ERROR', userMessage: '채권자 수정에 실패했습니다.' };
+      }
     } else {
       // 다음 bond_number 계산
       const { data: maxRow } = await supabase
@@ -221,9 +227,12 @@ export async function upsertRehabCreditor(
           case_id: caseId,
           organization_id: organizationId,
           bond_number: nextBondNumber,
-          ...creditorData,
+          ...cleanData,
         });
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '채권자 추가에 실패했습니다.' };
+      if (error) {
+        console.error('[upsertRehabCreditor] insert error', error);
+        return { ok: false, code: 'DB_ERROR', userMessage: '채권자 추가에 실패했습니다.' };
+      }
     }
 
     revalidatePath(`/cases/${caseId}/rehabilitation`);

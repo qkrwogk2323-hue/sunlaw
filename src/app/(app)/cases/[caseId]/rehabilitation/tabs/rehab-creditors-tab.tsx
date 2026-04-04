@@ -234,8 +234,8 @@ export function RehabCreditorsTab({
 
       // 채권자 목록
       for (const c of creditors) {
-        const { isNew, expanded, ...data } = c;
-        const result = await upsertRehabCreditor(caseId, organizationId, data, isNew ? undefined : c.id);
+        const { isNew, expanded, id: formId, ...data } = c;
+        const result = await upsertRehabCreditor(caseId, organizationId, data, isNew ? undefined : formId);
         if (!result.ok) {
           error('저장 실패', { message: `채권자 ${c.creditor_name || c.bond_number}번 저장에 실패했습니다.` });
           return;
