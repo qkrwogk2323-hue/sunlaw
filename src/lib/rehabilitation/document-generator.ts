@@ -415,7 +415,7 @@ function generateCreditorList(data: DocumentData): string {
   const debtorBirth = app.resident_number_front || '';
   const courtCode = '수원회생법원';
   const caseNumber = app.case_number || '2026 개회 호';
-  const assessmentDate = creditorSettings.assessment_date || '';
+  const assessmentDate = creditorSettings.bond_date || creditorSettings.list_date || '';
   const listDate = creditorSettings.list_date || new Date().toISOString().split('T')[0];
 
   // 채권액 계산
@@ -431,9 +431,9 @@ function generateCreditorList(data: DocumentData): string {
     totalInterest += interest;
 
     if (cred.is_secured) {
-      securedTotal += capital;
+      securedTotal += capital + interest;
     } else {
-      unsecuredTotal += capital;
+      unsecuredTotal += capital + interest;
     }
   });
 
@@ -579,12 +579,16 @@ function generatePropertyList(data: DocumentData): string {
     totalValue += p.amount || 0;
   });
 
+  const deductions = data.propertyDeductions || [];
+  const totalDeduction = deductions.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+  const liquidationValue = Math.max(0, totalValue - totalDeduction);
+
   let propertyRows = '';
   properties.forEach((prop: any) => {
-    const name = prop.name || '';
-    const amount = prop.amount || 0;
-    const hasSeizure = prop.has_seizure ? '있음' : '없음';
-    const notes = prop.notes || '';
+    const name = prop.detail || prop.category || '';
+    const amount = Number(prop.amount) || 0;
+    const hasSeizure = prop.seizure || '무';
+    const notes = prop.repay_use || '';
 
     propertyRows += `
       <tr>
@@ -612,16 +616,15 @@ function generatePropertyList(data: DocumentData): string {
         <td style="text-align: right; font-weight: bold;">${formatAmount(totalValue)}</td>
         <td colspan="2"></td>
       </tr>
-      <tr>
-        <td colspan="4" style="height: 40px;">면제재산 결정신청 금액 (1. 설명)</td>
-      </tr>
-      <tr>
-        <td colspan="4" style="height: 40px;">면제재산 결정신청 금액 (2. 설명)</td>
-      </tr>
+      ${totalDeduction > 0 ? `<tr>
+        <td style="font-weight: bold;">면제재산(공제) 합계</td>
+        <td style="text-align: right; font-weight: bold;">${formatAmount(totalDeduction)}</td>
+        <td colspan="2"></td>
+      </tr>` : ''}
       <tr>
         <td style="font-weight: bold;">청산가치</td>
-        <td style="text-align: right; font-weight: bold;">${formatAmount(totalValue)}</td>
-        <td colspan="2"></td>
+        <td style="text-align: right; font-weight: bold;">${formatAmount(liquidationValue)}</td>
+        <td colspan="2">재산 합계 − 면제재산(공제)</td>
       </tr>
     </table>
   `;
@@ -667,6 +670,11 @@ function generateIncomeStatement(data: DocumentData): string {
     `;
   });
 
+  const app = data.application || {};
+  const incomeType = app.income_type || 'salary';
+  const employerName = app.employer_name || '';
+  const dependentCount = familyMembers.filter((m: any) => m.is_dependent).length + 1;
+
   const content = `
     <h1>수입 및 지출에 관한 목록</h1>
 
@@ -677,10 +685,13 @@ function generateIncomeStatement(data: DocumentData): string {
         <th style="width: 25%;">수입상황</th>
         <th style="width: 25%;">자영(상호)</th>
         <th style="width: 25%;">고용(직장명)</th>
-        <th style="width: 25%;">-</th>
+        <th style="width: 25%;">비고</th>
       </tr>
       <tr>
-        <td colspan="4" style="height: 60px;"></td>
+        <td></td>
+        <td style="text-align: center;">${incomeType === 'business' ? `■ ${esc(employerName)}` : '□'}</td>
+        <td style="text-align: center;">${incomeType === 'salary' ? `■ ${esc(employerName)}` : '□'}</td>
+        <td></td>
       </tr>
     </table>
 
@@ -694,8 +705,18 @@ function generateIncomeStatement(data: DocumentData): string {
       </tr>
       <tr>
         <td style="text-align: center;">급여소득</td>
-        <td colspan="4" style="height: 60px;"></td>
+        <td style="text-align: center;">월</td>
+        <td style="text-align: right;">${formatAmount(monthlySalary)}</td>
+        <td style="text-align: right;">${formatAmount(annualIncome)}</td>
+        <td style="text-align: center;">무</td>
       </tr>
+      ${extraIncome > 0 ? `<tr>
+        <td style="text-align: center;">기타소득</td>
+        <td style="text-align: center;">월</td>
+        <td style="text-align: right;">${formatAmount(extraIncome)}</td>
+        <td style="text-align: right;">${formatAmount(extraIncome * 12)}</td>
+        <td style="text-align: center;">무</td>
+      </tr>` : ''}
     </table>
 
     <p style="margin-top: 15px;">
@@ -706,7 +727,7 @@ function generateIncomeStatement(data: DocumentData): string {
 
     <p>
       ■채무자가 예상하는 생계비가 보건복지부 공표 기준 중위소득의 100분의 60 이하인 경우<br/>
-      보건복지부 공표 (1)인 가구 기준 중위 소득 (2,564,238)원의 약 (60)%인 (1,538,543)원을 지출할 것으로 예상됩니다.
+      보건복지부 공표 (${dependentCount})인 가구 기준 중위 소득의 약 (60)%인 ${formatAmount(livingExpense)}을 지출할 것으로 예상됩니다.
     </p>
 
     <h3>III. 가족관계</h3>
@@ -722,7 +743,7 @@ function generateIncomeStatement(data: DocumentData): string {
         <th style="width: 12%; text-align: center;">재산총액</th>
         <th style="width: 11%; text-align: center;">부양유무</th>
       </tr>
-      ${familyRows}
+      ${familyRows || '<tr><td colspan="8" style="text-align: center; padding: 15px; color: #666;">해당 없음</td></tr>'}
     </table>
   `;
 
@@ -896,7 +917,11 @@ function generateRepaymentPlan(data: DocumentData): string {
   const annualIncome = monthlyIncome * 12;
   const livingExpense = Number(incomeSettings.living_cost) || 0;
   const extraLivingCost = Number(incomeSettings.extra_living_cost) || 0;
-  const availableIncome = monthlyIncome - livingExpense - extraLivingCost;
+  const childSupport = Number(incomeSettings.child_support) || 0;
+  const commissionRate = Number(incomeSettings.trustee_comm_rate) || 0;
+  const rawAvailable = monthlyIncome - livingExpense - extraLivingCost - childSupport;
+  const commission = Math.floor(rawAvailable * commissionRate / 100);
+  const availableIncome = rawAvailable - commission;
 
   // 변제기간: 신청일 기준으로 산출
   const repayMonths = Number(incomeSettings.repay_months) || 36;
