@@ -308,7 +308,7 @@ function wrapDocument(content: string, title: string): string {
 function generateApplication(data: DocumentData): string {
   const app = data.application || {};
   const caseNumber = app.case_number || '';
-  const debtorName = app.debtor_name || '';
+  const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
   const agentName = app.agent_name || '';
   const agentPhone = app.agent_phone || '';
@@ -365,7 +365,7 @@ function generateApplication(data: DocumentData): string {
  */
 function generateDelegation(data: DocumentData): string {
   const app = data.application || {};
-  const debtorName = app.debtor_name || '';
+  const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
   const agentName = app.agent_name || '';
 
@@ -411,7 +411,7 @@ function generateCreditorList(data: DocumentData): string {
   const creditorSettings = data.creditorSettings || {};
   const creditors = data.creditors || [];
 
-  const debtorName = app.debtor_name || '';
+  const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
   const courtCode = '수원회생법원';
   const caseNumber = app.case_number || '2026 개회 호';
@@ -636,20 +636,22 @@ function generateIncomeStatement(data: DocumentData): string {
   const incomeSettings = data.incomeSettings || {};
   const familyMembers = data.familyMembers || [];
 
-  const annualIncome = incomeSettings.annual_income || 0;
-  const monthlyIncome = annualIncome / 12;
-  const livingExpense = incomeSettings.living_expense || 0;
+  const monthlySalary = Number(incomeSettings.net_salary) || 0;
+  const extraIncome = Number(incomeSettings.extra_income) || 0;
+  const monthlyIncome = monthlySalary + extraIncome;
+  const annualIncome = monthlyIncome * 12;
+  const livingExpense = Number(incomeSettings.living_cost) || 0;
 
   let familyRows = '';
   familyMembers.forEach((member: any) => {
-    const relationship = member.relationship || '';
-    const name = member.name || '';
+    const relationship = member.relation || '';
+    const name = member.member_name || '';
     const age = member.age || '';
-    const cohabitation = member.cohabitation_status || '';
-    const job = member.job || '';
-    const monthlyIncome = member.monthly_income || 0;
-    const totalProperty = member.total_property || 0;
-    const isSupportDependent = member.is_support_dependent ? '있음' : '없음';
+    const cohabitation = member.cohabitation || '';
+    const job = member.occupation || '';
+    const monthlyIncome = Number(member.monthly_income) || 0;
+    const totalProperty = Number(member.total_property) || 0;
+    const isSupportDependent = member.is_dependent ? '있음' : '없음';
 
     familyRows += `
       <tr>
@@ -881,27 +883,46 @@ function generateRepaymentPlan(data: DocumentData): string {
   const incomeSettings = data.incomeSettings || {};
   const creditorSettings = data.creditorSettings || {};
 
-  const debtorName = app.debtor_name || '';
+  const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
   const agentName = app.agent_name || '';
-  const agentFirm = app.agent_firm || '';
+  const agentFirm = app.agent_type ? `${app.agent_type} 사무소` : '';
   const caseNumber = app.case_number || '2026 개회 호';
 
-  const annualIncome = incomeSettings.annual_income || 0;
-  const monthlyIncome = annualIncome / 12;
-  const livingExpense = incomeSettings.living_expense || 0;
-  const availableIncome = monthlyIncome - livingExpense;
+  // 소득: DB 컬럼은 net_salary(월), living_cost(월)
+  const monthlySalary = Number(incomeSettings.net_salary) || 0;
+  const extraIncome = Number(incomeSettings.extra_income) || 0;
+  const monthlyIncome = monthlySalary + extraIncome;
+  const annualIncome = monthlyIncome * 12;
+  const livingExpense = Number(incomeSettings.living_cost) || 0;
+  const extraLivingCost = Number(incomeSettings.extra_living_cost) || 0;
+  const availableIncome = monthlyIncome - livingExpense - extraLivingCost;
 
-  const planStartDate = planSections[0]?.start_date || '';
-  const planEndDate = planSections[0]?.end_date || '';
-  const planDurationMonths = planSections[0]?.duration_months || 36;
+  // 변제기간: 신청일 기준으로 산출
+  const repayMonths = Number(incomeSettings.repay_months) || 36;
+  const planDurationMonths = repayMonths;
+  const repayStartDate = app.repayment_start_date || app.application_date || '';
+  let planStartDate = '';
+  let planEndDate = '';
+  if (repayStartDate) {
+    const start = new Date(repayStartDate);
+    if (!isNaN(start.getTime())) {
+      planStartDate = repayStartDate;
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + planDurationMonths);
+      planEndDate = end.toISOString().slice(0, 10);
+    }
+  }
 
+  // 채권자별 변제액: 가용소득 기반 안분 계산
+  const totalDebt = (data.creditors || []).reduce((sum: number, c: any) => sum + (Number(c.capital) || 0), 0);
   let creditorTableRows = '';
   (data.creditors || []).forEach((cred: any, idx: number) => {
     const bondNumber = cred.bond_number || String(idx + 1);
     const creditorName = cred.creditor_name || '';
-    const principalAmount = cred.capital || 0;
-    const monthlyPayment = (principalAmount / planDurationMonths) || 0;
+    const principalAmount = Number(cred.capital) || 0;
+    const ratio = totalDebt > 0 ? principalAmount / totalDebt : 0;
+    const monthlyPayment = Math.floor(availableIncome * ratio);
     const totalPayment = monthlyPayment * planDurationMonths;
 
     creditorTableRows += `
@@ -950,8 +971,12 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     <h3>1. 변제기간</h3>
     <p>
-      [ ${new Date(planStartDate).getFullYear()} ]년 [ ${String(new Date(planStartDate).getMonth() + 1).padStart(2, '0')} ]월 [ ${String(new Date(planStartDate).getDate()).padStart(2, '0')} ]일부터
-      [ ${new Date(planEndDate).getFullYear()} ]년 [ ${String(new Date(planEndDate).getMonth() + 1).padStart(2, '0')} ]월 [ ${String(new Date(planEndDate).getDate()).padStart(2, '0')} ]일까지
+      ${planStartDate && !isNaN(new Date(planStartDate).getTime())
+        ? `[ ${new Date(planStartDate).getFullYear()} ]년 [ ${String(new Date(planStartDate).getMonth() + 1).padStart(2, '0')} ]월 [ ${String(new Date(planStartDate).getDate()).padStart(2, '0')} ]일부터`
+        : '[ ____ ]년 [ __ ]월 [ __ ]일부터'}
+      ${planEndDate && !isNaN(new Date(planEndDate).getTime())
+        ? `[ ${new Date(planEndDate).getFullYear()} ]년 [ ${String(new Date(planEndDate).getMonth() + 1).padStart(2, '0')} ]월 [ ${String(new Date(planEndDate).getDate()).padStart(2, '0')} ]일까지`
+        : '[ ____ ]년 [ __ ]월 [ __ ]일까지'}
       [ ${planDurationMonths} ]개월간
     </p>
 
