@@ -1047,31 +1047,105 @@ function generateRepaymentPlan(data: DocumentData): string {
     </table>
 
     <h4>2. 채권자별 변제예정액의 산정내역 및 변제율</h4>
-    <p style="height: 60px; border: 1px solid #000;"></p>
+    <table style="margin: 10px 0;">
+      <tr>
+        <th style="width: 8%; text-align: center;">번호</th>
+        <th style="width: 22%; text-align: center;">채권자</th>
+        <th style="width: 18%; text-align: center;">(A)채권액</th>
+        <th style="width: 18%; text-align: center;">(B)월변제액</th>
+        <th style="width: 18%; text-align: center;">(C)총변제액</th>
+        <th style="width: 16%; text-align: center;">변제율</th>
+      </tr>
+      ${(data.creditors || []).map((cred: any, idx: number) => {
+        const cap = Number(cred.capital) || 0;
+        const interest = Number(cred.interest) || 0;
+        const credDebt = cap + interest;
+        const ratio = totalDebt > 0 ? credDebt / totalDebt : 0;
+        const mPay = Math.floor(availableIncome * ratio);
+        const tPay = mPay * planDurationMonths;
+        const rRate = credDebt > 0 ? ((tPay / credDebt) * 100).toFixed(1) : '0.0';
+        return `<tr>
+          <td style="text-align: center;">${cred.bond_number || idx + 1}</td>
+          <td style="text-align: center;">${esc(cred.creditor_name || '')}</td>
+          <td style="text-align: right;">${formatAmount(credDebt)}</td>
+          <td style="text-align: right;">${formatAmount(mPay)}</td>
+          <td style="text-align: right;">${formatAmount(tPay)}</td>
+          <td style="text-align: center;">${rRate}%</td>
+        </tr>`;
+      }).join('')}
+      <tr style="font-weight: bold; border-top: 2px solid #000;">
+        <td colspan="2" style="text-align: center;">합 계</td>
+        <td style="text-align: right;">${formatAmount(totalDebt)}</td>
+        <td style="text-align: right;">${formatAmount(Math.floor(availableIncome))}</td>
+        <td style="text-align: right;">${formatAmount(Math.floor(availableIncome) * planDurationMonths)}</td>
+        <td style="text-align: center;">${totalDebt > 0 ? ((Math.floor(availableIncome) * planDurationMonths / totalDebt) * 100).toFixed(1) : '0.0'}%</td>
+      </tr>
+    </table>
 
     <h4>3. 청산가치와의 비교</h4>
-    <p style="height: 60px; border: 1px solid #000;"></p>
+    ${(() => {
+      const props = data.properties || [];
+      const deductions = data.propertyDeductions || [];
+      const totalPropValue = props.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+      const totalDeduction = deductions.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+      const liqValue = Math.max(0, totalPropValue - totalDeduction);
+      const totalRepay = Math.floor(availableIncome) * planDurationMonths;
+      const exceedsLiq = totalRepay >= liqValue;
+      return `
+        <table style="margin: 10px 0;">
+          <tr><th style="width: 50%;">항목</th><th style="width: 50%; text-align: right;">금액</th></tr>
+          <tr><td>총 재산가액</td><td style="text-align: right;">${formatAmount(totalPropValue)}</td></tr>
+          <tr><td>공제금액 합계</td><td style="text-align: right;">${formatAmount(totalDeduction)}</td></tr>
+          <tr style="font-weight: bold;"><td>청산가치 (A)</td><td style="text-align: right;">${formatAmount(liqValue)}</td></tr>
+          <tr style="font-weight: bold;"><td>총 변제예정액 (B)</td><td style="text-align: right;">${formatAmount(totalRepay)}</td></tr>
+        </table>
+        <p style="margin-top: 10px;">
+          ${exceedsLiq
+            ? `총 변제예정액(${formatAmount(totalRepay)})이 청산가치(${formatAmount(liqValue)})를 <strong>상회</strong>하므로 청산가치 보장 원칙을 충족합니다.`
+            : `<strong style="color: red;">⚠ 총 변제예정액(${formatAmount(totalRepay)})이 청산가치(${formatAmount(liqValue)})에 미달합니다. 변제액 조정이 필요합니다.</strong>`}
+        </p>`;
+    })()}
 
     <div class="page-break"></div>
 
     <h3>별표(1) 가용소득에 의한 변제 내역</h3>
 
-    <table style="font-size: 10pt;">
-      <tr>
-        <th style="width: 8%; text-align: center;">회차</th>
-        <th style="width: 15%; text-align: center;">채권번호</th>
-        <th style="width: 20%; text-align: center;">채권자</th>
-        <th style="width: 15%; text-align: center;">(D)개인회생<br/>채권액</th>
-        <th style="width: 15%; text-align: center;">(E)월변제<br/>예정액</th>
-        <th style="width: 15%; text-align: center;">(F)총변제<br/>예정액</th>
-        <th style="width: 12%; text-align: center;">비고</th>
-      </tr>
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 40px 0;">
-          [36회차 변제 일정표]
-        </td>
-      </tr>
-    </table>
+    ${(() => {
+      const credList = data.creditors || [];
+      const rows: string[] = [];
+      for (let month = 1; month <= planDurationMonths; month++) {
+        credList.forEach((cred: any, idx: number) => {
+          const cap = Number(cred.capital) || 0;
+          const credDebt = cap + (Number(cred.interest) || 0);
+          const ratio = totalDebt > 0 ? credDebt / totalDebt : 0;
+          const mPay = Math.floor(availableIncome * ratio);
+          const tPay = mPay * month;
+          rows.push(`<tr>
+            ${idx === 0 ? `<td rowspan="${credList.length}" style="text-align: center; vertical-align: middle;">${month}</td>` : ''}
+            <td style="text-align: center;">${cred.bond_number || idx + 1}</td>
+            <td>${esc(cred.creditor_name || '')}</td>
+            <td style="text-align: right;">${formatAmount(credDebt)}</td>
+            <td style="text-align: right;">${formatAmount(mPay)}</td>
+            <td style="text-align: right;">${formatAmount(tPay)}</td>
+            <td></td>
+          </tr>`);
+        });
+      }
+      return `<table style="font-size: 9pt;">
+        <thead>
+          <tr>
+            <th style="width: 6%; text-align: center;">회차</th>
+            <th style="width: 8%; text-align: center;">번호</th>
+            <th style="width: 20%; text-align: center;">채권자</th>
+            <th style="width: 18%; text-align: center;">(D)채권액</th>
+            <th style="width: 18%; text-align: center;">(E)월변제액</th>
+            <th style="width: 18%; text-align: center;">(F)누적변제액</th>
+            <th style="width: 12%; text-align: center;">비고</th>
+          </tr>
+        </thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>`;
+    })()}
   `;
 
   return wrapDocument(content, '변제계획안');
