@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import { saveCreditorsFromExtraction, softDeleteCreditor } from '@/lib/actions/insolvency-actions';
 import { RepaymentPlanCalculator } from './repayment-plan-calculator';
 import { ClientActionPacketPanel } from './client-action-packet-panel';
+import { BankruptcyDocumentsTab } from './tabs/bankruptcy-documents-tab';
 import type { CorrectionNoticeSummaryRaw, ExtractionResult } from '@/lib/insolvency-types';
 
 type Creditor = {
@@ -146,7 +147,7 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
   const [uploading, setUploading] = useState(false);
   const [extractResult, setExtractResult] = useState<ExtractionResult | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'creditors' | 'calculator' | 'packets'>('creditors');
+  const [activeTab, setActiveTab] = useState<'creditors' | 'calculator' | 'packets' | 'documents'>('creditors');
   const [docType, setDocType] = useState<string>('debt_certificate');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -300,7 +301,8 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
         {([
           { id: 'creditors', label: '채권자목록' },
           { id: 'calculator', label: '변제계획 계산기' },
-          { id: 'packets', label: `액션패킷 ${packets.length > 0 ? `(${packets.length})` : ''}` }
+          { id: 'packets', label: `액션패킷 ${packets.length > 0 ? `(${packets.length})` : ''}` },
+          { id: 'documents', label: '문서 출력' }
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -608,13 +610,18 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
             plan_start_date: latestPlan.plan_start_date
           } : null}
         />
-      ) : (
+      ) : activeTab === 'packets' ? (
         <ClientActionPacketPanel
           caseId={caseId}
           organizationId={organizationId}
           packets={packets}
           correctionItemsFromAI={correctionItemsFromAI}
           correctionNoticeSummaryFromAI={correctionNoticeSummaryFromAI}
+        />
+      ) : (
+        <BankruptcyDocumentsTab
+          caseId={caseId}
+          organizationId={organizationId}
         />
       )}
     </div>
