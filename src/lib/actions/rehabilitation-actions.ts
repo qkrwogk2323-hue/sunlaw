@@ -448,7 +448,13 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
     trustee_comm_rate: form.trustee_comm_rate ?? 0,
     dispose_amount: form.dispose_amount ?? 0,
   };
-  // dependent_count는 DB 컬럼에 없으므로 제거
+  // 변제계획 탭에서 저장하는 필드 (있을 때만 포함)
+  if (form.repay_period_option !== undefined) mapped.repay_period_option = form.repay_period_option;
+  if (form.repay_months !== undefined) mapped.repay_months = form.repay_months;
+  if (form.monthly_available !== undefined) mapped.monthly_available = form.monthly_available;
+  if (form.monthly_repay !== undefined) mapped.monthly_repay = form.monthly_repay;
+  if (form.total_repay_amount !== undefined) mapped.total_repay_amount = form.total_repay_amount;
+  if (form.repay_rate !== undefined) mapped.repay_rate = form.repay_rate;
   return mapped;
 }
 
