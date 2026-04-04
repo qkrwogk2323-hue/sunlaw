@@ -207,7 +207,9 @@ export async function bulkUploadCasesAction(
 
     const title = (row['제목'] || row['사건명'] || row['title'] || '').trim();
     const rawType = (row['사건유형'] || row['유형'] || row['case_type'] || row['type'] || 'general').trim().toLowerCase();
-    const caseType = VALID_CASE_TYPES.includes(rawType) ? rawType : 'general';
+    const KOREAN_TYPE_MAP: Record<string, string> = { '도산': 'insolvency', '개인회생': 'insolvency', '민사': 'civil', '형사': 'criminal', '채권': 'debt_collection', '가사': 'family', '행정': 'administrative', '기타': 'general' };
+    const mappedType = KOREAN_TYPE_MAP[rawType] ?? rawType;
+    const caseType = VALID_CASE_TYPES.includes(mappedType) ? mappedType : 'general';
     const principalAmount = parseFloat((row['원금'] || row['principal_amount'] || '0').replace(/,/g, '')) || 0;
     const courtName = (row['법원'] || row['법원명'] || row['court_name'] || '').trim() || null;
     const caseNumber = (row['사건번호'] || row['case_number'] || '').trim() || null;
@@ -223,9 +225,11 @@ export async function bulkUploadCasesAction(
     // 사건 번호 생성
     const now = new Date();
     const referenceNo = `${orgSlug.toUpperCase()}-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const slug = `${orgSlug.toLowerCase()}-${Date.now()}-${i}`;
     const stageTemplateKey = caseType === 'debt_collection' ? 'collection-default'
       : caseType === 'civil' ? 'civil-default'
       : caseType === 'criminal' ? 'criminal-default'
+      : caseType === 'insolvency' ? 'general-default'
       : 'general-default';
     const moduleFlags = caseType === 'debt_collection' ? { billing: true, collection: true }
       : caseType === 'insolvency' ? { billing: true, insolvency: true }
@@ -236,6 +240,7 @@ export async function bulkUploadCasesAction(
       .insert({
         organization_id: organizationId,
         reference_no: referenceNo,
+        slug,
         title,
         case_type: caseType,
         case_status: 'intake',
