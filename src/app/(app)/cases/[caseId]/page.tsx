@@ -79,6 +79,7 @@ function getCaseTypeLabel(value: string | null | undefined) {
     injunction: '가처분',
     criminal: '형사',
     advisory: '자문',
+    insolvency: '도산(회생·파산)',
     other: '기타'
   });
 }

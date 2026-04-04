@@ -124,8 +124,8 @@ export default async function ClientsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">의뢰인 관리</h1>
-        <p className="mt-2 text-sm text-slate-600">이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{membership?.organization?.kind === 'collection_company' ? '채무자 관리' : '의뢰인 관리'}</h1>
+        <p className="mt-2 text-sm text-slate-600">{membership?.organization?.kind === 'collection_company' ? '채무자 현황을 확인하고 사건 연결 상태를 관리합니다.' : '이름보다 상태를 먼저 확인해 가입, 초대, 사건 연결을 운영합니다.'}</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           {canManage && organizationId && (

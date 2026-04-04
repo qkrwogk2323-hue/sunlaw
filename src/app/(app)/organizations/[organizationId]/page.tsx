@@ -10,6 +10,7 @@ import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspaceSummary } from '@/lib/queries/organizations';
+import { membershipRoleLabel } from '@/lib/membership-labels';
 
 function requestStatusTone(status: string) {
   if (status === 'approved') return 'green';
@@ -177,7 +178,7 @@ export default async function OrganizationDetailPage({
                   <tr key={member.id} className="border-t border-slate-100 text-slate-700">
                     <td className="py-3">{member.profile?.full_name ?? '-'}</td>
                     <td className="py-3">{member.profile?.email ?? '-'}</td>
-                    <td className="py-3"><Badge tone="blue">{member.role}</Badge></td>
+                    <td className="py-3"><Badge tone="blue">{membershipRoleLabel(member.role)}</Badge></td>
                     <td className="py-3">{member.title ?? '-'}</td>
                   </tr>
                 ))}

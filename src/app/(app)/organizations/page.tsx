@@ -7,6 +7,7 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { listAccessibleOrganizations, listOrganizationMemberships } from '@/lib/queries/organizations';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
+import { membershipRoleLabel } from '@/lib/membership-labels';
 
 function requestStatusTone(status: string) {
   if (status === 'approved') return 'green';
@@ -91,7 +92,8 @@ export default async function OrganizationsPage({
           <CardContent className="space-y-3">
             {filteredOrganizations.length ? (
               filteredOrganizations.map((organization: any) => {
-                const role = memberships.find((membership: any) => membership.organization_id === organization.id)?.role ?? 'accessible';
+                const rawRole = memberships.find((membership: any) => membership.organization_id === organization.id)?.role;
+                const role = rawRole ? membershipRoleLabel(rawRole) : '열람 가능';
                 const isCurrentOrganization = organization.id === currentOrganizationId;
                 return (
                   <Link key={organization.id} href={`/organizations/${organization.id}` as Route} className="block rounded-xl border border-slate-200 p-4 transition hover:border-slate-400 hover:bg-slate-50/70">

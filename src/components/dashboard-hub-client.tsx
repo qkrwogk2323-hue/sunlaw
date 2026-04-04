@@ -529,7 +529,7 @@ function useDashboardCommunicationState({
       membershipId: member.id,
       profileId: profileRecord(member.profile)?.id ?? '',
       label: profileRecord(member.profile)?.full_name || profileRecord(member.profile)?.email || '구성원',
-      roleLabel: member.title || member.role || '구성원'
+      roleLabel: member.title || ({ org_owner: '조직 관리자', org_manager: '조직 관리자', org_staff: '조직원' } as Record<string, string>)[member.role ?? ''] || '구성원'
     }))
     .filter((item) => item.profileId && item.profileId !== effectiveCurrentUserId);
 
