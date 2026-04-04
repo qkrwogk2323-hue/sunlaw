@@ -757,12 +757,28 @@ function generateAffidavit(data: DocumentData): string {
   const affidavit = data.affidavit || {};
   const app = data.application || {};
 
-  const finalEducation = affidavit.final_education || '';
-  const currentHousing = affidavit.current_housing || '';
-  const housingDetails = affidavit.housing_details || '';
-  const litigationExperience = affidavit.litigation_experience || '없음';
-  const debtCircumstances = affidavit.debt_circumstances || '';
-  const pastProcedures = affidavit.past_procedures || '';
+  // income_change에 JSON 구조 데이터 저장됨
+  let structured: Record<string, any> = {};
+  try {
+    if (typeof affidavit.income_change === 'string' && affidavit.income_change.startsWith('{')) {
+      structured = JSON.parse(affidavit.income_change);
+    }
+  } catch { /* ignore */ }
+
+  const finalEducation = structured.school_name || '';
+  const educationYear = structured.graduation_year || '';
+  const graduationStatus = structured.graduation_status || '졸업';
+  const careers: Array<{ period?: string; industry?: string; company?: string; position?: string }> = structured.careers || [];
+  const marriageStatus = structured.marriage_status || '';
+  const marriageNote = structured.marriage_note || '';
+  const housingType = structured.housing_type || '1';
+  const housingStart = structured.housing_start || '';
+  const housingNote = structured.housing_note || '';
+  const debtHasLawsuit = structured.debt_has_lawsuit || '없음';
+  const debtCircumstances = affidavit.debt_history || '';
+  const debtIncreaseReason = affidavit.property_change || '';
+  const currentSituation = affidavit.living_situation || '';
+  const repayFeasibility = affidavit.repay_feasibility || '';
 
   const content = `
     <h1>진 술 서</h1>
@@ -770,7 +786,7 @@ function generateAffidavit(data: DocumentData): string {
     <h3>I. 경력</h3>
 
     <ol style="margin-left: 20px;">
-      <li>최종학력: ${affidavit.education_year || 'YYYY'}년도 : ${esc(finalEducation)} (졸업)</li>
+      <li>최종학력: ${esc(educationYear) || 'YYYY'}년도 : ${esc(finalEducation)} (${esc(graduationStatus)})</li>
       <li>과거 경력 (최근 경력부터 기재하여 주십시오)
         <table style="margin-top: 10px;">
           <tr>
@@ -779,117 +795,62 @@ function generateAffidavit(data: DocumentData): string {
             <th style="width: 25%; text-align: center;">직장명</th>
             <th style="width: 35%; text-align: center;">직위</th>
           </tr>
-          <tr>
-            <td style="height: 40px;"></td>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
+          ${careers.length > 0 ? careers.map(c => `<tr>
+            <td style="text-align: center;">${esc(c.period || '')}</td>
+            <td style="text-align: center;">${esc(c.industry || '')}</td>
+            <td style="text-align: center;">${esc(c.company || '')}</td>
+            <td style="text-align: center;">${esc(c.position || '')}</td>
+          </tr>`).join('') : '<tr><td colspan="4" style="height: 40px; text-align: center; color: #666;">해당 없음</td></tr>'}
         </table>
       </li>
-      <li>과거 결혼, 이혼 경력: 와( )</li>
+      <li>과거 결혼, 이혼 경력: ${esc(marriageStatus)}${marriageNote ? ` (${esc(marriageNote)})` : ''}</li>
     </ol>
 
     <h3>II. 현재 주거상황</h3>
 
-    <p>거주를 시작한 시점 ( ${affidavit.housing_start_date || 'YYYY.MM.DD'} )</p>
+    <p>거주를 시작한 시점 ( ${esc(housingStart) || 'YYYY.MM.DD'} )</p>
 
     <table style="margin-top: 10px;">
       <tr>
         <th style="width: 15%; text-align: center;">거주관계</th>
         <th style="width: 85%; text-align: center;">상세 내역</th>
       </tr>
-      <tr>
-        <td style="text-align: center;">■① 신청인 소유의 주택</td>
-        <td>${esc(housingDetails)}</td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□② 사택 또는 기숙사</td>
-        <td style="height: 40px;"></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□③ 임차(전월·세) 주택</td>
-        <td style="height: 40px;"></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□④ 친족 소유 주택에 무상 거주</td>
-        <td style="height: 40px;"></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□⑤ 친족외 소유 주택에 무상 거주</td>
-        <td style="height: 40px;"></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□⑥ 기타( )</td>
-        <td style="height: 40px;"></td>
-      </tr>
+      ${['1', '2', '3', '4', '5', '6'].map((n, i) => {
+        const labels = ['① 신청인 소유의 주택', '② 사택 또는 기숙사', '③ 임차(전월·세) 주택', '④ 친족 소유 주택에 무상 거주', '⑤ 친족외 소유 주택에 무상 거주', '⑥ 기타'];
+        const checked = housingType === n ? '■' : '□';
+        return `<tr>
+          <td style="text-align: center;">${checked}${labels[i]}</td>
+          <td>${housingType === n ? esc(housingNote) : ''}</td>
+        </tr>`;
+      }).join('')}
     </table>
 
     <h3>III. 부채 상황</h3>
 
     <ol style="margin-left: 20px;">
-      <li>채권자로부터 소송, 지급명령, 전부명령, 압류, 가압류 등을 받은 경험( ${esc(litigationExperience)} )
-        <table style="margin-top: 10px;">
-          <tr>
-            <th style="width: 25%; text-align: center;">내 역</th>
-            <th style="width: 25%; text-align: center;">채권자</th>
-            <th style="width: 25%; text-align: center;">관할법원</th>
-            <th style="width: 25%; text-align: center;">사건번호</th>
-          </tr>
-          <tr>
-            <td style="height: 40px;"></td>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-        </table>
+      <li>채권자로부터 소송, 지급명령, 전부명령, 압류, 가압류 등을 받은 경험( ${esc(debtHasLawsuit)} )</li>
+      <li>개인회생절차에 이르게 된 채무 경위<br/>
+        <div style="border: 1px solid #000; padding: 10px; min-height: 100px; margin-top: 10px; white-space: pre-wrap;">
+          ${esc(debtCircumstances) || '(미입력)'}
+        </div>
       </li>
-      <li>개인회생절차에 이르게 된 사정(여러 항목 중복 선택 가능)
-        <p style="margin-top: 10px;">
-          ☐사업의 실패·부진 / ☐실직·전업 / ☐급여감소 / ☐의료비 증가 / ☐금리 상승 / ☐기타( )
-        </p>
+      <li>채무 증가 경위<br/>
+        <div style="border: 1px solid #000; padding: 10px; min-height: 80px; margin-top: 10px; white-space: pre-wrap;">
+          ${esc(debtIncreaseReason) || '(미입력)'}
+        </div>
       </li>
-      <li>상세 사정 기재<br/>
-        <div style="border: 1px solid #000; padding: 10px; min-height: 100px; margin-top: 10px;">
-          ${esc(debtCircumstances)}
+      <li>현재 상황<br/>
+        <div style="border: 1px solid #000; padding: 10px; min-height: 80px; margin-top: 10px; white-space: pre-wrap;">
+          ${esc(currentSituation) || '(미입력)'}
         </div>
       </li>
     </ol>
 
-    <h3>IV. 과거 면책절차 등의 이용 상황</h3>
+    <h3>IV. 향후 계획 및 반성</h3>
 
-    <table>
-      <tr>
-        <th style="width: 25%; text-align: center;">절차</th>
-        <th style="width: 25%; text-align: center;">법원 또는 기관</th>
-        <th style="width: 25%; text-align: center;">신청시기</th>
-        <th style="width: 25%; text-align: center;">현재까지 진행상황</th>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□ 파산·면책절차</td>
-        <td style="height: 40px;"></td>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□ 화의·회생·개인회생절차</td>
-        <td style="height: 40px;"></td>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□ 신용회복위원회 워크아웃</td>
-        <td style="height: 40px;">( )회</td>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">□ 배드뱅크</td>
-        <td style="height: 40px;">( )원 변제</td>
-        <td></td>
-        <td></td>
-      </tr>
-    </table>
+    <div style="border: 1px solid #000; padding: 10px; min-height: 120px; white-space: pre-wrap;">
+      ${esc(repayFeasibility) || '(미입력)'}
+    </div>
   `;
 
   return wrapDocument(content, '진술서');
@@ -967,7 +928,7 @@ function generateRepaymentPlan(data: DocumentData): string {
     <p style="text-align: center; margin-bottom: 30px;">
       사 건: ${esc(caseNumber)} 개인회생<br/>
       채 무 자: ${esc(debtorName)}<br/>
-      대 리 인: ${esc(agentFirm)} / 변호사 ${esc(agentName)}
+      ${agentName ? `대 리 인: ${esc(agentFirm)} / ${esc(app.agent_type || '변호사')} ${esc(agentName)}` : ''}
     </p>
 
     <p style="text-align: center; margin-bottom: 20px;">
