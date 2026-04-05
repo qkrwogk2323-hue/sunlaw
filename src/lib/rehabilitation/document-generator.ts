@@ -307,7 +307,12 @@ function wrapDocument(content: string, title: string): string {
  */
 function generateApplication(data: DocumentData): string {
   const app = data.application || {};
-  const caseNumber = app.case_number || '';
+  const courtName = app.court_name || app.court_detail || '';
+  const caseYear = app.case_year || '';
+  const caseNum = app.case_number || '';
+  const caseNumberDisplay = caseYear && caseNum
+    ? `${caseYear} ${caseNum}`
+    : caseNum || '';
   const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
   const agentName = app.agent_name || '';
@@ -316,7 +321,7 @@ function generateApplication(data: DocumentData): string {
 
   const content = `
     <div class="header-line">
-      수원회생법원 ${caseNumber} 개회 호
+      ${esc(courtName)} ${esc(caseNumberDisplay)} 개회 호
     </div>
 
     <h1>개 시 신 청 서</h1>
@@ -413,8 +418,14 @@ function generateCreditorList(data: DocumentData): string {
 
   const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
-  const courtCode = '수원회생법원';
-  const caseNumber = app.case_number || '2026 개회 호';
+  // DB의 court_name 필드 사용, 없으면 court_detail 사용
+  const courtName = app.court_name || app.court_detail || '';
+  // 사건번호: case_year + case_number 조합, 없으면 case_number 필드 사용
+  const caseYear = app.case_year || '';
+  const caseNum = app.case_number || '';
+  const caseNumberDisplay = caseYear && caseNum
+    ? `${caseYear} ${caseNum}`
+    : caseNum || `${new Date().getFullYear()} 호`;
   const assessmentDate = creditorSettings.bond_date || creditorSettings.list_date || '';
   const listDate = creditorSettings.list_date || new Date().toISOString().split('T')[0];
 
@@ -439,51 +450,79 @@ function generateCreditorList(data: DocumentData): string {
 
   const totalAmount = totalCapital + totalInterest;
 
-  const headerLine = `${courtCode} ${caseNumber}  채무자 ${esc(debtorName)}(${esc(debtorBirth)}-*****)`;
+  // colaw 형식: "광주지법 2026 호  채무자 조재근(950809-*******)"
+  const headerLine = `${courtName} ${caseNumberDisplay}  채무자 ${esc(debtorName)}(${esc(debtorBirth)}-*******)`;
 
   let creditorRows = '';
   creditors.forEach((cred: any, idx: number) => {
     const bondNumber = cred.bond_number || String(idx + 1);
     const creditorName = cred.creditor_name || '';
     const cause = cred.bond_cause || '';
-    const causeDateStr = cred.cause_date || '';
     const address = cred.address || '';
     const phone = cred.phone || '';
     const fax = cred.fax || '';
     const mobile = cred.mobile || '';
     const capital = cred.capital || 0;
     const interest = cred.interest || 0;
-    const attachments = cred.attachments || [];
-    const attachmentYn = attachments.length > 0 ? '■' : '□';
+    const totalClaim = capital + interest;
+    const capitalCompute = cred.capital_compute || `부채증명서 참조(산정기준일：${formatDate(assessmentDate)})`;
+    const interestCompute = cred.interest_compute || `부채증명서 참조(산정기준일：${formatDate(assessmentDate)})`;
+    const attachments: number[] = cred.attachments || [];
+    const attachmentCheck = attachments.length > 0 ? '■' : '□';
+    const attachmentNums = attachments.length > 0 ? ` (${attachments.join(', ')})` : '';
 
-    const addressLine = [address, phone && `(전화)${phone}`, fax && `(팩스)${fax}`, mobile && `(휴대전화)${mobile}`]
-      .filter(Boolean)
-      .join(' ');
+    // 주소/연락처: colaw 형식 — 주소 위에, 전화/팩스/휴대전화 아래에 표시
+    const addressHtml = address
+      ? `(주소) ${esc(address)}`
+      : '';
+    const contactParts = [
+      phone ? `(전화) ${esc(phone)}` : '',
+      fax ? `(팩스) ${esc(fax)}` : '',
+      mobile ? `(휴대전화) ${esc(mobile)}` : '',
+    ].filter(Boolean).join('&nbsp;&nbsp;&nbsp;');
+    const contactHtml = contactParts ? `<br/>${contactParts}` : '';
+    const fullAddressHtml = addressHtml || contactParts
+      ? `${addressHtml}${contactHtml}`
+      : '';
+
+    // 원리금 서술문: bond_content가 있으면 사용, 없으면 기본 형식 생성
+    const bondContent = cred.bond_content
+      ? esc(cred.bond_content)
+      : `원리금 ${formatAmountNoUnit(totalClaim)}원 및 그 중 원금 ${formatAmountNoUnit(capital)}원에 대한 연체이율의 비율에 의한 금원.`;
+
+    // 채권의 원인: colaw 형식 — "YYYY.MM.DD 자 학자금대출" 등
+    const causeDisplay = cause || '';
 
     creditorRows += `
       <tr>
-        <td style="width: 5%; text-align: center;">${esc(bondNumber)}</td>
-        <td style="width: 15%; text-align: center;">${esc(creditorName)}</td>
-        <td style="width: 15%; text-align: center;">${esc(cause)}<br/>${esc(causeDateStr)}</td>
-        <td style="width: 20%;">${esc(addressLine)}</td>
-        <td style="width: 25%;">원리금<br/>부속서류 ${attachmentYn}</td>
-        <td style="width: 20%; text-align: right;">-</td>
+        <td rowspan="2" style="width: 5%; text-align: center; vertical-align: top;">${esc(String(bondNumber))}</td>
+        <td rowspan="2" style="width: 10%; text-align: center; vertical-align: top;">${esc(creditorName)}</td>
+        <td style="width: 20%;">${esc(causeDisplay)}</td>
+        <td rowspan="2" style="width: 20%; font-size: 9pt; vertical-align: top;">${fullAddressHtml}</td>
+        <td style="width: 30%; font-size: 9pt;">${bondContent}</td>
+        <td rowspan="2" style="width: 15%; text-align: center; vertical-align: top;">${attachmentCheck} 부속서류${attachmentNums}</td>
       </tr>
       <tr>
-        <td colspan="2">금 ${formatAmountNoUnit(capital)}원</td>
-        <td colspan="3">부채증명서 참조(산정기준일: ${formatDate(assessmentDate)})</td>
-        <td></td>
-      </tr>
-      <tr>
-        <td colspan="2">이자 ${formatAmountNoUnit(interest)}원</td>
-        <td colspan="3">부채증명서 참조(산정기준일: ${formatDate(assessmentDate)})</td>
-        <td></td>
+        <td colspan="2" style="font-size: 9pt;">
+          <table style="border: none; margin: 0; width: 100%;">
+            <tr style="border: none;">
+              <td style="border: none; padding: 2px 4px; width: 30%;">채권현재액(원금)</td>
+              <td style="border: none; padding: 2px 4px; width: 20%; text-align: right;">${formatAmountNoUnit(capital)}원</td>
+              <td style="border: none; padding: 2px 4px;">${esc(capitalCompute)}</td>
+            </tr>
+            <tr style="border: none;">
+              <td style="border: none; padding: 2px 4px;">채권현재액(이자)</td>
+              <td style="border: none; padding: 2px 4px; text-align: right;">${formatAmountNoUnit(interest)}원</td>
+              <td style="border: none; padding: 2px 4px;">${esc(interestCompute)}</td>
+            </tr>
+          </table>
+        </td>
       </tr>
     `;
   });
 
   const content = `
-    <div class="header-line">${esc(headerLine)}</div>
+    <div class="header-line">${headerLine}</div>
 
     <h1>개 인 회 생 채 권 자 목 록</h1>
 
@@ -499,20 +538,21 @@ function generateCreditorList(data: DocumentData): string {
     <div class="summary-box">
       <table>
         <tr>
-          <td style="width: 20%; text-align: center; font-weight: bold;">채권현재액</td>
-          <td style="width: 20%; text-align: right;">합계 ${formatAmount(totalAmount)}</td>
-          <td style="width: 30%; text-align: right;">담보부 회생 ${formatAmount(securedTotal)}</td>
-          <td style="width: 30%; text-align: right;">무담보 회생 ${formatAmount(unsecuredTotal)}</td>
+          <td rowspan="3" style="width: 15%; text-align: center; font-weight: bold; vertical-align: middle;">채권현재액</td>
+          <th style="width: 8%; text-align: center;">합계</th>
+          <td style="width: 17%; text-align: right;">${formatAmount(totalAmount)}</td>
+          <td rowspan="3" style="width: 20%; text-align: center; font-weight: bold; vertical-align: middle;">담보부 회생<br/>채권액의 합계</td>
+          <td rowspan="3" style="width: 12%; text-align: right; vertical-align: middle;">${formatAmount(securedTotal)}</td>
+          <td rowspan="3" style="width: 15%; text-align: center; font-weight: bold; vertical-align: middle;">무담보 회생<br/>채권액의 합계</td>
+          <td rowspan="3" style="width: 13%; text-align: right; vertical-align: middle;">${formatAmount(unsecuredTotal)}</td>
         </tr>
         <tr>
-          <td style="text-align: center; font-weight: bold;"></td>
-          <td style="text-align: right;">원금 ${formatAmount(totalCapital)}</td>
-          <td colspan="2" style="text-align: right;">채권액의 합계</td>
+          <th style="text-align: center;">원금</th>
+          <td style="text-align: right;">${formatAmount(totalCapital)}</td>
         </tr>
         <tr>
-          <td style="text-align: center; font-weight: bold;"></td>
-          <td style="text-align: right;">이자 ${formatAmount(totalInterest)}</td>
-          <td colspan="2" style="text-align: right;"></td>
+          <th style="text-align: center;">이자</th>
+          <td style="text-align: right;">${formatAmount(totalInterest)}</td>
         </tr>
       </table>
     </div>
@@ -524,15 +564,18 @@ function generateCreditorList(data: DocumentData): string {
 
     <table>
       <tr>
-        <th rowspan="2" style="width: 5%;">채권번호</th>
-        <th rowspan="2" style="width: 15%;">채권자</th>
-        <th rowspan="2" style="width: 15%;">채권의 원인<br/>채권현재액<br/>(원금/이자)</th>
-        <th rowspan="2" style="width: 20%;">주소 및 연락처</th>
-        <th colspan="2" style="width: 45%;">채권의 내용 및 부속서류</th>
+        <th rowspan="3" style="width: 5%;">채권번호</th>
+        <th rowspan="3" style="width: 10%;">채권자</th>
+        <th colspan="2" style="width: 50%;">채권의 원인</th>
+        <th rowspan="3" style="width: 20%;">주소 및 연락처</th>
+        <th rowspan="3" style="width: 15%;">부속서류 유무</th>
       </tr>
       <tr>
-        <th style="width: 25%;">기재사항</th>
-        <th style="width: 20%;">부속서류 유무</th>
+        <th colspan="2">채권의 내용</th>
+      </tr>
+      <tr>
+        <th>채권현재액(원금)</th>
+        <th>채권현재액(원금) 산정근거</th>
       </tr>
       ${creditorRows}
     </table>
