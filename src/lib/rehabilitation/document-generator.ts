@@ -409,6 +409,132 @@ function generateDelegation(data: DocumentData): string {
 }
 
 /**
+ * 별제권부채권 테이블 생성 헬퍼
+ * 담보부 채권자가 있으면 동적으로 행을 생성하고, 없으면 빈 행을 표시합니다.
+ */
+function generateSecuredCreditorTable(
+  creditors: Record<string, any>[],
+  securedProperties: Record<string, any>[],
+  assessmentDate: string
+): string {
+  const securedCreditors = creditors.filter((c: any) => c.is_secured);
+
+  // 담보물건 ID → 담보물건 정보 맵
+  const propertyMap = new Map<string, any>();
+  (securedProperties || []).forEach((p: any) => {
+    if (p.id) propertyMap.set(p.id, p);
+  });
+
+  let securedRows = '';
+  let securedTotalClaim = 0;
+  let securedTotalExpectedRepay = 0;
+  let securedTotalUnrecoverable = 0;
+  let securedTotalSecuredAmount = 0;
+  let lienDetailsRows = '';
+
+  if (securedCreditors.length === 0) {
+    // 담보부 채권이 없는 경우 — 빈 행 표시
+    securedRows = `
+      <tr>
+        <td colspan="6" style="height: 60px; text-align: center; color: #888; vertical-align: middle;">
+          해당 사항 없음
+        </td>
+      </tr>`;
+    lienDetailsRows = `
+      <tr>
+        <td colspan="6" style="height: 40px; text-align: center; color: #888; vertical-align: middle;">
+          해당 사항 없음
+        </td>
+      </tr>`;
+  } else {
+    securedCreditors.forEach((cred: any) => {
+      const bondNumber = cred.bond_number || '';
+      const creditorName = cred.creditor_name || '';
+      const capital = Number(cred.capital) || 0;
+      const interest = Number(cred.interest) || 0;
+      const totalClaim = capital + interest;
+      const maxClaimAmount = Number(cred.max_claim_amount) || 0;
+
+      // ③ 별제권행사로 변제예상액: max_claim_amount 또는 채권현재액 중 작은 값
+      const expectedRepay = maxClaimAmount > 0 ? Math.min(maxClaimAmount, totalClaim) : 0;
+      // ④ 변제받을 수 없는 채권액: 채권현재액 - 변제예상액
+      const unrecoverable = Math.max(0, totalClaim - expectedRepay);
+      // ⑤ 담보부회생채권액 = ③ 별제권행사변제예상액
+      const securedAmount = expectedRepay;
+
+      securedTotalClaim += totalClaim;
+      securedTotalExpectedRepay += expectedRepay;
+      securedTotalUnrecoverable += unrecoverable;
+      securedTotalSecuredAmount += securedAmount;
+
+      securedRows += `
+        <tr>
+          <td style="text-align: center;">${esc(String(bondNumber))}</td>
+          <td style="text-align: center;">${esc(creditorName)}</td>
+          <td style="text-align: right; padding-right: 8px;">
+            ${formatAmountNoUnit(capital)}원<br/>
+            <span style="font-size: 9pt; color: #555;">(이자 ${formatAmountNoUnit(interest)}원)</span>
+          </td>
+          <td style="text-align: right; padding-right: 8px;">${formatAmount(expectedRepay)}</td>
+          <td style="text-align: right; padding-right: 8px;">${formatAmount(unrecoverable)}</td>
+          <td style="text-align: right; padding-right: 8px;">${formatAmount(securedAmount)}</td>
+        </tr>`;
+
+      // ⑥ 별제권 등의 내용 및 목적물
+      const lienType = cred.lien_type || '';
+      const lienPriority = cred.lien_priority || '';
+      const property = cred.secured_property_id ? propertyMap.get(cred.secured_property_id) : null;
+      const propertyDesc = property
+        ? `${property.property_type || ''} ${property.detail || ''}`
+        : '';
+      const lienDesc = [
+        lienType ? `담보종류: ${esc(lienType)}` : '',
+        lienPriority ? `순위: ${esc(String(lienPriority))}` : '',
+        propertyDesc ? `목적물: ${esc(propertyDesc.trim())}` : '',
+        maxClaimAmount > 0 ? `채권최고액: ${formatAmount(maxClaimAmount)}` : '',
+      ].filter(Boolean).join(' / ');
+
+      lienDetailsRows += `
+        <tr>
+          <td style="text-align: center;">${esc(String(bondNumber))}</td>
+          <td colspan="5" style="font-size: 9pt; padding: 6px 8px;">${lienDesc || '&nbsp;'}</td>
+        </tr>`;
+    });
+  }
+
+  return `
+    <table>
+      <tr>
+        <th style="width: 8%; text-align: center;">채권<br/>번호</th>
+        <th style="width: 15%; text-align: center;">채권자</th>
+        <th style="width: 18%; text-align: center;">①채권현재액<br/>(원금/이자)</th>
+        <th style="width: 18%; text-align: center;">③별제권행사등으로<br/>변제가 예상되는<br/>채권액</th>
+        <th style="width: 18%; text-align: center;">④별제권행사등으로도<br/>변제받을 수 없을<br/>채권액</th>
+        <th style="width: 14%; text-align: center;">⑤담보부<br/>회생채권액</th>
+      </tr>
+      ${securedRows}
+      <tr>
+        <td colspan="2" style="text-align: center; font-weight: bold;">합 계</td>
+        <td style="text-align: right; padding-right: 8px; font-weight: bold;">${formatAmount(securedTotalClaim)}</td>
+        <td style="text-align: right; padding-right: 8px; font-weight: bold;">${formatAmount(securedTotalExpectedRepay)}</td>
+        <td style="text-align: right; padding-right: 8px; font-weight: bold;">${formatAmount(securedTotalUnrecoverable)}</td>
+        <td style="text-align: right; padding-right: 8px; font-weight: bold;">${formatAmount(securedTotalSecuredAmount)}</td>
+      </tr>
+    </table>
+
+    <table style="margin-top: 10px;">
+      <tr>
+        <th colspan="6" style="text-align: center;">⑥별제권 등의 내용 및 목적물</th>
+      </tr>
+      <tr>
+        <th style="width: 8%; text-align: center;">채권<br/>번호</th>
+        <th colspan="5" style="text-align: center;">별제권 등의 내용</th>
+      </tr>
+      ${lienDetailsRows}
+    </table>`;
+}
+
+/**
  * 3. 채권자목록 생성 (Portrait)
  */
 function generateCreditorList(data: DocumentData): string {
@@ -495,28 +621,22 @@ function generateCreditorList(data: DocumentData): string {
 
     creditorRows += `
       <tr>
-        <td rowspan="2" style="width: 5%; text-align: center; vertical-align: top;">${esc(String(bondNumber))}</td>
-        <td rowspan="2" style="width: 10%; text-align: center; vertical-align: top;">${esc(creditorName)}</td>
-        <td style="width: 20%;">${esc(causeDisplay)}</td>
-        <td rowspan="2" style="width: 20%; font-size: 9pt; vertical-align: top;">${fullAddressHtml}</td>
-        <td style="width: 30%; font-size: 9pt;">${bondContent}</td>
-        <td rowspan="2" style="width: 15%; text-align: center; vertical-align: top;">${attachmentCheck} 부속서류${attachmentNums}</td>
+        <td rowspan="4" style="width: 5%; text-align: center; vertical-align: middle;">${esc(String(bondNumber))}</td>
+        <td rowspan="4" style="width: 10%; text-align: center; vertical-align: middle;">${esc(creditorName)}</td>
+        <td colspan="2" style="width: 30%;">${esc(causeDisplay)}</td>
+        <td rowspan="4" style="width: 20%; font-size: 9pt; vertical-align: top; padding: 6px;">${fullAddressHtml}</td>
+        <td rowspan="4" style="width: 15%; text-align: center; vertical-align: middle; font-size: 9pt;">${attachmentCheck} 부속서류${attachmentNums}</td>
       </tr>
       <tr>
-        <td colspan="2" style="font-size: 9pt;">
-          <table style="border: none; margin: 0; width: 100%;">
-            <tr style="border: none;">
-              <td style="border: none; padding: 2px 4px; width: 30%;">채권현재액(원금)</td>
-              <td style="border: none; padding: 2px 4px; width: 20%; text-align: right;">${formatAmountNoUnit(capital)}원</td>
-              <td style="border: none; padding: 2px 4px;">${esc(capitalCompute)}</td>
-            </tr>
-            <tr style="border: none;">
-              <td style="border: none; padding: 2px 4px;">채권현재액(이자)</td>
-              <td style="border: none; padding: 2px 4px; text-align: right;">${formatAmountNoUnit(interest)}원</td>
-              <td style="border: none; padding: 2px 4px;">${esc(interestCompute)}</td>
-            </tr>
-          </table>
-        </td>
+        <td colspan="2" style="font-size: 9pt;">${bondContent}</td>
+      </tr>
+      <tr>
+        <td style="width: 15%; font-size: 9pt; padding: 4px 6px;">채권현재액(원금)<br/><span style="float: right; font-weight: bold;">${formatAmountNoUnit(capital)}원</span></td>
+        <td style="width: 15%; font-size: 9pt; padding: 4px 6px;">${esc(capitalCompute)}</td>
+      </tr>
+      <tr>
+        <td style="font-size: 9pt; padding: 4px 6px;">채권현재액(이자)<br/><span style="float: right; font-weight: bold;">${formatAmountNoUnit(interest)}원</span></td>
+        <td style="font-size: 9pt; padding: 4px 6px;">${esc(interestCompute)}</td>
       </tr>
     `;
   });
@@ -564,18 +684,22 @@ function generateCreditorList(data: DocumentData): string {
 
     <table>
       <tr>
-        <th rowspan="3" style="width: 5%;">채권번호</th>
-        <th rowspan="3" style="width: 10%;">채권자</th>
-        <th colspan="2" style="width: 50%;">채권의 원인</th>
-        <th rowspan="3" style="width: 20%;">주소 및 연락처</th>
-        <th rowspan="3" style="width: 15%;">부속서류 유무</th>
+        <th rowspan="4" style="width: 5%;">채권<br/>번호</th>
+        <th rowspan="4" style="width: 10%;">채권자</th>
+        <th colspan="2" style="width: 30%;">채권의 원인</th>
+        <th rowspan="4" style="width: 20%;">주소 및 연락처</th>
+        <th rowspan="4" style="width: 15%;">부속서류<br/>유무</th>
       </tr>
       <tr>
         <th colspan="2">채권의 내용</th>
       </tr>
       <tr>
-        <th>채권현재액(원금)</th>
-        <th>채권현재액(원금) 산정근거</th>
+        <th style="width: 15%;">채권현재액(원금)</th>
+        <th style="width: 15%;">산정근거</th>
+      </tr>
+      <tr>
+        <th>채권현재액(이자)</th>
+        <th>산정근거</th>
       </tr>
       ${creditorRows}
     </table>
@@ -584,28 +708,7 @@ function generateCreditorList(data: DocumentData): string {
 
     <h3>부속서류 1. 별제권부채권 및 이에 준하는 채권의 내역</h3>
 
-    <table>
-      <tr>
-        <th style="width: 8%; text-align: center;">채권번호</th>
-        <th style="width: 15%; text-align: center;">채권자</th>
-        <th style="width: 18%; text-align: center;">①채권현재액<br/>(원금/이자)</th>
-        <th style="width: 18%; text-align: center;">③별제권행사등으로<br/>변제가 예상되는<br/>채권액</th>
-        <th style="width: 18%; text-align: center;">④별제권행사등으로도<br/>변제받을 수 없을<br/>채권액</th>
-        <th style="width: 14%; text-align: center;">⑤담보부<br/>회생채권액</th>
-      </tr>
-      <tr>
-        <td colspan="6" style="height: 60px;"></td>
-      </tr>
-      <tr>
-        <td colspan="6" style="text-align: center; font-weight: bold;">⑥별제권 등의 내용 및 목적물</td>
-      </tr>
-      <tr>
-        <td colspan="6" style="height: 40px;"></td>
-      </tr>
-      <tr>
-        <td colspan="6" style="text-align: center; font-weight: bold;">합 계</td>
-      </tr>
-    </table>
+    ${generateSecuredCreditorTable(creditors, data.securedProperties, assessmentDate)}
   `;
 
   return wrapDocument(content, '채권자목록');
