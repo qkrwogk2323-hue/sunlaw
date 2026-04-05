@@ -17,6 +17,10 @@
 export type DocumentType =
   | 'application'
   | 'delegation'
+  | 'delegation_with_attorney'
+  | 'attorney_designation'
+  | 'prohibition_order'
+  | 'stay_order'
   | 'creditor_list'
   | 'property_list'
   | 'income_statement'
@@ -488,6 +492,328 @@ function generateDelegation(data: DocumentData): string {
   `;
 
   return wrapDocument(content, '위임장');
+}
+
+/**
+ * 2-1. 위임장 + 담당변호사지정서 (법무법인인 경우)
+ *
+ * 대리인이 법무법인인 경우 위임장에 법무법인명 + 대표변호사 + 담당변호사지정서를
+ * 함께 출력합니다. (한 문서로 연속 출력)
+ */
+function generateDelegationWithAttorney(data: DocumentData): string {
+  const app = data.application || {};
+  const courtName = app.court_name || '';
+  const caseNumber = app.case_number || '';
+  const debtorName = app.applicant_name || '';
+  const debtorBirth = app.resident_number_front || '';
+  const debtorPhone = app.phone_mobile || app.phone || '';
+  const debtorAddr = app.current_address?.address || app.registered_address?.address || '';
+  const agentLawFirm = app.agent_law_firm || '';
+  const agentName = app.agent_name || ''; // 담당변호사
+  const agentPhone = app.agent_phone || '';
+  const agentFax = app.agent_fax || '';
+  const agentEmail = app.agent_email || '';
+  const agentAddr = app.agent_address?.address || '';
+  const agentZip = app.agent_address?.postal_code || '';
+  const representativeLawyer = app.representative_lawyer || ''; // 대표변호사
+
+  const content = `
+    <h1>위 임 장</h1>
+
+    <div class="section">
+      <p style="text-align: center; margin-bottom: 20px;">
+        ${courtName && caseNumber ? `사 건: ${esc(courtName)} ${esc(caseNumber)} 개인회생` : ''}
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>위임인 (채무자)</h3>
+      <table>
+        <tr><td style="width: 25%;">성 명</td><td>${esc(debtorName)}</td></tr>
+        <tr><td>주민등록번호</td><td>${esc(debtorBirth)}-*******</td></tr>
+        <tr><td>주 소</td><td>${esc(debtorAddr)}</td></tr>
+        <tr><td>전화번호</td><td>${esc(debtorPhone)}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>수임인 (대리인)</h3>
+      <table>
+        <tr><td style="width: 25%;">법무법인</td><td>${esc(agentLawFirm)}</td></tr>
+        <tr><td>대표변호사</td><td>${esc(representativeLawyer)}</td></tr>
+        <tr><td>담당변호사</td><td>${esc(agentName)}</td></tr>
+        <tr><td>사무소 주소</td><td>${agentZip ? `(${esc(agentZip)}) ` : ''}${esc(agentAddr)}</td></tr>
+        <tr><td>전화</td><td>${esc(agentPhone)}</td></tr>
+        <tr><td>팩스</td><td>${esc(agentFax)}</td></tr>
+        <tr><td>전자우편</td><td>${esc(agentEmail)}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>위임사항</h3>
+      <p>위 위임인은 아래 사건에 관하여 위 수임인을 대리인으로 선임하고, 다음 사항을 위임합니다.</p>
+      <ol>
+        <li>개인회생절차 개시신청 및 변제계획안 제출에 관한 행위</li>
+        <li>개인회생절차에 관한 일체의 소송행위</li>
+        <li>채권자 이의 및 이의에 대한 대응</li>
+        <li>변제계획 인가결정에 관한 행위</li>
+        <li>강제집행 금지·중지 명령 신청</li>
+        <li>기타 개인회생절차에 부수하는 일체의 행위</li>
+      </ol>
+    </div>
+
+    <div class="signature-area">
+      <p>${formatDate(new Date())}</p>
+      <div style="margin-top: 30px; text-align: right;">
+        <p>위임인: ${esc(debtorName)} (인)</p>
+      </div>
+      <p class="text-center" style="margin-top: 40px;">${esc(courtName)} 귀중</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    ${generateAttorneyDesignationContent(data)}
+  `;
+
+  return wrapDocument(content, '위임장 및 담당변호사지정서');
+}
+
+/**
+ * 2-2. 담당변호사지정서 (단독 출력용)
+ */
+function generateAttorneyDesignation(data: DocumentData): string {
+  const content = generateAttorneyDesignationContent(data);
+  return wrapDocument(content, '담당변호사지정서');
+}
+
+/**
+ * 담당변호사지정서 내용 (공용 헬퍼)
+ */
+function generateAttorneyDesignationContent(data: DocumentData): string {
+  const app = data.application || {};
+  const courtName = app.court_name || '';
+  const caseNumber = app.case_number || '';
+  const debtorName = app.applicant_name || '';
+  const agentLawFirm = app.agent_law_firm || '';
+  const agentName = app.agent_name || '';
+  const agentPhone = app.agent_phone || '';
+  const representativeLawyer = app.representative_lawyer || '';
+
+  return `
+    <h1>담당변호사 지정서</h1>
+
+    <div class="section">
+      <p style="text-align: center; margin-bottom: 20px;">
+        ${courtName && caseNumber ? `사 건: ${esc(courtName)} ${esc(caseNumber)} 개인회생` : ''}
+      </p>
+      <p style="text-align: center; margin-bottom: 30px;">
+        채무자: ${esc(debtorName)}
+      </p>
+    </div>
+
+    <div class="section">
+      <p>위 사건에 관하여 ${esc(agentLawFirm)}은(는) 소속 변호사 중 아래 변호사를 담당변호사로 지정합니다.</p>
+    </div>
+
+    <div class="section" style="margin-top: 30px;">
+      <table>
+        <tr><td style="width: 30%; text-align: center;">법무법인</td><td>${esc(agentLawFirm)}</td></tr>
+        <tr><td style="text-align: center;">대표변호사</td><td>${esc(representativeLawyer)}</td></tr>
+        <tr><td style="text-align: center;">담당변호사</td><td>${esc(agentName)}</td></tr>
+        <tr><td style="text-align: center;">연락처</td><td>${esc(agentPhone)}</td></tr>
+      </table>
+    </div>
+
+    <div class="signature-area">
+      <p>${formatDate(new Date())}</p>
+      <div style="margin-top: 30px; text-align: right;">
+        <p>${esc(agentLawFirm)}</p>
+        <p>대표변호사 ${esc(representativeLawyer)} (직인)</p>
+      </div>
+      <p class="text-center" style="margin-top: 40px;">${esc(courtName)} 귀중</p>
+    </div>
+  `;
+}
+
+/**
+ * 3. 금지명령신청서
+ *
+ * 개인회생 신청 시 반드시 함께 제출하는 필수 문서입니다.
+ * 채무자 회생 및 파산에 관한 법률 제593조 제1항에 의한 금지명령을 신청합니다.
+ */
+function generateProhibitionOrder(data: DocumentData): string {
+  const app = data.application || {};
+  const courtName = app.court_name || '';
+  const caseNumber = app.case_number || '';
+  const debtorName = app.applicant_name || '';
+  const debtorBirth = app.resident_number_front || '';
+  const debtorAddr = app.current_address?.address || app.registered_address?.address || '';
+  const debtorPhone = app.phone_mobile || app.phone || '';
+  const agentLawFirm = app.agent_law_firm || '';
+  const agentName = app.agent_name || '';
+  const agentPhone = app.agent_phone || '';
+  const agentFax = app.agent_fax || '';
+  const agentAddr = app.agent_address?.address || '';
+  const agentZip = app.agent_address?.postal_code || '';
+  const representativeLawyer = app.representative_lawyer || '';
+
+  // 채권자 목록 (금지명령 대상)
+  const creditors = data.creditors || [];
+  const totalDebt = data.incomeSettings?.total_debt || creditors.reduce(
+    (sum: number, c: Record<string, any>) => sum + (Number(c.capital) || 0) + (Number(c.interest) || 0), 0
+  );
+
+  // 대리인 표기
+  const agentSection = agentLawFirm
+    ? `<p style="margin-left: 40px;">대리인 ${esc(agentLawFirm)}</p>
+       <p style="margin-left: 40px;">담당변호사 ${esc(agentName)}</p>`
+    : agentName
+      ? `<p style="margin-left: 40px;">대리인 ${esc(agentName)}</p>`
+      : '';
+
+  const content = `
+    <h1>금 지 명 령 신 청 서</h1>
+
+    <div class="section">
+      <p style="text-align: center; margin-bottom: 20px;">
+        ${courtName && caseNumber ? `사 건 ${esc(caseNumber)} 개인회생` : ''}
+      </p>
+    </div>
+
+    <div class="section">
+      <p>신청인(채무자) ${esc(debtorName)} (${esc(debtorBirth)}-*******)</p>
+      <p style="margin-left: 40px;">${esc(debtorAddr)}</p>
+      <p style="margin-left: 40px;">전화: ${esc(debtorPhone)}</p>
+      ${agentSection}
+      ${agentAddr ? `<p style="margin-left: 40px;">${agentZip ? `(${esc(agentZip)}) ` : ''}${esc(agentAddr)}</p>` : ''}
+      ${agentPhone ? `<p style="margin-left: 40px;">전화: ${esc(agentPhone)}${agentFax ? `, 팩스: ${esc(agentFax)}` : ''}</p>` : ''}
+    </div>
+
+    <div class="section">
+      <h3 style="text-align: center;">신 청 취 지</h3>
+      <div class="info-box">
+        <p>"신청인에 대한 개인회생절차 개시결정 전까지, 신청인의 재산 및 이에 대한 강제집행·가압류·가처분(이하 '강제집행 등'이라 한다)을 금지한다."</p>
+        <p>라는 결정을 구합니다.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 style="text-align: center;">신 청 이 유</h3>
+
+      <p><strong>1. 개인회생절차 개시신청</strong></p>
+      <p style="text-indent: 20px;">신청인은 ${formatDate(app.application_date) || formatDate(new Date())} ${esc(courtName)}에 개인회생절차 개시를 신청하였습니다.</p>
+
+      <p style="margin-top: 15px;"><strong>2. 금지명령의 필요성</strong></p>
+      <p style="text-indent: 20px;">신청인의 총 채무액은 ${formatAmount(totalDebt)}이며, 채권자는 총 ${creditors.length}명(개)입니다. 개인회생절차 개시결정 전에 채권자들의 강제집행 등이 이루어질 경우, 신청인의 재산이 산일되어 변제계획의 수행이 불가능해질 우려가 있습니다.</p>
+      <p style="text-indent: 20px;">따라서 채무자 회생 및 파산에 관한 법률 제593조 제1항에 의하여, 개인회생절차 개시결정 시까지 신청인의 재산에 대한 강제집행 등을 금지하여 주시기 바랍니다.</p>
+
+      <p style="margin-top: 15px;"><strong>3. 소명방법</strong></p>
+      <p style="text-indent: 20px;">1. 개인회생 개시신청서 사본</p>
+      <p style="text-indent: 20px;">2. 채권자목록</p>
+      <p style="text-indent: 20px;">3. 재산목록</p>
+      <p style="text-indent: 20px;">4. 수입 및 지출에 관한 목록</p>
+    </div>
+
+    <div class="signature-area">
+      <p>${formatDate(new Date())}</p>
+      <div style="margin-top: 20px; text-align: right;">
+        <p>신청인(채무자) ${esc(debtorName)}</p>
+        ${agentLawFirm
+          ? `<p>대리인 ${esc(agentLawFirm)}</p><p>담당변호사 ${esc(agentName)} (인)</p>`
+          : agentName ? `<p>대리인 ${esc(agentName)} (인)</p>` : ''}
+      </div>
+      <p class="text-center" style="margin-top: 40px;">${esc(courtName)} 귀중</p>
+    </div>
+  `;
+
+  return wrapDocument(content, '금지명령신청서');
+}
+
+/**
+ * 4. 중지명령신청서
+ *
+ * 강제집행이 진행 중일 때 이를 중지하기 위한 문서입니다.
+ * 채무자 회생 및 파산에 관한 법률 제593조 제3항에 의한 중지명령을 신청합니다.
+ */
+function generateStayOrder(data: DocumentData): string {
+  const app = data.application || {};
+  const courtName = app.court_name || '';
+  const caseNumber = app.case_number || '';
+  const debtorName = app.applicant_name || '';
+  const debtorBirth = app.resident_number_front || '';
+  const debtorAddr = app.current_address?.address || app.registered_address?.address || '';
+  const debtorPhone = app.phone_mobile || app.phone || '';
+  const agentLawFirm = app.agent_law_firm || '';
+  const agentName = app.agent_name || '';
+  const agentPhone = app.agent_phone || '';
+  const agentFax = app.agent_fax || '';
+  const agentAddr = app.agent_address?.address || '';
+  const agentZip = app.agent_address?.postal_code || '';
+  const representativeLawyer = app.representative_lawyer || '';
+
+  const agentSection = agentLawFirm
+    ? `<p style="margin-left: 40px;">대리인 ${esc(agentLawFirm)}</p>
+       <p style="margin-left: 40px;">담당변호사 ${esc(agentName)}</p>`
+    : agentName
+      ? `<p style="margin-left: 40px;">대리인 ${esc(agentName)}</p>`
+      : '';
+
+  const content = `
+    <h1>중 지 명 령 신 청 서</h1>
+
+    <div class="section">
+      <p style="text-align: center; margin-bottom: 20px;">
+        ${courtName && caseNumber ? `사 건 ${esc(caseNumber)} 개인회생` : ''}
+      </p>
+    </div>
+
+    <div class="section">
+      <p>신청인(채무자) ${esc(debtorName)} (${esc(debtorBirth)}-*******)</p>
+      <p style="margin-left: 40px;">${esc(debtorAddr)}</p>
+      <p style="margin-left: 40px;">전화: ${esc(debtorPhone)}</p>
+      ${agentSection}
+      ${agentAddr ? `<p style="margin-left: 40px;">${agentZip ? `(${esc(agentZip)}) ` : ''}${esc(agentAddr)}</p>` : ''}
+      ${agentPhone ? `<p style="margin-left: 40px;">전화: ${esc(agentPhone)}${agentFax ? `, 팩스: ${esc(agentFax)}` : ''}</p>` : ''}
+    </div>
+
+    <div class="section">
+      <h3 style="text-align: center;">신 청 취 지</h3>
+      <div class="info-box">
+        <p>"신청인에 대하여 현재 진행 중인 강제집행·가압류·가처분 절차를 중지한다."</p>
+        <p>라는 결정을 구합니다.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 style="text-align: center;">신 청 이 유</h3>
+
+      <p><strong>1. 개인회생절차 개시신청</strong></p>
+      <p style="text-indent: 20px;">신청인은 ${formatDate(app.application_date) || formatDate(new Date())} ${esc(courtName)}에 개인회생절차 개시를 신청하였습니다.</p>
+
+      <p style="margin-top: 15px;"><strong>2. 강제집행 현황 및 중지의 필요성</strong></p>
+      <p style="text-indent: 20px;">현재 신청인의 재산(급여 등)에 대한 강제집행이 진행 중이며, 이로 인해 변제계획에 따른 변제의 수행이 현저히 곤란해질 우려가 있습니다.</p>
+      <p style="text-indent: 20px;">채무자 회생 및 파산에 관한 법률 제593조 제3항에 의하면, 법원은 개인회생절차 개시신청이 있는 경우 필요하다고 인정하는 때에는 이해관계인의 신청이나 직권으로 강제집행 등의 중지를 명할 수 있으므로, 위 신청취지와 같은 중지명령을 구합니다.</p>
+
+      <p style="margin-top: 15px;"><strong>3. 소명방법</strong></p>
+      <p style="text-indent: 20px;">1. 개인회생 개시신청서 사본</p>
+      <p style="text-indent: 20px;">2. 강제집행 진행 사실을 소명하는 자료</p>
+      <p style="text-indent: 20px;">3. 채권자목록</p>
+      <p style="text-indent: 20px;">4. 재산목록</p>
+    </div>
+
+    <div class="signature-area">
+      <p>${formatDate(new Date())}</p>
+      <div style="margin-top: 20px; text-align: right;">
+        <p>신청인(채무자) ${esc(debtorName)}</p>
+        ${agentLawFirm
+          ? `<p>대리인 ${esc(agentLawFirm)}</p><p>담당변호사 ${esc(agentName)} (인)</p>`
+          : agentName ? `<p>대리인 ${esc(agentName)} (인)</p>` : ''}
+      </div>
+      <p class="text-center" style="margin-top: 40px;">${esc(courtName)} 귀중</p>
+    </div>
+  `;
+
+  return wrapDocument(content, '중지명령신청서');
 }
 
 /**
@@ -1377,6 +1703,14 @@ export function generateDocument(type: DocumentType, data: DocumentData): string
       return generateApplication(data);
     case 'delegation':
       return generateDelegation(data);
+    case 'delegation_with_attorney':
+      return generateDelegationWithAttorney(data);
+    case 'attorney_designation':
+      return generateAttorneyDesignation(data);
+    case 'prohibition_order':
+      return generateProhibitionOrder(data);
+    case 'stay_order':
+      return generateStayOrder(data);
     case 'creditor_list':
       return generateCreditorList(data);
     case 'property_list':

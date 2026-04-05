@@ -61,6 +61,8 @@ function mapApplicationFormToDb(form: Record<string, unknown>) {
     // 대리인
     agent_type: form.agent_type || null,
     agent_name: form.agent_name || null,
+    agent_law_firm: form.agent_law_firm || null,
+    representative_lawyer: form.representative_lawyer || null,
     agent_phone: form.agent_phone || null,
     agent_email: form.agent_email_addr || form.email || null,
     agent_fax: form.agent_fax || null,

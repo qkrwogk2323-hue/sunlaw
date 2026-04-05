@@ -203,17 +203,17 @@ async function extractCreditors(page: Page, c: (typeof COLAW_CASES)[0]) {
   await page.goto(caseUrl(c.cs, c.dy, c.rs, 'application'), { waitUntil: 'networkidle2' });
   await delay(1000);
 
-  // 채권자 탭 클릭 (AJAX 로딩)
+  // 채권자 탭 클릭 (AJAX 로딩) — jQuery 이벤트 트리거 포함
   await page.evaluate(() => {
-    const tabs = document.querySelectorAll<HTMLAnchorElement>('.tab-link, [role="tab"], a');
-    for (const t of tabs) {
+    const allLinks = document.querySelectorAll<HTMLAnchorElement>('a, [role="tab"], .tab-link');
+    for (const t of allLinks) {
       if (t.textContent?.trim() === '채권자') {
         t.click();
         break;
       }
     }
   });
-  await delay(2000);
+  await delay(3000); // AJAX 대기 증가 (2s → 3s)
 
   // 채권 합계
   const summary = await page.evaluate(() => {
@@ -230,21 +230,33 @@ async function extractCreditors(page: Page, c: (typeof COLAW_CASES)[0]) {
 
   // 각 채권자 레코드 추출 — 채권자 목록은 반복 form 구조
   // colaw는 채권자를 하나씩 표시하므로, creditor-add-list 셀렉트로 순회
-  const creditorCount = await page.evaluate(() => {
+  // 주의: option value는 순차 정수가 아니라 채권자 seq ID이므로 selectedIndex 사용
+  const optionValues = await page.evaluate(() => {
     const sel = document.querySelector<HTMLSelectElement>('[name="creditor-add-list"]');
-    return sel ? sel.options.length : 0;
+    if (!sel) return [];
+    return Array.from(sel.options).map((o, i) => ({
+      index: i,
+      value: o.value,
+      text: o.textContent?.trim() ?? '',
+    }));
   });
 
   const creditors: any[] = [];
-  for (let i = 0; i < creditorCount; i++) {
+  for (const opt of optionValues) {
+    // selectedIndex로 정확히 선택 + jQuery trigger로 AJAX 호출 보장
     await page.evaluate((idx) => {
       const sel = document.querySelector<HTMLSelectElement>('[name="creditor-add-list"]');
       if (sel) {
-        sel.value = String(idx);
-        sel.dispatchEvent(new Event('change'));
+        sel.selectedIndex = idx;
+        // jQuery change 이벤트 + native change 이벤트 모두 발생
+        if (typeof (window as any).jQuery !== 'undefined') {
+          (window as any).jQuery(sel).trigger('change');
+        } else {
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       }
-    }, i);
-    await delay(500);
+    }, opt.index);
+    await delay(1500); // AJAX 로딩 대기 시간 증가 (500ms → 1500ms)
 
     const cred = await page.evaluate(() => {
       const g = (name: string) => {
@@ -267,7 +279,10 @@ async function extractCreditors(page: Page, c: (typeof COLAW_CASES)[0]) {
         bond_content: g('bondcontent'),
       };
     });
-    creditors.push(cred);
+    // 빈 채권자 스킵 (이름이 없으면 placeholder option)
+    if (cred.creditor_name) {
+      creditors.push(cred);
+    }
   }
 
   return { summary, creditors };
@@ -305,29 +320,56 @@ async function extractProperties(page: Page, c: (typeof COLAW_CASES)[0]) {
 // ─── 4) 수입지출/변제기간 탭 추출 ────────────────────────────────
 async function extractIncome(page: Page, c: (typeof COLAW_CASES)[0]) {
   await page.goto(caseUrl(c.cs, c.dy, c.rs, 'application'), { waitUntil: 'networkidle2' });
-  await delay(1000);
-  await page.evaluate(() => {
-    const tabs = document.querySelectorAll<HTMLAnchorElement>('a');
-    for (const t of tabs) {
-      if (t.textContent?.includes('수입지출')) { t.click(); break; }
-    }
-  });
-  await delay(2000);
+  await delay(1500);
 
+  // 탭 클릭: 정확한 탭 선택 (텍스트 includes 대신 더 넓은 범위 탐색)
+  await page.evaluate(() => {
+    // 먼저 정확한 탭 링크 시도
+    const allLinks = document.querySelectorAll<HTMLAnchorElement>('a, [role="tab"], .tab-link, li[data-tab]');
+    for (const t of allLinks) {
+      const txt = t.textContent?.trim() ?? '';
+      if (txt.includes('수입지출') || txt.includes('변제기간')) {
+        t.click();
+        return true;
+      }
+    }
+    // fallback: 4번째 탭 (0:신청인, 1:채권자, 2:재산, 3:수입지출/변제기간)
+    const tabItems = document.querySelectorAll<HTMLAnchorElement>('.nav-tabs li a, .tab-nav a');
+    if (tabItems.length > 3) {
+      tabItems[3].click();
+      return true;
+    }
+    return false;
+  });
+  await delay(3000); // AJAX 대기 시간 대폭 증가 (2s → 3s)
+
+  // 데이터 추출 + 채권 합계도 이 탭에서 다시 시도
   return page.evaluate(() => {
     const g = (name: string) => {
       const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
       return el?.value?.trim() ?? '';
     };
+    // 여러 가능한 필드명을 시도 (colaw 버전에 따라 다를 수 있음)
+    const tryGet = (...names: string[]) => {
+      for (const name of names) {
+        const val = g(name);
+        if (val) return val;
+      }
+      return '';
+    };
     return {
-      gross_salary: g('monthlyincomeamount') || g('grosssalary'),
-      net_salary: g('tagyeosalary') || g('netsalary'),
-      living_cost: g('livingcost') || g('livingexpense'),
-      extra_living_cost: g('extralivingcost') || g('additionallivingexpense'),
-      child_support: g('childsupport'),
-      trustee_comm_rate: g('trusteecommrate') || g('commissionrate'),
-      repay_months: g('repaymentmonths') || g('repayperiod'),
-      family_count: g('familycount') || g('householdcount'),
+      gross_salary: tryGet('monthlyincomeamount', 'grosssalary', 'monthincome'),
+      net_salary: tryGet('tagyeosalary', 'netsalary', 'realincome'),
+      living_cost: tryGet('livingcost', 'livingexpense', 'monthlyliving'),
+      extra_living_cost: tryGet('extralivingcost', 'additionallivingexpense', 'extraliving'),
+      child_support: tryGet('childsupport', 'childeducation'),
+      trustee_comm_rate: tryGet('trusteecommrate', 'commissionrate'),
+      repay_months: tryGet('repayperiod', 'repaymentmonths', 'paymentperiod'),
+      family_count: tryGet('familycount', 'householdcount', 'familymember'),
+      // 채권 합계 (채권자 탭에서 못 가져온 경우를 대비)
+      total_debt_alt: tryGet('nowtotalsum', 'totalsumamount'),
+      secured_debt_alt: tryGet('dambosum', 'securedsum'),
+      unsecured_debt_alt: tryGet('nodambosum', 'unsecuredsum'),
     };
   });
 }
@@ -468,6 +510,7 @@ async function insertCase(
     repayment_start_date: app.repayment_start_date || null,
     agent_type: app.agent_gubun === '1' ? '법무사' : app.agent_gubun === '2' ? '변호사' : '기타',
     agent_name: app.agent_name,
+    agent_law_firm: app.agent_law_firm || null,
     agent_phone: app.agent_tel,
     agent_fax: app.agent_fax,
     agent_email: app.agent_email,
@@ -522,6 +565,11 @@ async function insertCase(
   }
 
   // 6) rehabilitation_income_settings
+  // 채권 합계: 채권자 탭에서 가져온 값 우선, 없으면 수입지출 탭에서 가져온 대체 값 사용
+  const totalDebt = parseAmount(creditorData.summary.total_debt) || parseAmount(income.total_debt_alt);
+  const securedDebt = parseAmount(creditorData.summary.secured_debt) || parseAmount(income.secured_debt_alt);
+  const unsecuredDebt = parseAmount(creditorData.summary.unsecured_debt) || parseAmount(income.unsecured_debt_alt);
+
   const { error: incomeErr } = await supabase.from('rehabilitation_income_settings').insert({
     case_id: caseId,
     gross_salary: parseAmount(income.gross_salary),
@@ -531,9 +579,9 @@ async function insertCase(
     child_support: parseAmount(income.child_support),
     trustee_comm_rate: parseFloat(income.trustee_comm_rate) || 0,
     repay_months: parseInt(income.repay_months) || 60,
-    total_debt: parseAmount(creditorData.summary.total_debt),
-    secured_debt: parseAmount(creditorData.summary.secured_debt),
-    unsecured_debt: parseAmount(creditorData.summary.unsecured_debt),
+    total_debt: totalDebt,
+    secured_debt: securedDebt,
+    unsecured_debt: unsecuredDebt,
   });
   if (incomeErr) console.error(`  ⚠ income_settings:`, incomeErr.message);
 
@@ -565,9 +613,86 @@ async function insertCase(
   return caseId;
 }
 
+// ─── 재마이그레이션: 기존 사건의 채권자·수입지출만 업데이트 ────────
+async function reExtractCase(
+  page: Page,
+  c: (typeof COLAW_CASES)[0],
+  existingCaseId: string,
+) {
+  console.log(`  🔄 재추출: ${c.nm} (${existingCaseId.substring(0, 8)})`);
+
+  // 1) 채권자 재추출
+  const creditorData = await extractCreditors(page, c);
+  console.log(`    ✓ 채권자: ${creditorData.creditors.length}건`);
+
+  // 2) 수입지출 재추출
+  const income = await extractIncome(page, c);
+  console.log(`    ✓ 수입지출`);
+
+  // 3) 기존 채권자 soft delete
+  const { error: delErr } = await supabase
+    .from('rehabilitation_creditors')
+    .update({ lifecycle_status: 'soft_deleted' })
+    .eq('case_id', existingCaseId);
+  if (delErr) console.error(`    ⚠ 기존 채권자 soft_delete 실패:`, delErr.message);
+
+  // 4) 새 채권자 삽입
+  for (const cred of creditorData.creditors) {
+    const { error: credErr } = await supabase.from('rehabilitation_creditors').insert({
+      case_id: existingCaseId,
+      organization_id: ORGANIZATION_ID,
+      bond_number: parseInt(cred.bond_number) || 0,
+      classify: cred.classify === '법인' ? '법인' : '자연인',
+      creditor_name: cred.creditor_name,
+      postal_code: cred.postal_code,
+      address: cred.address,
+      phone: cred.phone,
+      fax: cred.fax,
+      bond_cause: cred.bond_cause,
+      capital: parseAmount(cred.capital),
+      capital_compute: cred.capital_compute,
+      interest: parseAmount(cred.interest),
+      interest_compute: cred.interest_compute,
+      bond_content: cred.bond_content,
+    });
+    if (credErr) console.error(`    ⚠ creditor ${cred.creditor_name}:`, credErr.message);
+  }
+
+  // 5) 수입지출 upsert (총채무 포함)
+  const totalDebt = parseAmount(creditorData.summary.total_debt) || parseAmount(income.total_debt_alt);
+  const securedDebt = parseAmount(creditorData.summary.secured_debt) || parseAmount(income.secured_debt_alt);
+  const unsecuredDebt = parseAmount(creditorData.summary.unsecured_debt) || parseAmount(income.unsecured_debt_alt);
+
+  const { error: incUpd } = await supabase
+    .from('rehabilitation_income_settings')
+    .update({
+      gross_salary: parseAmount(income.gross_salary),
+      net_salary: parseAmount(income.net_salary),
+      living_cost: parseAmount(income.living_cost),
+      extra_living_cost: parseAmount(income.extra_living_cost),
+      child_support: parseAmount(income.child_support),
+      trustee_comm_rate: parseFloat(income.trustee_comm_rate) || 0,
+      repay_months: parseInt(income.repay_months) || 60,
+      total_debt: totalDebt,
+      secured_debt: securedDebt,
+      unsecured_debt: unsecuredDebt,
+    })
+    .eq('case_id', existingCaseId);
+  if (incUpd) console.error(`    ⚠ income_settings update:`, incUpd.message);
+
+  return { creditorCount: creditorData.creditors.length, totalDebt };
+}
+
 // ─── 메인 실행 ────────────────────────────────────────────────────
 async function main() {
-  console.log('🚀 colaw → Vein Spiral 마이그레이션 시작');
+  // 실행 모드: 'full' = 전체 마이그레이션, 'reextract' = 기존 사건 채권자/수입 재추출
+  const MODE = (process.env.MIGRATION_MODE || 'full') as 'full' | 'reextract';
+  // 재추출 대상 사건 ID 매핑 (VS case_id → colaw case index)
+  const RE_EXTRACT_MAP: Record<string, string> = process.env.RE_EXTRACT_MAP
+    ? JSON.parse(process.env.RE_EXTRACT_MAP)
+    : {};
+
+  console.log(`🚀 colaw → Vein Spiral 마이그레이션 시작 [모드: ${MODE}]`);
   console.log(`📋 총 ${COLAW_CASES.length}건 처리 예정\n`);
 
   const browser: Browser = await puppeteer.launch({

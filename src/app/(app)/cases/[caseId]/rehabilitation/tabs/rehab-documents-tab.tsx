@@ -14,10 +14,17 @@ const DOCUMENT_TYPES: {
   key: DocumentType;
   label: string;
   description: string;
+  group?: string;
 }[] = [
-  { key: 'application', label: '개인회생 신청서', description: '법원 제출용 개시신청서' },
+  // ── 필수 신청 문서 ──
+  { key: 'application', label: '개인회생 신청서', description: '법원 제출용 개시신청서', group: '필수 신청 문서' },
   { key: 'delegation', label: '위임장', description: '변호사/법무사 위임장' },
-  { key: 'creditor_list', label: '채권자 목록', description: '채권자 현황 목록표' },
+  { key: 'delegation_with_attorney', label: '위임장 + 담당변호사지정서', description: '법무법인 위임 시 (위임장+지정서 통합)' },
+  { key: 'attorney_designation', label: '담당변호사지정서', description: '법무법인 소속 담당변호사 지정' },
+  { key: 'prohibition_order', label: '금지명령신청서', description: '강제집행 금지 (개시신청 시 필수)', group: '보전 처분' },
+  { key: 'stay_order', label: '중지명령신청서', description: '진행 중인 강제집행 중지 신청' },
+  // ── 첨부 서류 ──
+  { key: 'creditor_list', label: '채권자 목록', description: '채권자 현황 목록표', group: '첨부 서류' },
   { key: 'property_list', label: '재산 목록', description: '재산 및 청산가치 목록' },
   { key: 'income_statement', label: '수입 및 지출에 관한 목록', description: '월 소득/지출 현황' },
   { key: 'affidavit', label: '진술서', description: '채무 경위 진술서' },
@@ -118,12 +125,19 @@ export function RehabDocumentsTab({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="mb-4 text-base font-semibold text-slate-800">출력 가능 문서</h2>
         <div className="space-y-3">
-          {DOCUMENT_TYPES.map((doc) => {
+          {DOCUMENT_TYPES.map((doc, idx) => {
             const isLoadingPreview = loadingDoc === doc.key;
             const isLoadingDownload = loadingDoc === `dl_${doc.key}`;
+            // 그룹 헤더 표시
+            const showGroupHeader = doc.group && (idx === 0 || DOCUMENT_TYPES[idx - 1].group !== doc.group);
             return (
+              <div key={doc.key}>
+                {showGroupHeader && (
+                  <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 first:mt-0">
+                    {doc.group}
+                  </p>
+                )}
               <div
-                key={doc.key}
                 className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/50 p-3"
               >
                 <div className="flex items-center gap-3">
@@ -163,6 +177,7 @@ export function RehabDocumentsTab({
                     다운로드
                   </button>
                 </div>
+              </div>
               </div>
             );
           })}
