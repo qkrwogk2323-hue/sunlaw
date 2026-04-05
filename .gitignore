@@ -21,3 +21,12 @@ supabase/.temp
 *.tsbuildinfo
 .vercel
 .env*.local
+
+# 민감 데이터 / 고객 출력물 (절대 커밋 금지)
+개인회생_*/
+*.png
+push-bankruptcy-docs.sh
+COPILOT_TASK.md
+
+# Claude Code 로컬 설정
+.claude/
