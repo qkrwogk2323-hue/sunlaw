@@ -606,10 +606,26 @@ export async function generateRehabDocument(
     const membership = findMembership(auth, organizationId);
     if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
 
-    const moduleData = await getRehabModuleData(caseId);
+    const supabase = await createSupabaseServerClient();
+    const [moduleData, caseResult] = await Promise.all([
+      getRehabModuleData(caseId),
+      supabase
+        .from('cases')
+        .select('court_name, case_number, title')
+        .eq('id', caseId)
+        .maybeSingle(),
+    ]);
+
+    // 사건 테이블의 법원명·사건번호를 application에 병합
+    const caseInfo = caseResult.data;
+    const mergedApplication = {
+      ...(moduleData.application ?? {}),
+      ...(caseInfo?.court_name ? { court_name: caseInfo.court_name } : {}),
+      ...(caseInfo?.case_number ? { case_number: caseInfo.case_number } : {}),
+    } as Record<string, any>;
 
     const docData: DocumentData = {
-      application: moduleData.application as Record<string, any> | null,
+      application: mergedApplication,
       creditorSettings: moduleData.creditorSettings as Record<string, any> | null,
       creditors: (moduleData.creditors ?? []) as Record<string, any>[],
       securedProperties: (moduleData.securedProperties ?? []) as Record<string, any>[],

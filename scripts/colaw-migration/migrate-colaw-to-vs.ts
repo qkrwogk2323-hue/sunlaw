@@ -152,6 +152,13 @@ async function extractApplication(page: Page, c: (typeof COLAW_CASES)[0]) {
       const el = document.querySelector<HTMLInputElement>(`[name="${name}"]:checked`);
       return el?.value?.trim() ?? '';
     };
+    // 사건번호·법원명 추출: 페이지 상단 헤더에서 "인천지방법원 2025 개회 101101" 패턴 탐색
+    const headerText = document.querySelector('.header, .case-header, h2, h3, .title')?.textContent?.trim() ?? '';
+    // colaw 제목 영역에서 법원명과 사건번호를 추출
+    const caseInfoMatch = headerText.match(/([\w가-힣]+(?:법원|회생법원))\s+(\d{4}\s*개회\s*\d+)/);
+    const courtName = caseInfoMatch?.[1] ?? '';
+    const caseNumber = caseInfoMatch?.[2] ?? '';
+
     return {
       applicant_name: g('applicationname'),
       resident_number: g('applicationjumin'),
@@ -180,9 +187,12 @@ async function extractApplication(page: Page, c: (typeof COLAW_CASES)[0]) {
       agent_address: g('agentaddress'),
       agent_email: g('agentemail'),
       agent_gubun: gr('agentgubun'), // '1'=법무사 등
+      agent_law_firm: g('agentlawfirm') || g('companydeliveryname'),
       company_delivery_name: g('companydeliveryname'),
       net_salary: g('tagyeosalary'),       // 월 급여 (세후)
       gross_salary: g('monthlyincomeamount'), // 월 급여 (세전)
+      court_name: courtName,
+      case_number: caseNumber,
     };
   });
 }
@@ -407,8 +417,8 @@ async function insertCase(
       stage_template_key: 'general-default',
       stage_key: 'intake',
       module_flags: { billing: true, insolvency: true },
-      court_name: app.application_date ? '수원회생법원' : null,
-      case_number: colawCase.cs,
+      court_name: app.court_name || '인천지방법원',
+      case_number: app.case_number || `${colawCase.dy} 개회`,
       summary: `colaw #${colawCase.n} ${colawCase.nm} 마이그레이션`,
       created_by: CREATED_BY,
       updated_by: CREATED_BY,

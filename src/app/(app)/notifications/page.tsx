@@ -15,7 +15,7 @@ import { UnifiedListSearch } from '@/components/ui/unified-list-search';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { formatNotificationDate } from '@/lib/format';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
-import { getArchivedNotificationItems, getNotificationArchiveMeta, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
+import { getArchivedNotificationItems, getNavUnreadCounts, getNotificationArchiveMeta, getNotificationChannelPreferences, getNotificationQueueView, type NotificationQueueItem } from '@/lib/queries/notifications';
 import { resolveSafeInternalHref } from '@/lib/navigation/safe-navigation';
 import { ROUTES } from '@/lib/routes/registry';
 
@@ -170,10 +170,11 @@ export default async function NotificationsPage({
   const state = `${resolved?.state ?? 'active'}` as 'active' | 'archived';
   const pageSize = 30;
 
-  const [archivedItems, archiveMeta, channelPreferences] = await Promise.all([
+  const [archivedItems, archiveMeta, channelPreferences, navCounts] = await Promise.all([
     state === 'archived' ? getArchivedNotificationItems(pageSize) : Promise.resolve(null),
     getNotificationArchiveMeta(),
-    getNotificationChannelPreferences()
+    getNotificationChannelPreferences(),
+    getNavUnreadCounts()
   ]);
 
   const queueView = await getNotificationQueueView({
@@ -194,7 +195,7 @@ export default async function NotificationsPage({
 
       <NotificationsSummaryCards
         immediateCount={queueView.categories.immediate.length}
-        confirmCount={queueView.categories.confirm.length}
+        confirmCount={navCounts.actionRequiredCount}
         meetingCount={queueView.categories.meeting.length}
         otherCount={queueView.categories.other.length}
       />

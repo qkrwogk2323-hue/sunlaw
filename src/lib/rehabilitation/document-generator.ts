@@ -308,20 +308,26 @@ function wrapDocument(content: string, title: string): string {
 function generateApplication(data: DocumentData): string {
   const app = data.application || {};
   const courtName = app.court_name || app.court_detail || '';
-  const caseYear = app.case_year || '';
-  const caseNum = app.case_number || '';
-  const caseNumberDisplay = caseYear && caseNum
-    ? `${caseYear} ${caseNum}`
-    : caseNum || '';
+  const caseNumber = app.case_number || '';
   const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
+  const debtorPhone = app.phone_mobile || app.phone || '';
   const agentName = app.agent_name || '';
   const agentPhone = app.agent_phone || '';
   const agentEmail = app.agent_email || '';
+  const agentFax = app.agent_fax || '';
+  const agentLawFirm = app.agent_law_firm || agentName || '';
+
+  // colaw 형식: "인천지방법원 2025 개회 101101 호" → cases.case_number에 "2025 개회 101101" 형태로 저장됨
+  const headerLine = courtName && caseNumber
+    ? `${courtName} ${caseNumber} 호`
+    : courtName
+      ? `${courtName}`
+      : '';
 
   const content = `
     <div class="header-line">
-      ${esc(courtName)} ${esc(caseNumberDisplay)} 개회 호
+      ${esc(headerLine)}
     </div>
 
     <h1>개 시 신 청 서</h1>
@@ -331,34 +337,67 @@ function generateApplication(data: DocumentData): string {
       <table>
         <tr>
           <td style="width: 30%;">채무자</td>
-          <td>${esc(debtorName)}</td>
+          <td>${esc(debtorName)} (${esc(debtorBirth)}-*******)</td>
         </tr>
         <tr>
-          <td>주민번호</td>
-          <td>${esc(debtorBirth)}-*******</td>
+          <td>전화번호</td>
+          <td>${esc(debtorPhone)}</td>
         </tr>
       </table>
     </div>
 
     <div class="section">
       <h3>대리인</h3>
-      <p>법 무 법 인: ${esc(agentName)}</p>
-      <p>전 화: ${esc(agentPhone)}</p>
-      <p>전자메일: ${esc(agentEmail)}</p>
+      <table>
+        <tr>
+          <td style="width: 30%;">법무법인</td>
+          <td>${esc(agentLawFirm)}</td>
+        </tr>
+        <tr>
+          <td>담당자</td>
+          <td>${esc(agentName)}</td>
+        </tr>
+        <tr>
+          <td>전화</td>
+          <td>${esc(agentPhone)}</td>
+        </tr>
+        ${agentFax ? `<tr><td>팩스</td><td>${esc(agentFax)}</td></tr>` : ''}
+        <tr>
+          <td>전자메일</td>
+          <td>${esc(agentEmail)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>신청의 취지</h3>
+      <p>채무자에 대하여 개인회생절차를 개시한다.</p>
+      <p>라는 결정을 구합니다.</p>
+    </div>
+
+    <div class="section">
+      <h3>첨부서류</h3>
+      <p>1. 채권자목록 1통</p>
+      <p>2. 재산목록 1통</p>
+      <p>3. 수입 및 지출에 관한 목록 1통</p>
+      <p>4. 진술서 1통</p>
+      <p>5. 변제계획안 1통</p>
+      <p>6. 위임장 1통</p>
     </div>
 
     <div class="signature-area">
-      <p>2026년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+      <p>${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
       <div style="margin-top: 40px;">
         <div style="display: inline-block; margin: 0 30px;">
-          <p>채무자</p>
+          <p>채무자 ${esc(debtorName)}</p>
           <div class="signature-line"></div>
         </div>
         <div style="display: inline-block; margin: 0 30px;">
-          <p>대리인</p>
+          <p>대리인 ${esc(agentName)}</p>
           <div class="signature-line"></div>
         </div>
       </div>
+      <p class="text-center" style="margin-top: 20px;">${esc(courtName)} 귀중</p>
     </div>
   `;
 
@@ -370,21 +409,30 @@ function generateApplication(data: DocumentData): string {
  */
 function generateDelegation(data: DocumentData): string {
   const app = data.application || {};
+  const courtName = app.court_name || '';
+  const caseNumber = app.case_number || '';
   const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
+  const debtorPhone = app.phone_mobile || app.phone || '';
   const agentName = app.agent_name || '';
+  const agentLawFirm = app.agent_law_firm || agentName || '';
+  const agentPhone = app.agent_phone || '';
+  const agentEmail = app.agent_email || '';
 
   const content = `
     <h1>위 임 장</h1>
 
     <div class="section">
-      <p>본인은 아래의 개인회생절차에 관련하여 ${esc(agentName)}을(를) 본인의 법정대리인으로 위임합니다.</p>
+      <p style="text-align: center; margin-bottom: 20px;">
+        ${courtName && caseNumber ? `사 건: ${esc(courtName)} ${esc(caseNumber)} 개인회생` : ''}
+      </p>
     </div>
 
     <div class="section">
+      <h3>위임인 (채무자)</h3>
       <table>
         <tr>
-          <td style="width: 30%;">위임자</td>
+          <td style="width: 30%;">성명</td>
           <td>${esc(debtorName)}</td>
         </tr>
         <tr>
@@ -392,16 +440,50 @@ function generateDelegation(data: DocumentData): string {
           <td>${esc(debtorBirth)}-*******</td>
         </tr>
         <tr>
-          <td>위임대리인</td>
-          <td>${esc(agentName)}</td>
+          <td>전화번호</td>
+          <td>${esc(debtorPhone)}</td>
         </tr>
       </table>
     </div>
 
+    <div class="section">
+      <h3>수임인 (대리인)</h3>
+      <table>
+        <tr>
+          <td style="width: 30%;">법무법인</td>
+          <td>${esc(agentLawFirm)}</td>
+        </tr>
+        <tr>
+          <td>담당자</td>
+          <td>${esc(agentName)}</td>
+        </tr>
+        <tr>
+          <td>전화</td>
+          <td>${esc(agentPhone)}</td>
+        </tr>
+        <tr>
+          <td>전자메일</td>
+          <td>${esc(agentEmail)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>위임사항</h3>
+      <p>1. 개인회생 개시신청 및 변제계획안 제출</p>
+      <p>2. 개인회생절차에 관한 일체의 행위</p>
+      <p>3. 채권자 이의에 대한 대응</p>
+      <p>4. 변제계획 인가결정에 관한 행위</p>
+      <p>5. 기타 개인회생절차에 부수하는 행위</p>
+    </div>
+
     <div class="signature-area">
-      <p>위임자</p>
-      <div class="signature-line"></div>
-      <p style="margin-top: 20px;">2026년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+      <p>${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+      <div style="margin-top: 30px;">
+        <p>위임자 ${esc(debtorName)}</p>
+        <div class="signature-line"></div>
+      </div>
+      <p class="text-center" style="margin-top: 20px;">${esc(courtName)} 귀중</p>
     </div>
   `;
 
@@ -1014,8 +1096,9 @@ function generateRepaymentPlan(data: DocumentData): string {
   const debtorName = app.applicant_name || '';
   const debtorBirth = app.resident_number_front || '';
   const agentName = app.agent_name || '';
-  const agentFirm = app.agent_type ? `${app.agent_type} 사무소` : '';
-  const caseNumber = app.case_number || '2026 개회 호';
+  const agentFirm = app.agent_law_firm || (app.agent_type ? `${app.agent_type} 사무소` : '');
+  const courtName = app.court_name || '';
+  const caseNumber = app.case_number || '';
 
   // 소득: DB 컬럼은 net_salary(월), living_cost(월)
   const monthlySalary = Number(incomeSettings.net_salary) || 0;
@@ -1072,9 +1155,9 @@ function generateRepaymentPlan(data: DocumentData): string {
     <h1>변 제 계 획(안)</h1>
 
     <p style="text-align: center; margin-bottom: 30px;">
-      사 건: ${esc(caseNumber)} 개인회생<br/>
-      채 무 자: ${esc(debtorName)}<br/>
-      ${agentName ? `대 리 인: ${esc(agentFirm)} / ${esc(app.agent_type || '변호사')} ${esc(agentName)}` : ''}
+      사 건: ${esc(courtName)} ${esc(caseNumber)} 개인회생<br/>
+      채 무 자: ${esc(debtorName)} (${esc(debtorBirth)}-*******)<br/>
+      ${agentName ? `대 리 인: ${esc(agentFirm)} ${esc(agentName)}` : ''}
     </p>
 
     <p style="text-align: center; margin-bottom: 20px;">
@@ -1082,7 +1165,7 @@ function generateRepaymentPlan(data: DocumentData): string {
     </p>
 
     <div class="signature-area">
-      <p style="margin-top: 40px;">2026년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+      <p style="margin-top: 40px;">${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
       <div style="display: inline-block; margin: 20px 30px;">
         <p>채무자</p>
         <div class="signature-line"></div>

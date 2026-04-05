@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
 const AUTH_REQUIRED_PREFIXES = [
   '/dashboard',
@@ -136,12 +137,11 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // NOTE: 미들웨어 타임아웃 방지를 위해 세션 갱신은 앱 라우트 내부에서 처리합니다.
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders
-    }
-  });
+  // x-pathname 헤더를 request에 설정한 후 세션 갱신
+  request.headers.set('x-pathname', request.nextUrl.pathname);
+
+  // 세션 갱신: Supabase 인증 토큰 자동 리프레시
+  return await updateSession(request);
 }
 
 export const config = {

@@ -17,6 +17,7 @@ import {
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { ClientActionForm } from '@/components/ui/client-action-form';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 
@@ -306,30 +307,26 @@ export default async function OrganizationSettingsPage({
             <SubmitButton pendingLabel="비활성화 중..." variant="secondary">조직 비활성화</SubmitButton>
           </ClientActionForm>
 
-          <ClientActionForm
-            action={deleteOrganizationAction}
-            successTitle="조직 삭제 처리가 완료되었습니다."
-            successMessage="활성 구성원 상태와 기본 조직 연결이 해제되었습니다."
-            errorTitle="조직 삭제에 실패했습니다."
-            errorCause="확인 문구가 틀렸거나 권한이 없습니다."
-            errorResolution="확인 문구 '삭제'를 정확히 입력했는지 확인하고, 문제가 지속되면 관리자에게 문의해 주세요."
-            className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4"
-          >
-            <input type="hidden" name="organizationId" value={organizationId} />
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
             <p className="text-sm text-slate-700">조직 삭제는 안전 삭제로 처리되며, 활성 구성원 상태와 기본 조직 연결을 해제합니다.</p>
-            <label htmlFor="organization-delete-confirm" className="block text-xs font-medium text-slate-600">
-              확인 문구 입력: 삭제
-              <input
-                id="organization-delete-confirm"
-                name="confirmText"
-                required
-                aria-required="true"
-                className="mt-1 h-10 w-full rounded-lg border border-red-200 bg-white px-3 text-sm"
-                placeholder="삭제"
-              />
-            </label>
-            <SubmitButton pendingLabel="삭제 처리 중..." variant="destructive">조직 삭제</SubmitButton>
-          </ClientActionForm>
+            <DangerActionButton
+              action={deleteOrganizationAction}
+              fields={{ organizationId, confirmText: '삭제' }}
+              confirmTitle="조직을 삭제할까요?"
+              confirmDescription="조직 삭제는 안전 삭제로 처리되며, 활성 구성원 상태와 기본 조직 연결이 해제됩니다. 이 작업은 관리자만 복구할 수 있습니다."
+              highlightedInfo={`조직: ${organization?.name || ''}`}
+              confirmLabel="삭제"
+              successTitle="조직 삭제 처리가 완료되었습니다."
+              successMessage="활성 구성원 상태와 기본 조직 연결이 해제되었습니다."
+              errorTitle="조직 삭제에 실패했습니다."
+              errorCause="권한이 없습니다."
+              errorResolution="관리자 권한이 있는지 확인하고, 문제가 지속되면 관리자에게 문의해 주세요."
+              undoNote="삭제된 조직은 관리자가 복구할 수 있습니다."
+              buttonVariant="destructive"
+            >
+              조직 삭제
+            </DangerActionButton>
+          </div>
         </div>
       </CollapsibleSettingsSection>
         </>

@@ -790,6 +790,7 @@ export async function getNotificationQueueView({
     .select(queueSummarySelect)
     .eq('recipient_profile_id', auth.user.id)
     .neq('status', 'deleted')
+    .is('trashed_at', null)
     .order('created_at', { ascending: false })
     .limit(limit + 1);
 

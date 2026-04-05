@@ -129,14 +129,14 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
 
       {/* 탭 콘텐츠: 회수 활동 */}
       {(tab === 'activity' || !tab) && (
-        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <section className="grid gap-6 md:grid-cols-1 xl:grid-cols-2">
           <Card className="vs-interactive vs-mesh-card">
             <CardHeader><CardTitle>추심 사건</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="max-h-[600px] space-y-3 overflow-y-auto">
               {data.collectionCases.length ? data.collectionCases.map((item: any) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <Link href={`/cases/${item.id}?tab=collection`} className="font-medium text-slate-900 hover:underline">{item.title}</Link>
+                    <Link href={`/cases/${item.id}?tab=collection`} className="min-w-0 truncate font-medium text-slate-900 hover:underline">{item.title}</Link>
                     <Badge tone="amber">{item.stage_key ?? '-'}</Badge>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{item.reference_no ?? '-'} · {formatCurrency(item.principal_amount)}</p>
@@ -159,11 +159,11 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
 
           <Card className="vs-interactive">
             <CardHeader><CardTitle>최근 회수 활동</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="max-h-[600px] space-y-3 overflow-y-auto">
               {data.activities.length ? data.activities.map((item: any) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4 text-sm text-slate-700">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-900">{item.cases?.title ?? '-'}</p>
+                    <p className="min-w-0 truncate font-medium text-slate-900">{item.cases?.title ?? '-'}</p>
                     <Badge tone="slate">{item.activity_kind}</Badge>
                   </div>
                   <p className="mt-1 text-slate-500">{item.outcome_status ?? '-'} · {formatCurrency(item.amount)}</p>

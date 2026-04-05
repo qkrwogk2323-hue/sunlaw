@@ -31,6 +31,7 @@ export async function generateBankruptcyDoc(
     // 병렬 데이터 조회
     const [
       applicationRes,
+      caseRes,
       creditorsRes,
       propertiesRes,
       propertyDeductionsRes,
@@ -43,6 +44,13 @@ export async function generateBankruptcyDoc(
         .from('rehabilitation_applications')
         .select('*')
         .eq('case_id', caseId)
+        .maybeSingle(),
+
+      // 사건 기본 정보 (법원명, 사건번호)
+      supabase
+        .from('cases')
+        .select('court_name, case_number, title')
+        .eq('id', caseId)
         .maybeSingle(),
 
       // 채권자 목록 (insolvency_creditors 사용)
@@ -91,8 +99,16 @@ export async function generateBankruptcyDoc(
         .maybeSingle(),
     ]);
 
+    // 사건 테이블의 법원명·사건번호를 application에 병합
+    const caseInfo = caseRes.data;
+    const mergedApplication = {
+      ...((applicationRes.data as Record<string, any>) || {}),
+      ...(caseInfo?.court_name ? { court_name: caseInfo.court_name } : {}),
+      ...(caseInfo?.case_number ? { case_number: caseInfo.case_number } : {}),
+    };
+
     const docData: BankruptcyDocumentData = {
-      application: (applicationRes.data as Record<string, any>) || null,
+      application: mergedApplication as Record<string, any>,
       creditors: ((creditorsRes.data ?? []) as BankruptcyDocumentData['creditors']),
       properties: (propertiesRes.data ?? []) as Record<string, any>[],
       propertyDeductions: (propertyDeductionsRes.data ?? []) as Record<string, any>[],
