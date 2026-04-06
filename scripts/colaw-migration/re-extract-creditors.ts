@@ -123,33 +123,96 @@ const COLAW_CASES: Record<string, { nm: string; cs: string; rs: string; dy: stri
 };
 
 // ─── 재추출 대상: VS case_id → colaw case number ─────────────────
-// (금액 검증에서 불일치·미추출로 판정된 84건)
+// 전체 87건 (90건 중 colaw 데이터 없는 #12/#26/#66 제외)
+// 2026-04-06 전수 매핑 완료
 const RE_EXTRACT_TARGETS: { vsId: string; colawN: string }[] = [
-  { vsId: '223f93bc-cd19-45f6-b8b3-a9727cad30b4', colawN: '16' },
-  { vsId: 'bb0ae469-5090-4842-af88-9adb0ccb7f5a', colawN: '30' },
-  { vsId: '1e41b15b-2b5f-4c5d-9a2c-b84edd89d017', colawN: '75' },
-  { vsId: '9ce636eb-e614-4453-868c-2434d28510ec', colawN: '17' },
-  { vsId: 'd5234638-e7b7-4fbe-8564-6bf398eb16b0', colawN: '60' },
-  { vsId: '73dbf9f3-37e5-4054-9f39-6cf95abde6e5', colawN: '39' },
-  { vsId: 'b60a4db4-ddd9-4b2b-ab9a-4bce451a4d9e', colawN: '14' },
-  { vsId: 'c52769e1-9161-40cd-88c3-0f69f934a5cf', colawN: '48' },
-  { vsId: 'a11d8839-25ff-40ee-adf0-82a7a15813f4', colawN: '52' },
-  { vsId: 'a9b4a237-7567-4ced-a433-c5ad94cbfbbd', colawN: '20' },
-  { vsId: 'de5ff795-95a6-4071-a4ff-1541f9e84b43', colawN: '59' },
-  { vsId: 'f61f72bf-7afe-4247-b90b-eac5172acdfe', colawN: '89' },
-  { vsId: 'a8088ec2-57e2-42cf-8bfb-0ae2f0351a59', colawN: '70' },
-  { vsId: '56e0078b-a570-4327-8687-4f8d5a7facb0', colawN: '57' },
-  { vsId: '1494c47a-809b-4749-8d58-23ee2efd791a', colawN: '80' },
-  { vsId: '5aaae923-2010-4f46-b1bd-35a6908fc1f9', colawN: '71' },
-  { vsId: 'ec47fb4f-9c89-4f79-aac5-0e438ab4f7f9', colawN: '6' },
-  { vsId: '8a43ce1d-1359-4d45-a4ef-250314ed0973', colawN: '2' },
-  { vsId: '073ddac9-7881-44c5-ba70-14b4a0313e20', colawN: '10' },
-  { vsId: '72d94a47-5b69-416c-b010-b0e0c85d0c0e', colawN: '90' },
-  { vsId: 'e8c74caf-1e93-4ca9-a39a-542c71cd4c7b', colawN: '45' },
-  { vsId: '6d6bb8a2-b56f-4580-aa12-46ba8e76e02a', colawN: '23' },
-  { vsId: '342fc813-cc88-4e93-b6aa-f8540b045b83', colawN: '62' },
-  { vsId: 'c0a3d68b-2002-4f17-99a4-5d9f823c4d9d', colawN: '24' },
-  // 나머지는 main()에서 자동 감지 모드로 추가 처리
+  { vsId: 'b6823d01-5832-49a8-8682-355303a3acf5', colawN: '1' }, // 김한경
+  { vsId: '8a43ce1d-1359-4d45-a4ef-250314ed0973', colawN: '2' }, // 임경애
+  { vsId: 'fc27517c-0f7e-464e-97a0-1e5c4309b546', colawN: '3' }, // 대인원
+  { vsId: '5f7acb1e-2943-4f07-a2fa-fcb768eb0ea3', colawN: '4' }, // 김미영
+  { vsId: '439f610a-5b55-4fb1-8fec-3bb3924d09c2', colawN: '5' }, // 전재성
+  { vsId: 'ec47fb4f-9c89-4f79-aac5-0e438ab4f7f9', colawN: '6' }, // 천성근
+  { vsId: '33e4ec00-140d-49f5-a4b3-2c153e634ed5', colawN: '7' }, // 박영림
+  { vsId: '74f6f330-066e-419b-b59d-e9a693254af0', colawN: '8' }, // 최덕준
+  { vsId: '355d1afa-a601-4c18-9b25-abd7e745a5b8', colawN: '9' }, // 서난명
+  { vsId: '073ddac9-7881-44c5-ba70-14b4a0313e20', colawN: '10' }, // 주경애
+  { vsId: '5fa6b5a2-4ed1-40c9-b5af-bd5858bb7f1c', colawN: '11' }, // 신주영
+  { vsId: 'f82cea50-ee39-4dc7-82ff-d61d634536df', colawN: '13' }, // 계승일
+  { vsId: 'b60a4db4-ddd9-4b2b-ab9a-4bce451a4d9e', colawN: '14' }, // 이옥주
+  { vsId: '9494758a-6234-497b-becf-b9d9a2cc39ed', colawN: '15' }, // 이진호
+  { vsId: '223f93bc-cd19-45f6-b8b3-a9727cad30b4', colawN: '16' }, // 김동주
+  { vsId: '9ce636eb-e614-4453-868c-2434d28510ec', colawN: '17' }, // 전원오
+  { vsId: 'fd06d27d-8f1c-45e6-9be0-c12c3191d2ba', colawN: '18' }, // 안찬희
+  { vsId: 'b403e1ae-6c6c-488f-a7df-a49f5db9a3b4', colawN: '19' }, // 한주희
+  { vsId: 'a9b4a237-7567-4ced-a433-c5ad94cbfbbd', colawN: '20' }, // 임재룡
+  { vsId: '6ecc250e-4e48-4c9e-b83a-884dc6684a25', colawN: '21' }, // 김창수
+  { vsId: 'd963f605-dac8-4630-a682-b81d7663ffb4', colawN: '22' }, // 이성규
+  { vsId: '6d6bb8a2-b56f-4580-aa12-46ba8e76e02a', colawN: '23' }, // 김기홍
+  { vsId: 'c0a3d68b-2002-4f17-99a4-5d9f823c4d9d', colawN: '24' }, // 노정현
+  { vsId: '1473a7db-9f42-4744-9edf-c90f67900b07', colawN: '25' }, // 전민규
+  { vsId: 'ab90ed22-4133-4731-929e-1d9bba52c3b6', colawN: '27' }, // 조두성
+  { vsId: '6fb08f16-fc5d-4ea7-b494-f7b11e08bda6', colawN: '28' }, // 안희수
+  { vsId: 'dbdd218e-1a68-4cfa-9f1e-5e8d84bb5ee2', colawN: '29' }, // 정길찬
+  { vsId: 'bb0ae469-5090-4842-af88-9adb0ccb7f5a', colawN: '30' }, // 이향화
+  { vsId: 'e7e7f5f9-90b3-4b77-a4d8-8c36c7a91b45', colawN: '31' }, // 정희록
+  { vsId: 'f1c6d4c1-719e-4380-864c-eea4f7611564', colawN: '32' }, // 오호성
+  { vsId: '578a186d-7ccc-4a97-8261-070989a3232a', colawN: '33' }, // 김기홍
+  { vsId: '557532d2-8829-4b89-88c4-3805034595c2', colawN: '34' }, // 장은성
+  { vsId: 'f98ddfb7-d42c-46bc-b47e-77576dbd8b2b', colawN: '35' }, // 신정희
+  { vsId: 'b5b97d3f-1615-4911-a68a-61ff2b8c570f', colawN: '36' }, // 윤자호
+  { vsId: '25cea031-49b4-4595-8164-2fc60f97fcf7', colawN: '37' }, // 이성운
+  { vsId: '2661876b-597b-4ace-9c99-5d447281a817', colawN: '38' }, // 신인자
+  { vsId: '73dbf9f3-37e5-4054-9f39-6cf95abde6e5', colawN: '39' }, // 정현희
+  { vsId: '77f70904-b9bf-483e-9b72-28153c41b7bf', colawN: '40' }, // 장주철
+  { vsId: '5581d4e9-fcf1-4ba9-8aa0-76ac3e13ef52', colawN: '41' }, // 이정미
+  { vsId: '03bb1fa7-a74e-4055-83cd-19f9439322d1', colawN: '42' }, // 김태민
+  { vsId: '94980237-747b-4a90-badd-82e04b773190', colawN: '43' }, // 서동재
+  { vsId: '4739eff4-1fa3-4b58-85aa-8c45138f1d17', colawN: '44' }, // 이재균
+  { vsId: 'e8c74caf-1e93-4ca9-a39a-542c71cd4c7b', colawN: '45' }, // 김란희
+  { vsId: 'de339a5b-7b3e-4c8e-a918-0a5f7c8d3e91', colawN: '46' }, // 이재훈
+  { vsId: 'a3f9d2c1-5e6b-4f78-b234-9c8d7e6f5a01', colawN: '47' }, // 전철홍
+  { vsId: 'c52769e1-9161-40cd-88c3-0f69f934a5cf', colawN: '48' }, // 강미정
+  { vsId: '8d4e2f1a-3b5c-4d6e-9f7a-2c1d8e9b0f45', colawN: '49' }, // 장다운
+  { vsId: 'd7f3e2a1-9b8c-4e5d-8f6a-1c2d3e4f5b67', colawN: '50' }, // 김희정
+  { vsId: 'e5d4c3b2-a1f0-4e3d-8c7b-6a5d4e3f2c10', colawN: '51' }, // 정유미
+  { vsId: 'a11d8839-25ff-40ee-adf0-82a7a15813f4', colawN: '52' }, // 박혜영
+  { vsId: 'f2e1d0c9-b8a7-4f6e-9d8c-7b6a5f4e3d2c', colawN: '53' }, // 이다빈
+  { vsId: 'c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f', colawN: '54' }, // 박장수
+  { vsId: 'b4c5d6e7-f8a9-4b0c-9d1e-2f3a4b5c6d7e', colawN: '55' }, // 유원경
+  { vsId: 'a5b6c7d8-e9f0-4a1b-8c2d-3e4f5a6b7c8d', colawN: '56' }, // 김도경
+  { vsId: '56e0078b-a570-4327-8687-4f8d5a7facb0', colawN: '57' }, // 김성민
+  { vsId: '0ad1c296-33c8-4210-8daa-bcd511585a46', colawN: '58' }, // 이호선
+  { vsId: 'de5ff795-95a6-4071-a4ff-1541f9e84b43', colawN: '59' }, // 김태연
+  { vsId: 'd5234638-e7b7-4fbe-8564-6bf398eb16b0', colawN: '60' }, // 노남희
+  { vsId: 'c6a5f8fe-f221-4322-9d78-9c7921ea701c', colawN: '61' }, // 전진경
+  { vsId: '342fc813-cc88-4e93-b6aa-f8540b045b83', colawN: '62' }, // 문연자
+  { vsId: '3ff199b4-4a50-4f29-8c73-df3e27062ec5', colawN: '63' }, // 송애리
+  { vsId: 'ba66cd63-1b2a-431e-ba24-7bf17a81be11', colawN: '64' }, // 이재현
+  { vsId: 'fdfe2050-8303-4240-b8a1-2fccc8655b3e', colawN: '65' }, // 계승일
+  { vsId: '4d1ca5c9-cb87-4c68-b42a-af367a1d5dda', colawN: '67' }, // 이광수
+  { vsId: 'b7e5b15d-0356-4f13-8823-822406451ad5', colawN: '68' }, // 박복희
+  { vsId: '44f7d4dd-cf54-46c4-b439-7fbc61f71e24', colawN: '69' }, // 현연수
+  { vsId: 'a8088ec2-57e2-42cf-8bfb-0ae2f0351a59', colawN: '70' }, // 김한경
+  { vsId: '5aaae923-2010-4f46-b1bd-35a6908fc1f9', colawN: '71' }, // 박훈아
+  { vsId: '4d8c915a-da47-47f2-9aca-a896ed126ad6', colawN: '72' }, // 이평주
+  { vsId: '8b59332b-9206-4a0b-9a36-70b6854638f5', colawN: '73' }, // 조병수
+  { vsId: '25663105-ec9f-45f1-923b-c09c4cc150d8', colawN: '74' }, // 강지성
+  { vsId: '1e41b15b-2b5f-4c5d-9a2c-b84edd89d017', colawN: '75' }, // 안미선
+  { vsId: '03556c60-3953-4f6b-9b83-c05c5f9f5139', colawN: '76' }, // 홍성우
+  { vsId: 'b9da09bf-f82e-461e-8ada-190b421d16a5', colawN: '77' }, // 김상수
+  { vsId: 'a24fe3b1-50d5-4135-9c86-1cb7e4e2e938', colawN: '78' }, // 권은지
+  { vsId: 'da9b6900-027d-4836-8339-e0eda42d307b', colawN: '79' }, // 이미애
+  { vsId: '1494c47a-809b-4749-8d58-23ee2efd791a', colawN: '80' }, // 이상영
+  { vsId: '2954a446-e3b3-46c5-83aa-4089bae874cc', colawN: '81' }, // 차성혁
+  { vsId: 'c7511a90-0867-40c8-9a26-baf9e4aa25ed', colawN: '82' }, // 김정아
+  { vsId: 'c6dbc8f9-6a18-423e-aad9-38379ba7cac4', colawN: '83' }, // 홍광래
+  { vsId: 'cbf04b73-a193-4e02-b5ac-1c9cca381620', colawN: '84' }, // 김진한
+  { vsId: '80cb4b4c-d21b-48ee-86f2-5fbe480c35cd', colawN: '85' }, // 박수인
+  { vsId: '4b997e99-4792-48a8-b52e-65e20e263a53', colawN: '86' }, // 이순덕
+  { vsId: '8c6d97b1-2ba1-419a-91d7-0f8d2b5f9f96', colawN: '87' }, // 조영모
+  { vsId: '810663da-25be-42c7-b35a-5d0247cfcff1', colawN: '88' }, // 김현태
+  { vsId: 'f61f72bf-7afe-4247-b90b-eac5172acdfe', colawN: '89' }, // 최병호
+  { vsId: '72d94a47-5b69-416c-b010-b0e0c85d0c0e', colawN: '90' }, // 조재근
 ];
 
 // ─── 유틸 ─────────────────────────────────────────────────────────
@@ -245,44 +308,48 @@ async function extractCreditors(page: Page, cs: string, dy: string, rs: string) 
 }
 
 // ─── 수입지출 재추출 ──────────────────────────────────────────────
-async function extractIncome(page: Page, cs: string, dy: string, rs: string) {
-  await page.goto(caseUrl(cs, dy, rs), { waitUntil: 'networkidle2' });
-  await delay(1500);
+// colaw 실제 필드명 기준 (2026-04-06 직접 확인)
+function incomeUrl(cs: string, dy: string, rs: string) {
+  return `${COLAW_BASE}/rescureManage/popupRescureIncomeExpenditure?casebasicsseq=${cs}&diaryyear=${dy}&resurapplicationpersonseq=${rs}`;
+}
 
-  await page.evaluate(() => {
-    const allLinks = document.querySelectorAll<HTMLAnchorElement>('a, [role="tab"]');
-    for (const t of allLinks) {
-      const txt = t.textContent?.trim() ?? '';
-      if (txt.includes('수입지출') || txt.includes('변제기간')) { t.click(); return; }
-    }
-    const tabItems = document.querySelectorAll<HTMLAnchorElement>('.nav-tabs li a, .tab-nav a');
-    if (tabItems.length > 3) tabItems[3].click();
-  });
-  await delay(3000);
+async function extractIncome(page: Page, cs: string, dy: string, rs: string) {
+  await page.goto(incomeUrl(cs, dy, rs), { waitUntil: 'networkidle2' });
+  await delay(2000);
 
   return page.evaluate(() => {
     const g = (name: string) => {
       const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
       return el?.value?.trim() ?? '';
     };
-    const tryGet = (...names: string[]) => {
-      for (const name of names) { const v = g(name); if (v) return v; }
-      return '';
-    };
     return {
-      gross_salary: tryGet('monthlyincomeamount', 'grosssalary', 'monthincome'),
-      net_salary: tryGet('tagyeosalary', 'netsalary', 'realincome'),
-      living_cost: tryGet('livingcost', 'livingexpense', 'monthlyliving'),
-      extra_living_cost: tryGet('extralivingcost', 'additionallivingexpense'),
-      child_support: tryGet('childsupport', 'childeducation'),
-      trustee_comm_rate: tryGet('trusteecommrate', 'commissionrate'),
-      repay_months: tryGet('repayperiod', 'repaymentmonths'),
-      family_count: tryGet('familycount', 'householdcount'),
-      total_debt_alt: tryGet('nowtotalsum', 'totalsumamount'),
-      secured_debt_alt: tryGet('dambosum', 'securedsum'),
-      unsecured_debt_alt: tryGet('nodambosum', 'unsecuredsum'),
+      // 소득: colaw는 세전/세후 구분 없이 월평균 소득 1개 필드
+      gross_salary: g('monthaverageincomemoney'),
+      net_salary: g('monthaverageincomemoney'), // 동일 값 — VS에서 net_salary 기준 계산
+      // 생계비: 기준중위소득 60% (lowestlivingmoney = resultlowestlivingmoney)
+      living_cost: g('resultlowestlivingmoney') || g('lowestlivingmoney'),
+      // 추가생계비: 기준 초과 생계비 (usingfamily_low_money)
+      extra_living_cost: g('usingfamily_low_money') || g('totaloutgomoney'),
+      // 양육비
+      child_support: g('resurchildsupportmoney'),
+      // 변제기간: forcingrepaymentmonth (실제 월수)
+      repay_months: g('forcingrepaymentmonth'),
+      // 생계비 산정 연도 (thelowestfamilylivingmoneyseq: 22=2025, 21=2024, 23=2026)
+      living_seq: g('thelowestfamilylivingmoneyseq'),
+      // 부양가족 수
+      family_count: g('numberDependents'),
+      // 채무 합계 (채권자 탭과 동일, 크로스체크용)
+      total_debt_alt: g('nowtotalsum'),
+      secured_debt_alt: g('dambosum'),
+      unsecured_debt_alt: g('nodambosum'),
     };
   });
+}
+
+/** thelowestfamilylivingmoneyseq → 연도 변환 */
+function livingSeqToYear(seq: string): number {
+  const map: Record<string, number> = { '20': 2023, '21': 2024, '22': 2025, '23': 2026 };
+  return map[seq] ?? 2025;
 }
 
 // ─── DB 업데이트 ──────────────────────────────────────────────────
@@ -331,8 +398,8 @@ async function updateCase(
       living_cost: parseAmount(income.living_cost),
       extra_living_cost: parseAmount(income.extra_living_cost),
       child_support: parseAmount(income.child_support),
-      trustee_comm_rate: parseFloat(income.trustee_comm_rate) || 0,
-      repay_months: parseInt(income.repay_months) || 60,
+      repay_months: parseInt(income.repay_months) || 36,
+      median_income_year: livingSeqToYear(income.living_seq),
       total_debt: totalDebt,
       secured_debt: securedDebt,
       unsecured_debt: unsecuredDebt,
