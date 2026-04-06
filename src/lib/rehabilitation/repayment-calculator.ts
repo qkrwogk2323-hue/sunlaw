@@ -7,6 +7,7 @@
  */
 
 import type { RepaymentInput, RepaymentResult, SecuredAllocationResult } from './types';
+import { discountByLeibniz } from './leibniz';
 
 /** 개인회생 자격 한도 (담보부 15억, 무담보 10억) */
 export const SECURED_LIMIT = 1_500_000_000;
@@ -182,6 +183,7 @@ export function calculateRepayment(input: RepaymentInput): RepaymentResult | nul
     monthlyRepay,
     repayMonths,
     totalRepayAmount: finalTotalRepay,
+    presentValue: discountByLeibniz(monthlyAvailable, repayMonths),
     repayRate,
     totalDebt,
     totalCapital,
@@ -214,6 +216,7 @@ export function resetRepayPeriod(
     monthlyRepay,
     repayMonths: months,
     totalRepayAmount,
+    presentValue: discountByLeibniz(monthlyAvailable, months),
     repayRate,
     totalDebt,
     totalCapital: 0,

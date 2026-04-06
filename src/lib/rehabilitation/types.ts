@@ -37,6 +37,10 @@ export interface RehabCreditor {
   guarantorName: string;
   guarantorAmount: number;
   guarantorText: string;
+  /** 확정(confirmed) / 미확정(unconfirmed, 유보) 구분 */
+  confirmationStatus?: 'confirmed' | 'unconfirmed';
+  /** 채권 우선순위 — 조세(재단채권) / 담보(별제권) / 일반(무담보) */
+  priorityClass?: 'tax_priority' | 'secured' | 'unsecured';
 }
 
 // ─── 별제권 담보물건 ───
@@ -143,6 +147,8 @@ export interface RepaymentResult {
   monthlyRepay: number;
   repayMonths: number;
   totalRepayAmount: number;
+  /** (L) 총변제예정액의 라이프니츠 현재가치 — 계수 미보유 시 null */
+  presentValue: number | null;
   repayRate: number;
   totalDebt: number;
   totalCapital: number;
@@ -152,7 +158,7 @@ export interface RepaymentResult {
   liquidationWarning: boolean;
 }
 
-export type RepayType = 'sequential' | 'combined';
+export type RepayType = 'sequential' | 'combined' | 'tieredTaxPriority';
 
 export interface CreditorRepaySchedule {
   creditorId: string;
@@ -161,4 +167,16 @@ export interface CreditorRepaySchedule {
   totalAmount: number;
   capitalRepay: number;
   interestRepay: number;
+  /** 확정채권 변제액 (unconfirmed 분리 시) */
+  confirmedAmount?: number;
+  /** 미확정채권 변제액 */
+  unconfirmedAmount?: number;
+}
+
+/** 계단식 조세우선 배분 — 구간별 월변제 내역 */
+export interface TieredScheduleSegment {
+  startMonth: number;
+  endMonth: number;
+  monthlyAmount: number;
+  targets: Array<{ creditorId: string; monthlyShare: number }>;
 }

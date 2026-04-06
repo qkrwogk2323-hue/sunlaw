@@ -1580,12 +1580,39 @@ function generateRepaymentPlan(data: DocumentData): string {
         <th style="width: 30%; text-align: center;">비고</th>
       </tr>
       <tr>
-        <td style="text-align: center;">가용소득</td>
+        <td style="text-align: center;">가용소득 (⑥)</td>
         <td style="text-align: right;">${formatAmount(availableIncome)}</td>
         <td style="text-align: right;">${formatAmount(availableIncome * 12)}</td>
         <td></td>
       </tr>
     </table>
+
+    <p><strong>나. 총변제예정액 및 현재가치</strong></p>
+    ${(() => {
+      const totalRepay = Math.floor(availableIncome) * planDurationMonths;
+      // 라이프니츠 현가계수 (36개월 기준: 33.7702)
+      const leibniz: Record<number, number> = { 36: 33.7702 };
+      const coef = leibniz[planDurationMonths];
+      const presentValue = coef ? Math.round(availableIncome * coef) : null;
+      return `
+        <table style="margin: 10px 0;">
+          <tr>
+            <th style="width: 40%; text-align: center;">항목</th>
+            <th style="width: 30%; text-align: center;">금액</th>
+            <th style="width: 30%; text-align: center;">산식</th>
+          </tr>
+          <tr>
+            <td style="text-align: center;">(K) 가용소득 총변제예정액</td>
+            <td style="text-align: right;">${formatAmount(totalRepay)}</td>
+            <td style="text-align: center;">월가용 × ${planDurationMonths}</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">(L) (K)의 현재가치</td>
+            <td style="text-align: right;">${presentValue != null ? formatAmount(presentValue) : '— (계수 미확정)'}</td>
+            <td style="text-align: center;">${coef ? `월가용 × 라이프니츠 계수(${coef})` : `${planDurationMonths}개월 계수 미확정`}</td>
+          </tr>
+        </table>`;
+    })()}
 
     <h4>2. 채권자별 변제예정액의 산정내역 및 변제율</h4>
     <table style="margin: 10px 0;">

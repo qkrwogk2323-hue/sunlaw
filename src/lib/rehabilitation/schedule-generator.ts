@@ -6,7 +6,7 @@
  * - combined (원리금합산변제): 원금과 이자를 비율대로 동시 변제
  */
 
-import type { RehabCreditor, RepayType, CreditorRepaySchedule } from './types';
+import type { RehabCreditor, RepayType, CreditorRepaySchedule, TieredScheduleSegment } from './types';
 
 /**
  * 채권자별 변제 스케줄을 생성합니다.
@@ -14,11 +14,15 @@ import type { RehabCreditor, RepayType, CreditorRepaySchedule } from './types';
  * 마지막 채권자에게 반올림 오차를 보정하여
  * 합계가 정확히 일치하도록 합니다.
  *
+ * tieredTaxPriority 모드:
+ *   조세채권(재단채권/우선권) 완납 후 → 무담보 pro-rata 배분.
+ *   반환 결과에 내부적으로 계단식 구간 정보를 포함.
+ *
  * @param creditors - 채권자 목록
  * @param monthlyRepay - 월 변제액
  * @param repayMonths - 변제기간 (개월)
  * @param disposeAmount - 처분재산 변제투입액
- * @param repayType - 변제 유형 (sequential | combined)
+ * @param repayType - 변제 유형
  * @returns 채권자별 변제 스케줄
  */
 export function generateRepaySchedule(
@@ -29,6 +33,15 @@ export function generateRepaySchedule(
   repayType: RepayType,
 ): CreditorRepaySchedule[] {
   if (creditors.length === 0 || monthlyRepay <= 0) return [];
+
+  // 조세채권 우선순위 분리 배분
+  if (repayType === 'tieredTaxPriority') {
+    const hasTax = creditors.some((c) => c.priorityClass === 'tax_priority');
+    if (hasTax) {
+      return generateTieredSchedule(creditors, monthlyRepay, repayMonths, disposeAmount);
+    }
+    // 조세채권이 없으면 일반 sequential로 폴백
+  }
 
   const totalDebt = creditors.reduce(
     (s, c) => s + (c.capital || 0) + (c.interest || 0),
@@ -83,6 +96,167 @@ export function generateRepaySchedule(
       interestRepay,
     };
   });
+}
+
+/**
+ * 계단식 조세우선 변제 스케줄
+ *
+ * 동작:
+ *   1) 조세채권(재단채권) pro-rata 완납까지 월 전액 배분
+ *   2) 완납 회차에서 조세 잔여 + 무담보 혼합
+ *   3) 이후 회차는 무담보만 pro-rata
+ *
+ * 반환: 채권자별 월평균/총변제액. 계단식 구간 정보는 내부 계산에서만 사용.
+ * (회차별 상세는 document-generator에서 별도 생성)
+ */
+function generateTieredSchedule(
+  creditors: RehabCreditor[],
+  monthlyRepay: number,
+  repayMonths: number,
+  disposeAmount: number,
+): CreditorRepaySchedule[] {
+  const taxClaims = creditors.filter((c) => c.priorityClass === 'tax_priority');
+  const others = creditors.filter((c) => c.priorityClass !== 'tax_priority');
+
+  const taxTotal = taxClaims.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+  const othersTotal = others.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+
+  // 조세채권 완납까지의 개월 수
+  const taxFullMonths = Math.floor(taxTotal / monthlyRepay);
+  const taxRemainder = taxTotal - taxFullMonths * monthlyRepay;
+  const hasMixedMonth = taxRemainder > 0;
+  const pureUnsecuredMonths = repayMonths - taxFullMonths - (hasMixedMonth ? 1 : 0);
+
+  // 각 채권자의 총변제액 계산
+  const totalByCreditor = new Map<string, { monthly: number; total: number; isTax: boolean }>();
+
+  // 1) 조세채권: 전액 완납 (월평균 = 총액 / 전체 기간)
+  for (const c of taxClaims) {
+    const creditorDebt = (c.capital || 0) + (c.interest || 0);
+    const total = creditorDebt;
+    const monthly = Math.round(total / repayMonths);
+    totalByCreditor.set(c.id, { monthly, total, isTax: true });
+  }
+
+  // 2) 무담보채권: 남은 예산(무담보 구간 월수 × 월변제 + 혼합회차 무담보분)
+  const mixedMonthUnsecured = hasMixedMonth ? monthlyRepay - taxRemainder : 0;
+  const unsecuredBudget = pureUnsecuredMonths * monthlyRepay + mixedMonthUnsecured + disposeAmount;
+
+  let allocatedUnsecured = 0;
+  others.forEach((c, idx) => {
+    const creditorDebt = (c.capital || 0) + (c.interest || 0);
+    const ratio = othersTotal > 0 ? creditorDebt / othersTotal : 0;
+    let total: number;
+    if (idx === others.length - 1) {
+      // 마지막: 라운딩 오차 흡수
+      total = unsecuredBudget - allocatedUnsecured;
+    } else {
+      total = Math.round(unsecuredBudget * ratio);
+      allocatedUnsecured += total;
+    }
+    const monthly = Math.round(total / repayMonths);
+    totalByCreditor.set(c.id, { monthly, total, isTax: false });
+  });
+
+  // 원래 creditors 순서대로 CreditorRepaySchedule 배열 반환
+  return creditors.map((c) => {
+    const entry = totalByCreditor.get(c.id) ?? { monthly: 0, total: 0, isTax: false };
+    const creditorDebt = (c.capital || 0) + (c.interest || 0);
+    const ratio = (taxTotal + othersTotal) > 0 ? creditorDebt / (taxTotal + othersTotal) : 0;
+    // 원금·이자 배분 (sequential 기본)
+    const capitalRepay = Math.min(c.capital || 0, entry.total);
+    const interestRepay = Math.max(0, entry.total - (c.capital || 0));
+    // 확정/미확정 분리
+    const isUnconfirmed = c.confirmationStatus === 'unconfirmed';
+    return {
+      creditorId: c.id,
+      ratio,
+      monthlyAmount: entry.monthly,
+      totalAmount: entry.total,
+      capitalRepay,
+      interestRepay,
+      confirmedAmount: isUnconfirmed ? 0 : entry.total,
+      unconfirmedAmount: isUnconfirmed ? entry.total : 0,
+    };
+  });
+}
+
+/**
+ * 계단식 구간 정보 계산 (문서 생성용)
+ * 변제계획안의 "월변제표"에서 회차 구간을 표시하는 데 사용.
+ */
+export function computeTieredSegments(
+  creditors: RehabCreditor[],
+  monthlyRepay: number,
+  repayMonths: number,
+): TieredScheduleSegment[] {
+  const taxClaims = creditors.filter((c) => c.priorityClass === 'tax_priority');
+  const others = creditors.filter((c) => c.priorityClass !== 'tax_priority');
+  const taxTotal = taxClaims.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+  const othersTotal = others.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+
+  if (taxTotal <= 0) return [];
+
+  const taxFullMonths = Math.floor(taxTotal / monthlyRepay);
+  const taxRemainder = taxTotal - taxFullMonths * monthlyRepay;
+  const hasMixedMonth = taxRemainder > 0;
+
+  const segments: TieredScheduleSegment[] = [];
+
+  // 1구간: 조세 단독
+  if (taxFullMonths > 0) {
+    segments.push({
+      startMonth: 1,
+      endMonth: taxFullMonths,
+      monthlyAmount: monthlyRepay,
+      targets: taxClaims.map((c) => {
+        const debt = (c.capital || 0) + (c.interest || 0);
+        const share = Math.round(monthlyRepay * (taxTotal > 0 ? debt / taxTotal : 0));
+        return { creditorId: c.id, monthlyShare: share };
+      }),
+    });
+  }
+
+  // 2구간: 혼합 (조세 잔여 + 무담보 시작)
+  if (hasMixedMonth) {
+    const mixedMonth = taxFullMonths + 1;
+    const unsecuredPortion = monthlyRepay - taxRemainder;
+    const mixedTargets = [
+      ...taxClaims.map((c) => {
+        const debt = (c.capital || 0) + (c.interest || 0);
+        const share = Math.round(taxRemainder * (taxTotal > 0 ? debt / taxTotal : 0));
+        return { creditorId: c.id, monthlyShare: share };
+      }),
+      ...others.map((c) => {
+        const debt = (c.capital || 0) + (c.interest || 0);
+        const share = Math.round(unsecuredPortion * (othersTotal > 0 ? debt / othersTotal : 0));
+        return { creditorId: c.id, monthlyShare: share };
+      }),
+    ];
+    segments.push({
+      startMonth: mixedMonth,
+      endMonth: mixedMonth,
+      monthlyAmount: monthlyRepay,
+      targets: mixedTargets,
+    });
+  }
+
+  // 3구간: 무담보 단독
+  const pureStart = taxFullMonths + (hasMixedMonth ? 2 : 1);
+  if (pureStart <= repayMonths) {
+    segments.push({
+      startMonth: pureStart,
+      endMonth: repayMonths,
+      monthlyAmount: monthlyRepay,
+      targets: others.map((c) => {
+        const debt = (c.capital || 0) + (c.interest || 0);
+        const share = Math.round(monthlyRepay * (othersTotal > 0 ? debt / othersTotal : 0));
+        return { creditorId: c.id, monthlyShare: share };
+      }),
+    });
+  }
+
+  return segments;
 }
 
 /**
