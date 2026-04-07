@@ -42,6 +42,10 @@ export type { RepaymentPeriod, PeriodDecisionInput, PeriodDecisionResult, Period
 export { decidePeriodSetting } from './period-setting';
 export type { PeriodSetting, PeriodSettingInput, PeriodSettingResult, CreditorClaim } from './period-setting';
 
+// 라운딩·보정·변제율 표기 (P1-9)
+export { buildAdjustedSchedule, formatRepaymentRate } from './rounding';
+export type { ScheduleAdjustmentInput, ScheduleAdjustmentResult, MonthlyPaymentRow } from './rounding';
+
 // 라이프니츠 (P0-1)
 export { LEIBNIZ_REHAB, presentValue } from './leibniz';
 
