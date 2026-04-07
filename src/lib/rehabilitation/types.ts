@@ -37,8 +37,10 @@ export interface RehabCreditor {
   guarantorName: string;
   guarantorAmount: number;
   guarantorText: string;
-  /** 확정(confirmed) / 미확정(unconfirmed, 유보) 구분 */
-  confirmationStatus?: 'confirmed' | 'unconfirmed';
+  /** 별제권부 담보평가액 (is_secured=true 일 때만 의미) */
+  securedCollateralValue?: number;
+  /** 기타 미확정 (신탁재산 등) — is_secured와 상호 배타 */
+  isOtherUnconfirmed?: boolean;
   /** 채권 우선순위 — 조세(재단채권) / 담보(별제권) / 일반(무담보) */
   priorityClass?: 'tax_priority' | 'secured' | 'unsecured';
 }

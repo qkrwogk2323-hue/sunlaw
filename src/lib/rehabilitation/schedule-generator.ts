@@ -7,6 +7,7 @@
  */
 
 import type { RehabCreditor, RepayType, CreditorRepaySchedule, TieredScheduleSegment } from './types';
+import { classifyCreditor } from './creditor-classification';
 
 /**
  * 채권자별 변제 스케줄을 생성합니다.
@@ -115,11 +116,26 @@ function generateTieredSchedule(
   repayMonths: number,
   disposeAmount: number,
 ): CreditorRepaySchedule[] {
-  const taxClaims = creditors.filter((c) => c.priorityClass === 'tax_priority');
-  const others = creditors.filter((c) => c.priorityClass !== 'tax_priority');
+  // 채권자별 분류 (확정/미확정/담보충당)
+  const classified = creditors.map((c) => {
+    const totalClaim = (c.capital || 0) + (c.interest || 0);
+    const cls = classifyCreditor({
+      totalClaim,
+      isSecured: c.isSecured,
+      securedCollateralValue: c.securedCollateralValue ?? 0,
+      isOtherUnconfirmed: c.isOtherUnconfirmed ?? false,
+    });
+    return { creditor: c, totalClaim, ...cls };
+  });
 
-  const taxTotal = taxClaims.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
-  const othersTotal = others.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+  // 별제권부 담보 충당분은 변제계획에서 제외
+  // 무담보 안분 대상 = confirmed + unconfirmed (둘 다 변제 대상)
+  const taxClaims = classified.filter((x) => x.creditor.priorityClass === 'tax_priority');
+  const others = classified.filter((x) => x.creditor.priorityClass !== 'tax_priority');
+
+  const taxTotal = taxClaims.reduce((s, x) => s + x.totalClaim, 0);
+  // others의 변제 안분 기준액 = confirmed + unconfirmed (담보 충당분 제외)
+  const othersAnchor = others.reduce((s, x) => s + x.confirmedAmount + x.unconfirmedAmount, 0);
 
   // 조세채권 완납까지의 개월 수
   const taxFullMonths = Math.floor(taxTotal / monthlyRepay);
@@ -128,55 +144,55 @@ function generateTieredSchedule(
   const pureUnsecuredMonths = repayMonths - taxFullMonths - (hasMixedMonth ? 1 : 0);
 
   // 각 채권자의 총변제액 계산
-  const totalByCreditor = new Map<string, { monthly: number; total: number; isTax: boolean }>();
+  const totalByCreditor = new Map<string, { monthly: number; total: number }>();
 
-  // 1) 조세채권: 전액 완납 (월평균 = 총액 / 전체 기간)
-  for (const c of taxClaims) {
-    const creditorDebt = (c.capital || 0) + (c.interest || 0);
-    const total = creditorDebt;
+  // 1) 조세채권: 전액 완납
+  for (const x of taxClaims) {
+    const total = x.totalClaim;
     const monthly = Math.round(total / repayMonths);
-    totalByCreditor.set(c.id, { monthly, total, isTax: true });
+    totalByCreditor.set(x.creditor.id, { monthly, total });
   }
 
-  // 2) 무담보채권: 남은 예산(무담보 구간 월수 × 월변제 + 혼합회차 무담보분)
+  // 2) 무담보채권: 남은 예산 (무담보 구간 + 혼합회차 무담보분 + 처분재산)
   const mixedMonthUnsecured = hasMixedMonth ? monthlyRepay - taxRemainder : 0;
   const unsecuredBudget = pureUnsecuredMonths * monthlyRepay + mixedMonthUnsecured + disposeAmount;
 
   let allocatedUnsecured = 0;
-  others.forEach((c, idx) => {
-    const creditorDebt = (c.capital || 0) + (c.interest || 0);
-    const ratio = othersTotal > 0 ? creditorDebt / othersTotal : 0;
+  others.forEach((x, idx) => {
+    const anchorAmount = x.confirmedAmount + x.unconfirmedAmount;
+    const ratio = othersAnchor > 0 ? anchorAmount / othersAnchor : 0;
     let total: number;
     if (idx === others.length - 1) {
-      // 마지막: 라운딩 오차 흡수
       total = unsecuredBudget - allocatedUnsecured;
     } else {
       total = Math.round(unsecuredBudget * ratio);
       allocatedUnsecured += total;
     }
     const monthly = Math.round(total / repayMonths);
-    totalByCreditor.set(c.id, { monthly, total, isTax: false });
+    totalByCreditor.set(x.creditor.id, { monthly, total });
   });
 
-  // 원래 creditors 순서대로 CreditorRepaySchedule 배열 반환
-  return creditors.map((c) => {
-    const entry = totalByCreditor.get(c.id) ?? { monthly: 0, total: 0, isTax: false };
-    const creditorDebt = (c.capital || 0) + (c.interest || 0);
-    const ratio = (taxTotal + othersTotal) > 0 ? creditorDebt / (taxTotal + othersTotal) : 0;
+  // 원래 creditors 순서대로 결과 반환
+  return classified.map((x) => {
+    const entry = totalByCreditor.get(x.creditor.id) ?? { monthly: 0, total: 0 };
+    const anchor = x.confirmedAmount + x.unconfirmedAmount;
+    // 확정/미확정 비율로 totalAmount 분할
+    const confirmedShare = anchor > 0
+      ? Math.round(entry.total * (x.confirmedAmount / anchor))
+      : entry.total;
+    const unconfirmedShare = entry.total - confirmedShare;
     // 원금·이자 배분 (sequential 기본)
-    const capitalRepay = Math.min(c.capital || 0, entry.total);
-    const interestRepay = Math.max(0, entry.total - (c.capital || 0));
-    // 확정/미확정 분리
-    const isUnconfirmed = c.confirmationStatus === 'unconfirmed';
+    const capitalRepay = Math.min(x.creditor.capital || 0, entry.total);
+    const interestRepay = Math.max(0, entry.total - (x.creditor.capital || 0));
     return {
-      creditorId: c.id,
-      ratio,
+      creditorId: x.creditor.id,
+      ratio: x.totalClaim > 0 ? entry.total / x.totalClaim : 0,
       monthlyAmount: entry.monthly,
       totalAmount: entry.total,
       capitalRepay,
       interestRepay,
-      confirmedAmount: isUnconfirmed ? 0 : entry.total,
-      unconfirmedAmount: isUnconfirmed ? entry.total : 0,
+      confirmedAmount: confirmedShare,
+      unconfirmedAmount: unconfirmedShare,
     };
   });
 }
