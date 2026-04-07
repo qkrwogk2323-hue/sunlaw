@@ -105,12 +105,14 @@ async function fetchVsCase(caseId: string) {
   const { data: creditors } = await supabase
     .from('rehabilitation_creditors')
     .select('capital, interest, is_secured, secured_collateral_value, is_other_unconfirmed')
-    .eq('case_id', caseId);
+    .eq('case_id', caseId)
+    .neq('lifecycle_status', 'soft_deleted');
 
   const { data: properties } = await supabase
     .from('rehabilitation_properties')
     .select('amount')
-    .eq('case_id', caseId);
+    .eq('case_id', caseId)
+    .neq('lifecycle_status', 'soft_deleted');
 
   const { data: deductions } = await supabase
     .from('rehabilitation_property_deductions')
