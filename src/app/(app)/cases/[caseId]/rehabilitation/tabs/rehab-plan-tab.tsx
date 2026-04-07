@@ -138,14 +138,17 @@ export function RehabPlanTab({
     [securedProperties, creditors],
   );
 
-  // 소득 데이터
+  // 소득 데이터 — DB 컬럼명 매핑 (median_income_year, net_salary)
   const dependentCount = familyMembers.filter((m) => m.is_dependent).length + 1;
-  const incomeYear = (incomeSettings?.income_year as number) || new Date().getFullYear();
-  const monthlyIncome = (incomeSettings?.monthly_income as number) || 0;
+  const incomeYear = (incomeSettings?.median_income_year as number) || new Date().getFullYear();
+  const monthlyIncome =
+    (incomeSettings?.net_salary as number) ||
+    (incomeSettings?.monthly_income as number) ||
+    0;
   const livingCost = getLivingCost(incomeYear, dependentCount);
   const extraLivingCost = (incomeSettings?.extra_living_cost as number) || 0;
   const childSupport = (incomeSettings?.child_support as number) || 0;
-  const trusteeCommRate = (incomeSettings?.trustee_comm_rate as number) || 3;
+  const trusteeCommRate = (incomeSettings?.trustee_comm_rate as number) || 0;
   const disposeAmount = (incomeSettings?.dispose_amount as number) || 0;
 
   // 변제계획 계산

@@ -24,12 +24,19 @@ export function RehabIncomeTab({
 
   const dependentCount = familyMembers.filter((m) => m.is_dependent).length + 1;
 
+  // DB → form 매핑 (DB는 median_income_year/net_salary, form은 income_year/monthly_income)
   const [form, setForm] = useState({
-    income_year: (incomeSettings?.income_year as number) || new Date().getFullYear(),
-    monthly_income: (incomeSettings?.monthly_income as number) || 0,
+    income_year:
+      (incomeSettings?.median_income_year as number) ||
+      (incomeSettings?.income_year as number) ||
+      new Date().getFullYear(),
+    monthly_income:
+      (incomeSettings?.net_salary as number) ||
+      (incomeSettings?.monthly_income as number) ||
+      0,
     extra_living_cost: (incomeSettings?.extra_living_cost as number) || 0,
     child_support: (incomeSettings?.child_support as number) || 0,
-    trustee_comm_rate: (incomeSettings?.trustee_comm_rate as number) || 3,
+    trustee_comm_rate: (incomeSettings?.trustee_comm_rate as number) || 0,
     dispose_amount: (incomeSettings?.dispose_amount as number) || 0,
   });
 
