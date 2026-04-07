@@ -38,6 +38,10 @@ export { calculateRepayment, calculateMonthlyAvailable, getDebtSummary, checkEli
 export { decideRepaymentPeriod } from './repayment-period';
 export type { RepaymentPeriod, PeriodDecisionInput, PeriodDecisionResult, PeriodDecisionReason } from './repayment-period';
 
+// 변제기간 6규칙 엔진 (P1-8)
+export { decidePeriodSetting } from './period-setting';
+export type { PeriodSetting, PeriodSettingInput, PeriodSettingResult, CreditorClaim } from './period-setting';
+
 // 라이프니츠 (P0-1)
 export { LEIBNIZ_REHAB, presentValue } from './leibniz';
 

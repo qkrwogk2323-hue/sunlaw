@@ -1,6 +1,7 @@
 import { adjustLivingCost } from './median-income';
 import { computeMonthlyAvailable } from './monthly-available';
 import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
+import { decidePeriodSetting, type PeriodSetting } from './period-setting';
 
 /**
  * 개인회생 법원 제출 문서 생성기
@@ -1473,38 +1474,39 @@ function generateRepaymentPlan(data: DocumentData): string {
   const extraLivingCost = monthlyResult.livingCost.extraFamilyLowMoney;
   const childSupport = monthlyResult.childSupport;
 
-  // 변제기간: 사용자 명시값 우선, 없으면 청산가치 보장 테스트로 자동 결정
+  // 변제기간 자동결정 (P1-8): 6규칙 + 청산가치 보장 post-step
   const explicitMonths = Number(incomeSettings.repay_months) || 0;
-  let planDurationMonths: RepaymentPeriod;
-  if (explicitMonths === 36 || explicitMonths === 48 || explicitMonths === 60) {
-    planDurationMonths = explicitMonths;
-  } else {
-    // 자동 결정 — 청산가치는 재산 합계 − 면제재산
-    const totalPropValue = (data.properties || []).reduce(
-      (s: number, p: any) => s + (Number(p.amount) || 0),
-      0,
-    );
-    const totalDeduction = (data.propertyDeductions || []).reduce(
-      (s: number, d: any) => s + (Number(d.deduction_amount) || 0),
-      0,
-    );
-    const liquidationValue = Math.max(0, totalPropValue - totalDeduction);
-    // 일반회생채권: 무담보 + 별제권 부족액
-    const unsecuredTotal = (data.creditors || []).reduce((s: number, c: any) => {
-      const claim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
-      if (c.is_secured) {
-        const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
-        return s + Math.max(0, claim - collateral);
-      }
-      return s + claim;
-    }, 0);
-    const decision = decideRepaymentPeriod({
-      monthlyPayment: Math.floor(availableIncome),
-      liquidationValue,
-      unsecuredTotal,
-    });
-    planDurationMonths = decision.period;
-  }
+  const forcedMonths: RepaymentPeriod | undefined =
+    explicitMonths === 36 || explicitMonths === 48 || explicitMonths === 60
+      ? (explicitMonths as RepaymentPeriod)
+      : undefined;
+  const periodSetting = (Number(incomeSettings.period_setting) || 6) as PeriodSetting;
+
+  // 청산가치
+  const totalPropValue = (data.properties || []).reduce(
+    (s: number, p: any) => s + (Number(p.amount) || 0),
+    0,
+  );
+  const totalDeduction = (data.propertyDeductions || []).reduce(
+    (s: number, d: any) => s + (Number(d.deduction_amount) || 0),
+    0,
+  );
+  const liquidationValueComputed = Math.max(0, totalPropValue - totalDeduction);
+
+  const periodResult = decidePeriodSetting({
+    setting: periodSetting,
+    creditors: (data.creditors || []).map((c: any) => ({
+      capital: Number(c.capital) || 0,
+      interest: Number(c.interest) || 0,
+      isSecured: !!c.is_secured,
+      securedCollateralValue: Number(c.secured_collateral_value) || 0,
+      isOtherUnconfirmed: !!c.is_other_unconfirmed,
+    })),
+    monthlyAvailable: Math.floor(availableIncome),
+    liquidationValue: liquidationValueComputed,
+    forcedMonths,
+  });
+  const planDurationMonths: RepaymentPeriod = periodResult.months;
   const repayStartDate = app.repayment_start_date || app.application_date || '';
   let planStartDate = '';
   let planEndDate = '';
