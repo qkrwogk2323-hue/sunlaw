@@ -23,9 +23,9 @@ import { createClient } from '@supabase/supabase-js';
 import { readFileSync, writeFileSync, readdirSync } from 'fs';
 import * as path from 'path';
 
-import { adjustLivingCost } from '../../src/lib/rehabilitation/median-income';
 import { presentValue } from '../../src/lib/rehabilitation/leibniz';
 import { decideRepaymentPeriod } from '../../src/lib/rehabilitation/repayment-period';
+import { computeMonthlyAvailable } from '../../src/lib/rehabilitation/monthly-available';
 
 // ─── 환경 변수 ────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -121,9 +121,8 @@ async function fetchVsCase(caseId: string) {
 }
 
 // ─── VS 엔진으로 재계산 ──────────────────────────────────────────
-function computeFromVs(vs: Awaited<ReturnType<typeof fetchVsCase>>) {
+async function computeFromVs(vs: Awaited<ReturnType<typeof fetchVsCase>>) {
   const income = vs.income ?? {};
-  const householdSize = 1 + (Number(income.dependent_count) || 0);
   const yearFromDate = (iso?: string | null) => {
     if (!iso) return null;
     const d = new Date(iso);
@@ -135,16 +134,28 @@ function computeFromVs(vs: Awaited<ReturnType<typeof fetchVsCase>>) {
     new Date().getFullYear();
   const incomeYear = Number(income.median_income_year) || caseYear;
 
+  // 가구원 수 = family_members 중 is_dependent + 본인
+  const { data: familyRows } = await supabase
+    .from('rehabilitation_family_members')
+    .select('is_dependent')
+    .eq('case_id', vs.caseRow!.id);
+  const dependents = (familyRows ?? []).filter((m: any) => m.is_dependent).length;
+  const householdSize = 1 + dependents;
+
   const monthlyIncome = (Number(income.net_salary) || 0) + (Number(income.extra_income) || 0);
-  const livingInput = Number(income.living_cost) || 0;
-  const livingAdj = adjustLivingCost(livingInput, householdSize, incomeYear);
-  const livingCost = livingAdj.adjusted;
-  const extraLiving = Number(income.extra_living_cost) || 0;
-  const childSupport = Number(income.child_support) || 0;
-  const commissionRate = Number(income.trustee_comm_rate) || 0;
-  const rawAvailable = monthlyIncome - livingCost - extraLiving - childSupport;
-  const commission = Math.floor((rawAvailable * commissionRate) / 100);
-  const monthlyAvailable = rawAvailable - commission;
+
+  // P1-7 통합 호출
+  const monthlyResult = computeMonthlyAvailable({
+    monthlyIncome,
+    householdSize,
+    year: incomeYear,
+    livingCostRate: Number(income.living_cost_rate) || 100,
+    extraFamilyLowMoney: Number(income.extra_living_cost) || 0,
+    childSupport: Number(income.child_support) || 0,
+    trusteeCommissionRate: Number(income.trustee_comm_rate) || 0,
+  });
+  const livingCost = monthlyResult.livingCost.applied;
+  const monthlyAvailable = monthlyResult.monthlyAvailable;
 
   // 채권/청산
   const totalDebt = vs.creditors.reduce(
@@ -291,7 +302,7 @@ async function main() {
       continue;
     }
 
-    const vs = computeFromVs(vsRaw);
+    const vs = await computeFromVs(vsRaw);
     const colaw = extractColawExpected(snap);
     const rows = compareCase(caseId, clientName, vs, colaw);
     allRows.push(...rows);
