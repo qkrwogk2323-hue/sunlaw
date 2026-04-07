@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
-import { getLivingCost, MEDIAN_INCOME_60, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
+import { getLivingCost, getMedianIncome60, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
 import { Save } from 'lucide-react';
 
 interface RehabIncomeTabProps {
@@ -82,7 +82,10 @@ export function RehabIncomeTab({
   }, [form, livingCost, dependentCount, caseId, organizationId, success, error]);
 
   const householdTable = useMemo(
-    () => SUPPORTED_YEARS.map((year) => ({ year, values: MEDIAN_INCOME_60[year] })),
+    () => SUPPORTED_YEARS.map((year) => ({
+      year,
+      values: [1, 2, 3, 4, 5, 6].map((size) => getMedianIncome60(size, year)),
+    })),
     [],
   );
 

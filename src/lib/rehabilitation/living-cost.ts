@@ -8,7 +8,7 @@
  * 본 모듈은 기존 median-income.ts (60% 값 테이블)를 floor로 사용한다.
  */
 
-import { getLivingCost } from './median-income';
+import { getMedianIncome60 } from './median-income';
 
 export interface AdjustLivingCostResult {
   adjusted: number;
@@ -20,11 +20,11 @@ export interface AdjustLivingCostResult {
  * 가구원 수 기준 최저 생계비 (= 기준중위소득 60%)
  *
  * @param householdSize 본인 포함 가구원 수
- * @param year 기준 연도 (2024~2026, 기본 2026)
+ * @param year 기준 연도 (등록되지 않은 연도면 throw)
+ * @throws 연도 미등록 시
  */
 export function minimumLivingCost(householdSize: number, year = 2026): number {
-  const dependentCount = Math.max(0, householdSize - 1);
-  return getLivingCost(year, dependentCount);
+  return getMedianIncome60(householdSize, year);
 }
 
 /**
