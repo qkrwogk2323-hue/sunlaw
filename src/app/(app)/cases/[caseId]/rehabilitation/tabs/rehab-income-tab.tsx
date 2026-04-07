@@ -22,7 +22,9 @@ export function RehabIncomeTab({
   const { success, error } = useToast();
   const [saving, setSaving] = useState(false);
 
-  const dependentCount = familyMembers.filter((m) => m.is_dependent).length + 1;
+  // 부양가족 수 (본인 제외) — getLivingCost는 이 값을 받아 1+dependents로 가구 수 계산
+  const dependents = familyMembers.filter((m) => m.is_dependent).length;
+  const householdSize = dependents + 1; // UI 표시용 (본인 포함)
 
   // DB → form 매핑 (DB는 median_income_year/net_salary, form은 income_year/monthly_income)
   const [form, setForm] = useState({
@@ -41,8 +43,8 @@ export function RehabIncomeTab({
   });
 
   const livingCost = useMemo(
-    () => getLivingCost(form.income_year, dependentCount),
-    [form.income_year, dependentCount],
+    () => getLivingCost(form.income_year, dependents),
+    [form.income_year, dependents],
   );
 
   const monthlyAvailable = useMemo(
@@ -76,7 +78,7 @@ export function RehabIncomeTab({
         child_support: form.child_support,
         trustee_comm_rate: form.trustee_comm_rate,
         dispose_amount: form.dispose_amount,
-        dependent_count: dependentCount,
+        dependent_count: dependents,
       });
       if (!result.ok) {
         error('저장 실패', { message: result.userMessage || '소득 설정 저장에 실패했습니다.' });
@@ -86,7 +88,7 @@ export function RehabIncomeTab({
     } finally {
       setSaving(false);
     }
-  }, [form, livingCost, dependentCount, caseId, organizationId, success, error]);
+  }, [form, livingCost, dependents, caseId, organizationId, success, error]);
 
   const householdTable = useMemo(
     () => SUPPORTED_YEARS.map((year) => ({
@@ -166,7 +168,7 @@ export function RehabIncomeTab({
           <div className="space-y-1">
             <p className="text-sm font-medium text-slate-700">부양가족 수</p>
             <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              {dependentCount}인 (본인 포함)
+              {householdSize}인 (본인 포함)
             </p>
             <p className="text-xs text-slate-400">신청인 탭에서 가족 구성원을 수정할 수 있습니다</p>
           </div>
