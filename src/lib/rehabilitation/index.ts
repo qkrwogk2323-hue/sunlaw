@@ -8,8 +8,16 @@
 export type * from './types';
 
 // 기준중위소득
-export { MEDIAN_INCOME_100, SUPPORTED_YEARS, getMedianIncome100, getMedianIncome60, getLivingCost, getHouseholdSummary } from './median-income';
-export { minimumLivingCost, adjustLivingCost } from './living-cost';
+export {
+  MEDIAN_INCOME_100,
+  INCREMENT_PER_EXTRA,
+  SUPPORTED_YEARS,
+  getMedianIncome,
+  minimumLivingCost,
+  adjustLivingCost,
+  getLivingCost,
+  getHouseholdSummary,
+} from './median-income';
 
 // 별제권 배분
 export { calculateSecuredAllocations, getSecuredAllocationTotals, getLiquidationValue, getDefaultValuationRate } from './secured-allocation';

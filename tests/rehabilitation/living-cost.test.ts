@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { adjustLivingCost, minimumLivingCost } from '@/lib/rehabilitation/living-cost';
-import { getMedianIncome60 } from '@/lib/rehabilitation/median-income';
+import {
+  adjustLivingCost,
+  minimumLivingCost,
+  getMedianIncome,
+} from '@/lib/rehabilitation/median-income';
 
 describe('생계비 자동 조정 (P1-1)', () => {
   it('2026 1인 가구 = 1,538,542원 (floor)', () => {
@@ -30,20 +33,43 @@ describe('생계비 자동 조정 (P1-1)', () => {
   });
 });
 
-describe('getMedianIncome60 — 연도 분기', () => {
+describe('minimumLivingCost — 연도별 (2022~2026)', () => {
+  it('2022 3인 = 2,516,820원', () => {
+    expect(minimumLivingCost(3, 2022)).toBe(2_516_820);
+  });
+
+  it('2023 3인 = 2,660,889원', () => {
+    expect(minimumLivingCost(3, 2023)).toBe(2_660_889);
+  });
+
   it('2024 3인 = 2,828,794원', () => {
-    expect(getMedianIncome60(3, 2024)).toBe(2_828_794);
+    expect(minimumLivingCost(3, 2024)).toBe(2_828_794);
   });
 
   it('2025 3인 = 3,015,211원', () => {
-    expect(getMedianIncome60(3, 2025)).toBe(3_015_211);
+    expect(minimumLivingCost(3, 2025)).toBe(3_015_211);
   });
 
   it('2026 3인 = 3,215,421원', () => {
-    expect(getMedianIncome60(3, 2026)).toBe(3_215_421);
+    expect(minimumLivingCost(3, 2026)).toBe(3_215_421);
+  });
+});
+
+describe('getMedianIncome — 8인 이상 증분 산출', () => {
+  it('2024 7인 = 8,514,994원 (고시 직접)', () => {
+    expect(getMedianIncome(7, 2024)).toBe(8_514_994);
   });
 
-  it('미등록 연도는 throw', () => {
-    expect(() => getMedianIncome60(3, 2099)).toThrow('2099년 수치 미등록');
+  it('2024 8인 = 9,411,619원 (7인 + 증분 896,625)', () => {
+    expect(getMedianIncome(8, 2024)).toBe(9_411_619);
+  });
+
+  it('2026 9인 = 11,553,651원 (7인 + 증분 999,233 × 2)', () => {
+    expect(getMedianIncome(9, 2026)).toBe(11_553_651);
+  });
+
+  it('미등록 연도는 2025 fallback', () => {
+    // 2099년 → 2025 테이블 사용
+    expect(getMedianIncome(3, 2099)).toBe(5_025_353);
   });
 });

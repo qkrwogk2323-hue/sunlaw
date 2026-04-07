@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
-import { getLivingCost, getMedianIncome60, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
+import { getLivingCost, minimumLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
 import { Save } from 'lucide-react';
 
 interface RehabIncomeTabProps {
@@ -84,7 +84,7 @@ export function RehabIncomeTab({
   const householdTable = useMemo(
     () => SUPPORTED_YEARS.map((year) => ({
       year,
-      values: [1, 2, 3, 4, 5, 6].map((size) => getMedianIncome60(size, year)),
+      values: [1, 2, 3, 4, 5, 6].map((size) => minimumLivingCost(size, year)),
     })),
     [],
   );

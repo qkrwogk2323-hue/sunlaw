@@ -1,4 +1,4 @@
-import { adjustLivingCost } from './living-cost';
+import { adjustLivingCost } from './median-income';
 
 /**
  * 개인회생 법원 제출 문서 생성기
@@ -1436,11 +1436,17 @@ function generateRepaymentPlan(data: DocumentData): string {
 
   // 가구원 수 (본인 1 + 부양가족) — incomeSettings.dependent_count가 부양가족
   const householdSize = 1 + (Number(incomeSettings.dependent_count) || 0);
-  // incomeYear: incomeSettings에 있으면 우선, 없으면 사건 신청일/연도 fallback
-  const fallbackYear = app.application_date
-    ? new Date(app.application_date).getFullYear()
-    : (app.case_year || new Date().getFullYear());
-  const incomeYear = Number(incomeSettings.median_income_year) || fallbackYear;
+  // caseYear 결정: filing_date(=application_date) 연도 → created_at → 현재연도
+  const yearFromDate = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.getFullYear();
+  };
+  const caseYear =
+    yearFromDate(app.application_date) ??
+    yearFromDate(app.created_at) ??
+    new Date().getFullYear();
+  const incomeYear = Number(incomeSettings.median_income_year) || caseYear;
 
   // 생계비 자동 조정 (P1-1): 입력값 < 기준중위소득 60%이면 기준치로 클램프
   const livingCostInput = Number(incomeSettings.living_cost) || 0;

@@ -1,21 +1,33 @@
 /**
- * 기준중위소득 데이터 (보건복지부 고시)
+ * 기준중위소득 데이터 (2022~2026 보건복지부 고시)
  *
- * 100% 기준 테이블을 단일 원본(source of truth)으로 두고,
- * 60% 등 파생값은 함수로 floor 계산합니다.
+ * 출처:
+ * - 2022: 고시 제2021-211호
+ * - 2023: 고시 제2022-191호
+ * - 2024: 고시 제2023-150호
+ * - 2025: 2024 중앙생활보장위원회
+ * - 2026: 2025 중앙생활보장위원회
  *
- * 7인은 6인 + (6인−5인) 차분식으로 산출.
- *
- * P1-1 시점 변경 이력:
- * - 2024 100% 값 보정 (이전 60% 값이 다른 출처 기반이었음 — 보건복지부 고시 기준으로 교정)
- * - 2025/2026 round → floor 일관화 (1원 단위 차이 발생 가능)
+ * 8인 이상은 연도별 증분(`INCREMENT_PER_EXTRA`)을 이용해 산출.
+ * 2022~2024 증분은 고시 원문 확인분, 2025/2026은 (7인−6인) 차분식.
  */
 
-/** 가구원 수별 월 기준중위소득 100% (원) */
+/** 가구원 수별 월 기준중위소득 100% (원, 1~7인) */
 export const MEDIAN_INCOME_100: Record<number, Record<number, number>> = {
-  2024: { 1: 2_228_445, 2: 3_682_609, 3: 4_714_657, 4: 5_729_913, 5: 6_695_735, 6: 7_618_369, 7: 8_540_825 },
+  2022: { 1: 1_944_812, 2: 3_260_085, 3: 4_194_701, 4: 5_121_080, 5: 6_024_515, 6: 6_907_004, 7: 7_780_592 },
+  2023: { 1: 2_077_892, 2: 3_456_155, 3: 4_434_816, 4: 5_400_964, 5: 6_330_688, 6: 7_227_981, 7: 8_107_515 },
+  2024: { 1: 2_228_445, 2: 3_682_609, 3: 4_714_657, 4: 5_729_913, 5: 6_695_735, 6: 7_618_369, 7: 8_514_994 },
   2025: { 1: 2_392_013, 2: 3_932_658, 3: 5_025_353, 4: 6_097_773, 5: 7_108_192, 6: 8_064_805, 7: 9_021_418 },
   2026: { 1: 2_564_238, 2: 4_199_292, 3: 5_359_036, 4: 6_494_738, 5: 7_556_719, 6: 8_555_952, 7: 9_555_185 },
+};
+
+/** 8인 이상 추가 1인당 증분 (원, 연도별) */
+export const INCREMENT_PER_EXTRA: Record<number, number> = {
+  2022: 873_588,
+  2023: 879_534,
+  2024: 896_625,
+  2025: 956_613,
+  2026: 999_233,
 };
 
 /** 지원 연도 목록 (최신순) */
@@ -25,40 +37,62 @@ export const SUPPORTED_YEARS = Object.keys(MEDIAN_INCOME_100)
 
 /**
  * 가구원 수 기준 기준중위소득 100% 금액
- * @throws 연도 미등록 시
+ *
+ * - 1~7인: 고시 직접 조회
+ * - 8인 이상: 7인 + 증분 × (가구원 − 7)
+ * - 미등록 연도: 가장 최근 확정연도(2025) fallback
  */
-export function getMedianIncome100(householdSize: number, year: number): number {
-  const table = MEDIAN_INCOME_100[year];
-  if (!table) {
-    throw new Error(`기준중위소득 ${year}년 수치 미등록`);
-  }
-  const size = Math.max(1, Math.min(7, Math.floor(householdSize)));
-  return table[size];
+export function getMedianIncome(householdSize: number, year: number): number {
+  const table = MEDIAN_INCOME_100[year] ?? MEDIAN_INCOME_100[2025];
+  const size = Math.max(1, Math.floor(householdSize));
+  if (size <= 7) return table[size] ?? table[1];
+  const inc = INCREMENT_PER_EXTRA[year] ?? INCREMENT_PER_EXTRA[2025];
+  return table[7] + inc * (size - 7);
 }
 
 /**
- * 가구원 수 기준 기준중위소득 60% 금액 (floor)
- * @throws 연도 미등록 시
+ * 최저 생계비 (= 기준중위소득 60%, floor)
  */
-export function getMedianIncome60(householdSize: number, year: number): number {
-  return Math.floor(getMedianIncome100(householdSize, year) * 0.6);
+export function minimumLivingCost(householdSize: number, year: number): number {
+  return Math.floor(getMedianIncome(householdSize, year) * 0.6);
 }
 
-// ─── 하위 호환 (기존 코드에서 사용 중) ─────────────────────────────
+export interface AdjustLivingCostResult {
+  adjusted: number;
+  wasClamped: boolean;
+  floor: number;
+}
 
 /**
- * @deprecated `getMedianIncome60(householdSize, year)` 사용 권장
+ * 입력 생계비를 최저 기준으로 자동 조정.
+ *   - input >= floor: 그대로 사용
+ *   - input <  floor: floor로 클램프, wasClamped=true
+ */
+export function adjustLivingCost(
+  input: number,
+  householdSize: number,
+  year: number,
+): AdjustLivingCostResult {
+  const floor = minimumLivingCost(householdSize, year);
+  if (input >= floor) return { adjusted: input, wasClamped: false, floor };
+  return { adjusted: floor, wasClamped: true, floor };
+}
+
+// ─── 하위 호환 ─────────────────────────────────────────────────────
+
+/**
+ * @deprecated `minimumLivingCost(householdSize, year)` 사용 권장
  *
  * 부양가족 수 기반 호환 함수.
  * `dependentCount` = 본인 제외 부양가족 → householdSize = 1 + dependentCount
  */
 export function getLivingCost(year: number, dependentCount: number): number {
   const householdSize = 1 + Math.max(0, dependentCount);
-  return getMedianIncome60(householdSize, year);
+  return minimumLivingCost(householdSize, year);
 }
 
 /**
- * 가구 수 정보 요약
+ * 가구 수 정보 요약 (하위 호환)
  */
 export function getHouseholdSummary(
   totalFamilyCount: number,
@@ -66,7 +100,7 @@ export function getHouseholdSummary(
   year: number,
 ) {
   const householdSize = 1 + dependentCount;
-  const livingCost = getMedianIncome60(householdSize, year);
+  const livingCost = minimumLivingCost(householdSize, year);
 
   return {
     totalFamilyCount,
