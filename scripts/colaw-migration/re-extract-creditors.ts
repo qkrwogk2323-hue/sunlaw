@@ -423,13 +423,23 @@ async function main() {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
 
-  // colaw 로그인 확인
+  // colaw 로그인 확인 (수동 로그인 대기)
   await page.goto(`${COLAW_BASE}/documentManage/rescurMainList`, { waitUntil: 'networkidle2' });
-  const isLoggedIn = await page.evaluate(() => document.body.textContent?.includes('Total'));
+  let isLoggedIn = await page.evaluate(() => document.body.textContent?.includes('Total'));
   if (!isLoggedIn) {
-    console.error('❌ colaw 로그인 필요. 브라우저에서 수동 로그인 후 재실행.');
-    await browser.close();
-    return;
+    console.log('⏳ colaw 로그인 필요. 브라우저에서 로그인 버튼을 눌러주세요...');
+    console.log('   (최대 3분 대기)');
+    // 3분 동안 매 3초 체크
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      isLoggedIn = await page.evaluate(() => document.body.textContent?.includes('Total'));
+      if (isLoggedIn) break;
+    }
+    if (!isLoggedIn) {
+      console.error('❌ 로그인 대기 시간 초과. 다시 실행해주세요.');
+      await browser.close();
+      return;
+    }
   }
   console.log('✅ colaw 로그인 확인\n');
 
