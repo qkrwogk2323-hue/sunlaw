@@ -1,3 +1,5 @@
+import { adjustLivingCost } from './living-cost';
+
 /**
  * 개인회생 법원 제출 문서 생성기
  *
@@ -1431,7 +1433,16 @@ function generateRepaymentPlan(data: DocumentData): string {
   const extraIncome = Number(incomeSettings.extra_income) || 0;
   const monthlyIncome = monthlySalary + extraIncome;
   const annualIncome = monthlyIncome * 12;
-  const livingExpense = Number(incomeSettings.living_cost) || 0;
+
+  // 가구원 수 (본인 1 + 부양가족) — incomeSettings.dependent_count가 부양가족
+  const householdSize = 1 + (Number(incomeSettings.dependent_count) || 0);
+  const incomeYear = Number(incomeSettings.median_income_year) || 2026;
+
+  // 생계비 자동 조정 (P1-1): 입력값 < 기준중위소득 60%이면 기준치로 클램프
+  const livingCostInput = Number(incomeSettings.living_cost) || 0;
+  const livingCostAdjusted = adjustLivingCost(livingCostInput, householdSize, incomeYear);
+  const livingExpense = livingCostAdjusted.adjusted;
+
   const extraLivingCost = Number(incomeSettings.extra_living_cost) || 0;
   const childSupport = Number(incomeSettings.child_support) || 0;
   const commissionRate = Number(incomeSettings.trustee_comm_rate) || 0;
@@ -1612,6 +1623,34 @@ function generateRepaymentPlan(data: DocumentData): string {
             <td style="text-align: center;">${coef ? `월가용 × 라이프니츠 계수(${coef})` : `${planDurationMonths}개월 계수 미확정`}</td>
           </tr>
         </table>`;
+    })()}
+
+    ${livingCostAdjusted.wasClamped ? `
+      <p style="margin-top: 10px; padding: 8px 12px; background: #fff3cd; border-left: 3px solid #ffc107; font-size: 0.9em;">
+        ⚠ 입력 생계비(${formatAmount(livingCostInput)})가 ${householdSize}인 가구 기준중위소득 60%(${formatAmount(livingCostAdjusted.floor)}) 미만이어서 자동으로 기준치로 조정됨.
+      </p>` : ''}
+
+    ${(() => {
+      // 변제율 (P1-3): (확정+미확정 변제총액) / (확정+미확정 채권총액)
+      const totalClaimMinusSecured = (data.creditors || []).reduce((sum: number, c: any) => {
+        const claim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
+        if (c.is_secured) {
+          const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
+          return sum + Math.max(0, claim - collateral);
+        }
+        return sum + claim;
+      }, 0);
+      const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
+      const ratePercent = totalClaimMinusSecured > 0
+        ? Math.round((totalRepayAmount / totalClaimMinusSecured) * 1000) / 10
+        : 0;
+      return `
+        <p style="margin-top: 8px;">
+          <strong>변제율: ${ratePercent}%</strong>
+          <span style="color: #666; font-size: 0.85em;">
+            (총변제 ${formatAmount(totalRepayAmount)} / 확정+미확정 채권 ${formatAmount(totalClaimMinusSecured)})
+          </span>
+        </p>`;
     })()}
 
     <h4>2. 채권자별 변제예정액의 산정내역 및 변제율</h4>
