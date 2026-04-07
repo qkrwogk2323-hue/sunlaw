@@ -15,9 +15,15 @@ export {
   getMedianIncome,
   minimumLivingCost,
   adjustLivingCost,
+  computeLivingCost,
   getLivingCost,
   getHouseholdSummary,
 } from './median-income';
+export type { LivingCostOptions, LivingCostResult } from './median-income';
+
+// P1-7 월가용소득 공식 확장
+export { computeMonthlyAvailable } from './monthly-available';
+export type { MonthlyAvailableInput, MonthlyAvailableResult } from './monthly-available';
 
 // 별제권 배분
 export { calculateSecuredAllocations, getSecuredAllocationTotals, getLiquidationValue, getDefaultValuationRate } from './secured-allocation';

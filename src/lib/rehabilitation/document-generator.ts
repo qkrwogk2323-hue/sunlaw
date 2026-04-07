@@ -1,4 +1,5 @@
 import { adjustLivingCost } from './median-income';
+import { computeMonthlyAvailable } from './monthly-available';
 import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
 
 /**
@@ -1429,14 +1430,16 @@ function generateRepaymentPlan(data: DocumentData): string {
   const courtName = app.court_name || '';
   const caseNumber = app.case_number || '';
 
-  // 소득: DB 컬럼은 net_salary(월), living_cost(월)
+  // 소득: DB 컬럼은 net_salary(월)
   const monthlySalary = Number(incomeSettings.net_salary) || 0;
   const extraIncome = Number(incomeSettings.extra_income) || 0;
   const monthlyIncome = monthlySalary + extraIncome;
   const annualIncome = monthlyIncome * 12;
 
-  // 가구원 수 (본인 1 + 부양가족) — incomeSettings.dependent_count가 부양가족
-  const householdSize = 1 + (Number(incomeSettings.dependent_count) || 0);
+  // 가구원 수: family_members 중 is_dependent=true인 부양가족 + 본인
+  const dependents = (data.familyMembers || []).filter((m: any) => m.is_dependent).length;
+  const householdSize = 1 + dependents;
+
   // caseYear 결정: filing_date(=application_date) 연도 → created_at → 현재연도
   const yearFromDate = (iso?: string | null) => {
     if (!iso) return null;
@@ -1449,17 +1452,26 @@ function generateRepaymentPlan(data: DocumentData): string {
     new Date().getFullYear();
   const incomeYear = Number(incomeSettings.median_income_year) || caseYear;
 
-  // 생계비 자동 조정 (P1-1): 입력값 < 기준중위소득 60%이면 기준치로 클램프
+  // P1-7: 월가용소득 공식 확장 (생계비율, 추가생계비, 양육비, 회생위원보수 통합)
+  const monthlyResult = computeMonthlyAvailable({
+    monthlyIncome,
+    householdSize,
+    year: incomeYear,
+    livingCostRate: Number(incomeSettings.living_cost_rate) || 100,
+    extraFamilyLowMoney: Number(incomeSettings.extra_living_cost) || 0,
+    childSupport: Number(incomeSettings.child_support) || 0,
+    trusteeCommissionRate: Number(incomeSettings.trustee_comm_rate) || 0,
+  });
+  const livingExpense = monthlyResult.livingCost.applied;
+  const availableIncome = monthlyResult.monthlyAvailable;
+
+  // P1-1 호환: livingCostAdjusted 변수 (안내 배너용)
   const livingCostInput = Number(incomeSettings.living_cost) || 0;
   const livingCostAdjusted = adjustLivingCost(livingCostInput, householdSize, incomeYear);
-  const livingExpense = livingCostAdjusted.adjusted;
 
-  const extraLivingCost = Number(incomeSettings.extra_living_cost) || 0;
-  const childSupport = Number(incomeSettings.child_support) || 0;
-  const commissionRate = Number(incomeSettings.trustee_comm_rate) || 0;
-  const rawAvailable = monthlyIncome - livingExpense - extraLivingCost - childSupport;
-  const commission = Math.floor(rawAvailable * commissionRate / 100);
-  const availableIncome = rawAvailable - commission;
+  // 잔여 변수 (하위 코드 호환)
+  const extraLivingCost = monthlyResult.livingCost.extraFamilyLowMoney;
+  const childSupport = monthlyResult.childSupport;
 
   // 변제기간: 사용자 명시값 우선, 없으면 청산가치 보장 테스트로 자동 결정
   const explicitMonths = Number(incomeSettings.repay_months) || 0;

@@ -64,6 +64,8 @@ export interface AdjustLivingCostResult {
 }
 
 /**
+ * @deprecated P1-1 호환용. 가능하면 `computeLivingCost` 사용.
+ *
  * 입력 생계비를 최저 기준으로 자동 조정.
  *   - input >= floor: 그대로 사용
  *   - input <  floor: floor로 클램프, wasClamped=true
@@ -76,6 +78,51 @@ export function adjustLivingCost(
   const floor = minimumLivingCost(householdSize, year);
   if (input >= floor) return { adjusted: input, wasClamped: false, floor };
   return { adjusted: floor, wasClamped: true, floor };
+}
+
+// ─── P1-7: colaw 생계비 공식 (증액률 + 추가생계비) ────────────────
+
+export interface LivingCostOptions {
+  householdSize: number;
+  year: number;
+  /** colaw lowestlivingmoneyrate (%, 기본 100 = 60% 그대로) */
+  rate?: number;
+  /** colaw usingfamily_low_money (추가생계비) */
+  extraFamilyLowMoney?: number;
+}
+
+export interface LivingCostResult {
+  /** 기준중위소득 60% (최저 클램프 기준) */
+  baseline60: number;
+  /** baseline60 × rate / 100 */
+  afterRate: number;
+  /** afterRate + extraFamilyLowMoney (실적용 생계비) */
+  applied: number;
+  rate: number;
+  extraFamilyLowMoney: number;
+}
+
+/**
+ * colaw 공식 기반 생계비 계산.
+ *
+ * lowMoney(=baseline60) × (rate/100) + 추가생계비
+ *
+ * 김한경 케이스(rate=150, baseline 1,538,542):
+ *   afterRate = round(1,538,542 × 1.5) = 2,307,813
+ *   ※ colaw의 lowMoney(1,025,695)는 별도 산출 기반이며, VS는 60% 테이블 직접 사용
+ */
+export function computeLivingCost(opts: LivingCostOptions): LivingCostResult {
+  const baseline60 = minimumLivingCost(opts.householdSize, opts.year);
+  const rate = opts.rate ?? 100;
+  const afterRate = Math.round((baseline60 * rate) / 100);
+  const extra = Math.max(0, Math.round(opts.extraFamilyLowMoney ?? 0));
+  return {
+    baseline60,
+    afterRate,
+    applied: afterRate + extra,
+    rate,
+    extraFamilyLowMoney: extra,
+  };
 }
 
 // ─── 하위 호환 ─────────────────────────────────────────────────────
