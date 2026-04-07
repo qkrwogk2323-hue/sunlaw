@@ -2,7 +2,36 @@
 
 **작성일**: 2026-04-08
 **근거 케이스**: 김한경 (cs=5640948, anatomy §9.3/§9.4)
-**상태**: 결정 보류 — 추가 케이스 확보 후 P1-10에서 결정
+**상태**: ✅ **종결 (2026-04-07, P1-10)** — 가설 B 채택, 코드 수정 0건
+
+---
+
+## 0. P1-10 종결 요약 (2026-04-07 추가)
+
+콜로 직접 채증으로 결론:
+
+**L (현재가치)** — colaw `popupRescureIncomeExpenditure` 페이지에 직접 저장됨:
+- `nowvalue = 18961470`
+- `leibniz = 30.7719` (n−3 라이프니츠 원값, +3 보정 전)
+- 우리 공식 `30.7719 + 3 = 33.7719` × `561,457 = 18,961,469.66 → 18,961,470` ✅ 일치
+
+**K (총변제예정액)** — colaw JS/DB에 **저장돼 있지 않음**:
+- 변제계획안 출력 = `report.colaw.co.kr/ClipReport/JavaOOFGeneratorChange_Popup.jsp`
+- `crfName=B_29`, `crfDbName=mssql`
+- `crfParams = casebasicsseq^companycode^diaryyear^resurapplicationpersonseq^reportprintexcept:1`
+- K는 **Clipsoft ClipReport 서버측 mssql 쿼리/리포트 템플릿 내부 수식**이 산출
+- 김한경 +96원은 ClipReport 템플릿 회차분배 ceil 흡수의 결과로 보임
+
+→ K는 colaw 도메인 밖이며, 라이프니츠 역산 가설(가설 A)은 폐기. **가설 B 채택.**
+
+| 항목 | 결정 |
+|---|---|
+| `LEIBNIZ_REHAB[36] = 33.7719` | 유지 |
+| `period-setting.ts totalScheduled = monthly × months` | 유지 |
+| K +96원 | `buildAdjustedSchedule({totalTarget})` 외부 주입 경로로 흡수 |
+| `leibniz.ts` 이중 계수 도입 | 폐기 (anatomy `33.7702`는 유령값) |
+
+코드 수정 0건. host HEAD `6394256` 상태가 그대로 정답.
 
 ---
 
