@@ -1611,8 +1611,8 @@ function generateRepaymentPlan(data: DocumentData): string {
     <p><strong>나. 총변제예정액 및 현재가치</strong></p>
     ${(() => {
       const totalRepay = Math.floor(availableIncome) * planDurationMonths;
-      // 라이프니츠 현가계수 (36개월 기준: 33.7702)
-      const leibniz: Record<number, number> = { 36: 33.77190060859514 };
+      // 라이프니츠 현가계수 (공표 4자리 표값)
+      const leibniz: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
       const coef = leibniz[planDurationMonths];
       const presentValue = coef ? Math.round(availableIncome * coef) : null;
       return `
