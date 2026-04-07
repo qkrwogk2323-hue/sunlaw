@@ -11,6 +11,12 @@ alter table public.rehabilitation_creditors
 
 -- 기존 is_secured 컬럼은 0086에 이미 존재 → 재선언 안 함
 
+-- 기존 데이터 정리: is_secured=true인데 담보평가액 없는 row는
+-- 임시로 is_secured=false로 변경 (재마이그레이션 시 colaw에서 정확한 값 복구)
+update public.rehabilitation_creditors
+set is_secured = false
+where is_secured = true and secured_collateral_value = 0;
+
 -- 제약: 별제권부와 기타 미확정은 상호 배타
 do $$
 begin
