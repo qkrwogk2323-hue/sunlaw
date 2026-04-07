@@ -52,7 +52,6 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.4.49",
-    "puppeteer": "^24.40.0",
     "tailwindcss": "^4.0.14",
     "typescript": "^5.7.2",
     "vitest": "^4.1.0"
