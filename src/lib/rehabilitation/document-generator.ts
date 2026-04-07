@@ -1,4 +1,5 @@
 import { adjustLivingCost } from './median-income';
+import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
 
 /**
  * 개인회생 법원 제출 문서 생성기
@@ -1460,9 +1461,38 @@ function generateRepaymentPlan(data: DocumentData): string {
   const commission = Math.floor(rawAvailable * commissionRate / 100);
   const availableIncome = rawAvailable - commission;
 
-  // 변제기간: 신청일 기준으로 산출
-  const repayMonths = Number(incomeSettings.repay_months) || 36;
-  const planDurationMonths = repayMonths;
+  // 변제기간: 사용자 명시값 우선, 없으면 청산가치 보장 테스트로 자동 결정
+  const explicitMonths = Number(incomeSettings.repay_months) || 0;
+  let planDurationMonths: RepaymentPeriod;
+  if (explicitMonths === 36 || explicitMonths === 48 || explicitMonths === 60) {
+    planDurationMonths = explicitMonths;
+  } else {
+    // 자동 결정 — 청산가치는 재산 합계 − 면제재산
+    const totalPropValue = (data.properties || []).reduce(
+      (s: number, p: any) => s + (Number(p.amount) || 0),
+      0,
+    );
+    const totalDeduction = (data.propertyDeductions || []).reduce(
+      (s: number, d: any) => s + (Number(d.deduction_amount) || 0),
+      0,
+    );
+    const liquidationValue = Math.max(0, totalPropValue - totalDeduction);
+    // 일반회생채권: 무담보 + 별제권 부족액
+    const unsecuredTotal = (data.creditors || []).reduce((s: number, c: any) => {
+      const claim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
+      if (c.is_secured) {
+        const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
+        return s + Math.max(0, claim - collateral);
+      }
+      return s + claim;
+    }, 0);
+    const decision = decideRepaymentPeriod({
+      monthlyPayment: Math.floor(availableIncome),
+      liquidationValue,
+      unsecuredTotal,
+    });
+    planDurationMonths = decision.period;
+  }
   const repayStartDate = app.repayment_start_date || app.application_date || '';
   let planStartDate = '';
   let planEndDate = '';
