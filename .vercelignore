@@ -1,0 +1,7 @@
+# colaw 마이그레이션 스크립트는 로컬 전용 (puppeteer 의존성 — Vercel 빌드 차단)
+scripts/colaw-migration/
+scripts/rehab/
+
+# 보고서·문서는 빌드와 무관
+docs/reports/
+docs/specs/
