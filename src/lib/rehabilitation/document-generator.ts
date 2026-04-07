@@ -2,6 +2,7 @@ import { adjustLivingCost } from './median-income';
 import { computeMonthlyAvailable } from './monthly-available';
 import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
 import { decidePeriodSetting, type PeriodSetting } from './period-setting';
+import { buildAdjustedSchedule } from './rounding';
 
 /**
  * 개인회생 법원 제출 문서 생성기
@@ -1717,30 +1718,52 @@ function generateRepaymentPlan(data: DocumentData): string {
         <th style="width: 18%; text-align: center;">(C)총변제액</th>
         <th style="width: 16%; text-align: center;">변제율</th>
       </tr>
-      ${(data.creditors || []).map((cred: any, idx: number) => {
-        const cap = Number(cred.capital) || 0;
-        const interest = Number(cred.interest) || 0;
-        const credDebt = cap + interest;
-        const ratio = totalDebt > 0 ? credDebt / totalDebt : 0;
-        const mPay = Math.floor(availableIncome * ratio);
-        const tPay = mPay * planDurationMonths;
-        const rRate = credDebt > 0 ? ((tPay / credDebt) * 100).toFixed(1) : '0.0';
-        return `<tr>
-          <td style="text-align: center;">${cred.bond_number || idx + 1}</td>
-          <td style="text-align: center;">${esc(cred.creditor_name || '')}</td>
-          <td style="text-align: right;">${formatAmount(credDebt)}</td>
-          <td style="text-align: right;">${formatAmount(mPay)}</td>
-          <td style="text-align: right;">${formatAmount(tPay)}</td>
-          <td style="text-align: center;">${rRate}%</td>
-        </tr>`;
-      }).join('')}
-      <tr style="font-weight: bold; border-top: 2px solid #000;">
-        <td colspan="2" style="text-align: center;">합 계</td>
-        <td style="text-align: right;">${formatAmount(totalDebt)}</td>
-        <td style="text-align: right;">${formatAmount(Math.floor(availableIncome))}</td>
-        <td style="text-align: right;">${formatAmount(Math.floor(availableIncome) * planDurationMonths)}</td>
-        <td style="text-align: center;">${totalDebt > 0 ? ((Math.floor(availableIncome) * planDurationMonths / totalDebt) * 100).toFixed(1) : '0.0'}%</td>
-      </tr>
+      ${(() => {
+        // 변제율 단일 분모: 확정+미확정 (별제권 충당분 제외)
+        // anatomy 39% 기준
+        const unsecuredDenom = (data.creditors || []).reduce((sum: number, c: any) => {
+          const claim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
+          if (c.is_secured) {
+            const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
+            return sum + Math.max(0, claim - collateral);
+          }
+          return sum + claim;
+        }, 0);
+
+        const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
+        const overallRate = unsecuredDenom > 0
+          ? Math.round((totalRepayAmount / unsecuredDenom) * 1000) / 10
+          : 0;
+
+        return (data.creditors || []).map((cred: any, idx: number) => {
+          const cap = Number(cred.capital) || 0;
+          const interest = Number(cred.interest) || 0;
+          const credDebt = cap + interest;
+          // 채권자별 변제 분모 (별제권은 부족액, 일반은 채권액 전액)
+          const credUnsecured = cred.is_secured
+            ? Math.max(0, credDebt - Math.min(Number(cred.secured_collateral_value) || 0, credDebt))
+            : credDebt;
+          const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
+          const mPay = Math.round(availableIncome * ratio);
+          const tPay = mPay * planDurationMonths;
+          const rRate = credUnsecured > 0 ? ((tPay / credUnsecured) * 100).toFixed(1) : '0.0';
+          return `<tr>
+            <td style="text-align: center;">${cred.bond_number || idx + 1}</td>
+            <td style="text-align: center;">${esc(cred.creditor_name || '')}</td>
+            <td style="text-align: right;">${formatAmount(credDebt)}</td>
+            <td style="text-align: right;">${formatAmount(mPay)}</td>
+            <td style="text-align: right;">${formatAmount(tPay)}</td>
+            <td style="text-align: center;">${rRate}%</td>
+          </tr>`;
+        }).join('') + `
+          <tr style="font-weight: bold; border-top: 2px solid #000;">
+            <td colspan="2" style="text-align: center;">합 계 (확정+미확정 기준)</td>
+            <td style="text-align: right;">${formatAmount(unsecuredDenom)}</td>
+            <td style="text-align: right;">${formatAmount(Math.floor(availableIncome))}</td>
+            <td style="text-align: right;">${formatAmount(totalRepayAmount)}</td>
+            <td style="text-align: center;">${overallRate}%</td>
+          </tr>`;
+      })()}
     </table>
 
     <h4>3. 청산가치와의 비교</h4>
@@ -1773,21 +1796,44 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     ${(() => {
       const credList = data.creditors || [];
+      // P1-9: buildAdjustedSchedule로 회차별 월변제액 분배
+      // totalTarget 미지정 시 base × months → diff=0 → 모든 회차 동일
+      // 향후 colaw K_observed를 incomeSettings에 저장하면 totalTarget으로 주입
+      const colawTotalTarget = Number(incomeSettings.total_repay_amount) || 0;
+      const schedule = buildAdjustedSchedule({
+        monthlyAvailable: availableIncome,
+        months: planDurationMonths,
+        totalTarget: colawTotalTarget > 0 ? colawTotalTarget : undefined,
+      });
+
       const rows: string[] = [];
-      for (let month = 1; month <= planDurationMonths; month++) {
+      const cumulByCred = new Map<string | number, number>();
+
+      for (const r of schedule.rows) {
+        const monthlyTotal = r.amount;
         credList.forEach((cred: any, idx: number) => {
           const cap = Number(cred.capital) || 0;
           const credDebt = cap + (Number(cred.interest) || 0);
           const ratio = totalDebt > 0 ? credDebt / totalDebt : 0;
-          const mPay = Math.floor(availableIncome * ratio);
-          const tPay = mPay * month;
+          // 마지막 채권자는 잔여 흡수 (라운딩 오차 보정)
+          const mPay = idx === credList.length - 1
+            ? monthlyTotal - credList.slice(0, -1).reduce((s: number, c: any) => {
+                const d = (Number(c.capital) || 0) + (Number(c.interest) || 0);
+                const rt = totalDebt > 0 ? d / totalDebt : 0;
+                return s + Math.round(monthlyTotal * rt);
+              }, 0)
+            : Math.round(monthlyTotal * ratio);
+          const credKey = cred.id || idx;
+          const prev = cumulByCred.get(credKey) || 0;
+          const cumul = prev + mPay;
+          cumulByCred.set(credKey, cumul);
           rows.push(`<tr>
-            ${idx === 0 ? `<td rowspan="${credList.length}" style="text-align: center; vertical-align: middle;">${month}</td>` : ''}
+            ${idx === 0 ? `<td rowspan="${credList.length}" style="text-align: center; vertical-align: middle;">${r.index}</td>` : ''}
             <td style="text-align: center;">${cred.bond_number || idx + 1}</td>
             <td>${esc(cred.creditor_name || '')}</td>
             <td style="text-align: right;">${formatAmount(credDebt)}</td>
             <td style="text-align: right;">${formatAmount(mPay)}</td>
-            <td style="text-align: right;">${formatAmount(tPay)}</td>
+            <td style="text-align: right;">${formatAmount(cumul)}</td>
             <td></td>
           </tr>`);
         });
