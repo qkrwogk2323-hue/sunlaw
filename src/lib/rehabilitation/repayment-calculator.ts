@@ -88,7 +88,20 @@ function resolveRepayPeriod(
   let targetAmount = totalDebt;
 
   switch (input.repayOption) {
+    case 'capital36':
+      // 2018년 이후 기본 정책: 원금만 36개월 변제 (anatomy 김한경 케이스)
+      repayMonths = 36;
+      targetAmount = totalCapital;
+      break;
+
+    case 'both36':
+      // 원리금 36개월 변제
+      repayMonths = 36;
+      targetAmount = totalDebt;
+      break;
+
     case 'capital60':
+      // 2018 이전 5년 픽스 시대 잔재 (예외 케이스)
       repayMonths = 60;
       targetAmount = totalCapital;
       break;

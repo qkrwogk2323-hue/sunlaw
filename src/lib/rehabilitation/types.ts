@@ -122,6 +122,8 @@ export interface RehabFamilyMember {
 
 // ─── 변제계획 ───
 export type RepayPeriodOption =
+  | 'capital36'
+  | 'both36'
   | 'capital60'
   | 'both60'
   | 'capital100_5y'

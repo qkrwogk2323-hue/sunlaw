@@ -47,7 +47,7 @@ export function RehabPlanTab({
   const { success, error } = useToast();
   const [isSaving, startSaveTransition] = useTransition();
 
-  const initialOption = (incomeSettings?.repay_period_option as RepayPeriodOption) || 'both60';
+  const initialOption = (incomeSettings?.repay_period_option as RepayPeriodOption) || 'capital36';
   const initialMonths = (incomeSettings?.repay_months as number) || 60;
   const [repayOption, setRepayOption] = useState<RepayPeriodOption>(initialOption);
   const [repayType, setRepayType] = useState<RepayType>('sequential');
@@ -264,10 +264,12 @@ export function RehabPlanTab({
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               aria-label="변제기간 옵션 선택"
             >
+              <option value="capital36">원금 3년 변제</option>
+              <option value="both36">원리금 3년 변제</option>
               <option value="capital60">원금 5년 변제</option>
               <option value="both60">원리금 5년 변제</option>
-              <option value="capital100_5y">원금 100% (5년 이내)</option>
               <option value="capital100_3y">원금 100% (3년 이내)</option>
+              <option value="capital100_5y">원금 100% (5년 이내)</option>
               <option value="full3y">3년 전액 변제</option>
             </select>
           </div>
