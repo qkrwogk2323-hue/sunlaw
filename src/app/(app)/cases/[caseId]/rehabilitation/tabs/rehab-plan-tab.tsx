@@ -139,8 +139,7 @@ export function RehabPlanTab({
   );
 
   // 소득 데이터 — DB 컬럼명 매핑 (median_income_year, net_salary)
-  // dependentCount = 부양가족 수 (본인 제외). getLivingCost 내부에서 1+dependentCount로 가구수 계산
-  const dependentCount = familyMembers.filter((m) => m.is_dependent).length;
+  const dependentCount = familyMembers.filter((m) => m.is_dependent).length + 1;
   const incomeYear = (incomeSettings?.median_income_year as number) || new Date().getFullYear();
   const monthlyIncome =
     (incomeSettings?.net_salary as number) ||
