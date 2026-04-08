@@ -1719,15 +1719,15 @@ function generateRepaymentPlan(data: DocumentData): string {
         <th style="width: 16%; text-align: center;">변제율</th>
       </tr>
       ${(() => {
-        // 변제율 단일 분모: 확정+미확정 (별제권 충당분 제외)
-        // anatomy 39% 기준
+        // 변제율 단일 분모: 무담보 원금 (이자 제외, 별제권 충당분 제외)
+        // 회생법원 양식 + colaw anatomy 39% 일치 — repayment-calculator.getDebtSummary.unsecuredCapital과 동일 산식
         const unsecuredDenom = (data.creditors || []).reduce((sum: number, c: any) => {
-          const claim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
+          const cap = Number(c.capital) || 0;
           if (c.is_secured) {
-            const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
-            return sum + Math.max(0, claim - collateral);
+            const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
+            return sum + Math.max(0, cap - collateral);
           }
-          return sum + claim;
+          return sum + cap;
         }, 0);
 
         const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
@@ -1739,10 +1739,10 @@ function generateRepaymentPlan(data: DocumentData): string {
           const cap = Number(cred.capital) || 0;
           const interest = Number(cred.interest) || 0;
           const credDebt = cap + interest;
-          // 채권자별 변제 분모 (별제권은 부족액, 일반은 채권액 전액)
+          // 채권자별 변제 분모 (무담보 원금 기준): 별제권은 원금 부족액, 일반은 원금 전액
           const credUnsecured = cred.is_secured
-            ? Math.max(0, credDebt - Math.min(Number(cred.secured_collateral_value) || 0, credDebt))
-            : credDebt;
+            ? Math.max(0, cap - Math.min(Number(cred.secured_collateral_value) || 0, cap))
+            : cap;
           const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
           const mPay = Math.round(availableIncome * ratio);
           const tPay = mPay * planDurationMonths;
@@ -1757,7 +1757,7 @@ function generateRepaymentPlan(data: DocumentData): string {
           </tr>`;
         }).join('') + `
           <tr style="font-weight: bold; border-top: 2px solid #000;">
-            <td colspan="2" style="text-align: center;">합 계 (확정+미확정 기준)</td>
+            <td colspan="2" style="text-align: center;">합 계 (무담보 원금 기준)</td>
             <td style="text-align: right;">${formatAmount(unsecuredDenom)}</td>
             <td style="text-align: right;">${formatAmount(Math.floor(availableIncome))}</td>
             <td style="text-align: right;">${formatAmount(totalRepayAmount)}</td>
