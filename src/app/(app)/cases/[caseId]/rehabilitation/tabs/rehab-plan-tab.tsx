@@ -139,7 +139,8 @@ export function RehabPlanTab({
   );
 
   // 소득 데이터 — DB 컬럼명 매핑 (median_income_year, net_salary)
-  const dependentCount = familyMembers.filter((m) => m.is_dependent).length + 1;
+  // dependentCount = 부양가족 수 (본인 제외). getLivingCost 내부에서 1+dependents로 가구수 계산
+  const dependentCount = familyMembers.filter((m) => m.is_dependent).length;
   const incomeYear = (incomeSettings?.median_income_year as number) || new Date().getFullYear();
   const monthlyIncome =
     (incomeSettings?.net_salary as number) ||
@@ -222,6 +223,28 @@ export function RehabPlanTab({
       <div className="py-12 text-center text-slate-400">
         <p className="font-medium">소득 정보가 없습니다</p>
         <p className="mt-1 text-sm">소득/생계비 탭에서 월 소득을 먼저 입력해주세요</p>
+      </div>
+    );
+  }
+
+  // 가용소득이 0 이하인 경우 안내 (월 소득 < 생계비)
+  // 이전에는 빈 화면(변제 옵션만)으로 빠져 사용자 혼란 발생
+  if (!repaymentResult) {
+    const monthlyAvail = monthlyIncome - livingCost - extraLivingCost - childSupport;
+    return (
+      <div className="space-y-4">
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-800">변제계획을 산출할 수 없습니다</p>
+          <p className="mt-1 text-sm text-amber-700">
+            월 소득({formatMoney(monthlyIncome)}원)에서 생계비({formatMoney(livingCost)}원)를 차감한
+            가용소득이 {formatMoney(monthlyAvail)}원입니다. 변제 가능액이 0 이하이면 변제계획을
+            수립할 수 없습니다.
+          </p>
+          <p className="mt-2 text-xs text-amber-600">
+            ▸ 부양가족 수가 정확한지 신청인 탭에서 확인해주세요<br />
+            ▸ 월 소득(net_salary)이 정확한지 소득/생계비 탭에서 확인해주세요
+          </p>
+        </section>
       </div>
     );
   }
