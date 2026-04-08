@@ -15,9 +15,15 @@ export const UNSECURED_LIMIT = 1_000_000_000;
 
 /**
  * 채무 총액 정보를 계산합니다.
+ *
+ * unsecuredCapital: 변제율 분모 (회생법원 양식 + colaw anatomy 기준)
+ *   = 무담보 채권 원금 합계
+ *   - 일반 무담보: 채권자 capital 전액
+ *   - 별제권부: max(0, capital - secured_collateral_value) 부족분만
+ *   - 이자 제외
  */
 export function getDebtSummary(
-  creditors: { capital: number; interest: number; isSecured: boolean }[],
+  creditors: { capital: number; interest: number; isSecured: boolean; securedCollateralValue?: number }[],
   securedResults: SecuredAllocationResult[],
 ) {
   const totalCapital = creditors.reduce((s, c) => s + (c.capital || 0), 0);
@@ -37,7 +43,17 @@ export function getDebtSummary(
     unsecuredDebt = totalDebt - securedDebt;
   }
 
-  return { totalDebt, totalCapital, totalInterest, securedDebt, unsecuredDebt };
+  // 회생법원 양식 변제율 분모: 무담보 원금 (이자 제외, 별제권 충당분 제외)
+  const unsecuredCapital = creditors.reduce((s, c) => {
+    const cap = c.capital || 0;
+    if (c.isSecured) {
+      const collateral = Math.min(c.securedCollateralValue ?? 0, cap);
+      return s + Math.max(0, cap - collateral);
+    }
+    return s + cap;
+  }, 0);
+
+  return { totalDebt, totalCapital, totalInterest, securedDebt, unsecuredDebt, unsecuredCapital };
 }
 
 /**
@@ -147,7 +163,7 @@ function resolveRepayPeriod(
  * @returns 계산 결과 (월 가용소득이 0 이하이면 null)
  */
 export function calculateRepayment(input: RepaymentInput): RepaymentResult | null {
-  const { totalDebt, totalCapital, totalInterest, securedDebt, unsecuredDebt } =
+  const { totalDebt, totalCapital, totalInterest, securedDebt, unsecuredDebt, unsecuredCapital } =
     getDebtSummary(input.creditors, input.securedResults);
 
   const monthlyAvailable = calculateMonthlyAvailable(
@@ -187,8 +203,11 @@ export function calculateRepayment(input: RepaymentInput): RepaymentResult | nul
   }
 
   const finalTotalRepay = monthlyRepay * repayMonths + input.disposeAmount;
-  const repayRate = totalDebt > 0
-    ? (finalTotalRepay / totalDebt) * 100
+  // 변제율 분모: 무담보 원금 (회생법원 양식 + colaw anatomy 일치)
+  // 0이면 totalCapital fallback
+  const rateDenominator = unsecuredCapital > 0 ? unsecuredCapital : totalCapital;
+  const repayRate = rateDenominator > 0
+    ? (finalTotalRepay / rateDenominator) * 100
     : 0;
 
   return {

@@ -74,6 +74,8 @@ export function RehabPlanTab({
         delayRate: (c.delay_rate as number) || 0,
         bondContent: '',
         isSecured: (c.is_secured as boolean) || false,
+        securedCollateralValue: Number(c.secured_collateral_value) || 0,
+        isOtherUnconfirmed: (c.is_other_unconfirmed as boolean) || false,
         securedPropertyId: (c.secured_property_id as string) || null,
         lienPriority: (c.lien_priority as number) || 1,
         lienType: (c.lien_type as string) || '',
@@ -157,7 +159,12 @@ export function RehabPlanTab({
     if (creditors.length === 0 || monthlyIncome <= 0) return null;
 
     const input: RepaymentInput = {
-      creditors: creditors.map((c) => ({ capital: c.capital, interest: c.interest, isSecured: c.isSecured })),
+      creditors: creditors.map((c) => ({
+        capital: c.capital,
+        interest: c.interest,
+        isSecured: c.isSecured,
+        securedCollateralValue: c.securedCollateralValue,
+      })),
       securedResults,
       monthlyIncome,
       livingCost,

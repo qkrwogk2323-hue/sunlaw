@@ -131,7 +131,7 @@ export type RepayPeriodOption =
   | 'full3y';
 
 export interface RepaymentInput {
-  creditors: Pick<RehabCreditor, 'capital' | 'interest' | 'isSecured'>[];
+  creditors: Pick<RehabCreditor, 'capital' | 'interest' | 'isSecured' | 'securedCollateralValue'>[];
   securedResults: SecuredAllocationResult[];
   monthlyIncome: number;
   livingCost: number;
