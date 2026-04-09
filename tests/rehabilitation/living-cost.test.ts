@@ -32,15 +32,17 @@ describe('생계비 자동 조정 (P1-1)', () => {
     expect(result.floor).toBe(1_538_542);
   });
 
-  it('rate=50 권장선 적용 — 1인 가구 1,282,119원', () => {
+  // minimumLivingCost(size, year, rate) — rate=median × N% (스탠드얼론 의미론)
+  // UI는 colaw computeLivingCost 사용 (별도 식). 본 함수는 직접 % 계산용.
+  it('rate=50 — 1인 가구 1,282,119원 (median × 50%)', () => {
     expect(minimumLivingCost(1, 2026, 50)).toBe(1_282_119);
   });
 
-  it('rate=70 권장선 적용 — 1인 가구 1,794,966원', () => {
+  it('rate=70 — 1인 가구 1,794,966원 (median × 70%)', () => {
     expect(minimumLivingCost(1, 2026, 70)).toBe(1_794_966);
   });
 
-  it('rate=70 입력값 1,800,000 → 권장선 통과', () => {
+  it('adjustLivingCost rate=70 — 1,800,000 통과', () => {
     const result = adjustLivingCost(1_800_000, 1, 2026, 70);
     expect(result.belowRecommendedFloor).toBe(false);
     expect(result.adjusted).toBe(1_800_000);

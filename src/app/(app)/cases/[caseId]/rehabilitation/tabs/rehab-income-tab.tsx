@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
-import { minimumLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
+import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
 import { Save } from 'lucide-react';
 
 interface RehabIncomeTabProps {
@@ -34,8 +34,10 @@ export function RehabIncomeTab({
       (incomeSettings?.net_salary as number) ||
       (incomeSettings?.monthly_income as number) ||
       0,
+    // colaw 의미론: rate=100 → baseline60 그대로 사용 (= 기준중위소득의 60%).
+    // rate=150 → baseline60 × 1.5 = 기준중위소득의 90%. (DB default 100, 0089 origin)
     living_cost_rate:
-      (incomeSettings?.living_cost_rate as number) ?? 60,
+      (incomeSettings?.living_cost_rate as number) ?? 100,
     living_cost_input:
       (incomeSettings?.living_cost as number) || 0,
     extra_living_cost: (incomeSettings?.extra_living_cost as number) || 0,
@@ -44,8 +46,14 @@ export function RehabIncomeTab({
     dispose_amount: (incomeSettings?.dispose_amount as number) || 0,
   });
 
+  // colaw 의미론: 권장 생계비 = baseline60(=기준중위소득×60%) × rate/100
+  // rate=100이면 baseline60 그대로 (= 기준중위소득의 60%, 회생법원 표준)
   const recommendedLivingCost = useMemo(
-    () => minimumLivingCost(dependentCount, form.income_year, form.living_cost_rate),
+    () => computeLivingCost({
+      householdSize: dependentCount,
+      year: form.income_year,
+      rate: form.living_cost_rate,
+    }).afterRate,
     [form.income_year, dependentCount, form.living_cost_rate],
   );
 
@@ -97,12 +105,13 @@ export function RehabIncomeTab({
     }
   }, [form, livingCost, dependentCount, caseId, organizationId, success, error]);
 
+  // 참고표는 기준중위소득 60% (baseline60) 고정 — rate 적용 전 표준값
   const householdTable = useMemo(
     () => SUPPORTED_YEARS.map((year) => ({
       year,
-      values: [1, 2, 3, 4, 5, 6].map((size) => minimumLivingCost(size, year, form.living_cost_rate)),
+      values: [1, 2, 3, 4, 5, 6].map((size) => minimumLivingCost(size, year)),
     })),
-    [form.living_cost_rate],
+    [],
   );
 
   return (
@@ -157,10 +166,11 @@ export function RehabIncomeTab({
       {/* 생계비 */}
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="mb-1 text-base font-semibold text-slate-800">
-          생계비 (기준중위소득 {form.living_cost_rate}%)
+          생계비 (기준중위소득 60% × 비율 {form.living_cost_rate}%)
         </h2>
         <p className="mb-3 text-xs text-slate-500">
-          권장선 60%는 회생법원 표준이며, 사건별로 50~100% 조정 가능합니다. 권장선 미만 입력 시 소명서에 사유 기재 필요.
+          기준중위소득 60%(회생법원 표준)에 비율을 곱해 권장선을 산출합니다. 비율 100% = 60% 그대로, 150% = 90%(가족 부양 등 추가 인정).
+          권장선 미만 입력 시 소명서에 사유 기재 필요.
         </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="space-y-1">
@@ -184,17 +194,17 @@ export function RehabIncomeTab({
             </p>
           </div>
           <div className="space-y-1">
-            <label htmlFor="living_cost_rate" className="text-sm font-medium text-slate-700">권장선 비율 (%)</label>
+            <label htmlFor="living_cost_rate" className="text-sm font-medium text-slate-700">비율 (%)</label>
             <input
               id="living_cost_rate"
               type="number"
               min={1}
-              max={100}
+              max={300}
               step={1}
               value={form.living_cost_rate}
-              onChange={(e) => updateField('living_cost_rate', Math.max(1, Math.min(100, parseInt(e.target.value) || 60)))}
+              onChange={(e) => updateField('living_cost_rate', Math.max(1, Math.min(300, parseInt(e.target.value) || 100)))}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              aria-label="권장선 비율"
+              aria-label="기준중위소득 60% 대비 비율"
             />
             <p className="text-xs text-slate-400">권장선: {formatMoney(recommendedLivingCost)}원</p>
           </div>
@@ -223,7 +233,7 @@ export function RehabIncomeTab({
         {/* 기준중위소득 참고표 */}
         <details className="mt-4">
           <summary className="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700">
-            기준중위소득 {form.living_cost_rate}% 참고표 펼치기
+            기준중위소득 60% 참고표 펼치기 (비율 적용 전 표준값)
           </summary>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-xs">
