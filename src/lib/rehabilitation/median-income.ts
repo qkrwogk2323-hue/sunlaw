@@ -51,33 +51,53 @@ export function getMedianIncome(householdSize: number, year: number): number {
 }
 
 /**
- * 최저 생계비 (= 기준중위소득 60%, floor)
+ * 권장 생계비 (= 기준중위소득 × rate%)
+ *
+ * @param householdSize 가구원 수
+ * @param year 기준연도
+ * @param rate 적용 비율(%) — 기본 60 (회생법원 권장선).
+ *             50/55/65 등 사건별 조정 가능. 100은 중위소득 100% 자체.
+ *
+ * 검사관 2026-04-08 보고서 B-3:
+ *   60%는 권장선이지 절대 하한이 아님. 법원은 60% 미만 인정 / 60% 초과 모두 수용.
+ *   본 함수는 rate 기본값만 60으로 두고, 호출자가 사건별 조정 가능.
  */
-export function minimumLivingCost(householdSize: number, year: number): number {
-  return Math.floor(getMedianIncome(householdSize, year) * 0.6);
+export function minimumLivingCost(householdSize: number, year: number, rate = 60): number {
+  return Math.floor((getMedianIncome(householdSize, year) * rate) / 100);
 }
 
 export interface AdjustLivingCostResult {
   adjusted: number;
-  wasClamped: boolean;
+  /** 입력값이 권장선 미만인 경우 true (UP-clamp 하지 않음, 경고용 플래그) */
+  belowRecommendedFloor: boolean;
+  /** 권장선 (rate 적용 후) */
   floor: number;
+  /** @deprecated UP-clamp 제거됨. belowRecommendedFloor 사용 권장. */
+  wasClamped: false;
 }
 
 /**
- * @deprecated P1-1 호환용. 가능하면 `computeLivingCost` 사용.
+ * 입력 생계비 검사 — 권장선 미만 여부만 플래그로 반환.
+ * 검사관 2026-04-08 보고서 B-3 #2: UP-clamp 제거. 사용자 입력 그대로 보존.
  *
- * 입력 생계비를 최저 기준으로 자동 조정.
- *   - input >= floor: 그대로 사용
- *   - input <  floor: floor로 클램프, wasClamped=true
+ * @param input 사용자 입력 생계비 (원)
+ * @param householdSize 가구원 수
+ * @param year 기준연도
+ * @param rate 권장선 비율 (기본 60)
  */
 export function adjustLivingCost(
   input: number,
   householdSize: number,
   year: number,
+  rate = 60,
 ): AdjustLivingCostResult {
-  const floor = minimumLivingCost(householdSize, year);
-  if (input >= floor) return { adjusted: input, wasClamped: false, floor };
-  return { adjusted: floor, wasClamped: true, floor };
+  const floor = minimumLivingCost(householdSize, year, rate);
+  return {
+    adjusted: input,
+    belowRecommendedFloor: input < floor,
+    floor,
+    wasClamped: false,
+  };
 }
 
 // ─── P1-7: colaw 생계비 공식 (증액률 + 추가생계비) ────────────────

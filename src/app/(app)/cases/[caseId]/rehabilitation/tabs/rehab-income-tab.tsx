@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
-import { getLivingCost, minimumLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
+import { minimumLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
 import { Save } from 'lucide-react';
 
 interface RehabIncomeTabProps {
@@ -34,16 +34,24 @@ export function RehabIncomeTab({
       (incomeSettings?.net_salary as number) ||
       (incomeSettings?.monthly_income as number) ||
       0,
+    living_cost_rate:
+      (incomeSettings?.living_cost_rate as number) ?? 60,
+    living_cost_input:
+      (incomeSettings?.living_cost as number) || 0,
     extra_living_cost: (incomeSettings?.extra_living_cost as number) || 0,
     child_support: (incomeSettings?.child_support as number) || 0,
     trustee_comm_rate: (incomeSettings?.trustee_comm_rate as number) || 0,
     dispose_amount: (incomeSettings?.dispose_amount as number) || 0,
   });
 
-  const livingCost = useMemo(
-    () => getLivingCost(form.income_year, dependentCount),
-    [form.income_year, dependentCount],
+  const recommendedLivingCost = useMemo(
+    () => minimumLivingCost(dependentCount, form.income_year, form.living_cost_rate),
+    [form.income_year, dependentCount, form.living_cost_rate],
   );
+
+  // 생계비 입력값 — 0이면 권장선 자동 적용, 사용자 입력 시 그 값 보존
+  const livingCost = form.living_cost_input > 0 ? form.living_cost_input : recommendedLivingCost;
+  const belowRecommendedFloor = form.living_cost_input > 0 && form.living_cost_input < recommendedLivingCost;
 
   const monthlyAvailable = useMemo(
     () =>
@@ -72,6 +80,7 @@ export function RehabIncomeTab({
         income_year: form.income_year,
         monthly_income: form.monthly_income,
         living_cost: livingCost,
+        living_cost_rate: form.living_cost_rate,
         extra_living_cost: form.extra_living_cost,
         child_support: form.child_support,
         trustee_comm_rate: form.trustee_comm_rate,
@@ -91,9 +100,9 @@ export function RehabIncomeTab({
   const householdTable = useMemo(
     () => SUPPORTED_YEARS.map((year) => ({
       year,
-      values: [1, 2, 3, 4, 5, 6].map((size) => minimumLivingCost(size, year)),
+      values: [1, 2, 3, 4, 5, 6].map((size) => minimumLivingCost(size, year, form.living_cost_rate)),
     })),
-    [],
+    [form.living_cost_rate],
   );
 
   return (
@@ -147,8 +156,13 @@ export function RehabIncomeTab({
 
       {/* 생계비 */}
       <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-4 text-base font-semibold text-slate-800">기준중위소득 60% (생계비)</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <h2 className="mb-1 text-base font-semibold text-slate-800">
+          생계비 (기준중위소득 {form.living_cost_rate}%)
+        </h2>
+        <p className="mb-3 text-xs text-slate-500">
+          권장선 60%는 회생법원 표준이며, 사건별로 50~100% 조정 가능합니다. 권장선 미만 입력 시 소명서에 사유 기재 필요.
+        </p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="space-y-1">
             <label htmlFor="income_year" className="text-sm font-medium text-slate-700">기준 연도</label>
             <select
@@ -168,20 +182,48 @@ export function RehabIncomeTab({
             <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
               {dependentCount}인 (본인 포함)
             </p>
-            <p className="text-xs text-slate-400">신청인 탭에서 가족 구성원을 수정할 수 있습니다</p>
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-700">월 생계비</p>
-            <p className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">
-              {formatMoney(livingCost)}원
-            </p>
+            <label htmlFor="living_cost_rate" className="text-sm font-medium text-slate-700">권장선 비율 (%)</label>
+            <input
+              id="living_cost_rate"
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={form.living_cost_rate}
+              onChange={(e) => updateField('living_cost_rate', Math.max(1, Math.min(100, parseInt(e.target.value) || 60)))}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              aria-label="권장선 비율"
+            />
+            <p className="text-xs text-slate-400">권장선: {formatMoney(recommendedLivingCost)}원</p>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="living_cost_input" className="text-sm font-medium text-slate-700">월 생계비 (원)</label>
+            <input
+              id="living_cost_input"
+              type="text"
+              value={form.living_cost_input ? formatMoney(form.living_cost_input) : ''}
+              onChange={(e) => updateField('living_cost_input', parseMoney(e.target.value))}
+              placeholder={formatMoney(recommendedLivingCost)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              aria-label="월 생계비 직접 입력"
+            />
+            <p className="text-xs text-slate-400">비워두면 권장선 자동 적용</p>
           </div>
         </div>
+
+        {belowRecommendedFloor && (
+          <div className="mt-3 rounded-md border-l-4 border-yellow-400 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+            ⚠ 입력 생계비({formatMoney(form.living_cost_input)}원)가 권장선({formatMoney(recommendedLivingCost)}원) 미만입니다.
+            법원 인정 사유를 소명서에 기재해야 합니다.
+          </div>
+        )}
 
         {/* 기준중위소득 참고표 */}
         <details className="mt-4">
           <summary className="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700">
-            기준중위소득 60% 참고표 펼치기
+            기준중위소득 {form.living_cost_rate}% 참고표 펼치기
           </summary>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-xs">

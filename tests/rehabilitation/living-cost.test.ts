@@ -18,18 +18,32 @@ describe('생계비 자동 조정 (P1-1)', () => {
     expect(minimumLivingCost(3, 2025)).toBe(3_015_211);
   });
 
-  it('입력값이 기준 이상이면 그대로 통과', () => {
+  it('입력값이 권장선 이상이면 belowRecommendedFloor=false', () => {
     const result = adjustLivingCost(2_000_000, 1, 2026);
-    expect(result.wasClamped).toBe(false);
+    expect(result.belowRecommendedFloor).toBe(false);
     expect(result.adjusted).toBe(2_000_000);
     expect(result.floor).toBe(1_538_542);
   });
 
-  it('입력값이 기준 미만이면 자동으로 끌어올림', () => {
+  it('입력값이 권장선 미만이면 belowRecommendedFloor=true (UP-clamp 안 함)', () => {
     const result = adjustLivingCost(1_000_000, 1, 2026);
-    expect(result.wasClamped).toBe(true);
-    expect(result.adjusted).toBe(1_538_542);
+    expect(result.belowRecommendedFloor).toBe(true);
+    expect(result.adjusted).toBe(1_000_000); // 사용자 입력 보존
     expect(result.floor).toBe(1_538_542);
+  });
+
+  it('rate=50 권장선 적용 — 1인 가구 1,282,119원', () => {
+    expect(minimumLivingCost(1, 2026, 50)).toBe(1_282_119);
+  });
+
+  it('rate=70 권장선 적용 — 1인 가구 1,794,966원', () => {
+    expect(minimumLivingCost(1, 2026, 70)).toBe(1_794_966);
+  });
+
+  it('rate=70 입력값 1,800,000 → 권장선 통과', () => {
+    const result = adjustLivingCost(1_800_000, 1, 2026, 70);
+    expect(result.belowRecommendedFloor).toBe(false);
+    expect(result.adjusted).toBe(1_800_000);
   });
 });
 

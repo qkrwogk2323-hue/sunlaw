@@ -1680,9 +1680,9 @@ function generateRepaymentPlan(data: DocumentData): string {
         </table>`;
     })()}
 
-    ${livingCostAdjusted.wasClamped ? `
+    ${livingCostAdjusted.belowRecommendedFloor ? `
       <p style="margin-top: 10px; padding: 8px 12px; background: #fff3cd; border-left: 3px solid #ffc107; font-size: 0.9em;">
-        ⚠ 입력 생계비(${formatAmount(livingCostInput)})가 ${householdSize}인 가구 기준중위소득 60%(${formatAmount(livingCostAdjusted.floor)}) 미만이어서 자동으로 기준치로 조정됨.
+        ⚠ 입력 생계비(${formatAmount(livingCostInput)})가 ${householdSize}인 가구 기준중위소득 60% 권장선(${formatAmount(livingCostAdjusted.floor)}) 미만입니다. 법원 인정 사유는 소명서에 기재 필요.
       </p>` : ''}
 
     ${(() => {

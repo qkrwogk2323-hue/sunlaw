@@ -445,6 +445,7 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
     median_income_year: form.income_year ?? new Date().getFullYear(),
     net_salary: form.monthly_income ?? 0,
     living_cost: form.living_cost ?? 0,
+    living_cost_rate: form.living_cost_rate ?? 60,
     extra_living_cost: form.extra_living_cost ?? 0,
     child_support: form.child_support ?? 0,
     trustee_comm_rate: form.trustee_comm_rate ?? 0,
