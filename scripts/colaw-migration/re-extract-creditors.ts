@@ -398,7 +398,13 @@ async function updateCase(
       living_cost: parseAmount(income.living_cost),
       extra_living_cost: parseAmount(income.extra_living_cost),
       child_support: parseAmount(income.child_support),
-      repay_months: parseInt(income.repay_months) || 36,
+      // 1~60 범위 가드 (채무자회생법 §611⑤). 범위 밖이면 36 default.
+      repay_months: (() => {
+        const n = parseInt(income.repay_months) || 0;
+        if (n >= 1 && n <= 60) return n;
+        if (n > 60) console.warn(`  ⚠ repay_months out of range: ${n} → 36 default`);
+        return 36;
+      })(),
       median_income_year: livingSeqToYear(income.living_seq),
       total_debt: totalDebt,
       secured_debt: securedDebt,

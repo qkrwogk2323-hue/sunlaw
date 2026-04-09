@@ -126,6 +126,25 @@ function parseAmount(s: string): number {
   return parseInt(s.replace(/,/g, ''), 10) || 0;
 }
 
+/**
+ * 변제기간(개월) 안전 파싱.
+ * 채무자회생법 제611조 제5항: 변제기간은 변제개시일부터 3년 이하 (특별한 경우 5년 이하).
+ * 즉 36~60개월만 유효. 그 외 값은 import script 단위 오류로 간주하고 36개월 default 적용.
+ *
+ * 검사관 2026-04-08 보고: 구 import script가 잘못된 COLAW 필드를 읽어
+ * 51건이 repay_months=72로 오염됨. 본 가드로 재발 방지.
+ */
+function parseRepayMonths(s: string): number | null {
+  if (!s) return null;
+  const n = parseInt(s.replace(/,/g, ''), 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n < 1 || n > 60) {
+    console.warn(`  ⚠ repay_months out of range (1~60): ${n} → 36 default 적용`);
+    return 36;
+  }
+  return n;
+}
+
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -364,7 +383,10 @@ async function extractIncome(page: Page, c: (typeof COLAW_CASES)[0]) {
       extra_living_cost: tryGet('extralivingcost', 'additionallivingexpense', 'extraliving'),
       child_support: tryGet('childsupport', 'childeducation'),
       trustee_comm_rate: tryGet('trusteecommrate', 'commissionrate'),
-      repay_months: tryGet('repayperiod', 'repaymentmonths', 'paymentperiod'),
+      // 검사관 2026-04-08 보고: COLAW 실제 필드는 forcingrepaymentmonth.
+      // 구 필드명 3종은 COLAW에 존재하지 않아 garbage 값 51건 주입 (repay_months=72) 사고 발생.
+      repay_months: tryGet('forcingrepaymentmonth', 'repayperiod', 'repaymentmonths', 'paymentperiod'),
+      repay_period_setting: tryGet('repaymentperiodsetting'),
       family_count: tryGet('familycount', 'householdcount', 'familymember'),
       // 채권 합계 (채권자 탭에서 못 가져온 경우를 대비)
       total_debt_alt: tryGet('nowtotalsum', 'totalsumamount'),
@@ -578,7 +600,7 @@ async function insertCase(
     extra_living_cost: parseAmount(income.extra_living_cost),
     child_support: parseAmount(income.child_support),
     trustee_comm_rate: parseFloat(income.trustee_comm_rate) || 0,
-    repay_months: parseInt(income.repay_months) || 60,
+    repay_months: parseRepayMonths(income.repay_months) ?? 36,
     total_debt: totalDebt,
     secured_debt: securedDebt,
     unsecured_debt: unsecuredDebt,
@@ -672,7 +694,7 @@ async function reExtractCase(
       extra_living_cost: parseAmount(income.extra_living_cost),
       child_support: parseAmount(income.child_support),
       trustee_comm_rate: parseFloat(income.trustee_comm_rate) || 0,
-      repay_months: parseInt(income.repay_months) || 60,
+      repay_months: parseRepayMonths(income.repay_months) ?? 36,
       total_debt: totalDebt,
       secured_debt: securedDebt,
       unsecured_debt: unsecuredDebt,
