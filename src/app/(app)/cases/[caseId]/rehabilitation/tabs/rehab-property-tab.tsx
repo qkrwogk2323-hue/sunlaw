@@ -377,8 +377,8 @@ export function RehabPropertyTab({
             </p>
             <p className="mt-1 text-xs text-slate-400">보관함에서 복구할 수 있습니다.</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setDeleteConfirm(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">취소</button>
-              <button type="button" onClick={() => removeItem(deleteConfirm.id)} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">삭제</button>
+              <button type="button" aria-label="취소" onClick={() => setDeleteConfirm(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">취소</button>
+              <button type="button" aria-label="삭제 확인" onClick={() => removeItem(deleteConfirm.id)} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">삭제</button>
             </div>
           </div>
         </div>

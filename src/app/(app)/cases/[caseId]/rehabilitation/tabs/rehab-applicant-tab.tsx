@@ -1059,8 +1059,8 @@ export function RehabApplicantTab({
               <span className="font-medium text-red-600">{familyDeleteConfirm.name}</span>을(를) 삭제하시겠습니까?
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setFamilyDeleteConfirm(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">취소</button>
-              <button type="button" onClick={() => removeFamilyMember(familyDeleteConfirm.index)} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">삭제</button>
+              <button type="button" aria-label="취소" onClick={() => setFamilyDeleteConfirm(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">취소</button>
+              <button type="button" aria-label="삭제 확인" onClick={() => removeFamilyMember(familyDeleteConfirm.index)} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">삭제</button>
             </div>
           </div>
         </div>

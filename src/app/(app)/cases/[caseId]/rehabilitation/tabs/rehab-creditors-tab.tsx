@@ -398,6 +398,7 @@ export function RehabCreditorsTab({
                   type="button"
                   onClick={() => addFromSearch(fi)}
                   className="flex w-full items-center justify-between px-3 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
+                  aria-label={`${fi.name} 채권자로 추가`}
                 >
                   <span className="font-medium">{fi.name}</span>
                   <span className="text-xs text-slate-400">{fi.phone}</span>
@@ -881,6 +882,7 @@ export function RehabCreditorsTab({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
+                aria-label="취소"
                 onClick={() => setDeleteConfirm(null)}
                 className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
               >
@@ -888,6 +890,7 @@ export function RehabCreditorsTab({
               </button>
               <button
                 type="button"
+                aria-label="삭제 확인"
                 onClick={() => removeCreditor(deleteConfirm.index)}
                 className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
