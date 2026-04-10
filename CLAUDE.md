@@ -121,6 +121,31 @@ undo('삭제됨', { message: '8초 내 취소 가능', onUndo: handleUndo });
 - 모든 Server Action → `revalidatePath()` 호출
 - ARIA 속성 모든 인터랙티브 요소에 필수
 
+### 🔴 Migration 규칙 (절대 준수)
+```
+supabase/migrations/ 구조:
+  001 extensions_and_schemas   007 insolvency_shared
+  002 enums                    008 rehabilitation
+  003 core_tables              009 functions_and_triggers
+  004 platform_governance      010 rls_policies
+  005 collaboration            011 indexes
+  006 billing                  012 seed_data
+```
+- **새 migration 파일 추가 금지** — 기존 12개 파일 안에서 수정
+- 컬럼 추가/변경 → 해당 도메인의 기존 CREATE TABLE 문을 직접 수정
+- 함수 추가/변경 → `009_functions_and_triggers.sql` 수정
+- RLS 추가/변경 → `010_rls_policies.sql` 수정
+- 인덱스 추가 → `011_indexes.sql` 수정
+- 시드 데이터 → `012_seed_data.sql` 수정
+- 새 테이블이 필요하면 가장 가까운 도메인 파일(003~008)의 끝에 추가
+- **배치 규칙**: 테이블 파일(003~008)에는 `CREATE TABLE` + 제약조건(constraint) + 코멘트만 둔다
+  - `ENABLE ROW LEVEL SECURITY` + `CREATE POLICY` → `010_rls_policies.sql`에 집중
+  - `CREATE INDEX` → `011_indexes.sql`에 집중
+  - 테이블 파일에 인라인 RLS/인덱스를 넣지 말 것 — 대신 `-- NOTE: indexes → 011, RLS → 010` 코멘트 추가
+- **절대 하지 말 것**: `0098_xxx.sql` 같은 증분 migration 파일 생성
+- **이유**: 97개 → 12개로 squash한 구조. 다시 늘리면 안 됨
+- 새 도메인 파일(013 이상)이 정말 필요하면 **사용자 승인** 후에만 추가. 기존 12개로 안 되는 이유를 먼저 설명할 것
+
 ## 핵심 컴포넌트
 
 ```
