@@ -647,3 +647,64 @@ export async function generateRehabDocument(
     return { ok: false, code: 'UNEXPECTED', userMessage: '문서 생성 중 오류가 발생했습니다.' };
   }
 }
+
+// ─── 금지명령 신청서 (D5114) ───
+
+export async function upsertProhibitionOrder(
+  caseId: string,
+  organizationId: string,
+  data: Record<string, unknown>,
+) {
+  try {
+    const auth = await requireAuthenticatedUser();
+    const membership = findMembership(auth, organizationId);
+    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+
+    const supabase = await createSupabaseServerClient();
+
+    const dbData: Record<string, unknown> = {
+      court_name: data.court_name || null,
+      applicant_name: data.applicant_name || null,
+      resident_number_front: data.resident_number_front || null,
+      registered_address: data.registered_address || null,
+      current_address: data.current_address || null,
+      has_agent: data.has_agent || false,
+      agent_type: data.agent_type || null,
+      agent_name: data.agent_name || null,
+      agent_phone: data.agent_phone || null,
+      agent_fax: data.agent_fax || null,
+      agent_address: data.agent_address || null,
+      agent_law_firm: data.agent_law_firm || null,
+      total_debt_amount: data.total_debt_amount || 0,
+      creditor_count: data.creditor_count || 0,
+      reason_detail: data.reason_detail || null,
+      attachments: data.attachments || [],
+      application_date: data.application_date || null,
+    };
+
+    const { data: existing } = await supabase
+      .from('rehabilitation_prohibition_orders')
+      .select('id')
+      .eq('case_id', caseId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from('rehabilitation_prohibition_orders')
+        .update({ ...dbData, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '금지명령 신청서 저장에 실패했습니다.' };
+    } else {
+      const { error } = await supabase
+        .from('rehabilitation_prohibition_orders')
+        .insert({ case_id: caseId, organization_id: organizationId, ...dbData });
+      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '금지명령 신청서 생성에 실패했습니다.' };
+    }
+
+    revalidatePath(`/cases/${caseId}/rehabilitation`);
+    return { ok: true };
+  } catch (e) {
+    console.error('[upsertProhibitionOrder]', e);
+    return { ok: false, code: 'UNEXPECTED', userMessage: '금지명령 신청서 저장 중 오류가 발생했습니다.' };
+  }
+}

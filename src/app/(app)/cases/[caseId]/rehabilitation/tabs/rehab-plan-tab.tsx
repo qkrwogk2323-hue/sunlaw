@@ -51,6 +51,7 @@ export function RehabPlanTab({
   const initialMonths = (incomeSettings?.repay_months as number) || 60;
   const [repayOption, setRepayOption] = useState<RepayPeriodOption>(initialOption);
   const [repayType, setRepayType] = useState<RepayType>('sequential');
+  const [formMode, setFormMode] = useState<'standard' | 'simple'>('standard');
 
   // 데이터 변환
   const creditors: RehabCreditor[] = useMemo(
@@ -258,6 +259,188 @@ export function RehabPlanTab({
 
   return (
     <div className="space-y-6">
+      {/* D5112 간이양식 / 정식양식 토글 */}
+      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+        <span className="text-sm font-medium text-slate-700">변제계획안 양식</span>
+        <div className="inline-flex rounded-md border border-slate-300">
+          <button
+            type="button"
+            onClick={() => setFormMode('standard')}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${formMode === 'standard' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} rounded-l-md`}
+            aria-label="정식양식 보기"
+            aria-pressed={formMode === 'standard'}
+          >
+            정식양식
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormMode('simple')}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${formMode === 'simple' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} rounded-r-md`}
+            aria-label="간이양식(D5112) 보기"
+            aria-pressed={formMode === 'simple'}
+          >
+            간이양식 (D5112)
+          </button>
+        </div>
+        {formMode === 'simple' && (
+          <span className="text-xs text-slate-400">가용소득·변제기간·채권자배분만 표시</span>
+        )}
+      </div>
+
+      {/* D5112 간이양식 뷰 */}
+      {formMode === 'simple' && repaymentResult && (
+        <div className="space-y-4">
+          {/* 1절: 변제기간 */}
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">제1절 변제기간</h3>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">변제기간</p>
+                <p className="mt-1 text-lg font-bold text-slate-800">{repaymentResult.repayMonths}개월</p>
+              </div>
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">변제방법</p>
+                <p className="mt-1 text-lg font-bold text-slate-800">{(incomeSettings?.repayment_method as string) || '매월'}</p>
+              </div>
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">변제율</p>
+                <p className="mt-1 text-lg font-bold text-green-700">{repaymentResult.repayRate.toFixed(2)}%</p>
+              </div>
+            </div>
+          </section>
+
+          {/* 2절: 소득/재산 */}
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">제2절 변제에 제공되는 소득 및 재산</h3>
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-slate-600">가. 소득</h4>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-md border border-slate-100 p-3">
+                  <p className="text-xs text-slate-500">월 수입(실수령)</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{formatMoney(monthlyIncome)}원</p>
+                </div>
+                <div className="rounded-md border border-slate-100 p-3">
+                  <p className="text-xs text-slate-500">월 생계비</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{formatMoney(livingCost + extraLivingCost)}원</p>
+                </div>
+                <div className="rounded-md border border-slate-100 p-3">
+                  <p className="text-xs text-slate-500">월 가용소득</p>
+                  <p className="mt-1 text-sm font-semibold text-blue-700">{formatMoney(repaymentResult.monthlyAvailable)}원</p>
+                </div>
+              </div>
+              {disposeAmount > 0 && (
+                <>
+                  <h4 className="mt-3 text-xs font-medium text-slate-600">나. 재산처분</h4>
+                  <div className="rounded-md border border-slate-100 p-3">
+                    <p className="text-xs text-slate-500">처분예상액</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{formatMoney(disposeAmount)}원</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* 6절: 계산 결과 기초사항 */}
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">제6절 계산 결과</h3>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">총 채무액</p>
+                <p className="mt-1 text-sm font-bold text-slate-800">{formatMoney(repaymentResult.totalDebt)}원</p>
+              </div>
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">월 변제액</p>
+                <p className="mt-1 text-sm font-bold text-blue-700">{formatMoney(repaymentResult.monthlyRepay)}원</p>
+              </div>
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">총 변제액</p>
+                <p className="mt-1 text-sm font-bold text-slate-800">{formatMoney(repaymentResult.totalRepayAmount)}원</p>
+              </div>
+              <div className="text-center rounded-md bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">청산가치</p>
+                <p className="mt-1 text-sm font-bold text-slate-800">{formatMoney(liquidationValue)}원</p>
+              </div>
+            </div>
+            {repaymentResult.liquidationWarning && (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700" role="alert">
+                청산가치보장 원칙에 따라 월 변제액이 상향 조정되었습니다.
+              </div>
+            )}
+          </section>
+
+          {/* 채권자별 변제배분 (간이) */}
+          {schedule.length > 0 && (
+            <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-800">채권자별 변제예정액</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="px-2 py-2 text-center text-xs font-medium text-slate-500 w-10">번호</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-slate-500">채권자</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">채권액</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">월 변제액</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">총 변제액</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">변제율</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedule.map((s, idx) => {
+                      const creditor = creditors.find((c) => c.id === s.creditorId);
+                      return (
+                        <tr key={s.creditorId} className="border-b border-slate-100">
+                          <td className="px-2 py-2 text-center text-slate-500">{idx + 1}</td>
+                          <td className="px-2 py-2 font-medium text-slate-700">{creditor?.creditorName || `채권자 ${idx + 1}`}</td>
+                          <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.capitalRepay + s.interestRepay > 0 ? Math.round(s.totalAmount / (s.ratio || 1)) : 0)}원</td>
+                          <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.monthlyAmount)}원</td>
+                          <td className="px-2 py-2 text-right font-medium text-slate-700">{formatMoney(s.totalAmount)}원</td>
+                          <td className="px-2 py-2 text-right text-green-700">{(s.ratio * 100).toFixed(2)}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-300 font-semibold">
+                      <td colSpan={3} className="px-2 py-2 text-slate-800">합계</td>
+                      <td className="px-2 py-2 text-right text-blue-700">
+                        {formatMoney(schedule.reduce((s, r) => s + r.monthlyAmount, 0))}원
+                      </td>
+                      <td className="px-2 py-2 text-right text-blue-700">
+                        {formatMoney(schedule.reduce((s, r) => s + r.totalAmount, 0))}원
+                      </td>
+                      <td className="px-2 py-2 text-right text-slate-600">100%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* 저장 버튼 (간이양식) */}
+          <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+            <button
+              type="button"
+              onClick={handleSavePlan}
+              disabled={isSaving}
+              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              aria-label="변제계획 저장"
+            >
+              {isSaving ? '저장 중...' : '변제계획 저장'}
+            </button>
+            <p className="mt-1 text-center text-xs text-slate-500">저장해야 문서 출력에 반영됩니다</p>
+          </div>
+        </div>
+      )}
+
+      {formMode === 'simple' && !repaymentResult && (
+        <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-400">
+          <p className="font-medium">간이양식을 표시하려면 변제계획 계산이 필요합니다</p>
+          <p className="mt-1 text-sm">정식양식에서 변제 옵션을 선택하고 저장해주세요</p>
+        </div>
+      )}
+
+      {/* 정식양식 — 변제 옵션 선택 */}
+      {formMode === 'standard' && <>
       {/* 변제 옵션 선택 */}
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="mb-3 text-base font-semibold text-slate-800">변제 옵션</h2>
@@ -492,6 +675,7 @@ export function RehabPlanTab({
           </div>
         </section>
       )}
+      </>}
     </div>
   );
 }

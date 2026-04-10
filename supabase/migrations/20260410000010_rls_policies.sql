@@ -86,6 +86,7 @@ ALTER TABLE public.rehabilitation_creditors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_family_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_income_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_plan_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rehabilitation_prohibition_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_property_deductions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_secured_properties ENABLE ROW LEVEL SECURITY;
@@ -170,6 +171,7 @@ ALTER TABLE public.rehabilitation_creditors FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_family_members FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_income_settings FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_plan_sections FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.rehabilitation_prohibition_orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_properties FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_property_deductions FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_secured_properties FORCE ROW LEVEL SECURITY;
@@ -2397,6 +2399,22 @@ CREATE POLICY rehab_affidavit_org_member ON public.rehabilitation_affidavits
 -- ────────────────────────────────────────────────────────────────────────────────
 
 CREATE POLICY rehab_plan_org_member ON public.rehabilitation_plan_sections
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING (
+    case_id IN (
+      SELECT c.id FROM public.cases c
+      JOIN public.organization_memberships om ON om.organization_id = c.organization_id
+      WHERE om.profile_id = auth.uid()
+    )
+  );
+
+-- ────────────────────────────────────────────────────────────────────────────────
+-- Table: rehabilitation_prohibition_orders
+-- ────────────────────────────────────────────────────────────────────────────────
+
+CREATE POLICY rehab_prohibition_org_member ON public.rehabilitation_prohibition_orders
   AS PERMISSIVE
   FOR ALL
   TO authenticated

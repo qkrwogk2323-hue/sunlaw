@@ -430,6 +430,50 @@ create table if not exists public.rehabilitation_plan_sections (
 -- NOTE: RLS → 010_rls_policies.sql
 
 -- ───────────────────────────────────────────────────────────────────────────
+-- D5114 금지명령 신청서
+-- 법 제593조①: 개인회생 개시신청 후 강제집행 금지 명령 신청
+-- ───────────────────────────────────────────────────────────────────────────
+create table if not exists public.rehabilitation_prohibition_orders (
+  id               uuid primary key default gen_random_uuid(),
+  case_id          uuid not null references public.cases(id) on delete cascade,
+  organization_id  uuid not null references public.organizations(id) on delete cascade,
+
+  -- 사건 정보
+  court_name       text,
+  -- 신청인(채무자)
+  applicant_name   text,
+  resident_number_front text,       -- 주민등록번호 앞 6자리만
+  registered_address    text,       -- 등록 기준지
+  current_address       text,       -- 현재 주소
+
+  -- 대리인
+  has_agent             boolean not null default false,
+  agent_type            text check (agent_type in ('법무사','변호사','기타')),
+  agent_name            text,
+  agent_phone           text,
+  agent_fax             text,
+  agent_address         text,
+  agent_law_firm        text,
+
+  -- 신청 내용
+  total_debt_amount     bigint not null default 0,
+  creditor_count        int not null default 0,
+  reason_detail         text,
+
+  -- 소명방법(첨부서류)
+  attachments           text[] not null default '{}',
+
+  application_date      date,
+
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+
+  constraint uq_rehab_prohibition_order unique (case_id)
+);
+
+-- NOTE: indexes → 011, RLS → 010
+
+-- ───────────────────────────────────────────────────────────────────────────
 -- D5100 갭 보강 — 기존 테이블 컬럼 추가만 (신규 테이블 없음)
 -- ───────────────────────────────────────────────────────────────────────────
 -- D5110 변제계획안 → rehabilitation_income_settings에 이미 존재
