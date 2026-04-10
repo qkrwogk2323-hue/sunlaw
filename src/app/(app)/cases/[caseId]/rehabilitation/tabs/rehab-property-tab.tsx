@@ -6,7 +6,7 @@ import { upsertRehabProperty, softDeleteRehabProperty, upsertRehabPropertyDeduct
 import { PROPERTY_CATEGORIES, calculateCategorySubtotal, calculateLiquidationValue, formatMoney, parseMoney, PROPERTY_DETAIL_SCHEMAS, validatePropertyDetail } from '@/lib/rehabilitation';
 import type { PropertyCategoryId, RehabPropertyItem } from '@/lib/rehabilitation';
 import type { PropertyCategoryKey } from '@/lib/rehabilitation/property-schemas';
-import { Plus, Trash2, Save, Package } from 'lucide-react';
+import { Plus, Trash2, Save, Package, ShieldCheck, FileText } from 'lucide-react';
 
 interface RehabPropertyTabProps {
   caseId: string;
@@ -353,6 +353,16 @@ export function RehabPropertyTab({
         </div>
       </section>
 
+      {/* D5108 비사건재산 (압류금지 재산 등) */}
+      <NonEstatePropertySection items={items} />
+
+      {/* D5109 면제재산 결정신청 */}
+      <ExemptPropertySection
+        items={items}
+        deductions={deductions}
+        totalLiquidation={totalLiquidation}
+      />
+
       {/* 저장 */}
       <div className="flex justify-end">
         <button
@@ -384,6 +394,131 @@ export function RehabPropertyTab({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── D5108 비사건재산 (압류금지재산 등) ───────────────────────────
+// 법 제580조③, 제383조①: 회생재단에 속하지 않는 재산
+// 현재 재산 목록에서 seizure='압류' 또는 is_protection=true인 항목을 뷰로 표시
+function NonEstatePropertySection({ items }: { items: PropertyRow[] }) {
+  const nonEstateItems = items.filter(i => i.seizure === '압류' || i.seizure === '가압류' || i.is_protection);
+
+  return (
+    <section className="rounded-lg border border-indigo-200 bg-indigo-50/30 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-indigo-600" />
+        <div>
+          <h2 className="text-base font-semibold text-indigo-800">비사건재산 (D5108)</h2>
+          <p className="text-xs text-indigo-600">압류금지재산 등 회생재단에서 제외되는 재산 목록</p>
+        </div>
+      </div>
+      {nonEstateItems.length === 0 ? (
+        <div className="py-8 text-center text-indigo-400">
+          <ShieldCheck className="mx-auto mb-2 h-6 w-6 opacity-40" />
+          <p className="text-sm">해당되는 항목이 없습니다</p>
+          <p className="mt-1 text-xs">재산 항목에서 압류/보호 설정 시 자동으로 표시됩니다</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-indigo-200 text-left">
+                <th className="px-2 py-1.5 text-xs font-medium text-indigo-600">순번</th>
+                <th className="px-2 py-1.5 text-xs font-medium text-indigo-600">재산 대상과 명칭</th>
+                <th className="px-2 py-1.5 text-xs font-medium text-indigo-600 text-right">추정가액</th>
+                <th className="px-2 py-1.5 text-xs font-medium text-indigo-600">압류/보호</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nonEstateItems.map((item, idx) => (
+                <tr key={item.id} className="border-b border-indigo-100">
+                  <td className="px-2 py-1.5 text-slate-500">{idx + 1}</td>
+                  <td className="px-2 py-1.5 text-slate-800">{item.detail || (item.structured_detail as Record<string, unknown>)?.description as string || '(미입력)'}</td>
+                  <td className="px-2 py-1.5 text-right text-slate-700">{formatMoney(item.amount)}원</td>
+                  <td className="px-2 py-1.5">
+                    {item.seizure && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{item.seizure}</span>}
+                    {item.is_protection && <span className="ml-1 rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">보호</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-indigo-200">
+                <td colSpan={2} className="px-2 py-1.5 text-xs font-semibold text-indigo-700">합계 ({nonEstateItems.length}건)</td>
+                <td className="px-2 py-1.5 text-right font-semibold text-indigo-800">{formatMoney(nonEstateItems.reduce((s, i) => s + i.amount, 0))}원</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── D5109 면제재산 결정신청 ─────────────────────────────────────
+// 법 제383조②: 주거용 임차보증금 또는 6개월 생계비용 재산 면제
+function ExemptPropertySection({
+  items,
+  deductions,
+  totalLiquidation,
+}: {
+  items: PropertyRow[];
+  deductions: Record<string, number>;
+  totalLiquidation: number;
+}) {
+  const exemptItems = items.filter(i => i.is_protection);
+  const totalDeduction = Object.values(deductions).reduce((s, v) => s + v, 0);
+  const netLiquidation = totalLiquidation - totalDeduction;
+
+  return (
+    <section className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <FileText className="h-5 w-5 text-emerald-600" />
+        <div>
+          <h2 className="text-base font-semibold text-emerald-800">면제재산 결정신청 (D5109)</h2>
+          <p className="text-xs text-emerald-600">주거용 임차보증금 또는 6개월 생계비 재산의 면제 신청</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="rounded-md border border-emerald-200 bg-white p-3 text-center">
+          <p className="text-xs text-emerald-600">재산 합계</p>
+          <p className="mt-1 text-lg font-bold text-emerald-800">{formatMoney(totalLiquidation)}원</p>
+        </div>
+        <div className="rounded-md border border-emerald-200 bg-white p-3 text-center">
+          <p className="text-xs text-emerald-600">면제재산 결정신청 금액</p>
+          <p className="mt-1 text-lg font-bold text-emerald-800">{formatMoney(totalDeduction)}원</p>
+        </div>
+        <div className="rounded-md border border-emerald-200 bg-white p-3 text-center">
+          <p className="text-xs text-emerald-600">청산가치 (합계 - 면제)</p>
+          <p className={`mt-1 text-lg font-bold ${netLiquidation >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
+            {formatMoney(netLiquidation)}원
+          </p>
+        </div>
+      </div>
+
+      {exemptItems.length > 0 && (
+        <div className="mt-3">
+          <h3 className="mb-2 text-sm font-medium text-emerald-700">면제 대상 재산</h3>
+          <div className="space-y-1">
+            {exemptItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded bg-white px-3 py-2 text-sm">
+                <span className="text-slate-700">{item.detail || '(미입력)'}</span>
+                <span className="font-medium text-emerald-700">{formatMoney(item.amount)}원</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {exemptItems.length === 0 && totalDeduction === 0 && (
+        <div className="mt-3 py-4 text-center text-emerald-400">
+          <p className="text-sm">면제 신청 대상이 없습니다</p>
+          <p className="mt-1 text-xs">재산 항목에서 '보호' 체크 또는 공제액을 입력하면 면제 대상으로 포함됩니다</p>
+        </div>
+      )}
+    </section>
   );
 }
 
