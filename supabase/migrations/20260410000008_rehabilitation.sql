@@ -240,7 +240,8 @@ create table if not exists public.rehabilitation_properties (
   case_id          uuid not null references public.cases(id) on delete cascade,
 
   category         text not null,  -- D5101: 부동산/동산/예금/보험/차량/임차보증금/퇴직금/기타
-  detail           text,
+  detail           text,                            -- 레거시: 비정형 텍스트 (마이그레이션 기간 유지)
+  structured_detail jsonb default '{}',             -- D5101: 카테고리별 구조화 데이터 (Zod 검증)
   amount           bigint not null default 0,      -- D5101: 평가액 (현재가액)
   seizure          text not null default '무',
   repay_use        text not null default '무',
@@ -343,6 +344,10 @@ create table if not exists public.rehabilitation_income_settings (
   living_cost_rate     numeric(5,2) not null default 100,  -- 0089/0095: default 100
   period_setting       smallint not null default 6         -- 0090: 1-6 rule
                        check (period_setting between 1 and 6),
+
+  -- D5103 수입/지출 항목별 breakdown (법원 양식 명목별 출력용, Zod 검증)
+  income_breakdown     jsonb default '[]',          -- [{명목, 기간구분, 금액, 연간환산, 압류유무}]
+  expense_breakdown    jsonb default '[]',          -- [{비목, 금액, 추가사유}]
 
   -- D5110 변제계획안 필드 (income_settings가 겸임)
   repayment_method     text not null default '매월'
