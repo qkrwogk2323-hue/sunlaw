@@ -1,0 +1,8392 @@
+{
+  "1": {
+    "n": "1",
+    "applicant": "김한경",
+    "jumin_last4": "2319",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 23835499,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)바리움홀딩스대부",
+        "capital": 3761389,
+        "interest": 214855,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "현대카드(주)",
+        "capital": 4352306,
+        "interest": 458571,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)우리카드",
+        "capital": 1540958,
+        "interest": 6274,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "주식회사 광주은행",
+        "capital": 5500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드(주)",
+        "capital": 2619700,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "중소기업은행",
+        "capital": 4449875,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 5687436,
+        "interest": 711020,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "와이앤케이파트너스대부(주)",
+        "capital": 1648074,
+        "interest": 93333,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 53395237,
+      "total_interest": 1484053,
+      "secured_capital": 0
+    }
+  },
+  "2": {
+    "n": "2",
+    "applicant": "임경애",
+    "jumin_last4": "0310",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "인천세무서",
+        "capital": 57299520,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "연수세무서",
+        "capital": 2646860,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "수협은행 본점영업본부",
+        "capital": 193396000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "수협은행 본점영업본부",
+        "capital": 2500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "주식회사 국민은행",
+        "capital": 3952000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)케이비국민카드",
+        "capital": 4500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "롯데카드(주)",
+        "capital": 5500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "삼성카드(주)",
+        "capital": 2500000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 5,
+    "properties_raw": 5,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 8,
+      "total_capital": 272294380,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "3": {
+    "n": "3",
+    "applicant": "대인원",
+    "jumin_last4": "9512",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "㈜하나은행",
+        "capital": 180529287,
+        "interest": 253806,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)케이비국민카드",
+        "capital": 9026510,
+        "interest": 564917,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성카드(주)",
+        "capital": 55640407,
+        "interest": 2763715,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "신한카드(주)",
+        "capital": 7817650,
+        "interest": 365415,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "하나카드(주)",
+        "capital": 21533260,
+        "interest": 1181341,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "롯데카드(주)",
+        "capital": 10535224,
+        "interest": 205911,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "중소기업은행",
+        "capital": 1400000,
+        "interest": 940,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)신한은행",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)신한은행",
+        "capital": 9583318,
+        "interest": 33660,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)신한은행",
+        "capital": 4444432,
+        "interest": 33655,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 20,
+    "properties_raw": 20,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 10,
+      "total_capital": 330510088,
+      "total_interest": 5403360,
+      "secured_capital": 0
+    }
+  },
+  "4": {
+    "n": "4",
+    "applicant": "김미영",
+    "jumin_last4": "1223",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "남인천농협 신연수지점",
+        "capital": 145000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "한광철",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "이지수",
+        "capital": 170000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "홍성훈",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "이병숙",
+        "capital": 150000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "이필순",
+        "capital": 185000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "조형자",
+        "capital": 220000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "김지태",
+        "capital": 55000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "신한카드(주)",
+        "capital": 7305611,
+        "interest": 463617,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "롯데캐피탈(주)",
+        "capital": 2444000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)한국씨티은행",
+        "capital": 3109626,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)오케이저축은행",
+        "capital": 1128455,
+        "interest": 11742,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "현대카드(주)",
+        "capital": 5875187,
+        "interest": 365542,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 2,
+    "properties_raw": 2,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 13,
+      "total_capital": 1004862879,
+      "total_interest": 840901,
+      "secured_capital": 0
+    }
+  },
+  "5": {
+    "n": "5",
+    "applicant": "전재성",
+    "jumin_last4": "8110",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "재단법인 한국장학재단",
+        "capital": 914733,
+        "interest": 8626,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "재단법인 한국장학재단",
+        "capital": 590000,
+        "interest": 13821,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "재단법인 한국장학재단",
+        "capital": 1500000,
+        "interest": 35140,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "재단법인 한국장학재단",
+        "capital": 1500000,
+        "interest": 35140,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)부산은행 ",
+        "capital": 8981452,
+        "interest": 79338,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)부산은행 ",
+        "capital": 5395565,
+        "interest": 26431,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "㈜하나은행",
+        "capital": 8699276,
+        "interest": 68244,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)아이엠뱅크",
+        "capital": 16783298,
+        "interest": 164387,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)하나저축은행",
+        "capital": 733335,
+        "interest": 44542,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)한국투자저축은행",
+        "capital": 9581937,
+        "interest": 186254,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)케이비국민카드",
+        "capital": 7746167,
+        "interest": 83339,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 8,
+    "properties_raw": 8,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 62425763,
+      "total_interest": 745262,
+      "secured_capital": 0
+    }
+  },
+  "6": {
+    "n": "6",
+    "applicant": "천성근",
+    "jumin_last4": "4012",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 인천남동지사",
+        "capital": 386130,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)케이비국민카드",
+        "capital": 715315,
+        "interest": 74270,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)우리카드",
+        "capital": 800990,
+        "interest": 102125,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "신한카드(주)",
+        "capital": 921007,
+        "interest": 84994,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)바리움홀딩스대부",
+        "capital": 903251,
+        "interest": 121359,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "현대카드(주)",
+        "capital": 864303,
+        "interest": 64021,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "비케이자산관리대부(주)",
+        "capital": 5201180,
+        "interest": 623450,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "롯데캐피탈(주)",
+        "capital": 7851058,
+        "interest": 408080,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "서민금융진흥원",
+        "capital": 8717502,
+        "interest": 693528,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "서민금융진흥원",
+        "capital": 2845264,
+        "interest": 228837,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)국민행복기금",
+        "capital": 11216619,
+        "interest": 248645,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)국민행복기금",
+        "capital": 3320863,
+        "interest": 73152,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "와이앤케이파트너스대부(주)",
+        "capital": 1399061,
+        "interest": 166258,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "남인천농협",
+        "capital": 1320000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "와이앤케이파트너스대부(주)",
+        "capital": 939170,
+        "interest": 177864,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "삼성카드(주)",
+        "capital": 495059,
+        "interest": 38548,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 22,
+    "properties_raw": 22,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 16,
+      "total_capital": 47896772,
+      "total_interest": 3105131,
+      "secured_capital": 0
+    }
+  },
+  "7": {
+    "n": "7",
+    "applicant": "박영림",
+    "jumin_last4": "5815",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "수협은행 본점영업본부",
+        "capital": 94800000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "에프더블유이오공육유동화전문 유한회사",
+        "capital": 220000000,
+        "interest": 8148386,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "농협은행 주식회사",
+        "capital": 32322000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "농협은행 주식회사",
+        "capital": 291204,
+        "interest": 46643,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "삼성카드(주)",
+        "capital": 516000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드(주)",
+        "capital": 2220000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 25000000,
+        "interest": 2044818,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 1025766,
+        "interest": 92885,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "현대카드(주)",
+        "capital": 3929833,
+        "interest": 690208,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "신한카드(주)",
+        "capital": 935520,
+        "interest": 3854,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)우리카드",
+        "capital": 846525,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)우리카드",
+        "capital": 10000000,
+        "interest": 153095,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "수협은행 본점영업본부",
+        "capital": 1520583,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 4,
+    "properties_raw": 4,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 13,
+      "total_capital": 393407431,
+      "total_interest": 11179889,
+      "secured_capital": 0
+    }
+  },
+  "8": {
+    "n": "8",
+    "applicant": "최덕준",
+    "jumin_last4": "7718",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "인천광역시 연수구",
+        "capital": 3144200,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)엘지유플러스",
+        "capital": 974580,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성카드(주)",
+        "capital": 1492816,
+        "interest": 512448,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)케이비국민카드",
+        "capital": 4996995,
+        "interest": 1662339,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "애플자산관리대부 주식회사",
+        "capital": 569167,
+        "interest": 441592,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)카카오뱅크",
+        "capital": 3688276,
+        "interest": 1036474,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)한국투자저축은행",
+        "capital": 0,
+        "interest": 2429149,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)아이엠뱅크",
+        "capital": 985902,
+        "interest": 348263,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "서민금융진흥원",
+        "capital": 500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "서민금융진흥원",
+        "capital": 500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "서민금융진흥원",
+        "capital": 6479033,
+        "interest": 807468,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "서민금융진흥원",
+        "capital": 9099584,
+        "interest": 1057498,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "서민금융진흥원",
+        "capital": 3174867,
+        "interest": 367828,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "(주)베리타스자산대부",
+        "capital": 18915593,
+        "interest": 6127859,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "유니애대부(유)",
+        "capital": 17514168,
+        "interest": 5878551,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "근로복지공단 경인지역본부  ",
+        "capital": 2000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "씨에스씨2506유동화전문(유)",
+        "capital": 7426349,
+        "interest": 2688701,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 24,
+    "properties_raw": 24,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 17,
+      "total_capital": 81461530,
+      "total_interest": 23358170,
+      "secured_capital": 0
+    }
+  },
+  "9": {
+    "n": "9",
+    "applicant": "서난명",
+    "jumin_last4": "8112",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "삼성카드(주)",
+        "capital": 4463251,
+        "interest": 65358,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "와이앤케이파트너스대부 (주)",
+        "capital": 806014,
+        "interest": 24625,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "와이앤케이파트너스대부 (주)",
+        "capital": 8930299,
+        "interest": 232288,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)바리움홀딩스대부",
+        "capital": 17963387,
+        "interest": 945514,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)바로크레디트대부",
+        "capital": 2758405,
+        "interest": 55861,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "써니캐피탈대부(주)",
+        "capital": 3000000,
+        "interest": 70589,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "경기도교육청",
+        "capital": 101256520,
+        "interest": 104641223,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 21,
+    "properties_raw": 21,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 7,
+      "total_capital": 139177876,
+      "total_interest": 106035458,
+      "secured_capital": 0
+    }
+  },
+  "10": {
+    "n": "10",
+    "applicant": "주경애",
+    "jumin_last4": "5711",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "연수세무서",
+        "capital": 36163960,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "서남해수어류양식수산업협동조합",
+        "capital": 572000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 20573610,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "제이티친애저축은행(주)",
+        "capital": 76902227,
+        "interest": 2756733,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)베리타스자산대부",
+        "capital": 49838732,
+        "interest": 4191653,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)하나저축은행",
+        "capital": 3686092,
+        "interest": 102259,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "주경미",
+        "capital": 160000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "주광돈",
+        "capital": 111230000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "김경남",
+        "capital": 64000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 42,
+    "properties_raw": 42,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 1094394621,
+      "total_interest": 7050645,
+      "secured_capital": 0
+    }
+  },
+  "11": {
+    "n": "11",
+    "applicant": "신주영",
+    "jumin_last4": "2312",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 송파지사",
+        "capital": 2005470,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단 송파지사",
+        "capital": 2922810,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "송파세무서",
+        "capital": 13862970,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "삼성카드(주)",
+        "capital": 1291713,
+        "interest": 1351356,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "엠메이드대부유한회사",
+        "capital": 44171,
+        "interest": 54417,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "한국에셋채권대부(주)",
+        "capital": 11998417,
+        "interest": 13570522,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "오케이에프앤아이대부(주)",
+        "capital": 13768472,
+        "interest": 13652145,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 16621105,
+        "interest": 16583267,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)안전대부",
+        "capital": 5790997,
+        "interest": 6334687,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "서울신용보증재단 ",
+        "capital": 1312394,
+        "interest": 666721,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)강엔터프라이즈코리아대부",
+        "capital": 9874226,
+        "interest": 945845,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)인더스코대부",
+        "capital": 3242086,
+        "interest": 463662,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "엠에스아이대부(주)",
+        "capital": 1995559,
+        "interest": 52461,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 29,
+    "properties_raw": 29,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 13,
+      "total_capital": 84730390,
+      "total_interest": 53675083,
+      "secured_capital": 0
+    }
+  },
+  "12": {
+    "n": "12",
+    "applicant": "이옥주",
+    "jumin_last4": "1012",
+    "creditors": [],
+    "properties_n": 1,
+    "properties_raw": 1,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 0,
+      "total_capital": 0,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "13": {
+    "n": "13",
+    "applicant": "계승일",
+    "jumin_last4": "4910",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "동안산세무서",
+        "capital": 2313700,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "안산세무서",
+        "capital": 6577040,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단 안산지사",
+        "capital": 964920,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "삼성카드(주)",
+        "capital": 6508819,
+        "interest": 7120228,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신한카드(주)",
+        "capital": 1027671,
+        "interest": 1156271,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)우리카드",
+        "capital": 8247214,
+        "interest": 7906800,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)케이아이코아즈대부",
+        "capital": 5916236,
+        "interest": 6972759,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "엠메이드대부유한회사",
+        "capital": 4246382,
+        "interest": 4972149,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "동양자산관리대부(주)",
+        "capital": 109772977,
+        "interest": 73632161,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "동양자산관리대부(주)",
+        "capital": 6980087,
+        "interest": 7610262,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 9774806,
+        "interest": 13947851,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "에스앤아이캐피탈대부(주)",
+        "capital": 38587796,
+        "interest": 37572382,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "(주)제니스자산관리대부",
+        "capital": 4158269,
+        "interest": 5583156,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "서울보증보험(주)",
+        "capital": 39744391,
+        "interest": 18952363,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "서울보증보험(주)",
+        "capital": 11671853,
+        "interest": 5620076,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "서울보증보험(주)",
+        "capital": 72444,
+        "interest": 10336,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "서울보증보험(주)",
+        "capital": 155130,
+        "interest": 18050,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "한국도로공사",
+        "capital": 561120,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 1,
+    "properties_raw": 1,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 18,
+      "total_capital": 257280855,
+      "total_interest": 191074844,
+      "secured_capital": 0
+    }
+  },
+  "14": {
+    "n": "14",
+    "applicant": "이옥주",
+    "jumin_last4": "1012",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "삼성화재해상보험(주)",
+        "capital": 255627971,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)신한은행",
+        "capital": 891203,
+        "interest": 76580,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한은행",
+        "capital": 1020000,
+        "interest": 71551,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)신한은행",
+        "capital": 305555,
+        "interest": 22874,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신용보증기금  ",
+        "capital": 5830456,
+        "interest": 410208,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "신용보증기금  ",
+        "capital": 16672731,
+        "interest": 1173106,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "경기신용보증재단",
+        "capital": 9695105,
+        "interest": 524863,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "경기신용보증재단",
+        "capital": 8449398,
+        "interest": 457424,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "경기신용보증재단",
+        "capital": 18417163,
+        "interest": 601529,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)국민은행",
+        "capital": 0,
+        "interest": 193671,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)카카오뱅크",
+        "capital": 35600000,
+        "interest": 3651349,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 9444460,
+        "interest": 339770,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "(주)케이비국민카드",
+        "capital": 10161879,
+        "interest": 1892813,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "(주)케이비국민카드",
+        "capital": 3000000,
+        "interest": 503080,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "(주)베리타스자산대부",
+        "capital": 11571030,
+        "interest": 1666617,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "현대카드(주)",
+        "capital": 7780737,
+        "interest": 1342030,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "신한카드(주)",
+        "capital": 31214767,
+        "interest": 5484011,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "신한카드(주)",
+        "capital": 22936939,
+        "interest": 2143391,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "한국주택금융공사",
+        "capital": 9257998,
+        "interest": 290238,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 19,
+      "total_capital": 457877392,
+      "total_interest": 20845105,
+      "secured_capital": 0
+    }
+  },
+  "15": {
+    "n": "15",
+    "applicant": "이진호",
+    "jumin_last4": "1235",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "안산시",
+        "capital": 155600,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "인천광역시 서구",
+        "capital": 96560,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "인천광역시 서구",
+        "capital": 859610,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "인천광역시 서구",
+        "capital": 788790,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "연천군",
+        "capital": 69460,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드 주식회사",
+        "capital": 3067465,
+        "interest": 2141904,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "신한카드(주)",
+        "capital": 5360306,
+        "interest": 3532926,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "씨에스씨2506유동화전문(유)",
+        "capital": 880900,
+        "interest": 700125,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "하나카드 주식회사",
+        "capital": 6303262,
+        "interest": 4539022,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)오케이저축은행",
+        "capital": 2813325,
+        "interest": 2163528,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "중소벤처기업진흥공단",
+        "capital": 45430886,
+        "interest": 9451903,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "인천신용보증재단",
+        "capital": 50525740,
+        "interest": 11627219,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 24,
+    "properties_raw": 24,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 12,
+      "total_capital": 116351904,
+      "total_interest": 34156627,
+      "secured_capital": 0
+    }
+  },
+  "16": {
+    "n": "16",
+    "applicant": "김동주",
+    "jumin_last4": "7413",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대캐피탈(주)",
+        "capital": 26707354,
+        "interest": 511538,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "현대캐피탈(주)",
+        "capital": 16425545,
+        "interest": 323822,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "현대캐피탈(주)",
+        "capital": 6917304,
+        "interest": 139532,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "현대카드(주)",
+        "capital": 1304908,
+        "interest": 20118,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "수협은행",
+        "capital": 3000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)우리카드",
+        "capital": 21608554,
+        "interest": 334236,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)카카오뱅크",
+        "capital": 3000000,
+        "interest": 14952,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)신한은행",
+        "capital": 6600000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)신한은행",
+        "capital": 699205,
+        "interest": 478,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 8,
+    "properties_raw": 8,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 86262870,
+      "total_interest": 1344676,
+      "secured_capital": 0
+    }
+  },
+  "17": {
+    "n": "17",
+    "applicant": "전원오",
+    "jumin_last4": "5129",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)아이엠뱅크",
+        "capital": 7700000,
+        "interest": 29618,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)하나저축은행",
+        "capital": 649990,
+        "interest": 32368,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "케이씨2506유동화전문(유)",
+        "capital": 24971601,
+        "interest": 1496161,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "엔에이치농협캐피탈(주)",
+        "capital": 15178000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드(주)",
+        "capital": 1240240,
+        "interest": 28837,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 4,
+    "properties_raw": 4,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 6,
+      "total_capital": 49739831,
+      "total_interest": 1586984,
+      "secured_capital": 0
+    }
+  },
+  "18": {
+    "n": "18",
+    "applicant": "안찬희",
+    "jumin_last4": "5514",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 인천남동지사",
+        "capital": 6043920,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단 인천남동지사",
+        "capital": 5930740,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단 인천남동지사",
+        "capital": 813700,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "국민건강보험공단 인천남동지사",
+        "capital": 367340,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신한카드(주)",
+        "capital": 10491800,
+        "interest": 54617,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드(주)",
+        "capital": 11965228,
+        "interest": 40281,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "롯데카드(주)",
+        "capital": 2316876,
+        "interest": 7395,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)신한은행",
+        "capital": 10919042,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)신한은행",
+        "capital": 5208325,
+        "interest": 23016,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "중소기업은행",
+        "capital": 30000000,
+        "interest": 67302,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "중소기업은행",
+        "capital": 594406,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "중소기업은행",
+        "capital": 1313700,
+        "interest": 20584,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 6111250,
+        "interest": 11571,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "현대카드(주)",
+        "capital": 1550580,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "㈜하나은행",
+        "capital": 65000000,
+        "interest": 263153,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 19117679,
+        "interest": 1494574,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "(주)서일테크",
+        "capital": 54300000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "박지영(제일레이져)",
+        "capital": 95000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "손동섭(해송테크)",
+        "capital": 51831000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "나동진(롤텍)",
+        "capital": 9000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "주식회사 탑스텍",
+        "capital": 45000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "김영훈(신성이엔지)",
+        "capital": 53000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "(주)신진에스엠 남인천지점",
+        "capital": 9000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 24,
+        "name": "강신곤(명성바퀴종합상사)",
+        "capital": 42200000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 25,
+        "name": "주식회사 이시스템",
+        "capital": 52000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 26,
+        "name": "안석희",
+        "capital": 50000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 27,
+        "name": "조성봉",
+        "capital": 37700000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 9,
+    "properties_raw": 9,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 27,
+      "total_capital": 676775586,
+      "total_interest": 1982493,
+      "secured_capital": 0
+    }
+  },
+  "19": {
+    "n": "19",
+    "applicant": "한주희",
+    "jumin_last4": "8218",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대카드(주)",
+        "capital": 2555340,
+        "interest": 82674,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "신한카드(주)",
+        "capital": 7885900,
+        "interest": 229737,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "와이앤케이파트너스대부 (주)",
+        "capital": 4995886,
+        "interest": 149882,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "에스에이치에이2508유동화전문(유)",
+        "capital": 11988106,
+        "interest": 775329,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "삼성카드(주)",
+        "capital": 7119521,
+        "interest": 185891,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "남면 새마을금고",
+        "capital": 182179900,
+        "interest": 2785410,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "남면 새마을금고",
+        "capital": 20000000,
+        "interest": 217340,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)우리카드",
+        "capital": 9020089,
+        "interest": 174882,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "에스케이미소금융재단",
+        "capital": 17870440,
+        "interest": 130325,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "농협은행 주식회사",
+        "capital": 0,
+        "interest": 5685,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "(주)신한은행",
+        "capital": 850000,
+        "interest": 43671,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "(주)신한은행",
+        "capital": 404760,
+        "interest": 64314,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 43,
+    "properties_raw": 43,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 15,
+      "total_capital": 264869942,
+      "total_interest": 4845140,
+      "secured_capital": 0
+    }
+  },
+  "20": {
+    "n": "20",
+    "applicant": "임재룡",
+    "jumin_last4": "7011",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "서인천세무서",
+        "capital": 8583680,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "안산세무서",
+        "capital": 21408220,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단",
+        "capital": 1492820,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "남동농협",
+        "capital": 380000000,
+        "interest": 3671960,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "농협손해보험(주)",
+        "capital": 92203426,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "농협손해보험(주)",
+        "capital": 540000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "에프비에스비2509유동화전문 유한회사",
+        "capital": 49492401,
+        "interest": 1874457,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "농협은행주식회사",
+        "capital": 29320000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)우리카드",
+        "capital": 1850000,
+        "interest": 31321,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "신한카드(주)",
+        "capital": 897134,
+        "interest": 21380,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)한국씨티은행",
+        "capital": 3936632,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "주식회사 우리은행",
+        "capital": 9583318,
+        "interest": 34786,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "주식회사 더온",
+        "capital": 7089490,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "비엠더블유파이낸셜서비스코리아(주)",
+        "capital": 11790176,
+        "interest": 19381,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "주식회사 서북",
+        "capital": 38207576,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 27,
+    "properties_raw": 27,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 15,
+      "total_capital": 1195854873,
+      "total_interest": 5653285,
+      "secured_capital": 0
+    }
+  },
+  "21": {
+    "n": "21",
+    "applicant": "김창수",
+    "jumin_last4": "9431",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 인천중부지사",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단 인천중부지사",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한은행",
+        "capital": 3129900,
+        "interest": 3536350,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "삼성카드(주)",
+        "capital": 1600000,
+        "interest": 3311514,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "동양자산관리대부(주)",
+        "capital": 1375815,
+        "interest": 6409486,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "동양자산관리대부(주)",
+        "capital": 4620284,
+        "interest": 12700159,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "오케이캐피탈(주)",
+        "capital": 3862303,
+        "interest": 12805704,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)대한채권관리대부",
+        "capital": 12632595,
+        "interest": 41118934,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "희망1자산대부관리(유)",
+        "capital": 1930400,
+        "interest": 3417601,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 10,
+    "properties_raw": 10,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 29151297,
+      "total_interest": 83299748,
+      "secured_capital": 0
+    }
+  },
+  "22": {
+    "n": "22",
+    "applicant": "이성규",
+    "jumin_last4": "0517",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "오윤아",
+        "capital": 23000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "삼성화재해상보험(주)",
+        "capital": 238825740,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성화재해상보험(주)",
+        "capital": 58125000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "주식회사 아이엠캐피탈",
+        "capital": 41035839,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 9093850,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "현대카드(주)",
+        "capital": 12308432,
+        "interest": 1085668,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "현대카드 주식회사",
+        "capital": 2938412,
+        "interest": 48728,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "중소기업은행",
+        "capital": 4800000,
+        "interest": 23058,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "중소기업은행",
+        "capital": 20000000,
+        "interest": 52602,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "중소기업은행",
+        "capital": 1685965,
+        "interest": 85,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)케이비국민카드",
+        "capital": 19900000,
+        "interest": 145133,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)케이비국민카드",
+        "capital": 10483706,
+        "interest": 166724,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "하나카드(주)",
+        "capital": 11235766,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "(주)제주은행",
+        "capital": 2927948,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "토스뱅크(주)",
+        "capital": 48000000,
+        "interest": 534987,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "농협은행주식회사",
+        "capital": 16020000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "농협은행주식회사",
+        "capital": 9993308,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "삼성카드(주)",
+        "capital": 7538423,
+        "interest": 39238,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 21,
+    "properties_raw": 21,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 18,
+      "total_capital": 537912389,
+      "total_interest": 2096223,
+      "secured_capital": 0
+    }
+  },
+  "23": {
+    "n": "23",
+    "applicant": "김기홍",
+    "jumin_last4": "0815",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "보령수협 ",
+        "capital": 1197900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "보령수협 ",
+        "capital": 801880,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "보령수협 ",
+        "capital": 7220275,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "이도경",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "최은정",
+        "capital": 8900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "장정민",
+        "capital": 26500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "장석훈",
+        "capital": 22000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "김태현",
+        "capital": 25500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "이채린",
+        "capital": 19900000,
+        "interest": 5112998,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "김준한",
+        "capital": 38000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "천지원",
+        "capital": 14460000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "황귀순",
+        "capital": 33000000,
+        "interest": 5958986,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "최우석",
+        "capital": 7000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "김현봉",
+        "capital": 31200000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "현대엘리베이터주식회사",
+        "capital": 584000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "탱커대부금융주식회사",
+        "capital": 86204661,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "(주)엔씨파이낸스대부",
+        "capital": 41000000,
+        "interest": 15186848,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "제이씨엔피엘대부주식회사",
+        "capital": 5000000,
+        "interest": 5000000,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "손병직",
+        "capital": 14900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "이은진",
+        "capital": 43000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "유호균",
+        "capital": 19500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "정홍주",
+        "capital": 4000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "곽다은",
+        "capital": 38000000,
+        "interest": 5500000,
+        "is_secured": false
+      },
+      {
+        "idx": 24,
+        "name": "강태훈",
+        "capital": 46000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 51,
+    "properties_raw": 51,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 24,
+      "total_capital": 1760570816,
+      "total_interest": 36758832,
+      "secured_capital": 0
+    }
+  },
+  "24": {
+    "n": "24",
+    "applicant": "노정현",
+    "jumin_last4": "8615",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "인천세무서",
+        "capital": 8019850,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단",
+        "capital": 4387500,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "한국전력공사",
+        "capital": 5761340,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "삼성카드 주식회사",
+        "capital": 10808988,
+        "interest": 3499941,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)국민은행 여신관리센터",
+        "capital": 0,
+        "interest": 17671,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "롯데오토리스(주)",
+        "capital": 91629096,
+        "interest": 7677848,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "신한카드(주)",
+        "capital": 15706341,
+        "interest": 4259726,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "신한카드(주)",
+        "capital": 12202068,
+        "interest": 2421072,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)케이비국민카드",
+        "capital": 8941295,
+        "interest": 3331567,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)케이비국민카드  ",
+        "capital": 3000000,
+        "interest": 1008016,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)케이비국민카드",
+        "capital": 12231,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "주식회사 신한은행",
+        "capital": 7496283,
+        "interest": 964698,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "메리츠캐피탈(주)",
+        "capital": 8993,
+        "interest": 27,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "인천신용보증재단",
+        "capital": 3305517,
+        "interest": 371774,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "우리금융캐피탈(주)",
+        "capital": 50359581,
+        "interest": 6784271,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 18,
+    "properties_raw": 18,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 15,
+      "total_capital": 221639083,
+      "total_interest": 30336611,
+      "secured_capital": 0
+    }
+  },
+  "25": {
+    "n": "25",
+    "applicant": "전민규",
+    "jumin_last4": "3011",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "양천세무서",
+        "capital": 651260,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단",
+        "capital": 1582070,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단",
+        "capital": 1818560,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "경기도 파주시청",
+        "capital": 197330,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "인천광역시 미추홀구청",
+        "capital": 830950,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "메리츠캐피탈(주)",
+        "capital": 27542000,
+        "interest": 486000,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "우리금융캐피탈(주)",
+        "capital": 29470819,
+        "interest": 3020469,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)엘지유플러스",
+        "capital": 1900000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 14,
+    "properties_raw": 14,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 8,
+      "total_capital": 63992989,
+      "total_interest": 3506469,
+      "secured_capital": 0
+    }
+  },
+  "26": {
+    "n": "26",
+    "applicant": "조두성",
+    "jumin_last4": "",
+    "creditors": [],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 0,
+      "total_capital": 0,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "27": {
+    "n": "27",
+    "applicant": "조두성",
+    "jumin_last4": "8611",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "하나캐피탈㈜",
+        "capital": 46500000,
+        "interest": 882862,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)오케이저축은행",
+        "capital": 36642426,
+        "interest": 538295,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "주식회사 국민은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드(주)",
+        "capital": 2627688,
+        "interest": 3866,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)바리움홀딩스대부",
+        "capital": 3298693,
+        "interest": 1460170,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 14,
+    "properties_raw": 14,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 7,
+      "total_capital": 89068807,
+      "total_interest": 2885193,
+      "secured_capital": 0
+    }
+  },
+  "28": {
+    "n": "28",
+    "applicant": "안희수",
+    "jumin_last4": "1011",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "신한카드(주)",
+        "capital": 7569200,
+        "interest": 95421,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "신한라이프생명보험(주)",
+        "capital": 15000000,
+        "interest": 162379,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성카드(주)",
+        "capital": 22884182,
+        "interest": 353361,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "중소기업은행",
+        "capital": 25000000,
+        "interest": 68842,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "중소기업은행",
+        "capital": 4600000,
+        "interest": 19787,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "중소기업은행",
+        "capital": 15000000,
+        "interest": 81748,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "교보생명보험(주)",
+        "capital": 4500000,
+        "interest": 57028,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "비케이자산관리대부(주)",
+        "capital": 2511400,
+        "interest": 187332,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "에스에이치에이2508유동화전문(유)",
+        "capital": 2585710,
+        "interest": 117412,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "신성순",
+        "capital": 12926800,
+        "interest": 7428356,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "엘지전자(주)",
+        "capital": 4208300,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 14,
+    "properties_raw": 14,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 116785592,
+      "total_interest": 8571666,
+      "secured_capital": 0
+    }
+  },
+  "29": {
+    "n": "29",
+    "applicant": "정길찬",
+    "jumin_last4": "8829",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)엘지유플러스",
+        "capital": 901964,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 9044306,
+        "interest": 17458281,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 6755956,
+        "interest": 11196663,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 3987782,
+        "interest": 4705237,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 509268,
+        "interest": 947129,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "오케이에프앤아이대부(주)",
+        "capital": 19997023,
+        "interest": 23410939,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "서민금융진흥원",
+        "capital": 4186478,
+        "interest": 5031281,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "서울보증보험(주)",
+        "capital": 180409,
+        "interest": 132751,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "서울보증보험(주)",
+        "capital": 164693,
+        "interest": 121167,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 8,
+    "properties_raw": 8,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 45727879,
+      "total_interest": 63003448,
+      "secured_capital": 0
+    }
+  },
+  "30": {
+    "n": "30",
+    "applicant": "이향화",
+    "jumin_last4": "3513",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대카드(주)",
+        "capital": 125440,
+        "interest": 385,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "삼성카드(주)",
+        "capital": 631300,
+        "interest": 4318,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "비케이자산관리대부(주)",
+        "capital": 10507489,
+        "interest": 476360,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "비케이자산관리대부(주)",
+        "capital": 4861112,
+        "interest": 23333,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)바리움홀딩스대부",
+        "capital": 17441068,
+        "interest": 839416,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "하나카드(주)",
+        "capital": 12429460,
+        "interest": 66003,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "케이비캐피탈㈜",
+        "capital": 2113985,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "케이비캐피탈㈜",
+        "capital": 3545480,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)케이비국민카드",
+        "capital": 900,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 15,
+    "properties_raw": 15,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 51656234,
+      "total_interest": 1409815,
+      "secured_capital": 0
+    }
+  },
+  "31": {
+    "n": "31",
+    "applicant": "정희록",
+    "jumin_last4": "2010",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 인천남동지사",
+        "capital": 1948660,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "손불농협",
+        "capital": 57486510,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)케이비국민카드",
+        "capital": 4273191,
+        "interest": 433222,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "신한카드(주)",
+        "capital": 6736618,
+        "interest": 647488,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신한카드(주)",
+        "capital": 7835266,
+        "interest": 814447,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "현대카드(주)",
+        "capital": 1500690,
+        "interest": 130474,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "삼성카드(주)",
+        "capital": 5303580,
+        "interest": 600353,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)한국씨티은행",
+        "capital": 1635000,
+        "interest": 87396,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)한국씨티은행",
+        "capital": 9330000,
+        "interest": 896263,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)한국씨티은행",
+        "capital": 891097,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "인천신용보증재단",
+        "capital": 9534693,
+        "interest": 127938,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "인천신용보증재단",
+        "capital": 1723815,
+        "interest": 22738,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "에스에이치에이2508유동화전문(유)",
+        "capital": 10225870,
+        "interest": 605213,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 66111120,
+        "interest": 510400,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "부천시흥원예농협 은계지점",
+        "capital": 2432472,
+        "interest": 211509,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "㈜하나은행",
+        "capital": 125002,
+        "interest": 23587,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "하나카드(주)",
+        "capital": 1599355,
+        "interest": 183427,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "중소기업은행",
+        "capital": 2861981,
+        "interest": 276611,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "중소기업은행",
+        "capital": 344762,
+        "interest": 21077,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "(주)베리타스자산대부",
+        "capital": 10764171,
+        "interest": 816616,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "신용보증기금 인천재기지원단",
+        "capital": 2422611,
+        "interest": 49381,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "신용보증기금 인천재기지원단",
+        "capital": 54191195,
+        "interest": 1078208,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "(주)네오스톤",
+        "capital": 6930500,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 24,
+        "name": "(주)케믹스산업",
+        "capital": 8571950,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 25,
+        "name": "(주)나일산업개발",
+        "capital": 165797769,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 26,
+        "name": "서울보증보험(주)",
+        "capital": 4000000,
+        "interest": 29580,
+        "is_secured": false
+      },
+      {
+        "idx": 27,
+        "name": "김희중",
+        "capital": 20000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 27,
+      "total_capital": 464577878,
+      "total_interest": 7565928,
+      "secured_capital": 0
+    }
+  },
+  "32": {
+    "n": "32",
+    "applicant": "오호성",
+    "jumin_last4": "2815",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "케이비캐피탈㈜",
+        "capital": 8403171,
+        "interest": 79848,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "삼성카드(주)",
+        "capital": 1362998,
+        "interest": 19049,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "㈜하나은행",
+        "capital": 13901905,
+        "interest": 63963,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "하나카드(주)",
+        "capital": 144700,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "비케이자산관리대부(주)",
+        "capital": 868864,
+        "interest": 44952,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "현대카드(주)",
+        "capital": 1162600,
+        "interest": 39777,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)우리카드",
+        "capital": 858200,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "롯데카드(주)",
+        "capital": 9003547,
+        "interest": 134311,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)베리타스자산대부",
+        "capital": 8174831,
+        "interest": 580677,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)베리타스자산대부",
+        "capital": 30559524,
+        "interest": 385148,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)케이비저축은행",
+        "capital": 7466688,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "신한카드(주)",
+        "capital": 2092794,
+        "interest": 33336,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "중소기업은행",
+        "capital": 650000,
+        "interest": 80727,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 2,
+    "properties_raw": 2,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 13,
+      "total_capital": 84649822,
+      "total_interest": 1461788,
+      "secured_capital": 0
+    }
+  },
+  "33": {
+    "n": "33",
+    "applicant": "김기홍",
+    "jumin_last4": "0815",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "보령수협",
+        "capital": 1197900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "보령수협",
+        "capital": 801880,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "보령수협",
+        "capital": 7220275,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "최은정",
+        "capital": 8900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "김현봉",
+        "capital": 31200000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "이도경",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "이채린",
+        "capital": 19900000,
+        "interest": 5112998,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "천지원",
+        "capital": 14460000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "김태현",
+        "capital": 25500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "황귀순",
+        "capital": 33000000,
+        "interest": 5958986,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "장석훈",
+        "capital": 22000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "최우석",
+        "capital": 7000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "장정민",
+        "capital": 26500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "김준한",
+        "capital": 38000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "손병직",
+        "capital": 14900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "이은진",
+        "capital": 43000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "유호균",
+        "capital": 19500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "현대엘리베이터주식회사",
+        "capital": 584000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "정홍주",
+        "capital": 4000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "(주)엔씨파이낸스대부 ",
+        "capital": 41000000,
+        "interest": 15186848,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "탱커대부금융주식회사",
+        "capital": 86204661,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "곽다은",
+        "capital": 38000000,
+        "interest": 5500000,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "강태훈",
+        "capital": 46000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 32,
+    "properties_raw": 32,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 23,
+      "total_capital": 1755570816,
+      "total_interest": 31758832,
+      "secured_capital": 0
+    }
+  },
+  "34": {
+    "n": "34",
+    "applicant": "장은성",
+    "jumin_last4": "8811",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)우리카드",
+        "capital": 5099558,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "웰컴저축은행(주) ",
+        "capital": 30746113,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "신한카드(주)",
+        "capital": 47802534,
+        "interest": 555556,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "와이앤케이파트너스대부 (주)",
+        "capital": 786667,
+        "interest": 16796,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "중소기업은행",
+        "capital": 4846662,
+        "interest": 507376,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 13,
+    "properties_raw": 13,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 89281534,
+      "total_interest": 1079728,
+      "secured_capital": 0
+    }
+  },
+  "35": {
+    "n": "35",
+    "applicant": "신정희",
+    "jumin_last4": "7010",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "삼성카드(주)",
+        "capital": 19505313,
+        "interest": 487807,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "현대카드(주)",
+        "capital": 15826600,
+        "interest": 2808158,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "중소기업은행",
+        "capital": 1801552,
+        "interest": 3822,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "중소기업은행",
+        "capital": 666664,
+        "interest": 440,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "중소기업은행",
+        "capital": 2300000,
+        "interest": 8629,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "신한카드(주)",
+        "capital": 10941504,
+        "interest": 148546,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 21,
+    "properties_raw": 21,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 6,
+      "total_capital": 51041633,
+      "total_interest": 3457402,
+      "secured_capital": 0
+    }
+  },
+  "36": {
+    "n": "36",
+    "applicant": "윤자호",
+    "jumin_last4": "4011",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "서인천세무서",
+        "capital": 7497870,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "주식회사 국민은행",
+        "capital": 35000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "주식회사 국민은행",
+        "capital": 35833000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)케이비국민카드",
+        "capital": 10472000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신한카드(주)",
+        "capital": 500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "손원길",
+        "capital": 40000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "이양원",
+        "capital": 20000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "노주원",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 8,
+      "total_capital": 179302870,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "37": {
+    "n": "37",
+    "applicant": "이성운",
+    "jumin_last4": "9123",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "신한카드(주)",
+        "capital": 7328185,
+        "interest": 3471082,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 38115249,
+        "interest": 22595048,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)에이치비캐피탈",
+        "capital": 41714788,
+        "interest": 27405879,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "진영자산관리대부 유한회사",
+        "capital": 45648339,
+        "interest": 25427711,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 7,
+    "properties_raw": 7,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 132806561,
+      "total_interest": 78899720,
+      "secured_capital": 0
+    }
+  },
+  "38": {
+    "n": "38",
+    "applicant": "신인자",
+    "jumin_last4": "7017",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "우리금융캐피탈(주)",
+        "capital": 6899345,
+        "interest": 5387,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "롯데카드(주)",
+        "capital": 20443061,
+        "interest": 245160,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한저축은행",
+        "capital": 2250000,
+        "interest": 14221,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "엔에이치카드디지털회원관리점",
+        "capital": 13938610,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "농협은행 주식회사",
+        "capital": 592296,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 23,
+    "properties_raw": 23,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 44123312,
+      "total_interest": 264768,
+      "secured_capital": 0
+    }
+  },
+  "39": {
+    "n": "39",
+    "applicant": "정현희",
+    "jumin_last4": "2624",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "근해안만강수협",
+        "capital": 54384339,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "근해안만강수협",
+        "capital": 631420,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "농업협동조합자산관리회사",
+        "capital": 0,
+        "interest": 148301523,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "해남군수산업협동조합",
+        "capital": 53567507,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 2,
+    "properties_raw": 2,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 108583266,
+      "total_interest": 148301523,
+      "secured_capital": 0
+    }
+  },
+  "40": {
+    "n": "40",
+    "applicant": "장주철",
+    "jumin_last4": "3829",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "파주세무서",
+        "capital": 41853540,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단 파주지사",
+        "capital": 5991020,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단 파주지사",
+        "capital": 43930,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)에이원알폼",
+        "capital": 163416360,
+        "interest": 468268128,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "한국자산관리공사",
+        "capital": 272834,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "한국자산관리공사",
+        "capital": 14259191,
+        "interest": 35087924,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "신한카드(주)",
+        "capital": 2084544,
+        "interest": 4975710,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "신한카드(주)",
+        "capital": 17633054,
+        "interest": 49015273,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 15,
+    "properties_raw": 15,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 8,
+      "total_capital": 245554473,
+      "total_interest": 557347035,
+      "secured_capital": 0
+    }
+  },
+  "41": {
+    "n": "41",
+    "applicant": "이정미",
+    "jumin_last4": "2115",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "신한카드(주)",
+        "capital": 6427430,
+        "interest": 568337,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "신한카드(주)",
+        "capital": 98443530,
+        "interest": 6064612,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "케이비캐피탈(주)",
+        "capital": 6480492,
+        "interest": 106508171,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "메르세데스벤츠파이낸셜서비스코리아주식회사",
+        "capital": 4781350,
+        "interest": 167123,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "이제민",
+        "capital": 19788170,
+        "interest": 1932192,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 8,
+    "properties_raw": 8,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 135920972,
+      "total_interest": 115240435,
+      "secured_capital": 0
+    }
+  },
+  "42": {
+    "n": "42",
+    "applicant": "김태민",
+    "jumin_last4": "3111",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "성동세무서",
+        "capital": 11267020,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "서인천세무서",
+        "capital": 10235060,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "서인천세무서",
+        "capital": 900270,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)카카오뱅크",
+        "capital": 2920516,
+        "interest": 152784,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)케이비국민카드",
+        "capital": 7487145,
+        "interest": 95998,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)케이비국민카드",
+        "capital": 7067707,
+        "interest": 71771,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)케이비국민카드",
+        "capital": 3639289,
+        "interest": 38232,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)케이비국민카드",
+        "capital": 767774,
+        "interest": 176306,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "서울보증보험(주)",
+        "capital": 354448,
+        "interest": 45812,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "신한라이프생명보험주식회사",
+        "capital": 17489353,
+        "interest": 2245650,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "오케이에프앤아이대부(주)",
+        "capital": 4375230,
+        "interest": 348751,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "현대캐피탈(주)",
+        "capital": 15976498,
+        "interest": 1815290,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "(주)삼성라코스안전 대표이사 박형순",
+        "capital": 42000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "(주)협동안전 대표이사 김은정",
+        "capital": 7500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "이은경 (반석스틸)",
+        "capital": 32360000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "박정남",
+        "capital": 41500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "박경노",
+        "capital": 26000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 877349,
+        "interest": 50225,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 2083980,
+        "interest": 149008,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 20,
+    "properties_raw": 20,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 19,
+      "total_capital": 234801639,
+      "total_interest": 5189827,
+      "secured_capital": 0
+    }
+  },
+  "43": {
+    "n": "43",
+    "applicant": "서동재",
+    "jumin_last4": "1613",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "서울보증재단 노원지점",
+        "capital": 13706949,
+        "interest": 16844551,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "유니애대부(유)",
+        "capital": 2499800,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "희망모아유동화전문(유) 자산관리자 ",
+        "capital": 10955908,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "동양자산관리대부(주)",
+        "capital": 7231398,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 34394055,
+      "total_interest": 16844551,
+      "secured_capital": 0
+    }
+  },
+  "44": {
+    "n": "44",
+    "applicant": "이재균",
+    "jumin_last4": "4018",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대카드(주)",
+        "capital": 1896449,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "농협은행 주식회사",
+        "capital": 7024719,
+        "interest": 24708,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)하나은행",
+        "capital": 2777795,
+        "interest": 12521,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)하나은행",
+        "capital": 1944467,
+        "interest": 3799,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)하나은행",
+        "capital": 4583342,
+        "interest": 12182,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)하나은행",
+        "capital": 5416674,
+        "interest": 18158,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)하나은행",
+        "capital": 25000000,
+        "interest": 206578,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 3611290,
+        "interest": 4452,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 1847260,
+        "interest": 1634,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 638990,
+        "interest": 367,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 26666680,
+        "interest": 53048,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "신한카드(주)",
+        "capital": 10221721,
+        "interest": 55357,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "엠메이드대부(유)",
+        "capital": 7913052,
+        "interest": 488327,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "주식회사 우리은행",
+        "capital": 4709000,
+        "interest": 16991,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "주식회사 우리은행",
+        "capital": 20000000,
+        "interest": 123544,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "(주)케이비국민카드",
+        "capital": 4392173,
+        "interest": 58721,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "형산새마을금고",
+        "capital": 20000000,
+        "interest": 13500,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "주식회사 국민은행",
+        "capital": 20000000,
+        "interest": 111084,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "삼성카드(주)",
+        "capital": 1609178,
+        "interest": 17767,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "하나카드(주)",
+        "capital": 7000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "(주)대구은행",
+        "capital": 10000000,
+        "interest": 9950,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 22,
+    "properties_raw": 22,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 21,
+      "total_capital": 187252790,
+      "total_interest": 1232688,
+      "secured_capital": 0
+    }
+  },
+  "45": {
+    "n": "45",
+    "applicant": "김란희",
+    "jumin_last4": "4627",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "하나카드(주)",
+        "capital": 2140895,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "롯데카드(주)",
+        "capital": 1192830,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)케이비국민카드",
+        "capital": 5000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 11155000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "현대카드(주)",
+        "capital": 1019079,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성카드(주)",
+        "capital": 960000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)다올저축은행",
+        "capital": 15462000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)우리금융저축은행",
+        "capital": 1339259,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)엘지헬로비전",
+        "capital": 3459300,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)교원프라퍼티",
+        "capital": 1467800,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "서민금융진흥원",
+        "capital": 907000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 28,
+    "properties_raw": 28,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 44103163,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "46": {
+    "n": "46",
+    "applicant": "이재훈",
+    "jumin_last4": "6311",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "㈜하나은행",
+        "capital": 31297428,
+        "interest": 74123723,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "㈜하나은행",
+        "capital": 127751094,
+        "interest": 210434699,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "㈜하나은행",
+        "capital": 0,
+        "interest": 489,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "고은요양병원",
+        "capital": 2500000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 161548522,
+      "total_interest": 284558911,
+      "secured_capital": 0
+    }
+  },
+  "47": {
+    "n": "47",
+    "applicant": "전철홍",
+    "jumin_last4": "5515",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "서대문세무서",
+        "capital": 35650410,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "서인천세무서",
+        "capital": 29386200,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "인천광역시청",
+        "capital": 2764270,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "인천광역시 서구청",
+        "capital": 407160,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "국민건강보험공단 인천부평지사",
+        "capital": 5718260,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "국민건강보험공단 인천부평지사",
+        "capital": 1240340,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)국민행복기금",
+        "capital": 49085627,
+        "interest": 302764,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 7,
+      "total_capital": 124252267,
+      "total_interest": 302764,
+      "secured_capital": 0
+    }
+  },
+  "48": {
+    "n": "48",
+    "applicant": "강미정",
+    "jumin_last4": "5417",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)상상인저축은행",
+        "capital": 2511896,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)상상인저축은행",
+        "capital": 2792132,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성카드(주)",
+        "capital": 628420,
+        "interest": 1623,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)카카오뱅크",
+        "capital": 1699201,
+        "interest": 14050,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "비엔케이캐피탈 주식회사",
+        "capital": 12516633,
+        "interest": 127854,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)케이비저축은행",
+        "capital": 8250000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "토스뱅크(주)",
+        "capital": 363359,
+        "interest": 36096,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "토스뱅크(주)",
+        "capital": 1300000,
+        "interest": 109888,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "토스뱅크(주)",
+        "capital": 12020000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)케이비국민카드",
+        "capital": 919050,
+        "interest": 1471,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)신한저축은행",
+        "capital": 1250242,
+        "interest": 9536,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 5,
+    "properties_raw": 5,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 44250933,
+      "total_interest": 300518,
+      "secured_capital": 0
+    }
+  },
+  "49": {
+    "n": "49",
+    "applicant": "장다운",
+    "jumin_last4": "0523",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)케이비국민카드",
+        "capital": 12549443,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)케이비국민카드",
+        "capital": 9548456,
+        "interest": 22104,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)우리카드",
+        "capital": 7640253,
+        "interest": 7640253,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "㈜하나은행",
+        "capital": 2674037,
+        "interest": 3144,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신한카드(주)",
+        "capital": 770200,
+        "interest": 6707,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 36741607,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)전북은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "서울보증보험(주)",
+        "capital": 3472577,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "주식회사 메타리치",
+        "capital": 3472577,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "굿리치(주)",
+        "capital": 10000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 6,
+    "properties_raw": 6,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 10,
+      "total_capital": 86869150,
+      "total_interest": 7672208,
+      "secured_capital": 0
+    }
+  },
+  "50": {
+    "n": "50",
+    "applicant": "김희정",
+    "jumin_last4": "8618",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대카드(주)",
+        "capital": 22652029,
+        "interest": 4931655,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "삼성카드(주)",
+        "capital": 4131593,
+        "interest": 33028,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)오케이저축은행",
+        "capital": 4337021,
+        "interest": 30878,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "농협은행 주식회사",
+        "capital": 8118599,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "남인천농협 백운지점",
+        "capital": 2140240,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 2,
+    "properties_raw": 2,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 41379482,
+      "total_interest": 4995561,
+      "secured_capital": 0
+    }
+  },
+  "51": {
+    "n": "51",
+    "applicant": "정유미",
+    "jumin_last4": "0014",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "비엔케이캐피탈 주식회사",
+        "capital": 32035000,
+        "interest": 15289856,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "중소기업은행",
+        "capital": 260706,
+        "interest": 77097,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "코웨이(주)",
+        "capital": 1333170,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "외환베리타스제1차대부(유)",
+        "capital": 32854332,
+        "interest": 2663061,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 737687,
+        "interest": 101742,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)우리카드",
+        "capital": 2100000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "서민금융진흥원",
+        "capital": 6521430,
+        "interest": 1318085,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "비케이(주)",
+        "capital": 5296790,
+        "interest": 196639,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 28,
+    "properties_raw": 28,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 8,
+      "total_capital": 81139115,
+      "total_interest": 19646480,
+      "secured_capital": 0
+    }
+  },
+  "52": {
+    "n": "52",
+    "applicant": "박혜영",
+    "jumin_last4": "8711",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)케이비국민카드",
+        "capital": 8983196,
+        "interest": 57545,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "삼성카드(주)",
+        "capital": 2115170,
+        "interest": 313,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "롯데카드(주)",
+        "capital": 605173,
+        "interest": 2065,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "현대카드(주)",
+        "capital": 8262381,
+        "interest": 70371,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "농협은행 주식회사",
+        "capital": 2910349,
+        "interest": 32044,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "농협은행 주식회사",
+        "capital": 9500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)신한은행",
+        "capital": 27000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "신한카드(주)",
+        "capital": 17436255,
+        "interest": 141966,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "삼성생명보험(주)",
+        "capital": 13750000,
+        "interest": 81799,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "인천가좌시장상인회",
+        "capital": 7506600,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 23,
+    "properties_raw": 23,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 10,
+      "total_capital": 98069124,
+      "total_interest": 386103,
+      "secured_capital": 0
+    }
+  },
+  "53": {
+    "n": "53",
+    "applicant": "이다빈",
+    "jumin_last4": "4111",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 강서지사",
+        "capital": 207380,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단 강서지사",
+        "capital": 1578760,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단 강서지사",
+        "capital": 24045010,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 14026305,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "하나카드(주)",
+        "capital": 9992313,
+        "interest": 3167827,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "현대카드(주)",
+        "capital": 2797660,
+        "interest": 851098,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "현대캐피탈(주)",
+        "capital": 9837141,
+        "interest": 672409,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "롯데캐피탈(주)",
+        "capital": 2226133,
+        "interest": 606950,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)에스비아이저축은행",
+        "capital": 2782411,
+        "interest": 57833,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)오케이저축은행",
+        "capital": 5000000,
+        "interest": 150004,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)케이비국민카드",
+        "capital": 1228684,
+        "interest": 379941,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "토스뱅크(주)",
+        "capital": 0,
+        "interest": 909305,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "한국주택금융공사",
+        "capital": 100461736,
+        "interest": 5765025,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "법무법인(유한)강",
+        "capital": 10000000,
+        "interest": 2341363,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 9,
+    "properties_raw": 9,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 14,
+      "total_capital": 184183533,
+      "total_interest": 14901755,
+      "secured_capital": 0
+    }
+  },
+  "54": {
+    "n": "54",
+    "applicant": "박장수",
+    "jumin_last4": "5418",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대캐피탈(주)",
+        "capital": 1668859,
+        "interest": 9638,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "웰컴저축은행(주) ",
+        "capital": 3425364,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "현대카드(주)",
+        "capital": 4056353,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)카카오뱅크",
+        "capital": 22500000,
+        "interest": 51366,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)카카오뱅크",
+        "capital": 20000000,
+        "interest": 133724,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)카카오뱅크",
+        "capital": 10000000,
+        "interest": 60269,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "하나캐피탈(주)",
+        "capital": 20304000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)에잇퍼센트",
+        "capital": 753000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "엔에이치저축은행(주)",
+        "capital": 2266000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)한국스탠다드차타드은행",
+        "capital": 54701000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 2,
+    "properties_raw": 2,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 10,
+      "total_capital": 139674576,
+      "total_interest": 254997,
+      "secured_capital": 0
+    }
+  },
+  "55": {
+    "n": "55",
+    "applicant": "유원경",
+    "jumin_last4": "8810",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "삼성카드㈜",
+        "capital": 33553002,
+        "interest": 330373,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "신한카드㈜",
+        "capital": 5053521,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "롯데카드㈜",
+        "capital": 21736720,
+        "interest": 25044,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "하나카드㈜",
+        "capital": 2961744,
+        "interest": 11251,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "신용보증기금",
+        "capital": 103386066,
+        "interest": 22155545,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 8,
+    "properties_raw": 8,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 166691053,
+      "total_interest": 22522213,
+      "secured_capital": 0
+    }
+  },
+  "56": {
+    "n": "56",
+    "applicant": "김도경",
+    "jumin_last4": "4336",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "한화생명보험(주)",
+        "capital": 40000000,
+        "interest": 897171,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "엔에이치농협캐피탈(주)",
+        "capital": 17629000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "신한카드㈜",
+        "capital": 966163,
+        "interest": 10821,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "우리카드㈜",
+        "capital": 827822,
+        "interest": 6776,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 14,
+    "properties_raw": 14,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 59422985,
+      "total_interest": 914768,
+      "secured_capital": 0
+    }
+  },
+  "57": {
+    "n": "57",
+    "applicant": "김성민",
+    "jumin_last4": "5124",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단",
+        "capital": 544160,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단",
+        "capital": 115230,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "국민건강보험공단",
+        "capital": 42720,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "농협자산관리회사",
+        "capital": 3409002,
+        "interest": 6266566,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)한빛자산관리대부  ",
+        "capital": 4818813,
+        "interest": 17505901,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)제니스자산관리대부",
+        "capital": 3016254,
+        "interest": 10017775,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)제니스자산관리대부",
+        "capital": 9772900,
+        "interest": 34847055,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)모두론대부",
+        "capital": 2893050,
+        "interest": 8839919,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "엠메이드대부(유)",
+        "capital": 1555143,
+        "interest": 1651683,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 7,
+    "properties_raw": 7,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 26167272,
+      "total_interest": 79128899,
+      "secured_capital": 0
+    }
+  },
+  "58": {
+    "n": "58",
+    "applicant": "이호선",
+    "jumin_last4": "7313",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)우리은행",
+        "capital": 9510000,
+        "interest": 1387269,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "중소기업은행",
+        "capital": 6399851,
+        "interest": 41642,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주) 키움예스저축은행",
+        "capital": 41407337,
+        "interest": 7536979,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "비엔케이캐피탈㈜",
+        "capital": 35643503,
+        "interest": 4945220,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 7,
+    "properties_raw": 7,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 92960691,
+      "total_interest": 13911110,
+      "secured_capital": 0
+    }
+  },
+  "59": {
+    "n": "59",
+    "applicant": "김태연",
+    "jumin_last4": "9217",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단 인천서부지사",
+        "capital": 2963940,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "롯데캐피탈㈜",
+        "capital": 42330730,
+        "interest": 8717390,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 12311893,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)오케이저축은행",
+        "capital": 39000000,
+        "interest": 6455321,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "삼성카드㈜",
+        "capital": 2395304,
+        "interest": 465747,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 8,
+    "properties_raw": 8,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 99001867,
+      "total_interest": 15638458,
+      "secured_capital": 0
+    }
+  },
+  "60": {
+    "n": "60",
+    "applicant": "노남희",
+    "jumin_last4": "4218",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "㈜더블저축은행",
+        "capital": 63014135,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)신한은행",
+        "capital": 31540000,
+        "interest": 1635128,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한은행",
+        "capital": 10000000,
+        "interest": 504711,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)신한은행",
+        "capital": 0,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "삼성화재해상보험㈜",
+        "capital": 3000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "중소기업은행",
+        "capital": 16650000,
+        "interest": 46978,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)카카오뱅크",
+        "capital": 9998869,
+        "interest": 2630,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "삼성카드㈜",
+        "capital": 17007828,
+        "interest": 188917,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "㈜케이비국민카드",
+        "capital": 9492544,
+        "interest": 130889,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "하나카드㈜",
+        "capital": 4995866,
+        "interest": 38384,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "신한카드㈜",
+        "capital": 9684216,
+        "interest": 105081,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "롯데카드㈜",
+        "capital": 11626314,
+        "interest": 151199,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "신한카드㈜",
+        "capital": 3886906,
+        "interest": 24482,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "중소기업은행",
+        "capital": 4981170,
+        "interest": 89350,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 24,
+    "properties_raw": 24,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 16,
+      "total_capital": 225877848,
+      "total_interest": 2917749,
+      "secured_capital": 0
+    }
+  },
+  "61": {
+    "n": "61",
+    "applicant": "전진경",
+    "jumin_last4": "1029",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "주식회사 KB국민카드",
+        "capital": 20173000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "롯데카드(주)",
+        "capital": 40211825,
+        "interest": 1582174,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성화재해상보험㈜",
+        "capital": 2333336,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "신한카드㈜",
+        "capital": 1775422,
+        "interest": 15009,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 15,
+    "properties_raw": 15,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 64493583,
+      "total_interest": 1597183,
+      "secured_capital": 0
+    }
+  },
+  "62": {
+    "n": "62",
+    "applicant": "문연자",
+    "jumin_last4": "3412",
+    "creditors": [],
+    "properties_n": 16,
+    "properties_raw": 16,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 0,
+      "total_capital": 0,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "63": {
+    "n": "63",
+    "applicant": "송애리",
+    "jumin_last4": "8919",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "남인천농업협동조합",
+        "capital": 25421324,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "엄기영",
+        "capital": 30000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "한국자산관리공사",
+        "capital": 18069414,
+        "interest": 77608941,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "상록수제일차유동화전문(유)",
+        "capital": 18986327,
+        "interest": 81311093,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 14,
+    "properties_raw": 14,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 92477065,
+      "total_interest": 158920034,
+      "secured_capital": 0
+    }
+  },
+  "64": {
+    "n": "64",
+    "applicant": "이재현",
+    "jumin_last4": "9918",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "㈜신한저축은행",
+        "capital": 4500000,
+        "interest": 803040,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "토스뱅크 주식회사",
+        "capital": 500000,
+        "interest": 28425,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)케이뱅크",
+        "capital": 117000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)하나은행",
+        "capital": 4720000,
+        "interest": 59301,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)경남은행",
+        "capital": 14000000,
+        "interest": 163312,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)스마트저축은행",
+        "capital": 22771304,
+        "interest": 601066,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)케이비국민카드",
+        "capital": 15183925,
+        "interest": 888388,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "에스케이텔레콤(주)",
+        "capital": 361908,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "에스케이텔레콤(주)",
+        "capital": 858912,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 7,
+    "properties_raw": 7,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 179896049,
+      "total_interest": 2543532,
+      "secured_capital": 0
+    }
+  },
+  "65": {
+    "n": "65",
+    "applicant": "계승일",
+    "jumin_last4": "4910",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "안산세무서",
+        "capital": 6925840,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단",
+        "capital": 267520,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "경기도 안산시 상록구",
+        "capital": 540810,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "엠메이드대부(유)",
+        "capital": 4338523,
+        "interest": 4972149,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "엠메이드대부(유)",
+        "capital": 1219005,
+        "interest": 882238,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "동양자산관리대부 (주)",
+        "capital": 6985404,
+        "interest": 9034903,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "동양자산관리대부 (주)",
+        "capital": 109772977,
+        "interest": 87633723,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "희망1자산대부관리(유)",
+        "capital": 9744806,
+        "interest": 14583744,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)제니스자산관리대부",
+        "capital": 4158269,
+        "interest": 6674019,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "서울보증보험 주식회사",
+        "capital": 39744391,
+        "interest": 22970993,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "서울보증보험 주식회사",
+        "capital": 11671853,
+        "interest": 6841956,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "서울보증보험 주식회사",
+        "capital": 155130,
+        "interest": 18050,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "서울보증보험 주식회사",
+        "capital": 72444,
+        "interest": 10336,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "삼성카드㈜",
+        "capital": 6508819,
+        "interest": 8439032,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "신한카드㈜",
+        "capital": 1029321,
+        "interest": 1374677,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "(주)우리카드",
+        "capital": 8247214,
+        "interest": 9404865,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "한국도로공사직장새마을금고",
+        "capital": 866470,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "(주)케이아이코아즈대부",
+        "capital": 5916236,
+        "interest": 8531039,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "(주)케이아이코아즈대부",
+        "capital": 38587796,
+        "interest": 46595052,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 21,
+    "properties_raw": 21,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 19,
+      "total_capital": 256752828,
+      "total_interest": 227966776,
+      "secured_capital": 0
+    }
+  },
+  "66": {
+    "n": "66",
+    "applicant": "임경애",
+    "jumin_last4": "0310",
+    "creditors": [],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 0,
+      "total_capital": 0,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "67": {
+    "n": "67",
+    "applicant": "이광수",
+    "jumin_last4": "0022",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "양산세무서",
+        "capital": 23763840,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단",
+        "capital": 981320,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "경상남도 양산시",
+        "capital": 409960,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "경상남도 양산시",
+        "capital": 2584550,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)케이아이코아즈대부",
+        "capital": 820000,
+        "interest": 4474083,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)제니스자산관리대부",
+        "capital": 78299726,
+        "interest": 80976846,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "해진에셋대부(유)",
+        "capital": 1680883,
+        "interest": 431331,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "오케이에프앤아이대부(주)",
+        "capital": 3946629,
+        "interest": 6068309,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "경남신용보증재단",
+        "capital": 496170,
+        "interest": 374926,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "경남신용보증재단",
+        "capital": 8167283,
+        "interest": 4589343,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "엠메이드대부(유)",
+        "capital": 5863918,
+        "interest": 4032281,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "삼성카드㈜",
+        "capital": 3055379,
+        "interest": 3761422,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "(주)엘지헬로비전",
+        "capital": 775900,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 17,
+    "properties_raw": 17,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 13,
+      "total_capital": 130845558,
+      "total_interest": 104708541,
+      "secured_capital": 0
+    }
+  },
+  "68": {
+    "n": "68",
+    "applicant": "박복희",
+    "jumin_last4": "",
+    "creditors": [],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 0,
+      "total_capital": 0,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "69": {
+    "n": "69",
+    "applicant": "현연수",
+    "jumin_last4": "6215",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "서인천세무서",
+        "capital": 8051930,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "서인천세무서",
+        "capital": 10859050,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "서인천세무서",
+        "capital": 104620,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "서인천세무서",
+        "capital": 35232530,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "황진희",
+        "capital": 13097260,
+        "interest": 2175178,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "강승모",
+        "capital": 3267400,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "이엠플러스(주)",
+        "capital": 7811190,
+        "interest": 661530,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "남보현",
+        "capital": 20767500,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)국민은행 ",
+        "capital": 1416669,
+        "interest": 974018,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)국민은행 ",
+        "capital": 2500002,
+        "interest": 1688560,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)하나은행",
+        "capital": 4144832,
+        "interest": 3102934,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "오현성",
+        "capital": 130000000,
+        "interest": 20087671,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "인천신용보증재단",
+        "capital": 14755527,
+        "interest": 5174491,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "인천신용보증재단",
+        "capital": 48877956,
+        "interest": 18156243,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "미소금융 인천서구법인",
+        "capital": 10637201,
+        "interest": 4798861,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 549000,
+        "interest": 66623,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "비엠더블류파이낸셜서비스코리아(주)",
+        "capital": 28746104,
+        "interest": 37328992,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "(주)한국미용데이터",
+        "capital": 3665620,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "(주)국민행복기금",
+        "capital": 6942873,
+        "interest": 5995960,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "(주)국민행복기금",
+        "capital": 2914479,
+        "interest": 2516983,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "전종백",
+        "capital": 18066900,
+        "interest": 1794279,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "이정희",
+        "capital": 34000000,
+        "interest": 1000000,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "김웅현",
+        "capital": 1866392,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 24,
+        "name": "정지덕",
+        "capital": 25000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 25,
+        "name": "이성범",
+        "capital": 5384900,
+        "interest": 1142123,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 36,
+    "properties_raw": 36,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 25,
+      "total_capital": 438659935,
+      "total_interest": 106664446,
+      "secured_capital": 0
+    }
+  },
+  "70": {
+    "n": "70",
+    "applicant": "김한경",
+    "jumin_last4": "2319",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "인천세무서",
+        "capital": 7067290,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 23835499,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)바리움홀딩스대부",
+        "capital": 3761389,
+        "interest": 214855,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "웰릭스에프앤아이대부(주)",
+        "capital": 5687436,
+        "interest": 1144411,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "와이앤케이파트너스대부 (주)",
+        "capital": 1648074,
+        "interest": 168376,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "중소기업은행",
+        "capital": 4384084,
+        "interest": 888741,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "현대카드 주식회사",
+        "capital": 4352306,
+        "interest": 547402,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)우리카드",
+        "capital": 1541258,
+        "interest": 215792,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "삼성카드㈜",
+        "capital": 2575220,
+        "interest": 476766,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "에스에이치비2509유동화전문(유)",
+        "capital": 7991960,
+        "interest": 893625,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 10,
+      "total_capital": 62844516,
+      "total_interest": 4549968,
+      "secured_capital": 0
+    }
+  },
+  "71": {
+    "n": "71",
+    "applicant": "박훈아",
+    "jumin_last4": "3714",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단",
+        "capital": 1587580,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "국민건강보험공단",
+        "capital": 2537690,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "인천광역시 연수구청",
+        "capital": 281400,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)하나은행",
+        "capital": 2885522,
+        "interest": 436727,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "㈜케이비저축은행",
+        "capital": 90000,
+        "interest": 22128,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)아이엠뱅크",
+        "capital": 1388875,
+        "interest": 247545,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 9734947,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)케이비국민카드",
+        "capital": 933631,
+        "interest": 230484,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "씨에스씨2512유동화전문(유)",
+        "capital": 14200000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 33639645,
+      "total_interest": 936884,
+      "secured_capital": 0
+    }
+  },
+  "72": {
+    "n": "72",
+    "applicant": "이평주",
+    "jumin_last4": "7218",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "비케이자산관리대부(주)",
+        "capital": 26124169,
+        "interest": 18022416,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "모아저축은행㈜",
+        "capital": 223345,
+        "interest": 33414,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)제니스자산관리대부",
+        "capital": 11351521,
+        "interest": 11227816,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)신한은행",
+        "capital": 2592252,
+        "interest": 241147,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "비콜랙트대부(주)",
+        "capital": 4376885,
+        "interest": 2515002,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)하나은행",
+        "capital": 2723056,
+        "interest": 222843,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "서민금융진흥원",
+        "capital": 1997154,
+        "interest": 59818,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)엘지유플러스",
+        "capital": 2204420,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "서울보증보험 주식회사",
+        "capital": 1232280,
+        "interest": 1010,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "신한카드㈜",
+        "capital": 840087,
+        "interest": 62078,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 10,
+      "total_capital": 53665169,
+      "total_interest": 32385544,
+      "secured_capital": 0
+    }
+  },
+  "73": {
+    "n": "73",
+    "applicant": "조병수",
+    "jumin_last4": "3522",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "신한카드㈜",
+        "capital": 6486524,
+        "interest": 86615,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)신한은행",
+        "capital": 1250000,
+        "interest": 15245,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "현대캐피탈㈜",
+        "capital": 5708695,
+        "interest": 75158,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "롯데카드(주)",
+        "capital": 10000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "삼성카드㈜",
+        "capital": 29258153,
+        "interest": 362638,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)케이비국민카드",
+        "capital": 1770329,
+        "interest": 19075,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)케이비국민카드",
+        "capital": 3000000,
+        "interest": 156862,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "현대커머셜(주)",
+        "capital": 56586836,
+        "interest": 992713,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)바디프랜드",
+        "capital": 2000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 1,
+    "properties_raw": 1,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 116060537,
+      "total_interest": 1708306,
+      "secured_capital": 0
+    }
+  },
+  "74": {
+    "n": "74",
+    "applicant": "강지성",
+    "jumin_last4": "4311",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "지수회계법인(고주현)",
+        "capital": 3222469,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "전국렌터카공제조합",
+        "capital": 76543380,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "디비손해보험㈜",
+        "capital": 4631200,
+        "interest": 1291180,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "아이에스렌트카",
+        "capital": 100000000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 184397049,
+      "total_interest": 1291180,
+      "secured_capital": 0
+    }
+  },
+  "75": {
+    "n": "75",
+    "applicant": "안미선",
+    "jumin_last4": "6721",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)신한은행",
+        "capital": 3749994,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)신한은행",
+        "capital": 6249990,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한은행",
+        "capital": 7916654,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)신한은행",
+        "capital": 12916646,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)신한은행",
+        "capital": 25500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 4444600,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "디비손해보험㈜",
+        "capital": 6516679,
+        "interest": 10883,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "디비손해보험㈜",
+        "capital": 1750000,
+        "interest": 3313,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "신한카드㈜",
+        "capital": 5987793,
+        "interest": 113022,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)케이비국민카드",
+        "capital": 3590028,
+        "interest": 26866,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "삼성카드㈜",
+        "capital": 1397861,
+        "interest": 12428,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 12,
+    "properties_raw": 12,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 80020245,
+      "total_interest": 166512,
+      "secured_capital": 0
+    }
+  },
+  "76": {
+    "n": "76",
+    "applicant": "홍성우",
+    "jumin_last4": "2715",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "주식회사 광주은행",
+        "capital": 1470620,
+        "interest": 15375,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)카카오뱅크",
+        "capital": 4052609,
+        "interest": 42263,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "동광주신협본점",
+        "capital": 4900000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)리드코프",
+        "capital": 4508358,
+        "interest": 96342,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)국민은행 ",
+        "capital": 4517392,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)국민은행 ",
+        "capital": 6437389,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)국민은행 ",
+        "capital": 2495345,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "토스뱅크 주식회사",
+        "capital": 3583296,
+        "interest": 49589,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "주식회사 한국투자저축은행",
+        "capital": 15786618,
+        "interest": 316036,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)케이비국민카드",
+        "capital": 300000,
+        "interest": 961,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "롯데카드(주)",
+        "capital": 497506,
+        "interest": 3010,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "삼성카드㈜",
+        "capital": 511708,
+        "interest": 3809,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "에스케이텔레콤(주)",
+        "capital": 453686,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "에스케이텔레콤(주)",
+        "capital": 773994,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 5,
+    "properties_raw": 5,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 14,
+      "total_capital": 50288521,
+      "total_interest": 527385,
+      "secured_capital": 0
+    }
+  },
+  "77": {
+    "n": "77",
+    "applicant": "김상수",
+    "jumin_last4": "3811",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대커머셜(주)",
+        "capital": 70521540,
+        "interest": 262765,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 26828494,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "중소기업은행",
+        "capital": 23000000,
+        "interest": 149707,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "중소기업은행",
+        "capital": 4950000,
+        "interest": 57272,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "중소기업은행",
+        "capital": 3200000,
+        "interest": 44616,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "중소기업은행",
+        "capital": 20000000,
+        "interest": 277079,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)신한은행",
+        "capital": 6685399,
+        "interest": 258113,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)하나은행",
+        "capital": 9805628,
+        "interest": 40051,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "삼성카드㈜",
+        "capital": 28667099,
+        "interest": 1745389,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "신한카드㈜",
+        "capital": 20287876,
+        "interest": 900317,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "현대카드 주식회사",
+        "capital": 773158,
+        "interest": 28751,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "김근수",
+        "capital": 65270000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "(주)바디프랜드 ",
+        "capital": 2375200,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 30,
+    "properties_raw": 30,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 13,
+      "total_capital": 282364394,
+      "total_interest": 3764060,
+      "secured_capital": 0
+    }
+  },
+  "78": {
+    "n": "78",
+    "applicant": "권은지",
+    "jumin_last4": "4212",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "현대카드 주식회사",
+        "capital": 3479874,
+        "interest": 62930,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)케이비국민카드",
+        "capital": 14200000,
+        "interest": 187284,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "신한카드㈜",
+        "capital": 7000000,
+        "interest": 94925,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "신한카드㈜",
+        "capital": 47211257,
+        "interest": 689029,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "중소기업은행",
+        "capital": 3954212,
+        "interest": 1168,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 22,
+    "properties_raw": 22,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 5,
+      "total_capital": 75845343,
+      "total_interest": 1035336,
+      "secured_capital": 0
+    }
+  },
+  "79": {
+    "n": "79",
+    "applicant": "이미애",
+    "jumin_last4": "6326",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민연금공단",
+        "capital": 894710,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 5555680,
+        "interest": 289,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 25000000,
+        "interest": 34356,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "새인천 새마을금고",
+        "capital": 8000000,
+        "interest": 18960,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 30894623,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주) 키움예스저축은행",
+        "capital": 11652079,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "농협은행㈜",
+        "capital": 3105237,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "롯데카드(주)",
+        "capital": 998837,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "삼성카드㈜",
+        "capital": 2986530,
+        "interest": 9323,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "비씨카드㈜",
+        "capital": 1363352,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "신한카드㈜",
+        "capital": 1497190,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "하나카드 주식회사",
+        "capital": 3856965,
+        "interest": 35953,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 25,
+    "properties_raw": 25,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 12,
+      "total_capital": 95805203,
+      "total_interest": 98881,
+      "secured_capital": 0
+    }
+  },
+  "80": {
+    "n": "80",
+    "applicant": "이상영",
+    "jumin_last4": "6115",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)유시드코리아",
+        "capital": 74716000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)가이드삼정",
+        "capital": 190890000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "현대캐피탈㈜",
+        "capital": 4587941,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)금우자산관리대부",
+        "capital": 45050706,
+        "interest": 2869714,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "㈜애큐온저축은행",
+        "capital": 14738159,
+        "interest": 336330,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "㈜애큐온저축은행",
+        "capital": 3721507,
+        "interest": 69442,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "㈜아이비케이저축은행",
+        "capital": 6258940,
+        "interest": 140606,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "제이티친애저축은행(주)",
+        "capital": 13297610,
+        "interest": 174150,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)우리카드",
+        "capital": 1454634,
+        "interest": 8374,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "삼성카드㈜",
+        "capital": 1997820,
+        "interest": 7047,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "현대카드 주식회사",
+        "capital": 663900,
+        "interest": 1042,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "김정국",
+        "capital": 8460000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "김영옥",
+        "capital": 2080000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "(주)월드케이투",
+        "capital": 2080000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "원영록",
+        "capital": 1040000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "(주)순수",
+        "capital": 7280000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": " SONGQUAN",
+        "capital": 1040000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "주식회사 브라운",
+        "capital": 4160000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "크랭크유한책임회사",
+        "capital": 5200000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "박효선",
+        "capital": 2080000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "주식회사 카시온",
+        "capital": 23400000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "정준호",
+        "capital": 1000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "주식회사 카네시아",
+        "capital": 3120000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 24,
+        "name": "노형섭",
+        "capital": 660000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 25,
+        "name": "임현진",
+        "capital": 9880000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 5,
+    "properties_raw": 5,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 25,
+      "total_capital": 428857217,
+      "total_interest": 3606705,
+      "secured_capital": 0
+    }
+  },
+  "81": {
+    "n": "81",
+    "applicant": "차성혁",
+    "jumin_last4": "5117",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "수협은행",
+        "capital": 77800000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)한국씨티은행",
+        "capital": 20061503,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)신한은행",
+        "capital": 18016035,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)하나은행",
+        "capital": 4323359,
+        "interest": 31000,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "삼성카드㈜",
+        "capital": 18204181,
+        "interest": 325983,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)케이비국민카드",
+        "capital": 572882,
+        "interest": 4535,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "하나카드 주식회사",
+        "capital": 3001546,
+        "interest": 24557,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "신한카드㈜",
+        "capital": 6371837,
+        "interest": 101655,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "수협은행",
+        "capital": 6930900,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 20,
+    "properties_raw": 20,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 9,
+      "total_capital": 155282243,
+      "total_interest": 487730,
+      "secured_capital": 0
+    }
+  },
+  "82": {
+    "n": "82",
+    "applicant": "김정아",
+    "jumin_last4": "9712",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)케이비국민카드",
+        "capital": 832109,
+        "interest": 12037,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)케이비국민카드",
+        "capital": 9786951,
+        "interest": 104572,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)케이비국민카드",
+        "capital": 11164573,
+        "interest": 210516,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "삼성카드㈜",
+        "capital": 19907592,
+        "interest": 327729,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 10,
+    "properties_raw": 10,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 4,
+      "total_capital": 41691225,
+      "total_interest": 654854,
+      "secured_capital": 0
+    }
+  },
+  "83": {
+    "n": "83",
+    "applicant": "홍광래",
+    "jumin_last4": "3912",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "농협은행㈜",
+        "capital": 53500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "농협은행㈜",
+        "capital": 6200000,
+        "interest": 2395,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "신한카드㈜",
+        "capital": 39244545,
+        "interest": 589526,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 16,
+    "properties_raw": 16,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 3,
+      "total_capital": 98944545,
+      "total_interest": 591921,
+      "secured_capital": 0
+    }
+  },
+  "84": {
+    "n": "84",
+    "applicant": "김진한",
+    "jumin_last4": "4712",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)우리은행",
+        "capital": 61860000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(주)엘지유플러스",
+        "capital": 4067002,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "삼성카드㈜",
+        "capital": 3514913,
+        "interest": 22276,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "케이비캐피탈㈜",
+        "capital": 35805360,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "현대카드 주식회사",
+        "capital": 996200,
+        "interest": 10981,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "롯데카드(주)",
+        "capital": 14073470,
+        "interest": 337998,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)우리카드",
+        "capital": 652007,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)우리카드",
+        "capital": 3267184,
+        "interest": 68007,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)전북은행",
+        "capital": 4246149,
+        "interest": 61807,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)전북은행",
+        "capital": 43679286,
+        "interest": 410463,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "메리츠캐피탈㈜",
+        "capital": 64694000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "신한카드㈜",
+        "capital": 850100,
+        "interest": 12979,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "농협은행㈜",
+        "capital": 5100000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "농협은행㈜",
+        "capital": 2800000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "농협은행㈜",
+        "capital": 12400000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "농협은행㈜",
+        "capital": 5800000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "농협은행㈜",
+        "capital": 19780880,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "소상공인시장진흥공단 ",
+        "capital": 30000000,
+        "interest": 201830,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "(주)리드코프",
+        "capital": 4664677,
+        "interest": 173806,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "앤알캐피탈대부 (주)",
+        "capital": 4808156,
+        "interest": 123826,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "에스케이텔레콤(주)",
+        "capital": 1360540,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 1,
+    "properties_raw": 1,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 21,
+      "total_capital": 324419924,
+      "total_interest": 1423973,
+      "secured_capital": 0
+    }
+  },
+  "85": {
+    "n": "85",
+    "applicant": "박수인",
+    "jumin_last4": "1239",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "삼성카드㈜",
+        "capital": 1000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "신한카드㈜",
+        "capital": 3667000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "하나카드 주식회사",
+        "capital": 4600000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "웰컴저축은행㈜",
+        "capital": 6000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "웰컴저축은행㈜",
+        "capital": 7531000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "웰컴저축은행㈜",
+        "capital": 24822000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "㈜에스비아이저축은행",
+        "capital": 17302000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)케이뱅크",
+        "capital": 9434000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 1,
+    "properties_raw": 1,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 8,
+      "total_capital": 74356000,
+      "total_interest": 0,
+      "secured_capital": 0
+    }
+  },
+  "86": {
+    "n": "86",
+    "applicant": "이순덕",
+    "jumin_last4": "0621",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "국민건강보험공단",
+        "capital": 641520,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "인천세무서",
+        "capital": 5019920,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "인천세무서",
+        "capital": 9260560,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "제이비우리캐피탈(주)",
+        "capital": 17687698,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)하나은행",
+        "capital": 360000000,
+        "interest": 8373908,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)하나은행",
+        "capital": 9442567,
+        "interest": 67341,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)하나은행",
+        "capital": 20988145,
+        "interest": 178622,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "농협은행㈜",
+        "capital": 14501440,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "농협은행㈜",
+        "capital": 16940000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "(주)우리은행",
+        "capital": 30000000,
+        "interest": 18278,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "김주현(동구축산)",
+        "capital": 3521989,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "이희권 (혜진이네(원협168))",
+        "capital": 6045000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "서영표(물레푸드)",
+        "capital": 9482000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "강기훈(우돈밸리)",
+        "capital": 120714300,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "현영숙",
+        "capital": 100000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 16,
+        "name": "현영숙",
+        "capital": 55000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 17,
+        "name": "현영숙",
+        "capital": 20000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 18,
+        "name": "장원기",
+        "capital": 10000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 19,
+        "name": "정연재",
+        "capital": 100000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 20,
+        "name": "김순보",
+        "capital": 20000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 21,
+        "name": "엄혜섭",
+        "capital": 130120500,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 22,
+        "name": "표영록",
+        "capital": 100000000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 23,
+        "name": "김영갑(선학축산도매센타)",
+        "capital": 3429480,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 20,
+    "properties_raw": 20,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 23,
+      "total_capital": 1162795119,
+      "total_interest": 8638149,
+      "secured_capital": 0
+    }
+  },
+  "87": {
+    "n": "87",
+    "applicant": "조영모",
+    "jumin_last4": "3414",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "메리츠캐피탈㈜",
+        "capital": 10846000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "한국캐피탈(주)",
+        "capital": 24266668,
+        "interest": 417646,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주) 키움예스저축은행",
+        "capital": 21500000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(주)하나은행",
+        "capital": 15555560,
+        "interest": 98143,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)신한은행",
+        "capital": 3055547,
+        "interest": 4854,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "(주)신한은행",
+        "capital": 26500000,
+        "interest": 111646,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "(주)신한은행",
+        "capital": 30000000,
+        "interest": 58709,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)국민은행 ",
+        "capital": 4806498,
+        "interest": 33330,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)전북은행",
+        "capital": 13807069,
+        "interest": 48358,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "롯데카드(주)",
+        "capital": 22053358,
+        "interest": 170901,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "현대카드 주식회사",
+        "capital": 5926860,
+        "interest": 146763,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 24,
+    "properties_raw": 24,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 178317560,
+      "total_interest": 1090350,
+      "secured_capital": 0
+    }
+  },
+  "88": {
+    "n": "88",
+    "applicant": "김현태",
+    "jumin_last4": "2122",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "인천광역시 옹진군",
+        "capital": 964560,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "메리츠캐피탈㈜",
+        "capital": 3670000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "대신저축은행",
+        "capital": 5000000,
+        "interest": 10273,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "㈜비엔케이저축은행",
+        "capital": 6364015,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "토스뱅크 주식회사",
+        "capital": 659944,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "토스뱅크 주식회사",
+        "capital": 1372223,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "토스뱅크 주식회사",
+        "capital": 16470000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "토스뱅크 주식회사",
+        "capital": 3570000,
+        "interest": 0,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "㈜애큐온저축은행",
+        "capital": 3698274,
+        "interest": 15157,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "㈜애큐온저축은행",
+        "capital": 27783596,
+        "interest": 86319,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "㈜애큐온저축은행",
+        "capital": 3693263,
+        "interest": 13842,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "㈜애큐온저축은행",
+        "capital": 5257633,
+        "interest": 21549,
+        "is_secured": false
+      },
+      {
+        "idx": 13,
+        "name": "신한카드㈜",
+        "capital": 2494307,
+        "interest": 15381,
+        "is_secured": false
+      },
+      {
+        "idx": 14,
+        "name": "현대카드 주식회사",
+        "capital": 992397,
+        "interest": 799,
+        "is_secured": false
+      },
+      {
+        "idx": 15,
+        "name": "중소기업은행",
+        "capital": 496000,
+        "interest": 0,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 5,
+    "properties_raw": 5,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 15,
+      "total_capital": 82486212,
+      "total_interest": 163320,
+      "secured_capital": 0
+    }
+  },
+  "89": {
+    "n": "89",
+    "applicant": "최병호",
+    "jumin_last4": "8611",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(주)국민은행 ",
+        "capital": 5605482,
+        "interest": 980816,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "㈜케이비저축은행",
+        "capital": 18700025,
+        "interest": 5994265,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(주)케이비국민카드",
+        "capital": 8146322,
+        "interest": 3457350,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "비케이자산관리대부(주)",
+        "capital": 12114617,
+        "interest": 1461815,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)금우자산관리대부",
+        "capital": 8133520,
+        "interest": 793247,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "엠메이드대부(유)",
+        "capital": 1093956,
+        "interest": 266414,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "엠메이드대부(유)",
+        "capital": 2654181,
+        "interest": 35656,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "한국자산관리공사",
+        "capital": 9371840,
+        "interest": 4452772,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "한국자산관리공사",
+        "capital": 0,
+        "interest": 778230,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "서민금융진흥원",
+        "capital": 10077530,
+        "interest": 3203032,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "디에스엔피엘인베스트먼트대부 (주)",
+        "capital": 13180695,
+        "interest": 9153540,
+        "is_secured": false
+      },
+      {
+        "idx": 12,
+        "name": "(주)카카오뱅크",
+        "capital": 2759870,
+        "interest": 757150,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 0,
+    "properties_raw": 0,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 12,
+      "total_capital": 91838038,
+      "total_interest": 31334287,
+      "secured_capital": 0
+    }
+  },
+  "90": {
+    "n": "90",
+    "applicant": "조재근",
+    "jumin_last4": "9015",
+    "creditors": [
+      {
+        "idx": 1,
+        "name": "(재)한국장학재단",
+        "capital": 1,
+        "interest": 217048,
+        "is_secured": false
+      },
+      {
+        "idx": 2,
+        "name": "(재)한국장학재단",
+        "capital": 1085727,
+        "interest": 147142,
+        "is_secured": false
+      },
+      {
+        "idx": 3,
+        "name": "(재)한국장학재단",
+        "capital": 1500000,
+        "interest": 173759,
+        "is_secured": false
+      },
+      {
+        "idx": 4,
+        "name": "(재)한국장학재단",
+        "capital": 1000000,
+        "interest": 105088,
+        "is_secured": false
+      },
+      {
+        "idx": 5,
+        "name": "(주)카카오뱅크",
+        "capital": 0,
+        "interest": 18099,
+        "is_secured": false
+      },
+      {
+        "idx": 6,
+        "name": "서민금융진흥원",
+        "capital": 3815613,
+        "interest": 1241899,
+        "is_secured": false
+      },
+      {
+        "idx": 7,
+        "name": "케이씨케이2403유동화전문 (유)",
+        "capital": 515335,
+        "interest": 203803,
+        "is_secured": false
+      },
+      {
+        "idx": 8,
+        "name": "(주)베리타스자산대부",
+        "capital": 6491794,
+        "interest": 3410903,
+        "is_secured": false
+      },
+      {
+        "idx": 9,
+        "name": "(주)베리타스자산대부",
+        "capital": 5647411,
+        "interest": 2965873,
+        "is_secured": false
+      },
+      {
+        "idx": 10,
+        "name": "비케이자산관리대부(주)",
+        "capital": 10856403,
+        "interest": 6876786,
+        "is_secured": false
+      },
+      {
+        "idx": 11,
+        "name": "(주)국민행복기금",
+        "capital": 13710550,
+        "interest": 6678221,
+        "is_secured": false
+      }
+    ],
+    "properties_n": 9,
+    "properties_raw": 9,
+    "income": {
+      "gross_salary": 0,
+      "living_cost": 0
+    },
+    "derived": {
+      "creditors_n": 11,
+      "total_capital": 44622834,
+      "total_interest": 22038621,
+      "secured_capital": 0
+    }
+  }
+}

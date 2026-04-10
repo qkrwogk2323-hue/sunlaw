@@ -30,3 +30,20 @@ COPILOT_TASK.md
 
 # Claude Code 로컬 설정
 .claude/
+
+# COLAW 스크래핑 데이터 (111MB)
+audit/colaw_raw/
+audit/colaw_raw_bankrupt/
+audit/colaw_parsed/
+
+# 개인정보 출력문서
+개인회생_김진한_출력문서/
+
+# squash 전 백업
+supabase/migrations_old_97/
+supabase/migrations_backup_97/
+
+# macOS
+.DS_Store
+**/.DS_Store
+scripts/colaw-migration/data/

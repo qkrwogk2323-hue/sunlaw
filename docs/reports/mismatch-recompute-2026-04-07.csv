@@ -1,0 +1,6 @@
+caseId,clientName,field,vsValue,colawValue,delta,tolerance,status
+b6823d01-5832-49a8-8682-355303a3acf5,"김한경",monthlyIncome,2100000,2100000,0,1,match
+b6823d01-5832-49a8-8682-355303a3acf5,"김한경",livingCost,1538542,1538543,1,1,match
+b6823d01-5832-49a8-8682-355303a3acf5,"김한경",planDurationMonths,36,36,0,0,match
+b6823d01-5832-49a8-8682-355303a3acf5,"김한경",totalDebt,67394484,67394484,0,1,match
+b6823d01-5832-49a8-8682-355303a3acf5,"김한경",unsecuredTotal,56714484,56714484,0,1,match

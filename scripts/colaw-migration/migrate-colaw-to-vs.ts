@@ -171,12 +171,12 @@ async function extractApplication(page: Page, c: (typeof COLAW_CASES)[0]) {
       const el = document.querySelector<HTMLInputElement>(`[name="${name}"]:checked`);
       return el?.value?.trim() ?? '';
     };
-    // 사건번호·법원명 추출: 페이지 상단 헤더에서 "인천지방법원 2025 개회 101101" 패턴 탐색
-    const headerText = document.querySelector('.header, .case-header, h2, h3, .title')?.textContent?.trim() ?? '';
-    // colaw 제목 영역에서 법원명과 사건번호를 추출
-    const caseInfoMatch = headerText.match(/([\w가-힣]+(?:법원|회생법원))\s+(\d{4}\s*개회\s*\d+)/);
-    const courtName = caseInfoMatch?.[1] ?? '';
-    const caseNumber = caseInfoMatch?.[2] ?? '';
+    // 법원명/사건번호: 콜로 form input 직접 읽기 (PR#2 hotfix)
+    // 검증관 2026-04-09 보고: 헤더 정규식 fallback으로 91건 중 9건이 잘못된 인천지방법원으로 박힘.
+    // 콜로 application 탭의 input[name="courtname"], input[name="casenumber"]가 단일 진실원본.
+    const courtName = g('courtname');
+    const caseNumber = g('casenumber');
+    const diaryYear = g('diaryyear');
 
     return {
       applicant_name: g('applicationname'),
@@ -212,6 +212,8 @@ async function extractApplication(page: Page, c: (typeof COLAW_CASES)[0]) {
       gross_salary: g('monthlyincomeamount'), // 월 급여 (세전)
       court_name: courtName,
       case_number: caseNumber,
+      diary_year: diaryYear,
+      charge_justice: g('chargejustice'),
     };
   });
 }
@@ -481,8 +483,10 @@ async function insertCase(
       stage_template_key: 'general-default',
       stage_key: 'intake',
       module_flags: { billing: true, insolvency: true },
-      court_name: app.court_name || '인천지방법원',
-      case_number: app.case_number || `${colawCase.dy} 개회`,
+      // PR#2 hotfix: 법원명/사건번호 fallback 제거. 콜로 원본이 빈값이면 빈값 그대로.
+      // 이전 코드는 빈값을 '인천지방법원'으로 강제해 9건 오염 + 89건 가짜 사건번호.
+      court_name: app.court_name || null,
+      case_number: app.case_number || null,
       summary: `colaw #${colawCase.n} ${colawCase.nm} 마이그레이션`,
       created_by: CREATED_BY,
       updated_by: CREATED_BY,
@@ -524,7 +528,8 @@ async function insertCase(
     phone_home: app.phone_home,
     phone_mobile: app.phone_mobile,
     return_account: app.return_account,
-    income_type: app.income_type === '1' ? 'salary' : 'business',
+    // PR#2 fix: 콜로 incomegubun은 0=영업, 1=급여 (기존 코드는 1=급여,2=영업으로 잘못 매핑)
+    income_type: app.income_type === '1' ? 'salary' : (app.income_type === '0' ? 'business' : null),
     employer_name: app.employer_name,
     position: app.position,
     work_period: app.work_period,
