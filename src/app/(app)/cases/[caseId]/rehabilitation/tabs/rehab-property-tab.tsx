@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabProperty, softDeleteRehabProperty, upsertRehabPropertyDeduction } from '@/lib/actions/rehabilitation-actions';
 import { PROPERTY_CATEGORIES, calculateCategorySubtotal, calculateLiquidationValue, formatMoney, parseMoney } from '@/lib/rehabilitation';
 import type { PropertyCategoryId, RehabPropertyItem } from '@/lib/rehabilitation';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Package } from 'lucide-react';
 
 interface RehabPropertyTabProps {
   caseId: string;
@@ -108,6 +108,8 @@ export function RehabPropertyTab({
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
   }, []);
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; detail: string } | null>(null);
+
   const removeItem = useCallback(
     async (id: string) => {
       const item = items.find((i) => i.id === id);
@@ -121,9 +123,20 @@ export function RehabPropertyTab({
         undo('재산 항목 삭제됨', () => {}, { message: '보관함에서 복구할 수 있습니다.' });
       }
       setItems((prev) => prev.filter((i) => i.id !== id));
+      setDeleteConfirm(null);
     },
     [items, caseId, organizationId, error, undo],
   );
+
+  const requestDeleteItem = useCallback((id: string) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    if (item.isNew) {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } else {
+      setDeleteConfirm({ id, detail: item.detail || `${activeCategoryDef?.name} 항목` });
+    }
+  }, [items, activeCategoryDef]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -160,6 +173,8 @@ export function RehabPropertyTab({
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
+
       {/* 총 청산가치 요약 */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center">
         <p className="text-sm text-blue-600">총 청산가치</p>
@@ -234,8 +249,9 @@ export function RehabPropertyTab({
         )}
 
         {categoryItems.length === 0 ? (
-          <div className="py-8 text-center text-slate-400">
-            <p className="font-medium">등록된 {activeCategoryDef?.name} 항목이 없습니다</p>
+          <div className="py-12 text-center text-slate-400">
+            <Package className="mx-auto mb-3 h-8 w-8 opacity-40" />
+            <p className="font-medium">아직 {activeCategoryDef?.name} 항목이 없습니다</p>
             <p className="mt-1 text-sm">추가 버튼으로 항목을 등록해주세요</p>
           </div>
         ) : (
@@ -243,7 +259,7 @@ export function RehabPropertyTab({
             {categoryItems.map((item) => (
               <div key={item.id} className="grid grid-cols-2 gap-3 rounded-md border border-slate-100 bg-slate-50/50 p-3 md:grid-cols-5">
                 <div className="space-y-1 md:col-span-2">
-                  <label htmlFor={`prop-detail-${item.id}`} className="text-xs font-medium text-slate-600">내용</label>
+                  <label htmlFor={`prop-detail-${item.id}`} className="text-xs font-medium text-slate-600">내용 <span className="text-red-500" aria-hidden="true">*</span></label>
                   <input
                     id={`prop-detail-${item.id}`}
                     type="text"
@@ -254,7 +270,7 @@ export function RehabPropertyTab({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor={`prop-amount-${item.id}`} className="text-xs font-medium text-slate-600">금액 (원)</label>
+                  <label htmlFor={`prop-amount-${item.id}`} className="text-xs font-medium text-slate-600">금액 (원) <span className="text-red-500" aria-hidden="true">*</span></label>
                   <input
                     id={`prop-amount-${item.id}`}
                     type="text"
@@ -290,7 +306,7 @@ export function RehabPropertyTab({
                   </label>
                   <button
                     type="button"
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => requestDeleteItem(item.id)}
                     className="p-1 text-red-400 hover:text-red-600"
                     aria-label="항목 삭제"
                   >
@@ -329,6 +345,23 @@ export function RehabPropertyTab({
           {saving ? '저장 중...' : '저장'}
         </button>
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="prop-delete-title">
+          <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+            <h3 id="prop-delete-title" className="text-base font-semibold text-slate-800">삭제 확인</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              <span className="font-medium text-red-600">{deleteConfirm.detail}</span>을(를) 삭제하시겠습니까?
+            </p>
+            <p className="mt-1 text-xs text-slate-400">보관함에서 복구할 수 있습니다.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setDeleteConfirm(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">취소</button>
+              <button type="button" onClick={() => removeItem(deleteConfirm.id)} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

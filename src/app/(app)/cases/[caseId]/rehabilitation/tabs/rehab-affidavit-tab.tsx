@@ -187,6 +187,7 @@ export function RehabAffidavitTab({
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
       {/* 안내 */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
         <p className="text-sm text-blue-700">
@@ -487,7 +488,7 @@ export function RehabAffidavitTab({
         <section key={section.key} className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="mb-2 flex items-center justify-between">
             <label htmlFor={`aff-${section.key}`} className="text-base font-semibold text-slate-800">
-              {section.label}
+              {section.label} <span className="text-red-500" aria-hidden="true">*</span>
             </label>
             <span className="text-xs text-slate-400">{((form as Record<string, unknown>)[section.key] as string || '').length}자</span>
           </div>

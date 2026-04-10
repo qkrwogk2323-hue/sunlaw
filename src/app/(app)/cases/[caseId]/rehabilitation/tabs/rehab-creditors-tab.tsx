@@ -9,7 +9,8 @@ import {
   upsertRehabSecuredProperty,
 } from '@/lib/actions/rehabilitation-actions';
 import { searchFinancialInstitution, formatMoney, parseMoney } from '@/lib/rehabilitation';
-import { Plus, Trash2, Save, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Save, Search, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { DangerActionButton } from '@/components/ui/danger-action-button';
 
 interface RehabCreditorsTabProps {
   caseId: string;
@@ -183,6 +184,8 @@ export function RehabCreditorsTab({
     setCreditors((prev) => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)));
   }, []);
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ index: number; name: string } | null>(null);
+
   const removeCreditor = useCallback(
     async (index: number) => {
       const creditor = creditors[index];
@@ -197,9 +200,20 @@ export function RehabCreditorsTab({
         });
       }
       setCreditors((prev) => prev.filter((_, i) => i !== index));
+      setDeleteConfirm(null);
     },
     [creditors, caseId, organizationId, error, undo],
   );
+
+  const requestDelete = useCallback((index: number) => {
+    const creditor = creditors[index];
+    if (creditor.isNew) {
+      // 신규(미저장)는 확인 없이 즉시 제거
+      setCreditors((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setDeleteConfirm({ index, name: creditor.creditor_name || `채권자 ${creditor.bond_number}번` });
+    }
+  }, [creditors]);
 
   const toggleExpanded = useCallback((index: number) => {
     setCreditors((prev) =>
@@ -251,6 +265,8 @@ export function RehabCreditorsTab({
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
+
       {/* 채무 요약 카드 */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {[
@@ -405,8 +421,9 @@ export function RehabCreditorsTab({
         </div>
 
         {creditors.length === 0 ? (
-          <div className="py-8 text-center text-slate-400">
-            <p className="font-medium">등록된 채권자가 없습니다</p>
+          <div className="py-12 text-center text-slate-400">
+            <Users className="mx-auto mb-3 h-8 w-8 opacity-40" />
+            <p className="font-medium">아직 채권자가 없습니다</p>
             <p className="mt-1 text-sm">금융기관 검색 또는 직접 추가로 채권자를 등록해주세요</p>
           </div>
         ) : (
@@ -439,7 +456,7 @@ export function RehabCreditorsTab({
                   </button>
                   <button
                     type="button"
-                    onClick={() => removeCreditor(idx)}
+                    onClick={() => requestDelete(idx)}
                     className="p-1 text-red-400 hover:text-red-600"
                     aria-label={`${c.creditor_name || '채권자'} 삭제`}
                   >
@@ -453,7 +470,7 @@ export function RehabCreditorsTab({
                     {/* 기본 정보 */}
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                       <div className="space-y-1">
-                        <label htmlFor={`cr-name-${idx}`} className="text-xs font-medium text-slate-600">채권자명</label>
+                        <label htmlFor={`cr-name-${idx}`} className="text-xs font-medium text-slate-600">채권자명 <span className="text-red-500" aria-hidden="true">*</span></label>
                         <input
                           id={`cr-name-${idx}`}
                           type="text"
@@ -482,6 +499,8 @@ export function RehabCreditorsTab({
                         >
                           <option value="법인">법인</option>
                           <option value="자연인">자연인</option>
+                          <option value="국가">국가</option>
+                          <option value="지방자치단체">지방자치단체</option>
                         </select>
                       </div>
                       <div className="space-y-1">
@@ -542,7 +561,7 @@ export function RehabCreditorsTab({
                       <h4 className="mb-2 text-xs font-semibold text-blue-700">채권 금액</h4>
                       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                         <div className="space-y-1">
-                          <label htmlFor={`cr-cause-${idx}`} className="text-xs font-medium text-slate-600">채권 원인</label>
+                          <label htmlFor={`cr-cause-${idx}`} className="text-xs font-medium text-slate-600">채권 원인 <span className="text-red-500" aria-hidden="true">*</span></label>
                           <input
                             id={`cr-cause-${idx}`}
                             type="text"
@@ -553,7 +572,7 @@ export function RehabCreditorsTab({
                           />
                         </div>
                         <div className="space-y-1">
-                          <label htmlFor={`cr-capital-${idx}`} className="text-xs font-medium text-slate-600">원금 (원)</label>
+                          <label htmlFor={`cr-capital-${idx}`} className="text-xs font-medium text-slate-600">원금 (원) <span className="text-red-500" aria-hidden="true">*</span></label>
                           <input
                             id={`cr-capital-${idx}`}
                             type="text"
@@ -819,6 +838,35 @@ export function RehabCreditorsTab({
           {saving ? '저장 중...' : '저장'}
         </button>
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+          <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+            <h3 id="delete-confirm-title" className="text-base font-semibold text-slate-800">삭제 확인</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              <span className="font-medium text-red-600">{deleteConfirm.name}</span>을(를) 삭제하시겠습니까?
+            </p>
+            <p className="mt-1 text-xs text-slate-400">보관함에서 복구할 수 있습니다.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => removeCreditor(deleteConfirm.index)}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
