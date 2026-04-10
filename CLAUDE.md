@@ -3,6 +3,11 @@
 > Claude Code가 자동으로 읽는 프로젝트 규칙입니다.  
 > 전체 규칙 원본: `docs/UX_RULES.md`
 
+## 작업 방식
+- 연속 작업 시 중간 확인 없이 끝까지 진행. 커밋 단위로 끊되 지시 요청하지 말 것
+- typecheck 통과하면 바로 다음 작업으로 넘어갈 것
+- "다음 지시 주세요" 금지 — TODO 목록이 남아있으면 알아서 진행
+
 ## 스택
 
 - Next.js 16 App Router + React 19 + TypeScript strict
