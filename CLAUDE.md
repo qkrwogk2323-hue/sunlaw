@@ -121,6 +121,11 @@ undo('삭제됨', { message: '8초 내 취소 가능', onUndo: handleUndo });
 - 모든 Server Action → `revalidatePath()` 호출
 - ARIA 속성 모든 인터랙티브 요소에 필수
 
+### 번들 최적화
+- 미디어: GIF 금지 → WebM/MP4 + `<video>` 사용. `unoptimized` 금지
+- 무거운 라이브러리: 클라이언트에서 쓰지 않는 모듈은 dynamic import
+- 탭/모달 등 조건부 UI: `next/dynamic`으로 lazy load
+
 ### 🔴 Migration 규칙 (절대 준수)
 ```
 supabase/migrations/ 구조:
