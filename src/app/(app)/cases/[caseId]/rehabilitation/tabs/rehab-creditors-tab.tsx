@@ -148,6 +148,21 @@ export function RehabCreditorsTab({
     return { totalCapital, totalInterest, totalDebt: totalCapital + totalInterest, securedDebt, unsecuredDebt, count: creditorsPagination.total };
   }, [creditorsSummary, creditorsPagination.total]);
 
+  // D5106 출력 뷰용 담보/무담보 요약 (filter·reduce 반복 방지)
+  const d5106Summary = useMemo(() => {
+    const secured = creditors.filter((c) => c.is_secured);
+    const unsecured = creditors.filter((c) => !c.is_secured);
+    return {
+      securedCapital: secured.reduce((s, c) => s + c.capital, 0),
+      securedInterest: secured.reduce((s, c) => s + c.interest, 0),
+      unsecuredCapital: unsecured.reduce((s, c) => s + c.capital, 0),
+      unsecuredInterest: unsecured.reduce((s, c) => s + c.interest, 0),
+      allCapital: creditors.reduce((s, c) => s + c.capital, 0),
+      allInterest: creditors.reduce((s, c) => s + c.interest, 0),
+      securedCreditors: secured,
+    };
+  }, [creditors]);
+
   const addCreditor = useCallback(() => {
     const nextBondNumber = creditors.length > 0 ? Math.max(...creditors.map((c) => c.bond_number)) + 1 : 1;
     setCreditors((prev) => [
@@ -882,37 +897,37 @@ export function RehabCreditorsTab({
                 <tr className="border-b border-slate-100">
                   <td className="px-3 py-2 text-slate-700">담보부 채권</td>
                   <td className="px-3 py-2 text-right text-slate-600">
-                    {formatMoney(creditors.filter(c => c.is_secured).reduce((s, c) => s + c.capital, 0))}원
+                    {formatMoney(d5106Summary.securedCapital)}원
                   </td>
                   <td className="px-3 py-2 text-right text-slate-600">
-                    {formatMoney(creditors.filter(c => c.is_secured).reduce((s, c) => s + c.interest, 0))}원
+                    {formatMoney(d5106Summary.securedInterest)}원
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-slate-700">
-                    {formatMoney(creditors.filter(c => c.is_secured).reduce((s, c) => s + c.capital + c.interest, 0))}원
+                    {formatMoney(d5106Summary.securedCapital + d5106Summary.securedInterest)}원
                   </td>
                 </tr>
                 <tr className="border-b border-slate-100">
                   <td className="px-3 py-2 text-slate-700">무담보 채권</td>
                   <td className="px-3 py-2 text-right text-slate-600">
-                    {formatMoney(creditors.filter(c => !c.is_secured).reduce((s, c) => s + c.capital, 0))}원
+                    {formatMoney(d5106Summary.unsecuredCapital)}원
                   </td>
                   <td className="px-3 py-2 text-right text-slate-600">
-                    {formatMoney(creditors.filter(c => !c.is_secured).reduce((s, c) => s + c.interest, 0))}원
+                    {formatMoney(d5106Summary.unsecuredInterest)}원
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-slate-700">
-                    {formatMoney(creditors.filter(c => !c.is_secured).reduce((s, c) => s + c.capital + c.interest, 0))}원
+                    {formatMoney(d5106Summary.unsecuredCapital + d5106Summary.unsecuredInterest)}원
                   </td>
                 </tr>
                 <tr className="bg-slate-50 font-semibold">
                   <td className="px-3 py-2 text-slate-800">합계</td>
                   <td className="px-3 py-2 text-right text-slate-700">
-                    {formatMoney(creditors.reduce((s, c) => s + c.capital, 0))}원
+                    {formatMoney(d5106Summary.allCapital)}원
                   </td>
                   <td className="px-3 py-2 text-right text-slate-700">
-                    {formatMoney(creditors.reduce((s, c) => s + c.interest, 0))}원
+                    {formatMoney(d5106Summary.allInterest)}원
                   </td>
                   <td className="px-3 py-2 text-right text-blue-700">
-                    {formatMoney(creditors.reduce((s, c) => s + c.capital + c.interest, 0))}원
+                    {formatMoney(d5106Summary.allCapital + d5106Summary.allInterest)}원
                   </td>
                 </tr>
               </tbody>
@@ -958,9 +973,9 @@ export function RehabCreditorsTab({
               <tfoot>
                 <tr className="bg-slate-50 font-semibold border-t-2 border-slate-300">
                   <td colSpan={3} className="px-2 py-2 text-slate-800">합계 ({creditors.length}건)</td>
-                  <td className="px-2 py-2 text-right text-slate-700">{formatMoney(creditors.reduce((s, c) => s + c.capital, 0))}</td>
-                  <td className="px-2 py-2 text-right text-slate-700">{formatMoney(creditors.reduce((s, c) => s + c.interest, 0))}</td>
-                  <td className="px-2 py-2 text-right text-blue-700">{formatMoney(creditors.reduce((s, c) => s + c.capital + c.interest, 0))}</td>
+                  <td className="px-2 py-2 text-right text-slate-700">{formatMoney(d5106Summary.allCapital)}</td>
+                  <td className="px-2 py-2 text-right text-slate-700">{formatMoney(d5106Summary.allInterest)}</td>
+                  <td className="px-2 py-2 text-right text-blue-700">{formatMoney(d5106Summary.allCapital + d5106Summary.allInterest)}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -968,7 +983,7 @@ export function RehabCreditorsTab({
           </div>
 
           {/* 별제권부 채권 부속서류 */}
-          {creditors.some(c => c.is_secured) && (
+          {d5106Summary.securedCreditors.length > 0 && (
             <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3">
               <h4 className="mb-2 text-xs font-semibold text-amber-700">부속서류 1: 별제권부채권 내역</h4>
               <div className="overflow-x-auto">
@@ -982,7 +997,7 @@ export function RehabCreditorsTab({
                     </tr>
                   </thead>
                   <tbody>
-                    {creditors.filter(c => c.is_secured).map((c) => (
+                    {d5106Summary.securedCreditors.map((c) => (
                       <tr key={c.id} className="border-b border-amber-100">
                         <td className="px-2 py-1.5 text-slate-700">{c.creditor_name}</td>
                         <td className="px-2 py-1.5 text-slate-600">{c.lien_type || '-'}</td>

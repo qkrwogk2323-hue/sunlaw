@@ -5,6 +5,7 @@ import { requireAuthenticatedUser, findMembership } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { generateDocument, type DocumentType, type DocumentData } from '@/lib/rehabilitation/document-generator';
 import { getRehabModuleData } from '@/lib/queries/rehabilitation';
+import { d5114Schema } from '@/lib/rehabilitation/court-form-schemas';
 
 // ─── 폼 → DB 필드 매핑 (신청서) ───
 
@@ -662,24 +663,32 @@ export async function upsertProhibitionOrder(
 
     const supabase = await createSupabaseServerClient();
 
+    // 서버 검증 (5-6: 클라이언트 검증이 있어도 서버 검증이 최종 원본)
+    const parsed = d5114Schema.safeParse(data);
+    if (!parsed.success) {
+      const msg = parsed.error.issues.map(i => i.message).join(', ');
+      return { ok: false, code: 'VALIDATION', userMessage: `입력값이 올바르지 않습니다: ${msg}` };
+    }
+    const v = parsed.data;
+
     const dbData: Record<string, unknown> = {
-      court_name: data.court_name || null,
-      applicant_name: data.applicant_name || null,
-      resident_number_front: data.resident_number_front || null,
-      registered_address: data.registered_address || null,
-      current_address: data.current_address || null,
-      has_agent: data.has_agent || false,
-      agent_type: data.agent_type || null,
-      agent_name: data.agent_name || null,
-      agent_phone: data.agent_phone || null,
-      agent_fax: data.agent_fax || null,
-      agent_address: data.agent_address || null,
-      agent_law_firm: data.agent_law_firm || null,
-      total_debt_amount: data.total_debt_amount || 0,
-      creditor_count: data.creditor_count || 0,
-      reason_detail: data.reason_detail || null,
-      attachments: data.attachments || [],
-      application_date: data.application_date || null,
+      court_name: v.court_name,
+      applicant_name: v.applicant_name,
+      resident_number_front: v.resident_number_front || null,
+      registered_address: v.registered_address || null,
+      current_address: v.current_address || null,
+      has_agent: v.has_agent,
+      agent_type: v.has_agent ? (v.agent_type || null) : null,
+      agent_name: v.has_agent ? (v.agent_name || null) : null,
+      agent_phone: v.has_agent ? (v.agent_phone || null) : null,
+      agent_fax: v.has_agent ? (v.agent_fax || null) : null,
+      agent_address: v.has_agent ? (v.agent_address || null) : null,
+      agent_law_firm: v.has_agent ? (v.agent_law_firm || null) : null,
+      total_debt_amount: v.total_debt_amount,
+      creditor_count: v.creditor_count,
+      reason_detail: v.reason_detail || null,
+      attachments: v.attachments,
+      application_date: v.application_date || null,
     };
 
     const { data: existing } = await supabase
