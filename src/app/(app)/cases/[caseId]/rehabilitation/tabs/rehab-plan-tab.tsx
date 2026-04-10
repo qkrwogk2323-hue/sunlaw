@@ -199,6 +199,9 @@ export function RehabPlanTab({
     });
   }, [caseId, organizationId, repayOption, repaymentResult, success, error, startSaveTransition]);
 
+  // capitalOnly: 원금만 변제하는 옵션인지 (이자 면책)
+  const isCapitalOnly = ['capital36', 'capital60', 'capital100_3y', 'capital100_5y'].includes(repayOption);
+
   // 변제 스케줄
   const schedule = useMemo(() => {
     if (!repaymentResult || repaymentResult.monthlyRepay <= 0) return [];
@@ -208,8 +211,9 @@ export function RehabPlanTab({
       repaymentResult.repayMonths,
       disposeAmount,
       repayType,
+      isCapitalOnly,
     );
-  }, [creditors, repaymentResult, disposeAmount, repayType]);
+  }, [creditors, repaymentResult, disposeAmount, repayType, isCapitalOnly]);
 
   // 스케줄 검증
   const scheduleValid = useMemo(() => {
@@ -372,13 +376,16 @@ export function RehabPlanTab({
           {schedule.length > 0 && (
             <section className="rounded-lg border border-slate-200 bg-white p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-800">채권자별 변제예정액</h3>
+              {isCapitalOnly && (
+                <p className="mb-2 text-xs text-blue-700">원금만 변제 — 이자는 면책 대상</p>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200">
                       <th className="px-2 py-2 text-center text-xs font-medium text-slate-500 w-10">번호</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-slate-500">채권자</th>
-                      <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">채권액</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">{isCapitalOnly ? '원금' : '채권액'}</th>
                       <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">월 변제액</th>
                       <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">총 변제액</th>
                       <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">변제율</th>
@@ -387,11 +394,14 @@ export function RehabPlanTab({
                   <tbody>
                     {schedule.map((s, idx) => {
                       const creditor = creditors.find((c) => c.id === s.creditorId);
+                      const claimAmount = creditor
+                        ? (creditor.capital + (isCapitalOnly ? 0 : creditor.interest))
+                        : (s.ratio > 0 ? Math.round(s.totalAmount / s.ratio) : 0);
                       return (
                         <tr key={s.creditorId} className="border-b border-slate-100">
                           <td className="px-2 py-2 text-center text-slate-500">{idx + 1}</td>
                           <td className="px-2 py-2 font-medium text-slate-700">{creditor?.creditorName || `채권자 ${idx + 1}`}</td>
-                          <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.capitalRepay + s.interestRepay > 0 ? Math.round(s.totalAmount / (s.ratio || 1)) : 0)}원</td>
+                          <td className="px-2 py-2 text-right text-slate-600">{formatMoney(claimAmount)}원</td>
                           <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.monthlyAmount)}원</td>
                           <td className="px-2 py-2 text-right font-medium text-slate-700">{formatMoney(s.totalAmount)}원</td>
                           <td className="px-2 py-2 text-right text-green-700">{(s.ratio * 100).toFixed(2)}%</td>
@@ -577,6 +587,12 @@ export function RehabPlanTab({
             )}
           </div>
 
+          {isCapitalOnly && (
+            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
+              원금만 변제 옵션입니다. 이자는 면책 대상이므로 변제 배분에 포함되지 않습니다.
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -586,7 +602,9 @@ export function RehabPlanTab({
                   <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">월 변제액</th>
                   <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">총 변제액</th>
                   <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">원금 변제</th>
-                  <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">이자 변제</th>
+                  {!isCapitalOnly && (
+                    <th className="px-2 py-2 text-right text-xs font-medium text-slate-500">이자 변제</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -601,7 +619,9 @@ export function RehabPlanTab({
                       <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.monthlyAmount)}원</td>
                       <td className="px-2 py-2 text-right font-medium text-slate-700">{formatMoney(s.totalAmount)}원</td>
                       <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.capitalRepay)}원</td>
-                      <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.interestRepay)}원</td>
+                      {!isCapitalOnly && (
+                        <td className="px-2 py-2 text-right text-slate-600">{formatMoney(s.interestRepay)}원</td>
+                      )}
                     </tr>
                   );
                 })}
@@ -619,9 +639,11 @@ export function RehabPlanTab({
                   <td className="px-2 py-2 text-right text-slate-600">
                     {formatMoney(schedule.reduce((s, r) => s + r.capitalRepay, 0))}원
                   </td>
-                  <td className="px-2 py-2 text-right text-slate-600">
-                    {formatMoney(schedule.reduce((s, r) => s + r.interestRepay, 0))}원
-                  </td>
+                  {!isCapitalOnly && (
+                    <td className="px-2 py-2 text-right text-slate-600">
+                      {formatMoney(schedule.reduce((s, r) => s + r.interestRepay, 0))}원
+                    </td>
+                  )}
                 </tr>
               </tfoot>
             </table>

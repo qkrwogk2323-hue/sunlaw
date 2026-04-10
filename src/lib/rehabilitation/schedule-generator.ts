@@ -32,6 +32,7 @@ export function generateRepaySchedule(
   repayMonths: number,
   disposeAmount: number,
   repayType: RepayType,
+  capitalOnly: boolean = false,
 ): CreditorRepaySchedule[] {
   if (creditors.length === 0 || monthlyRepay <= 0) return [];
 
@@ -39,13 +40,13 @@ export function generateRepaySchedule(
   if (repayType === 'tieredTaxPriority') {
     const hasTax = creditors.some((c) => c.priorityClass === 'tax_priority');
     if (hasTax) {
-      return generateTieredSchedule(creditors, monthlyRepay, repayMonths, disposeAmount);
+      return generateTieredSchedule(creditors, monthlyRepay, repayMonths, disposeAmount, capitalOnly);
     }
     // 조세채권이 없으면 일반 sequential로 폴백
   }
 
   const totalDebt = creditors.reduce(
-    (s, c) => s + (c.capital || 0) + (c.interest || 0),
+    (s, c) => s + (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0)),
     0,
   );
   const totalRepayTarget = monthlyRepay * repayMonths + disposeAmount;
@@ -55,7 +56,7 @@ export function generateRepaySchedule(
   let totalAllocated = 0;
 
   return creditors.map((creditor, idx) => {
-    const creditorDebt = (creditor.capital || 0) + (creditor.interest || 0);
+    const creditorDebt = (creditor.capital || 0) + (capitalOnly ? 0 : (creditor.interest || 0));
     const ratio = totalDebt > 0 ? creditorDebt / totalDebt : 0;
 
     let monthly: number;
@@ -75,7 +76,11 @@ export function generateRepaySchedule(
     let capitalRepay: number;
     let interestRepay: number;
 
-    if (repayType === 'sequential') {
+    if (capitalOnly) {
+      // 원금만 변제 (capital36 등): 이자는 면책
+      capitalRepay = total;
+      interestRepay = 0;
+    } else if (repayType === 'sequential') {
       // 원리금변제: 원금 먼저, 잔여분이 이자
       capitalRepay = Math.min(creditor.capital || 0, total);
       interestRepay = Math.max(0, total - (creditor.capital || 0));
@@ -115,10 +120,11 @@ function generateTieredSchedule(
   monthlyRepay: number,
   repayMonths: number,
   disposeAmount: number,
+  capitalOnly: boolean = false,
 ): CreditorRepaySchedule[] {
   // 채권자별 분류 (확정/미확정/담보충당)
   const classified = creditors.map((c) => {
-    const totalClaim = (c.capital || 0) + (c.interest || 0);
+    const totalClaim = (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0));
     const cls = classifyCreditor({
       totalClaim,
       isSecured: c.isSecured,
@@ -181,9 +187,16 @@ function generateTieredSchedule(
       ? Math.round(entry.total * (x.confirmedAmount / anchor))
       : entry.total;
     const unconfirmedShare = entry.total - confirmedShare;
-    // 원금·이자 배분 (sequential 기본)
-    const capitalRepay = Math.min(x.creditor.capital || 0, entry.total);
-    const interestRepay = Math.max(0, entry.total - (x.creditor.capital || 0));
+    // 원금·이자 배분
+    let capitalRepay: number;
+    let interestRepay: number;
+    if (capitalOnly) {
+      capitalRepay = entry.total;
+      interestRepay = 0;
+    } else {
+      capitalRepay = Math.min(x.creditor.capital || 0, entry.total);
+      interestRepay = Math.max(0, entry.total - (x.creditor.capital || 0));
+    }
     return {
       creditorId: x.creditor.id,
       ratio: x.totalClaim > 0 ? entry.total / x.totalClaim : 0,
@@ -205,11 +218,12 @@ export function computeTieredSegments(
   creditors: RehabCreditor[],
   monthlyRepay: number,
   repayMonths: number,
+  capitalOnly: boolean = false,
 ): TieredScheduleSegment[] {
   const taxClaims = creditors.filter((c) => c.priorityClass === 'tax_priority');
   const others = creditors.filter((c) => c.priorityClass !== 'tax_priority');
-  const taxTotal = taxClaims.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
-  const othersTotal = others.reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+  const taxTotal = taxClaims.reduce((s, c) => s + (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0)), 0);
+  const othersTotal = others.reduce((s, c) => s + (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0)), 0);
 
   if (taxTotal <= 0) return [];
 
@@ -219,6 +233,8 @@ export function computeTieredSegments(
 
   const segments: TieredScheduleSegment[] = [];
 
+  const creditorDebtFn = (c: RehabCreditor) => (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0));
+
   // 1구간: 조세 단독
   if (taxFullMonths > 0) {
     segments.push({
@@ -226,7 +242,7 @@ export function computeTieredSegments(
       endMonth: taxFullMonths,
       monthlyAmount: monthlyRepay,
       targets: taxClaims.map((c) => {
-        const debt = (c.capital || 0) + (c.interest || 0);
+        const debt = creditorDebtFn(c);
         const share = Math.round(monthlyRepay * (taxTotal > 0 ? debt / taxTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
@@ -239,12 +255,12 @@ export function computeTieredSegments(
     const unsecuredPortion = monthlyRepay - taxRemainder;
     const mixedTargets = [
       ...taxClaims.map((c) => {
-        const debt = (c.capital || 0) + (c.interest || 0);
+        const debt = creditorDebtFn(c);
         const share = Math.round(taxRemainder * (taxTotal > 0 ? debt / taxTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
       ...others.map((c) => {
-        const debt = (c.capital || 0) + (c.interest || 0);
+        const debt = creditorDebtFn(c);
         const share = Math.round(unsecuredPortion * (othersTotal > 0 ? debt / othersTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
@@ -265,7 +281,7 @@ export function computeTieredSegments(
       endMonth: repayMonths,
       monthlyAmount: monthlyRepay,
       targets: others.map((c) => {
-        const debt = (c.capital || 0) + (c.interest || 0);
+        const debt = creditorDebtFn(c);
         const share = Math.round(monthlyRepay * (othersTotal > 0 ? debt / othersTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
