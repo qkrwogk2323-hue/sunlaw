@@ -30,6 +30,8 @@ interface RehabModuleClientProps {
   application: Record<string, unknown> | null;
   creditorSettings: Record<string, unknown> | null;
   creditors: Record<string, unknown>[];
+  creditorsPagination: { total: number; page: number; pageSize: number; totalPages: number };
+  creditorsSummary: Record<string, unknown>[];
   securedProperties: Record<string, unknown>[];
   properties: Record<string, unknown>[];
   propertyDeductions: Record<string, unknown>[];
@@ -47,6 +49,8 @@ export function RehabModuleClient({
   application,
   creditorSettings,
   creditors,
+  creditorsPagination,
+  creditorsSummary,
   securedProperties,
   properties,
   propertyDeductions,
@@ -108,6 +112,8 @@ export function RehabModuleClient({
             organizationId={organizationId}
             creditorSettings={creditorSettings}
             creditors={creditors}
+            creditorsPagination={creditorsPagination}
+            creditorsSummary={creditorsSummary}
             securedProperties={securedProperties}
           />
         )}

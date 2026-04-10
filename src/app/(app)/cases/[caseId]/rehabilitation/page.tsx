@@ -6,10 +6,13 @@ import { RehabModuleClient } from './rehab-module-client';
 
 interface Props {
   params: Promise<{ caseId: string }>;
+  searchParams: Promise<{ creditorPage?: string }>;
 }
 
-export default async function RehabilitationPage({ params }: Props) {
+export default async function RehabilitationPage({ params, searchParams }: Props) {
   const { caseId } = await params;
+  const sp = await searchParams;
+  const creditorPage = Math.max(1, parseInt(sp.creditorPage || '1', 10) || 1);
   const auth = await requireAuthenticatedUser();
   const supabase = await createSupabaseServerClient();
 
@@ -36,7 +39,7 @@ export default async function RehabilitationPage({ params }: Props) {
   const primaryClient = caseClients?.[0]?.clients ?? null;
 
   // 개인회생 모듈 전체 데이터 병렬 조회
-  const moduleData = await getRehabModuleData(caseId);
+  const moduleData = await getRehabModuleData(caseId, creditorPage);
 
   return (
     <RehabModuleClient
@@ -47,6 +50,8 @@ export default async function RehabilitationPage({ params }: Props) {
       application={moduleData.application}
       creditorSettings={moduleData.creditorSettings}
       creditors={moduleData.creditors}
+      creditorsPagination={moduleData.creditorsPagination}
+      creditorsSummary={moduleData.creditorsSummary}
       securedProperties={moduleData.securedProperties}
       properties={moduleData.properties}
       propertyDeductions={moduleData.propertyDeductions}

@@ -99,16 +99,36 @@ export async function getRehabCreditorSettings(caseId: string) {
   return data ? mapCreditorSettingsDbToForm(data as Record<string, unknown>) : null;
 }
 
-/** 채권자 목록 조회 (soft delete 제외) */
-export async function getRehabCreditors(caseId: string) {
+/** 채권자 목록 조회 (soft delete 제외, 서버 페이지네이션) */
+export async function getRehabCreditors(
+  caseId: string,
+  opts?: { page?: number; pageSize?: number },
+) {
+  const page = opts?.page ?? 1;
+  const pageSize = opts?.pageSize ?? 20;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  const { data, count } = await supabase
     .from('rehabilitation_creditors')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('case_id', caseId)
     .neq('lifecycle_status', 'soft_deleted')
     .order('bond_number')
-    .limit(200);
+    .range(from, to);
+  return { creditors: data ?? [], total: count ?? 0, page, pageSize };
+}
+
+/** 채권자 전체 조회 (합계 계산 등 내부 용도) */
+export async function getRehabCreditorsAll(caseId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('rehabilitation_creditors')
+    .select('id, capital, interest, is_secured, classify, has_priority_repay')
+    .eq('case_id', caseId)
+    .neq('lifecycle_status', 'soft_deleted')
+    .order('bond_number');
   return data ?? [];
 }
 
@@ -221,11 +241,12 @@ export async function getRehabPlanSections(caseId: string) {
 }
 
 /** 개인회생 모듈 전체 데이터 병렬 조회 */
-export async function getRehabModuleData(caseId: string) {
+export async function getRehabModuleData(caseId: string, creditorPage = 1) {
   const [
     application,
     creditorSettings,
-    creditors,
+    creditorsResult,
+    creditorsAllSummary,
     securedProperties,
     properties,
     propertyDeductions,
@@ -236,7 +257,8 @@ export async function getRehabModuleData(caseId: string) {
   ] = await Promise.all([
     getRehabApplication(caseId),
     getRehabCreditorSettings(caseId),
-    getRehabCreditors(caseId),
+    getRehabCreditors(caseId, { page: creditorPage, pageSize: 20 }),
+    getRehabCreditorsAll(caseId),
     getRehabSecuredProperties(caseId),
     getRehabProperties(caseId),
     getRehabPropertyDeductions(caseId),
@@ -249,7 +271,14 @@ export async function getRehabModuleData(caseId: string) {
   return {
     application,
     creditorSettings,
-    creditors,
+    creditors: creditorsResult.creditors,
+    creditorsPagination: {
+      total: creditorsResult.total,
+      page: creditorsResult.page,
+      pageSize: creditorsResult.pageSize,
+      totalPages: Math.ceil(creditorsResult.total / creditorsResult.pageSize),
+    },
+    creditorsSummary: creditorsAllSummary,
     securedProperties,
     properties,
     propertyDeductions,

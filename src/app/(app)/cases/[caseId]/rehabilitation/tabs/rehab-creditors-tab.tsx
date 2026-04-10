@@ -17,6 +17,8 @@ interface RehabCreditorsTabProps {
   organizationId: string;
   creditorSettings: Record<string, unknown> | null;
   creditors: Record<string, unknown>[];
+  creditorsPagination: { total: number; page: number; pageSize: number; totalPages: number };
+  creditorsSummary: Record<string, unknown>[];
   securedProperties: Record<string, unknown>[];
 }
 
@@ -104,6 +106,8 @@ export function RehabCreditorsTab({
   organizationId,
   creditorSettings,
   creditors: initialCreditors,
+  creditorsPagination,
+  creditorsSummary,
   securedProperties: initialSecuredProperties,
 }: RehabCreditorsTabProps) {
   const { success, error, undo } = useToast();
@@ -134,14 +138,15 @@ export function RehabCreditorsTab({
     return searchFinancialInstitution(searchKeyword);
   }, [searchKeyword]);
 
-  // 합계
+  // 합계 (전체 기준 — creditorsSummary 사용, 현재 페이지가 아닌 전건)
   const totals = useMemo(() => {
-    const totalCapital = creditors.reduce((s, c) => s + c.capital, 0);
-    const totalInterest = creditors.reduce((s, c) => s + c.interest, 0);
-    const securedDebt = creditors.filter((c) => c.is_secured).reduce((s, c) => s + c.capital + c.interest, 0);
+    const all = creditorsSummary;
+    const totalCapital = all.reduce((s, c) => s + ((c.capital as number) || 0), 0);
+    const totalInterest = all.reduce((s, c) => s + ((c.interest as number) || 0), 0);
+    const securedDebt = all.filter((c) => c.is_secured).reduce((s, c) => s + ((c.capital as number) || 0) + ((c.interest as number) || 0), 0);
     const unsecuredDebt = totalCapital + totalInterest - securedDebt;
-    return { totalCapital, totalInterest, totalDebt: totalCapital + totalInterest, securedDebt, unsecuredDebt, count: creditors.length };
-  }, [creditors]);
+    return { totalCapital, totalInterest, totalDebt: totalCapital + totalInterest, securedDebt, unsecuredDebt, count: creditorsPagination.total };
+  }, [creditorsSummary, creditorsPagination.total]);
 
   const addCreditor = useCallback(() => {
     const nextBondNumber = creditors.length > 0 ? Math.max(...creditors.map((c) => c.bond_number)) + 1 : 1;
@@ -824,6 +829,31 @@ export function RehabCreditorsTab({
           </div>
         )}
       </section>
+
+      {/* 페이지네이션 */}
+      {creditorsPagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <a
+            href={`?creditorPage=${Math.max(1, creditorsPagination.page - 1)}`}
+            className={`rounded-md border px-3 py-1.5 text-sm ${creditorsPagination.page <= 1 ? 'pointer-events-none border-slate-200 text-slate-300' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+            aria-label="이전 페이지"
+            aria-disabled={creditorsPagination.page <= 1}
+          >
+            이전
+          </a>
+          <span className="text-sm text-slate-600">
+            {creditorsPagination.page} / {creditorsPagination.totalPages} 페이지 (총 {creditorsPagination.total}건)
+          </span>
+          <a
+            href={`?creditorPage=${Math.min(creditorsPagination.totalPages, creditorsPagination.page + 1)}`}
+            className={`rounded-md border px-3 py-1.5 text-sm ${creditorsPagination.page >= creditorsPagination.totalPages ? 'pointer-events-none border-slate-200 text-slate-300' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+            aria-label="다음 페이지"
+            aria-disabled={creditorsPagination.page >= creditorsPagination.totalPages}
+          >
+            다음
+          </a>
+        </div>
+      )}
 
       {/* 저장 버튼 */}
       <div className="flex justify-end">
