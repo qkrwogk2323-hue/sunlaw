@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/cn';
-import { RehabApplicantTab } from './tabs/rehab-applicant-tab';
-import { RehabCreditorsTab } from './tabs/rehab-creditors-tab';
-import { RehabPropertyTab } from './tabs/rehab-property-tab';
-import { RehabIncomeTab } from './tabs/rehab-income-tab';
-import { RehabAffidavitTab } from './tabs/rehab-affidavit-tab';
-import { RehabPlanTab } from './tabs/rehab-plan-tab';
-import { RehabDocumentsTab } from './tabs/rehab-documents-tab';
+
+// 탭별 dynamic import — 활성 탭만 로드 (번들 ~120K → 탭당 ~20K)
+const RehabApplicantTab = dynamic(() => import('./tabs/rehab-applicant-tab').then(m => ({ default: m.RehabApplicantTab })));
+const RehabCreditorsTab = dynamic(() => import('./tabs/rehab-creditors-tab').then(m => ({ default: m.RehabCreditorsTab })));
+const RehabPropertyTab = dynamic(() => import('./tabs/rehab-property-tab').then(m => ({ default: m.RehabPropertyTab })));
+const RehabIncomeTab = dynamic(() => import('./tabs/rehab-income-tab').then(m => ({ default: m.RehabIncomeTab })));
+const RehabAffidavitTab = dynamic(() => import('./tabs/rehab-affidavit-tab').then(m => ({ default: m.RehabAffidavitTab })));
+const RehabPlanTab = dynamic(() => import('./tabs/rehab-plan-tab').then(m => ({ default: m.RehabPlanTab })));
+const RehabDocumentsTab = dynamic(() => import('./tabs/rehab-documents-tab').then(m => ({ default: m.RehabDocumentsTab })));
 
 const TABS = [
   { key: 'applicant', label: '신청인' },
