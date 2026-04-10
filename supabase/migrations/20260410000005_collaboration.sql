@@ -17,24 +17,7 @@ create table if not exists public.notification_channel_preferences (
   updated_at timestamptz not null default now()
 );
 
-alter table public.notification_channel_preferences enable row level security;
-alter table public.notification_channel_preferences force row level security;
-
-drop policy if exists notification_channel_preferences_select on public.notification_channel_preferences;
-create policy notification_channel_preferences_select on public.notification_channel_preferences
-for select to authenticated
-using (profile_id = auth.uid());
-
-drop policy if exists notification_channel_preferences_insert on public.notification_channel_preferences;
-create policy notification_channel_preferences_insert on public.notification_channel_preferences
-for insert to authenticated
-with check (profile_id = auth.uid());
-
-drop policy if exists notification_channel_preferences_update on public.notification_channel_preferences;
-create policy notification_channel_preferences_update on public.notification_channel_preferences
-for update to authenticated
-using (profile_id = auth.uid())
-with check (profile_id = auth.uid());
+-- NOTE: RLS → 010, indexes → 011
 
 drop trigger if exists trg_notification_channel_preferences_updated_at on public.notification_channel_preferences;
 create trigger trg_notification_channel_preferences_updated_at
@@ -56,8 +39,7 @@ create table if not exists public.kakao_notification_outbox (
   created_at timestamptz not null default now()
 );
 
-create index if not exists kakao_notification_outbox_status_idx
-  on public.kakao_notification_outbox (status, created_at desc);
+-- NOTE: indexes → 011
 
 create or replace function app.enqueue_kakao_notification_for_eligible()
 returns trigger
@@ -162,8 +144,7 @@ alter table public.invitations
   add column if not exists revoked_at timestamptz,
   add column if not exists updated_at timestamptz not null default now();
 
-create index if not exists idx_invitations_status_expires on public.invitations (status, expires_at);
-create index if not exists idx_invitations_case_client on public.invitations (case_client_id, status);
+-- NOTE: indexes → 011
 
 alter table public.invitations
   drop constraint if exists invitations_staff_fields_check;
@@ -176,38 +157,7 @@ alter table public.invitations
     (kind = 'client_invite' and case_id is not null)
   );
 
-alter table public.invitations enable row level security;
-alter table public.invitations force row level security;
-
-drop policy if exists invitations_select on public.invitations;
-create policy invitations_select on public.invitations
-for select to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_manager(organization_id)
-  or lower(coalesce(auth.jwt() ->> 'email','')) = lower(email)
-);
-
-drop policy if exists invitations_insert on public.invitations;
-create policy invitations_insert on public.invitations
-for insert to authenticated
-with check (
-  app.is_platform_admin() or app.is_org_manager(organization_id)
-);
-
-drop policy if exists invitations_update on public.invitations;
-create policy invitations_update on public.invitations
-for update to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_manager(organization_id)
-  or lower(coalesce(auth.jwt() ->> 'email','')) = lower(email)
-)
-with check (
-  app.is_platform_admin()
-  or app.is_org_manager(organization_id)
-  or lower(coalesce(auth.jwt() ->> 'email','')) = lower(email)
-);
+-- NOTE: RLS → 010
 
 drop trigger if exists trg_invitations_updated_at on public.invitations;
 create trigger trg_invitations_updated_at
@@ -299,195 +249,9 @@ create table if not exists public.organization_collaboration_case_shares (
   constraint organization_collaboration_case_shares_permission_scope_check check (permission_scope in ('view', 'reference', 'collaborate'))
 );
 
--- ============================================================================
--- COLLABORATION INDEXES
--- ============================================================================
+-- NOTE: indexes → 011
 
-create unique index if not exists uq_org_collaboration_requests_pending_pair
-  on public.organization_collaboration_requests (source_organization_id, target_organization_id)
-  where status = 'pending';
-
-create unique index if not exists uq_org_collaboration_hubs_active_pair
-  on public.organization_collaboration_hubs (
-    (least(primary_organization_id, partner_organization_id)),
-    (greatest(primary_organization_id, partner_organization_id))
-  )
-  where status = 'active';
-
-create index if not exists idx_org_collaboration_requests_source_status
-  on public.organization_collaboration_requests (source_organization_id, status, created_at desc);
-
-create index if not exists idx_org_collaboration_requests_target_status
-  on public.organization_collaboration_requests (target_organization_id, status, created_at desc);
-
-create index if not exists idx_org_collaboration_hubs_primary_status
-  on public.organization_collaboration_hubs (primary_organization_id, status, updated_at desc);
-
-create index if not exists idx_org_collaboration_hubs_partner_status
-  on public.organization_collaboration_hubs (partner_organization_id, status, updated_at desc);
-
-create index if not exists idx_org_collaboration_messages_hub_created_at
-  on public.organization_collaboration_messages (hub_id, created_at desc);
-
-create index if not exists idx_org_collaboration_messages_org_created_at
-  on public.organization_collaboration_messages (organization_id, created_at desc);
-
-create index if not exists idx_org_collaboration_reads_hub_profile
-  on public.organization_collaboration_reads (hub_id, profile_id, last_read_at desc);
-
-create index if not exists idx_org_collaboration_case_shares_hub_created_at
-  on public.organization_collaboration_case_shares (hub_id, created_at desc);
-
--- ============================================================================
--- COLLABORATION RLS
--- ============================================================================
-
-alter table public.organization_collaboration_requests enable row level security;
-alter table public.organization_collaboration_requests force row level security;
-alter table public.organization_collaboration_hubs enable row level security;
-alter table public.organization_collaboration_hubs force row level security;
-alter table public.organization_collaboration_messages enable row level security;
-alter table public.organization_collaboration_messages force row level security;
-alter table public.organization_collaboration_reads enable row level security;
-alter table public.organization_collaboration_reads force row level security;
-alter table public.organization_collaboration_case_shares enable row level security;
-alter table public.organization_collaboration_case_shares force row level security;
-
-drop policy if exists organization_collaboration_requests_select on public.organization_collaboration_requests;
-create policy organization_collaboration_requests_select on public.organization_collaboration_requests
-for select to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_member(source_organization_id)
-  or app.is_org_member(target_organization_id)
-);
-
-drop policy if exists organization_collaboration_requests_insert on public.organization_collaboration_requests;
-create policy organization_collaboration_requests_insert on public.organization_collaboration_requests
-for insert to authenticated
-with check (
-  requested_by_profile_id = auth.uid()
-  and app.is_org_manager(source_organization_id)
-);
-
-drop policy if exists organization_collaboration_requests_update on public.organization_collaboration_requests;
-create policy organization_collaboration_requests_update on public.organization_collaboration_requests
-for update to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_manager(source_organization_id)
-  or app.is_org_manager(target_organization_id)
-)
-with check (
-  app.is_platform_admin()
-  or app.is_org_manager(source_organization_id)
-  or app.is_org_manager(target_organization_id)
-);
-
-drop policy if exists organization_collaboration_hubs_select on public.organization_collaboration_hubs;
-create policy organization_collaboration_hubs_select on public.organization_collaboration_hubs
-for select to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_member(primary_organization_id)
-  or app.is_org_member(partner_organization_id)
-);
-
-drop policy if exists organization_collaboration_hubs_write on public.organization_collaboration_hubs;
-create policy organization_collaboration_hubs_write on public.organization_collaboration_hubs
-for all to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_manager(primary_organization_id)
-  or app.is_org_manager(partner_organization_id)
-)
-with check (
-  app.is_platform_admin()
-  or app.is_org_manager(primary_organization_id)
-  or app.is_org_manager(partner_organization_id)
-);
-
-drop policy if exists organization_collaboration_messages_select on public.organization_collaboration_messages;
-create policy organization_collaboration_messages_select on public.organization_collaboration_messages
-for select to authenticated
-using (
-  app.is_platform_admin()
-  or exists (
-    select 1
-    from public.organization_collaboration_hubs hubs
-    where hubs.id = hub_id
-      and (
-        app.is_org_member(hubs.primary_organization_id)
-        or app.is_org_member(hubs.partner_organization_id)
-      )
-  )
-);
-
-drop policy if exists organization_collaboration_messages_insert on public.organization_collaboration_messages;
-create policy organization_collaboration_messages_insert on public.organization_collaboration_messages
-for insert to authenticated
-with check (
-  sender_profile_id = auth.uid()
-  and app.is_org_member(organization_id)
-  and exists (
-    select 1
-    from public.organization_collaboration_hubs hubs
-    where hubs.id = hub_id
-      and (
-        hubs.primary_organization_id = organization_id
-        or hubs.partner_organization_id = organization_id
-      )
-  )
-);
-
-drop policy if exists organization_collaboration_reads_select on public.organization_collaboration_reads;
-create policy organization_collaboration_reads_select on public.organization_collaboration_reads
-for select to authenticated
-using (
-  app.is_platform_admin()
-  or profile_id = auth.uid()
-  or app.is_org_member(organization_id)
-);
-
-drop policy if exists organization_collaboration_reads_write on public.organization_collaboration_reads;
-create policy organization_collaboration_reads_write on public.organization_collaboration_reads
-for all to authenticated
-using (
-  app.is_platform_admin()
-  or profile_id = auth.uid()
-)
-with check (
-  app.is_platform_admin()
-  or profile_id = auth.uid()
-);
-
-drop policy if exists organization_collaboration_case_shares_select on public.organization_collaboration_case_shares;
-create policy organization_collaboration_case_shares_select on public.organization_collaboration_case_shares
-for select to authenticated
-using (
-  app.is_platform_admin()
-  or exists (
-    select 1
-    from public.organization_collaboration_hubs hubs
-    where hubs.id = hub_id
-      and (
-        app.is_org_member(hubs.primary_organization_id)
-        or app.is_org_member(hubs.partner_organization_id)
-      )
-  )
-);
-
-drop policy if exists organization_collaboration_case_shares_write on public.organization_collaboration_case_shares;
-create policy organization_collaboration_case_shares_write on public.organization_collaboration_case_shares
-for all to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_org_member(shared_by_organization_id)
-)
-with check (
-  app.is_platform_admin()
-  or app.is_org_member(shared_by_organization_id)
-);
+-- NOTE: RLS → 010
 
 -- ============================================================================
 -- COLLABORATION TRIGGERS
@@ -605,106 +369,9 @@ comment on column public.case_hub_organizations.hub_role is 'Hub-based organizat
 comment on column public.case_hub_organizations.access_scope is 'Hub-based organization access scope (inherits case_organizations.access_scope)';
 comment on column public.case_hub_organizations.status is 'active | pending | unlinked';
 
--- ============================================================================
--- CASE HUBS INDEXES
--- ============================================================================
+-- NOTE: indexes → 011
 
-create index if not exists idx_case_hubs_organization_id  on public.case_hubs(organization_id);
-create index if not exists idx_case_hubs_case_id          on public.case_hubs(case_id);
-create index if not exists idx_case_hubs_lifecycle        on public.case_hubs(lifecycle_status);
-create index if not exists idx_case_hub_members_hub_id    on public.case_hub_members(hub_id);
-create index if not exists idx_case_hub_members_profile   on public.case_hub_members(profile_id);
-create index if not exists idx_case_hub_activity_hub_id   on public.case_hub_activity(hub_id);
-create index if not exists idx_case_hub_activity_created  on public.case_hub_activity(created_at desc);
-create index if not exists idx_case_hub_organizations_hub on public.case_hub_organizations (hub_id, status);
-create index if not exists idx_case_hub_organizations_org on public.case_hub_organizations (organization_id, status);
-create index if not exists idx_case_hub_organizations_case_org on public.case_hub_organizations (source_case_organization_id);
-
--- ============================================================================
--- CASE HUBS RLS
--- ============================================================================
-
-alter table public.case_hubs         enable row level security;
-alter table public.case_hub_members  enable row level security;
-alter table public.case_hub_activity enable row level security;
-alter table public.case_hub_organizations enable row level security;
-alter table public.case_hub_organizations force row level security;
-
--- case_hubs: organization members read, service_role all
-drop policy if exists "case_hubs_org_member_select" on public.case_hubs;
-create policy "case_hubs_org_member_select"
-  on public.case_hubs for select
-  using (
-    exists (
-      select 1 from public.organization_memberships om
-      where om.organization_id = case_hubs.organization_id
-        and om.profile_id = auth.uid()
-        and om.status = 'active'
-    )
-  );
-
-drop policy if exists "case_hubs_service_role_all" on public.case_hubs;
-create policy "case_hubs_service_role_all"
-  on public.case_hubs for all
-  using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
--- case_hub_members: organization members read, service_role all
-drop policy if exists "case_hub_members_org_select" on public.case_hub_members;
-create policy "case_hub_members_org_select"
-  on public.case_hub_members for select
-  using (
-    exists (
-      select 1 from public.case_hubs ch
-      join public.organization_memberships om on om.organization_id = ch.organization_id
-      where ch.id = case_hub_members.hub_id
-        and om.profile_id = auth.uid()
-        and om.status = 'active'
-    )
-  );
-
-drop policy if exists "case_hub_members_service_role_all" on public.case_hub_members;
-create policy "case_hub_members_service_role_all"
-  on public.case_hub_members for all
-  using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
--- case_hub_activity: organization members read, service_role all
-drop policy if exists "case_hub_activity_org_select" on public.case_hub_activity;
-create policy "case_hub_activity_org_select"
-  on public.case_hub_activity for select
-  using (
-    exists (
-      select 1 from public.case_hubs ch
-      join public.organization_memberships om on om.organization_id = ch.organization_id
-      where ch.id = case_hub_activity.hub_id
-        and om.profile_id = auth.uid()
-        and om.status = 'active'
-    )
-  );
-
-drop policy if exists "case_hub_activity_service_role_all" on public.case_hub_activity;
-create policy "case_hub_activity_service_role_all"
-  on public.case_hub_activity for all
-  using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
-drop policy if exists case_hub_organizations_select on public.case_hub_organizations;
-create policy case_hub_organizations_select
-on public.case_hub_organizations
-for select
-to authenticated
-using (
-  app.is_platform_admin()
-  or app.is_case_hub_org_member(hub_id)
-);
-
-drop policy if exists case_hub_organizations_service_role_all on public.case_hub_organizations;
-create policy case_hub_organizations_service_role_all
-on public.case_hub_organizations
-for all
-using (auth.role() = 'service_role')
-with check (auth.role() = 'service_role');
+-- NOTE: RLS → 010
 
 -- ============================================================================
 -- CASE HUBS TRIGGERS & FUNCTIONS

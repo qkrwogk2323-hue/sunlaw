@@ -590,46 +590,7 @@ create table if not exists public.organization_exit_requests (
   updated_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Create indexes
-create index if not exists idx_client_private_profiles_created_at
-  on public.client_private_profiles (created_at desc);
-
-create index if not exists idx_client_service_requests_profile_status
-  on public.client_service_requests (profile_id, status, created_at desc);
-
-create index if not exists idx_client_service_requests_org_status
-  on public.client_service_requests (organization_id, status, created_at desc);
-
-create index if not exists idx_org_exit_requests_org on public.organization_exit_requests(organization_id, status, created_at desc);
-create index if not exists idx_org_exit_requests_status on public.organization_exit_requests(status, created_at desc);
-
-create index if not exists idx_org_memberships_profile on public.organization_memberships (profile_id, status);
-create index if not exists idx_org_memberships_org on public.organization_memberships (organization_id, status, role);
-create index if not exists idx_cases_org on public.cases (organization_id, updated_at desc);
-create index if not exists idx_cases_status on public.cases (organization_id, case_status);
-create index if not exists idx_case_handlers_case on public.case_handlers (case_id);
-create index if not exists idx_case_clients_case on public.case_clients (case_id);
-create index if not exists idx_case_clients_profile on public.case_clients (profile_id);
-create index if not exists idx_case_parties_case on public.case_parties (case_id);
-create index if not exists idx_case_documents_case on public.case_documents (case_id, updated_at desc);
-create index if not exists idx_case_documents_status on public.case_documents (organization_id, approval_status);
-create index if not exists idx_case_document_reviews_case on public.case_document_reviews (case_id, created_at desc);
-create index if not exists idx_case_schedules_case on public.case_schedules (case_id, scheduled_start);
-create index if not exists idx_case_schedules_org_due on public.case_schedules (organization_id, scheduled_start);
-create index if not exists idx_case_recovery_case on public.case_recovery_activities (case_id, occurred_at desc);
-create index if not exists idx_notifications_recipient on public.notifications (recipient_profile_id, created_at desc);
-create index if not exists idx_support_requests_org on public.support_access_requests (organization_id, status, created_at desc);
-create index if not exists idx_case_organizations_case on public.case_organizations (case_id, status, role);
-create index if not exists idx_case_organizations_org on public.case_organizations (organization_id, status, role);
-create index if not exists idx_case_organizations_instructed_by on public.case_organizations (instructed_by_case_organization_id);
-create index if not exists idx_organization_relations_source on public.organization_relations (source_organization_id, relation_type);
-create index if not exists idx_organization_relations_target on public.organization_relations (target_organization_id, relation_type);
-create index if not exists idx_case_messages_case_created on public.case_messages (case_id, created_at desc);
-create index if not exists idx_case_requests_case_status on public.case_requests (case_id, status, created_at desc);
-create index if not exists idx_case_requests_assigned on public.case_requests (assigned_to, status, created_at desc);
-create index if not exists idx_billing_entries_case_status on public.billing_entries (case_id, status, created_at desc);
-create index if not exists idx_invitations_org_status on public.invitations (organization_id, status, created_at desc);
-create index if not exists idx_invitations_case_status on public.invitations (case_id, status, created_at desc);
+-- NOTE: indexes → 011
 
 -- Create update trigger functions
 create or replace function app.set_updated_at()
@@ -797,72 +758,7 @@ drop trigger if exists trg_invitations_updated_at on public.invitations;
 create trigger trg_invitations_updated_at before update on public.invitations
 for each row execute procedure app.set_updated_at();
 
--- Enable RLS on client/member private profiles and organization exit requests
-alter table public.client_private_profiles enable row level security;
-alter table public.client_private_profiles force row level security;
-alter table public.client_service_requests enable row level security;
-alter table public.client_service_requests force row level security;
-alter table public.member_private_profiles enable row level security;
-alter table public.member_private_profiles force row level security;
-alter table public.organization_exit_requests enable row level security;
-alter table public.organization_exit_requests force row level security;
-
--- RLS policies for client_private_profiles
-drop policy if exists client_private_profiles_select on public.client_private_profiles;
-create policy client_private_profiles_select on public.client_private_profiles
-for select to authenticated
-using (profile_id = auth.uid() or app.is_platform_admin());
-
-drop policy if exists client_private_profiles_insert on public.client_private_profiles;
-create policy client_private_profiles_insert on public.client_private_profiles
-for insert to authenticated
-with check (profile_id = auth.uid() or app.is_platform_admin());
-
-drop policy if exists client_private_profiles_update on public.client_private_profiles;
-create policy client_private_profiles_update on public.client_private_profiles
-for update to authenticated
-using (profile_id = auth.uid() or app.is_platform_admin())
-with check (profile_id = auth.uid() or app.is_platform_admin());
-
--- RLS policies for client_service_requests
-drop policy if exists client_service_requests_select on public.client_service_requests;
-create policy client_service_requests_select on public.client_service_requests
-for select to authenticated
-using (
-  profile_id = auth.uid()
-  or app.is_platform_admin()
-  or (organization_id is not null and app.is_org_manager(organization_id))
-);
-
-drop policy if exists client_service_requests_insert on public.client_service_requests;
-create policy client_service_requests_insert on public.client_service_requests
-for insert to authenticated
-with check (profile_id = auth.uid() or app.is_platform_admin());
-
-drop policy if exists client_service_requests_update on public.client_service_requests;
-create policy client_service_requests_update on public.client_service_requests
-for update to authenticated
-using (
-  app.is_platform_admin()
-  or (organization_id is not null and app.is_org_manager(organization_id))
-)
-with check (
-  app.is_platform_admin()
-  or (organization_id is not null and app.is_org_manager(organization_id))
-);
-
--- RLS policies for member_private_profiles
-drop policy if exists member_private_profiles_select on public.member_private_profiles;
-create policy member_private_profiles_select on public.member_private_profiles
-  for select using (profile_id = auth.uid());
-
-drop policy if exists member_private_profiles_insert on public.member_private_profiles;
-create policy member_private_profiles_insert on public.member_private_profiles
-  for insert with check (profile_id = auth.uid());
-
-drop policy if exists member_private_profiles_update on public.member_private_profiles;
-create policy member_private_profiles_update on public.member_private_profiles
-  for update using (profile_id = auth.uid()) with check (profile_id = auth.uid());
+-- NOTE: RLS → 010
 
 -- Triggers for organization_exit_requests, client_private_profiles, and member_private_profiles updated_at
 drop trigger if exists trg_client_private_profiles_updated_at on public.client_private_profiles;

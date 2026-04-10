@@ -179,10 +179,7 @@ insert into public.case_type_default_modules (case_type, module_key)
 values ('insolvency', 'insolvency')
 on conflict (case_type, module_key) do nothing;
 
--- Index for insolvency case queries (0064)
-create index if not exists idx_cases_insolvency_subtype
-  on public.cases (organization_id, insolvency_subtype)
-  where case_type = 'insolvency';
+-- NOTE: indexes → 011, RLS → 010
 
 -- ───────────────────────────────────────────────────────────────────────────
 -- SECTION 3: Document Ingestion Queue (0065)
@@ -226,34 +223,7 @@ comment on table public.document_ingestion_jobs is
 comment on column public.document_ingestion_jobs.extracted_json is
   'AI 원본 출력 JSON. 후속 파싱은 도메인 테이블에 저장.';
 
-create index if not exists idx_ingestion_jobs_case on public.document_ingestion_jobs (case_id, status);
-create index if not exists idx_ingestion_jobs_org_status on public.document_ingestion_jobs (organization_id, status, created_at desc);
-create index if not exists idx_ingestion_jobs_pending on public.document_ingestion_jobs (status, created_at)
-  where status in ('pending', 'failed');
-
-alter table public.document_ingestion_jobs enable row level security;
-alter table public.document_ingestion_jobs force row level security;
-
-drop policy if exists ingestion_jobs_select on public.document_ingestion_jobs;
-create policy ingestion_jobs_select on public.document_ingestion_jobs
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists ingestion_jobs_insert on public.document_ingestion_jobs;
-create policy ingestion_jobs_insert on public.document_ingestion_jobs
-  for insert to authenticated
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists ingestion_jobs_update on public.document_ingestion_jobs;
-create policy ingestion_jobs_update on public.document_ingestion_jobs
-  for update to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists ingestion_jobs_service_role on public.document_ingestion_jobs;
-create policy ingestion_jobs_service_role on public.document_ingestion_jobs
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
+-- NOTE: indexes → 011, RLS → 010
 
 drop trigger if exists trg_ingestion_jobs_updated_at on public.document_ingestion_jobs;
 create trigger trg_ingestion_jobs_updated_at
@@ -343,48 +313,7 @@ create table if not exists public.insolvency_creditor_addresses (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_insolvency_creditors_case on public.insolvency_creditors (case_id, lifecycle_status, claim_class);
-create index if not exists idx_insolvency_creditors_org on public.insolvency_creditors (organization_id, lifecycle_status);
-create index if not exists idx_insolvency_creditor_addresses_creditor on public.insolvency_creditor_addresses (creditor_id);
-
-alter table public.insolvency_creditors enable row level security;
-alter table public.insolvency_creditors force row level security;
-alter table public.insolvency_creditor_addresses enable row level security;
-alter table public.insolvency_creditor_addresses force row level security;
-
--- RLS: insolvency_creditors
-drop policy if exists insolvency_creditors_select on public.insolvency_creditors;
-create policy insolvency_creditors_select on public.insolvency_creditors
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists insolvency_creditors_write on public.insolvency_creditors;
-create policy insolvency_creditors_write on public.insolvency_creditors
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists insolvency_creditors_service_role on public.insolvency_creditors;
-create policy insolvency_creditors_service_role on public.insolvency_creditors
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
--- RLS: insolvency_creditor_addresses
-drop policy if exists insolvency_creditor_addresses_select on public.insolvency_creditor_addresses;
-create policy insolvency_creditor_addresses_select on public.insolvency_creditor_addresses
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists insolvency_creditor_addresses_write on public.insolvency_creditor_addresses;
-create policy insolvency_creditor_addresses_write on public.insolvency_creditor_addresses
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists insolvency_creditor_addresses_service_role on public.insolvency_creditor_addresses;
-create policy insolvency_creditor_addresses_service_role on public.insolvency_creditor_addresses
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
+-- NOTE: indexes → 011, RLS → 010
 
 -- Triggers: insolvency_creditors
 drop trigger if exists trg_insolvency_creditors_updated_at on public.insolvency_creditors;
@@ -452,27 +381,7 @@ comment on table public.insolvency_collaterals is
 comment on column public.insolvency_collaterals.estimated_value is
   '담보물 현재 추정 시장가. 별제권 충족 시 secured_claim_amount까지만 별제권으로 처리.';
 
-create index if not exists idx_insolvency_collaterals_case on public.insolvency_collaterals (case_id, lifecycle_status);
-create index if not exists idx_insolvency_collaterals_creditor on public.insolvency_collaterals (creditor_id);
-
-alter table public.insolvency_collaterals enable row level security;
-alter table public.insolvency_collaterals force row level security;
-
-drop policy if exists insolvency_collaterals_select on public.insolvency_collaterals;
-create policy insolvency_collaterals_select on public.insolvency_collaterals
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists insolvency_collaterals_write on public.insolvency_collaterals;
-create policy insolvency_collaterals_write on public.insolvency_collaterals
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists insolvency_collaterals_service_role on public.insolvency_collaterals;
-create policy insolvency_collaterals_service_role on public.insolvency_collaterals
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
+-- NOTE: indexes → 011, RLS → 010
 
 drop trigger if exists trg_insolvency_collaterals_updated_at on public.insolvency_collaterals;
 create trigger trg_insolvency_collaterals_updated_at
@@ -556,40 +465,7 @@ update public.insolvency_ruleset_constants
   set value_pct = 1.0000
 where ruleset_key = 'rehabilitation_min_payment_pct';
 
-create index if not exists idx_priority_claims_case on public.insolvency_priority_claims (case_id, lifecycle_status);
-create index if not exists idx_priority_claims_creditor on public.insolvency_priority_claims (creditor_id);
-create index if not exists idx_ruleset_constants_key on public.insolvency_ruleset_constants (ruleset_key, effective_from);
-
-alter table public.insolvency_priority_claims enable row level security;
-alter table public.insolvency_priority_claims force row level security;
-alter table public.insolvency_ruleset_constants enable row level security;
-alter table public.insolvency_ruleset_constants force row level security;
-
-drop policy if exists priority_claims_select on public.insolvency_priority_claims;
-create policy priority_claims_select on public.insolvency_priority_claims
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists priority_claims_write on public.insolvency_priority_claims;
-create policy priority_claims_write on public.insolvency_priority_claims
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists priority_claims_service_role on public.insolvency_priority_claims;
-create policy priority_claims_service_role on public.insolvency_priority_claims
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
-drop policy if exists ruleset_constants_select on public.insolvency_ruleset_constants;
-create policy ruleset_constants_select on public.insolvency_ruleset_constants
-  for select to authenticated using (true);
-
-drop policy if exists ruleset_constants_write on public.insolvency_ruleset_constants;
-create policy ruleset_constants_write on public.insolvency_ruleset_constants
-  for all to authenticated
-  using (app.is_platform_admin())
-  with check (app.is_platform_admin());
+-- NOTE: indexes → 011, RLS → 010
 
 drop trigger if exists trg_priority_claims_updated_at on public.insolvency_priority_claims;
 create trigger trg_priority_claims_updated_at
@@ -691,46 +567,7 @@ create table if not exists public.insolvency_repayment_allocations (
 comment on table public.insolvency_repayment_allocations is
   '채권자별 변제 배분. 별제권부/우선변제/일반채권별 안분비례 결과.';
 
-create index if not exists idx_repayment_plans_case on public.insolvency_repayment_plans (case_id, status);
-create index if not exists idx_repayment_allocations_plan on public.insolvency_repayment_allocations (plan_id);
-create index if not exists idx_repayment_allocations_creditor on public.insolvency_repayment_allocations (creditor_id);
-
-alter table public.insolvency_repayment_plans enable row level security;
-alter table public.insolvency_repayment_plans force row level security;
-alter table public.insolvency_repayment_allocations enable row level security;
-alter table public.insolvency_repayment_allocations force row level security;
-
-drop policy if exists repayment_plans_select on public.insolvency_repayment_plans;
-create policy repayment_plans_select on public.insolvency_repayment_plans
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists repayment_plans_write on public.insolvency_repayment_plans;
-create policy repayment_plans_write on public.insolvency_repayment_plans
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists repayment_plans_service_role on public.insolvency_repayment_plans;
-create policy repayment_plans_service_role on public.insolvency_repayment_plans
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
-drop policy if exists repayment_allocations_select on public.insolvency_repayment_allocations;
-create policy repayment_allocations_select on public.insolvency_repayment_allocations
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists repayment_allocations_write on public.insolvency_repayment_allocations;
-create policy repayment_allocations_write on public.insolvency_repayment_allocations
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists repayment_allocations_service_role on public.insolvency_repayment_allocations;
-create policy repayment_allocations_service_role on public.insolvency_repayment_allocations
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
+-- NOTE: indexes → 011, RLS → 010
 
 drop trigger if exists trg_repayment_plans_updated_at on public.insolvency_repayment_plans;
 create trigger trg_repayment_plans_updated_at
@@ -840,76 +677,7 @@ create table if not exists public.insolvency_client_action_items (
 comment on table public.insolvency_client_action_items is
   '의뢰인 체크리스트 개별 항목. client_checked_at이 법적 확인 증거.';
 
-create index if not exists idx_filing_bundles_case on public.insolvency_filing_bundles (case_id, status);
-create index if not exists idx_action_packets_case on public.insolvency_client_action_packets (case_id, status);
-create index if not exists idx_action_items_packet on public.insolvency_client_action_items (packet_id, display_order);
-create index if not exists idx_action_items_case on public.insolvency_client_action_items (case_id, is_completed);
-
-alter table public.insolvency_filing_bundles enable row level security;
-alter table public.insolvency_filing_bundles force row level security;
-alter table public.insolvency_client_action_packets enable row level security;
-alter table public.insolvency_client_action_packets force row level security;
-alter table public.insolvency_client_action_items enable row level security;
-alter table public.insolvency_client_action_items force row level security;
-
--- RLS: filing_bundles
-drop policy if exists filing_bundles_select on public.insolvency_filing_bundles;
-create policy filing_bundles_select on public.insolvency_filing_bundles
-  for select to authenticated
-  using (app.is_platform_admin() or app.is_org_member(organization_id));
-
-drop policy if exists filing_bundles_write on public.insolvency_filing_bundles;
-create policy filing_bundles_write on public.insolvency_filing_bundles
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists filing_bundles_service_role on public.insolvency_filing_bundles;
-create policy filing_bundles_service_role on public.insolvency_filing_bundles
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
--- RLS: action_packets
-drop policy if exists action_packets_select on public.insolvency_client_action_packets;
-create policy action_packets_select on public.insolvency_client_action_packets
-  for select to authenticated
-  using (
-    app.is_platform_admin()
-    or app.is_org_member(organization_id)
-    or app.is_case_client(case_id)
-  );
-
-drop policy if exists action_packets_write on public.insolvency_client_action_packets;
-create policy action_packets_write on public.insolvency_client_action_packets
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists action_packets_service_role on public.insolvency_client_action_packets;
-create policy action_packets_service_role on public.insolvency_client_action_packets
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
-
--- RLS: action_items
-drop policy if exists action_items_select on public.insolvency_client_action_items;
-create policy action_items_select on public.insolvency_client_action_items
-  for select to authenticated
-  using (
-    app.is_platform_admin()
-    or app.is_org_member(organization_id)
-    or app.is_case_client(case_id)
-  );
-
-drop policy if exists action_items_staff_write on public.insolvency_client_action_items;
-create policy action_items_staff_write on public.insolvency_client_action_items
-  for all to authenticated
-  using (app.is_org_staff(organization_id))
-  with check (app.is_org_staff(organization_id));
-
-drop policy if exists action_items_service_role on public.insolvency_client_action_items;
-create policy action_items_service_role on public.insolvency_client_action_items
-  for all using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
+-- NOTE: indexes → 011, RLS → 010
 
 -- Triggers: filing_bundles
 drop trigger if exists trg_filing_bundles_updated_at on public.insolvency_filing_bundles;
