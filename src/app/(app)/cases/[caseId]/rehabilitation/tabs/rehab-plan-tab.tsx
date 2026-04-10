@@ -296,6 +296,45 @@ export function RehabPlanTab({
         </div>
       </section>
 
+      {/* D5110 납부 정보 */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-base font-semibold text-slate-800">납부 정보 (D5110)</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-1">
+            <label htmlFor="trustee_name" className="text-sm font-medium text-slate-700">개인회생위원명</label>
+            <input
+              id="trustee_name"
+              type="text"
+              value={(incomeSettings?.trustee_name as string) || ''}
+              readOnly
+              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+              placeholder="소득/생계비 탭에서 입력"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="trustee_account" className="text-sm font-medium text-slate-700">변제금 납부계좌</label>
+            <input
+              id="trustee_account"
+              type="text"
+              value={(incomeSettings?.trustee_account as string) || ''}
+              readOnly
+              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+              placeholder="소득/생계비 탭에서 입력"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="repayment_method_display" className="text-sm font-medium text-slate-700">변제방법</label>
+            <input
+              id="repayment_method_display"
+              type="text"
+              value={(incomeSettings?.repayment_method as string) || '매월'}
+              readOnly
+              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* 계산 결과 요약 */}
       {repaymentResult && (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
