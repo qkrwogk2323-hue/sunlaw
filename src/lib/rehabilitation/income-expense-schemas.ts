@@ -29,6 +29,14 @@ export const expenseItemSchema = z.object({
 
 export const expenseBreakdownSchema = z.array(expenseItemSchema);
 
+// ─── 연간환산 자동 계산 ──────────────────────────────────────────
+const PERIOD_MULTIPLIER = { '월': 12, '분기': 4, '반기': 2, '연': 1 } as const;
+
+/** period_type + amount → annual_amount 자동 계산 */
+export function computeAnnualAmount(periodType: '월' | '분기' | '반기' | '연', amount: number): number {
+  return amount * PERIOD_MULTIPLIER[periodType];
+}
+
 // ─── 검증 함수 ───────────────────────────────────────────────────
 export function validateIncomeBreakdown(data: unknown) {
   const result = incomeBreakdownSchema.safeParse(data);

@@ -3,8 +3,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
-import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney } from '@/lib/rehabilitation';
-import { Save } from 'lucide-react';
+import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney, computeAnnualAmount } from '@/lib/rehabilitation';
+import { Save, Plus, Trash2 } from 'lucide-react';
 
 interface RehabIncomeTabProps {
   caseId: string;
@@ -45,6 +45,20 @@ export function RehabIncomeTab({
     trustee_comm_rate: (incomeSettings?.trustee_comm_rate as number) || 0,
     dispose_amount: (incomeSettings?.dispose_amount as number) || 0,
   });
+
+  // D5103 수입 명목별 breakdown
+  type IncomeRow = { label: string; period_type: '월' | '분기' | '반기' | '연'; amount: number; annual_amount: number; has_seizure: boolean };
+  const [incomeBreakdown, setIncomeBreakdown] = useState<IncomeRow[]>(
+    ((incomeSettings?.income_breakdown as IncomeRow[]) || []).length > 0
+      ? (incomeSettings?.income_breakdown as IncomeRow[])
+      : [{ label: '급여', period_type: '월', amount: form.monthly_income, annual_amount: form.monthly_income * 12, has_seizure: false }]
+  );
+
+  // D5103 지출 항목별 breakdown (60% 초과 시)
+  type ExpenseRow = { category: string; amount: number; additional_reason: string };
+  const [expenseBreakdown, setExpenseBreakdown] = useState<ExpenseRow[]>(
+    ((incomeSettings?.expense_breakdown as ExpenseRow[]) || [])
+  );
 
   // colaw 의미론: 권장 생계비 = baseline60(=기준중위소득×60%) × rate/100
   // rate=100이면 baseline60 그대로 (= 기준중위소득의 60%, 회생법원 표준)
@@ -94,6 +108,8 @@ export function RehabIncomeTab({
         trustee_comm_rate: form.trustee_comm_rate,
         dispose_amount: form.dispose_amount,
         dependent_count: dependentCount,
+        income_breakdown: incomeBreakdown,
+        expense_breakdown: expenseBreakdown,
       });
       if (!result.ok) {
         error('저장 실패', { message: result.userMessage || '소득 설정 저장에 실패했습니다.' });
@@ -346,6 +362,172 @@ export function RehabIncomeTab({
           </div>
         </div>
       </section>
+
+      {/* D5103 I. 수입 명목별 상세 */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-800">수입 명목별 상세 (D5103)</h2>
+          <button
+            type="button"
+            onClick={() => setIncomeBreakdown(prev => [...prev, { label: '', period_type: '월', amount: 0, annual_amount: 0, has_seizure: false }])}
+            className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+            aria-label="수입 항목 추가"
+          >
+            <Plus className="h-4 w-4" />
+            추가
+          </button>
+        </div>
+        {incomeBreakdown.length === 0 ? (
+          <p className="py-4 text-center text-sm text-slate-400">수입 항목을 추가해주세요</p>
+        ) : (
+          <div className="space-y-2">
+            {incomeBreakdown.map((row, idx) => (
+              <div key={idx} className="grid grid-cols-2 gap-2 rounded-md border border-slate-100 bg-slate-50/50 p-2 md:grid-cols-6">
+                <div className="space-y-1">
+                  <label htmlFor={`inc-label-${idx}`} className="text-xs font-medium text-slate-600">명목 <span className="text-red-500" aria-hidden="true">*</span></label>
+                  <input
+                    id={`inc-label-${idx}`}
+                    type="text"
+                    value={row.label}
+                    onChange={(e) => setIncomeBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, label: e.target.value } : r))}
+                    className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                    placeholder="급여, 상여, 연금 등"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor={`inc-period-${idx}`} className="text-xs font-medium text-slate-600">기간</label>
+                  <select
+                    id={`inc-period-${idx}`}
+                    value={row.period_type}
+                    onChange={(e) => {
+                      const pt = e.target.value as '월' | '분기' | '반기' | '연';
+                      setIncomeBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, period_type: pt, annual_amount: computeAnnualAmount(pt, r.amount) } : r));
+                    }}
+                    className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  >
+                    <option value="월">월</option>
+                    <option value="분기">분기</option>
+                    <option value="반기">반기</option>
+                    <option value="연">연</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor={`inc-amt-${idx}`} className="text-xs font-medium text-slate-600">금액 (원) <span className="text-red-500" aria-hidden="true">*</span></label>
+                  <input
+                    id={`inc-amt-${idx}`}
+                    type="text"
+                    value={row.amount ? formatMoney(row.amount) : ''}
+                    onChange={(e) => {
+                      const amt = parseMoney(e.target.value);
+                      setIncomeBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, amount: amt, annual_amount: computeAnnualAmount(r.period_type, amt) } : r));
+                    }}
+                    className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-right"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor={`inc-annual-${idx}`} className="text-xs font-medium text-slate-600">연간환산</label>
+                  <p id={`inc-annual-${idx}`} className="rounded border border-slate-200 bg-slate-100 px-2 py-1.5 text-sm text-right text-slate-600">
+                    {formatMoney(row.annual_amount)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 pt-5">
+                  <label className="flex items-center gap-1 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={row.has_seizure}
+                      onChange={(e) => setIncomeBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, has_seizure: e.target.checked } : r))}
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                      aria-label="압류 유무"
+                    />
+                    압류
+                  </label>
+                </div>
+                <div className="flex items-center justify-end pt-5">
+                  <button type="button" onClick={() => setIncomeBreakdown(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600" aria-label="수입 항목 삭제">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="mt-2 flex justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
+              <span className="font-medium text-blue-700">월 평균 수입</span>
+              <span className="font-semibold text-blue-800">
+                {formatMoney(Math.ceil(incomeBreakdown.reduce((s, r) => s + r.annual_amount, 0) / 12))}원
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* D5103 II. 지출 항목별 (60% 초과 시) */}
+      {form.living_cost_input > recommendedLivingCost && (
+        <section className="rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-amber-800">지출 항목별 상세 (60% 초과)</h2>
+              <p className="text-xs text-amber-600">생계비가 기준중위소득 60%를 초과합니다. 항목별 사유를 기재해주세요.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExpenseBreakdown(prev => [...prev, { category: '생계비', amount: 0, additional_reason: '' }])}
+              className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-200 transition-colors"
+              aria-label="지출 항목 추가"
+            >
+              <Plus className="h-4 w-4" />
+              추가
+            </button>
+          </div>
+          <div className="space-y-2">
+            {expenseBreakdown.map((row, idx) => (
+              <div key={idx} className="grid grid-cols-3 gap-2 rounded-md border border-amber-100 bg-white p-2 md:grid-cols-4">
+                <div className="space-y-1">
+                  <label htmlFor={`exp-cat-${idx}`} className="text-xs font-medium text-amber-700">비목 <span className="text-red-500" aria-hidden="true">*</span></label>
+                  <select
+                    id={`exp-cat-${idx}`}
+                    value={row.category}
+                    onChange={(e) => setExpenseBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, category: e.target.value } : r))}
+                    className="w-full rounded border border-amber-300 px-2 py-1.5 text-sm"
+                  >
+                    <option value="생계비">생계비</option>
+                    <option value="주거비">주거비</option>
+                    <option value="의료비">의료비</option>
+                    <option value="교육비">교육비</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor={`exp-amt-${idx}`} className="text-xs font-medium text-amber-700">금액 (원) <span className="text-red-500" aria-hidden="true">*</span></label>
+                  <input
+                    id={`exp-amt-${idx}`}
+                    type="text"
+                    value={row.amount ? formatMoney(row.amount) : ''}
+                    onChange={(e) => setExpenseBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, amount: parseMoney(e.target.value) } : r))}
+                    className="w-full rounded border border-amber-300 px-2 py-1.5 text-sm text-right"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label htmlFor={`exp-reason-${idx}`} className="text-xs font-medium text-amber-700">추가 지출 사유 <span className="text-red-500" aria-hidden="true">*</span></label>
+                  <div className="flex gap-2">
+                    <input
+                      id={`exp-reason-${idx}`}
+                      type="text"
+                      value={row.additional_reason}
+                      onChange={(e) => setExpenseBreakdown(prev => prev.map((r, i) => i === idx ? { ...r, additional_reason: e.target.value } : r))}
+                      className="w-full rounded border border-amber-300 px-2 py-1.5 text-sm"
+                      placeholder="구체적 사유 기재"
+                    />
+                    <button type="button" onClick={() => setExpenseBreakdown(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600" aria-label="지출 항목 삭제">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 저장 */}
       <div className="flex justify-end">

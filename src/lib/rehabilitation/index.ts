@@ -63,4 +63,4 @@ export { PROPERTY_DETAIL_SCHEMAS, validatePropertyDetail } from './property-sche
 export type { PropertyCategoryKey } from './property-schemas';
 
 // D5103 수입/지출 스키마
-export { incomeBreakdownSchema, expenseBreakdownSchema, validateIncomeBreakdown, validateExpenseBreakdown, computeMonthlyAverageIncome, computeAdditionalExpenseRate } from './income-expense-schemas';
+export { incomeBreakdownSchema, expenseBreakdownSchema, validateIncomeBreakdown, validateExpenseBreakdown, computeMonthlyAverageIncome, computeAdditionalExpenseRate, computeAnnualAmount } from './income-expense-schemas';

@@ -92,18 +92,23 @@ export const etcDetailSchema = z.object({
 });
 
 // ─── 카테고리 → 스키마 매핑 ───────────────────────────────────────
+// DB PropertyCategoryId 키에 맞춤 (car, lease, realestate, equipment, loan, sales)
 export const PROPERTY_DETAIL_SCHEMAS = {
   cash: cashDetailSchema,
   deposit: depositDetailSchema,
   insurance: insuranceDetailSchema,
-  vehicle: vehicleDetailSchema,
-  lease_deposit: leaseDepositDetailSchema,
-  real_estate: realEstateDetailSchema,
-  fixtures: fixturesDetailSchema,
-  loan_receivable: loanReceivableDetailSchema,
-  sales_receivable: salesReceivableDetailSchema,
+  car: vehicleDetailSchema,
+  lease: leaseDepositDetailSchema,
+  realestate: realEstateDetailSchema,
+  equipment: fixturesDetailSchema,
+  loan: loanReceivableDetailSchema,
+  sales: salesReceivableDetailSchema,
   retirement: retirementDetailSchema,
+  seizure: etcDetailSchema,
+  consignment: etcDetailSchema,
   etc: etcDetailSchema,
+  exempt_housing: etcDetailSchema,
+  exempt_living: etcDetailSchema,
 } as const;
 
 export type PropertyCategoryKey = keyof typeof PROPERTY_DETAIL_SCHEMAS;
