@@ -247,6 +247,8 @@ export function RehabApplicantTab({
     );
   }, []);
 
+  const [familyDeleteConfirm, setFamilyDeleteConfirm] = useState<{ index: number; name: string } | null>(null);
+
   const removeFamilyMember = useCallback(
     async (index: number) => {
       const member = familyMembers[index];
@@ -258,9 +260,19 @@ export function RehabApplicantTab({
         }
       }
       setFamilyMembers((prev) => prev.filter((_, i) => i !== index));
+      setFamilyDeleteConfirm(null);
     },
     [familyMembers, caseId, organizationId, error],
   );
+
+  const requestDeleteFamily = useCallback((index: number) => {
+    const member = familyMembers[index];
+    if (member.isNew) {
+      setFamilyMembers((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setFamilyDeleteConfirm({ index, name: member.member_name || '가족 구성원' });
+    }
+  }, [familyMembers]);
 
   const handleSave = useCallback(async () => {
     if (!form.applicant_name.trim()) {
@@ -1011,7 +1023,7 @@ export function RehabApplicantTab({
                 <div className="flex items-end">
                   <button
                     type="button"
-                    onClick={() => removeFamilyMember(idx)}
+                    onClick={() => requestDeleteFamily(idx)}
                     className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                     aria-label={`${member.member_name || '가족 구성원'} 삭제`}
                   >
@@ -1037,6 +1049,22 @@ export function RehabApplicantTab({
           {saving ? '저장 중...' : '저장'}
         </button>
       </div>
+
+      {/* 가족 삭제 확인 모달 */}
+      {familyDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="family-delete-title">
+          <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+            <h3 id="family-delete-title" className="text-base font-semibold text-slate-800">삭제 확인</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              <span className="font-medium text-red-600">{familyDeleteConfirm.name}</span>을(를) 삭제하시겠습니까?
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setFamilyDeleteConfirm(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">취소</button>
+              <button type="button" onClick={() => removeFamilyMember(familyDeleteConfirm.index)} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
