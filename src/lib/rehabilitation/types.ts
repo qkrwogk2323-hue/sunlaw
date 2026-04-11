@@ -196,3 +196,22 @@ export interface TieredScheduleSegment {
   monthlyAmount: number;
   targets: Array<{ creditorId: string; monthlyShare: number }>;
 }
+
+/**
+ * Phase별 단계변제 구간 (원금 전부 + 이자 일부 변제)
+ *
+ * Phase 1: 원금만 안분 변제
+ * Phase 2: 원금 잔여 + 이자 혼합 변제 (전환 회차)
+ * Phase 3: 이자만 안분 변제
+ */
+export interface PhasedRepaySegment {
+  phase: 1 | 2 | 3;
+  startMonth: number;
+  endMonth: number;
+  monthlyAmount: number;
+  targets: Array<{
+    creditorId: string;
+    monthlyCapital: number;
+    monthlyInterest: number;
+  }>;
+}

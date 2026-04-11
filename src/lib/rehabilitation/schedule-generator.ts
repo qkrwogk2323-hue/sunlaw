@@ -6,7 +6,7 @@
  * - combined (원리금합산변제): 원금과 이자를 비율대로 동시 변제
  */
 
-import type { RehabCreditor, RepayType, CreditorRepaySchedule, TieredScheduleSegment, MonthlyDetailRow } from './types';
+import type { RehabCreditor, RepayType, CreditorRepaySchedule, TieredScheduleSegment, MonthlyDetailRow, PhasedRepaySegment } from './types';
 import { classifyCreditor } from './creditor-classification';
 
 /**
@@ -408,39 +408,30 @@ export function computeTieredSegments(
 }
 
 /**
- * 변제시작일 자동 산출
+ * 변제시작일 산출
  *
- * 방법 1: 확정된 날짜 (repaymentStartDate가 있으면 그대로 사용)
- * 방법 2: "인가결정 후 최초로 도래하는 월의 N일" (불특정 모드)
- *   → filingDate(제출일) + 60~90일 ≈ 약 3개월 후를 인가일로 추정
- *   → 인가일 다음 달의 N일이 변제시작일
- * 방법 3: 둘 다 없으면 제출일 + 75일(중간값) 기준 추정
+ * (a) repaymentStartDate 확정 → 그대로 리턴
+ * (b) uncertain=true + repaymentStartDay 있음 → null
+ *     문서 출력 시 "인가결정 후 최초로 도래하는 월의 N일" 텍스트 사용
+ * (c) repaymentStartDay 자체가 없음 → null
+ *     UI에서 "변제개시일을 입력하세요" 경고 표시
  *
- * @returns YYYY-MM-DD 형식 문자열
+ * @returns YYYY-MM-DD 또는 null (미확정)
  */
 export function computeRepayStartDate(opts: {
   repaymentStartDate?: string | null;
   repaymentStartUncertain?: boolean;
   repaymentStartDay?: number;
   filingDate?: string | null;
-}): string {
-  // 확정된 날짜가 있으면 그대로
+}): string | null {
+  // (a) 확정된 날짜가 있고, uncertain이 아니면 그대로
   if (opts.repaymentStartDate && !opts.repaymentStartUncertain) {
     return opts.repaymentStartDate;
   }
 
-  // 인가일 추정: 제출일 + 75일 (60~90일 중간)
-  const filing = opts.filingDate ? new Date(opts.filingDate) : new Date();
-  const estimatedApproval = new Date(filing);
-  estimatedApproval.setDate(estimatedApproval.getDate() + 75);
-
-  // 인가결정 후 최초로 도래하는 월의 N일
-  const day = opts.repaymentStartDay || 25;
-  const nextMonth = new Date(estimatedApproval);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  nextMonth.setDate(Math.min(day, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate()));
-
-  return `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(nextMonth.getDate()).padStart(2, '0')}`;
+  // (b) uncertain 모드이지만 day가 있으면 → null (문서에서 텍스트 표기)
+  // (c) day 자체가 없으면 → null (UI에서 경고)
+  return null;
 }
 
 /**
@@ -458,15 +449,21 @@ export function generateMonthlyDetailSchedule(
 ): MonthlyDetailRow[] {
   if (schedule.length === 0 || repayMonths <= 0) return [];
 
-  const start = startDate ? new Date(startDate) : new Date();
+  const hasDate = !!startDate;
+  const start = hasDate ? new Date(startDate) : null;
   const cumulatives = new Map<string, number>();
   for (const s of schedule) cumulatives.set(s.creditorId, 0);
 
   const rows: MonthlyDetailRow[] = [];
   for (let m = 1; m <= repayMonths; m++) {
-    const payDate = new Date(start);
-    payDate.setMonth(payDate.getMonth() + m - 1);
-    const dateLabel = `${payDate.getFullYear()}.${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+    let dateLabel: string;
+    if (start) {
+      const payDate = new Date(start);
+      payDate.setMonth(payDate.getMonth() + m - 1);
+      dateLabel = `${payDate.getFullYear()}.${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+    } else {
+      dateLabel = `제${m}회`;
+    }
 
     let rowTotal = 0;
     const creditorPayments = schedule.map((s) => {
@@ -481,6 +478,102 @@ export function generateMonthlyDetailSchedule(
   }
 
   return rows;
+}
+
+/**
+ * Phase별 단계변제 구간 계산 (원금 전부 + 이자 일부 변제)
+ *
+ * 조건: 총변제액 > 총원금 (= 원금 100% + 이자 일부)
+ * Phase 1: 원금만 안분 — 월 변제액 전부를 원금 비율로 배분
+ * Phase 2: 전환 회차 — 남은 원금 + 이자 시작 (혼합)
+ * Phase 3: 이자만 안분 — 잔여 이자를 비율로 배분
+ *
+ * @returns 구간 배열 (1~3개). 원금 1회차에 끝나면 Phase 2+3만 반환.
+ */
+export function computePhasedRepaySegments(
+  creditors: RehabCreditor[],
+  monthlyRepay: number,
+  repayMonths: number,
+): PhasedRepaySegment[] {
+  if (creditors.length === 0 || monthlyRepay <= 0 || repayMonths <= 0) return [];
+
+  const totalCapital = creditors.reduce((s, c) => s + (c.capital || 0), 0);
+  const totalInterest = creditors.reduce((s, c) => s + (c.interest || 0), 0);
+  const totalRepay = monthlyRepay * repayMonths;
+
+  // 원금 전부 변제 불가 시 → 단계변제 불필요 (원금 안분만)
+  if (totalRepay <= totalCapital || totalCapital <= 0) return [];
+  // 이자가 없으면 단계변제 불필요
+  if (totalInterest <= 0) return [];
+
+  // Phase 1: 원금만 변제하는 기간
+  const capitalFullMonths = Math.floor(totalCapital / monthlyRepay);
+  const capitalRemainder = totalCapital - capitalFullMonths * monthlyRepay;
+  const hasMixedMonth = capitalRemainder > 0;
+
+  // 이자 변제에 사용할 예산
+  const interestBudget = totalRepay - totalCapital;
+  const segments: PhasedRepaySegment[] = [];
+
+  // Phase 1: 원금 안분 구간
+  if (capitalFullMonths > 0) {
+    segments.push({
+      phase: 1,
+      startMonth: 1,
+      endMonth: capitalFullMonths,
+      monthlyAmount: monthlyRepay,
+      targets: creditors.map((c) => {
+        const share = totalCapital > 0
+          ? Math.ceil(monthlyRepay * ((c.capital || 0) / totalCapital))
+          : 0;
+        return { creditorId: c.id, monthlyCapital: share, monthlyInterest: 0 };
+      }),
+    });
+  }
+
+  // Phase 2: 전환 회차 (원금 잔여 + 이자 시작)
+  if (hasMixedMonth) {
+    const mixedMonth = capitalFullMonths + 1;
+    const interestInMixed = monthlyRepay - capitalRemainder;
+    segments.push({
+      phase: 2,
+      startMonth: mixedMonth,
+      endMonth: mixedMonth,
+      monthlyAmount: monthlyRepay,
+      targets: creditors.map((c) => {
+        const capShare = totalCapital > 0
+          ? Math.ceil(capitalRemainder * ((c.capital || 0) / totalCapital))
+          : 0;
+        const intShare = totalInterest > 0
+          ? Math.ceil(interestInMixed * ((c.interest || 0) / totalInterest))
+          : 0;
+        return { creditorId: c.id, monthlyCapital: capShare, monthlyInterest: intShare };
+      }),
+    });
+  }
+
+  // Phase 3: 이자만 안분 구간
+  const phase3Start = capitalFullMonths + (hasMixedMonth ? 2 : 1);
+  if (phase3Start <= repayMonths) {
+    const phase3Months = repayMonths - phase3Start + 1;
+    const monthlyInterestPayment = phase3Months > 0
+      ? Math.ceil((interestBudget - (hasMixedMonth ? monthlyRepay - capitalRemainder : 0)) / phase3Months)
+      : 0;
+    segments.push({
+      phase: 3,
+      startMonth: phase3Start,
+      endMonth: repayMonths,
+      monthlyAmount: monthlyInterestPayment > 0 ? monthlyRepay : 0,
+      targets: creditors.map((c) => {
+        const share = totalInterest > 0
+          ? Math.ceil(monthlyRepay * ((c.interest || 0) / totalInterest))
+          : 0;
+        return { creditorId: c.id, monthlyCapital: 0, monthlyInterest: share };
+      }),
+    });
+  }
+
+  return segments;
 }
 
 /**

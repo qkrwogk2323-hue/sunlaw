@@ -325,7 +325,7 @@ export function RehabPlanTab({
           </p>
           <p className="mt-2 text-xs text-amber-600">
             ▸ 부양가족 수가 정확한지 신청인 탭에서 확인해주세요<br />
-            ▸ 월 소득(net_salary)이 정확한지 소득/생계비 탭에서 확인해주세요
+            ▸ 월 소득이 정확한지 소득/생계비 탭에서 확인해주세요
           </p>
         </section>
       </div>
@@ -555,6 +555,7 @@ export function RehabPlanTab({
             >
               <option value="sequential">원리금변제 (원금 우선)</option>
               <option value="combined">원리금합산변제 (비율 배분)</option>
+              <option value="tieredTaxPriority">단계변제 (조세우선)</option>
             </select>
           </div>
         </div>

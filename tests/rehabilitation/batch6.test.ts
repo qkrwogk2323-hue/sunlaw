@@ -7,7 +7,7 @@ import {
   calculateDisposalAmount,
   allocateDisposalToCreditors,
 } from '@/lib/rehabilitation/repayment-calculator';
-import { computeRepayStartDate } from '@/lib/rehabilitation/schedule-generator';
+import { computeRepayStartDate, computePhasedRepaySegments } from '@/lib/rehabilitation/schedule-generator';
 
 describe('D5111 전환 판정', () => {
   it('현재가치 > 청산가치 → D5110', () => {
@@ -76,14 +76,59 @@ describe('변제시작일 자동계산', () => {
     })).toBe('2026-07-25');
   });
 
-  it('불특정 모드: 제출일+75일 → 인가추정 → 다음달 N일', () => {
+  it('불특정 모드 + day 있음 → null (문서에서 텍스트 표기)', () => {
     const result = computeRepayStartDate({
       repaymentStartUncertain: true,
       repaymentStartDay: 25,
       filingDate: '2026-04-10',
     });
-    // 2026-04-10 + 75일 = 2026-06-24 (인가추정)
-    // 다음달 = 2026-07, 25일 → 2026-07-25
-    expect(result).toBe('2026-07-25');
+    expect(result).toBeNull();
+  });
+
+  it('day 없음 → null (UI 경고 표시)', () => {
+    const result = computeRepayStartDate({});
+    expect(result).toBeNull();
+  });
+});
+
+describe('Phase별 단계변제', () => {
+  const creditors = [
+    { id: 'A', bondNumber: 1, capital: 5_000_000, interest: 1_000_000 },
+    { id: 'B', bondNumber: 2, capital: 3_000_000, interest: 500_000 },
+  ] as import('@/lib/rehabilitation/types').RehabCreditor[];
+
+  it('원금 전부 + 이자 일부 변제 시 3구간 생성', () => {
+    // 총원금 8,000,000 / 총이자 1,500,000 / 총변제 = 500,000 × 36 = 18,000,000
+    // 원금 완납 = 8,000,000 / 500,000 = 16개월
+    // Phase 1: 1~16 (원금 안분)
+    // Phase 2: 없음 (나머지 0)
+    // Phase 3: 17~36 (이자 안분)
+    const segments = computePhasedRepaySegments(creditors, 500_000, 36);
+    expect(segments.length).toBeGreaterThanOrEqual(2);
+    expect(segments[0].phase).toBe(1);
+    expect(segments[0].startMonth).toBe(1);
+    expect(segments[0].endMonth).toBe(16);
+    // 마지막 구간은 이자 안분
+    const lastSeg = segments[segments.length - 1];
+    expect(lastSeg.phase).toBe(3);
+    expect(lastSeg.endMonth).toBe(36);
+  });
+
+  it('원금이 월변제액으로 나누어떨어지지 않으면 Phase 2 (전환 회차) 존재', () => {
+    // 총원금 8,000,000 / 월변제 300,000 = 26.67개월
+    // capitalFullMonths = 26, remainder = 200,000
+    // Phase 1: 1~26, Phase 2: 27, Phase 3: 28~36
+    const segments = computePhasedRepaySegments(creditors, 300_000, 36);
+    expect(segments).toHaveLength(3);
+    expect(segments[0].phase).toBe(1);
+    expect(segments[1].phase).toBe(2);
+    expect(segments[1].startMonth).toBe(segments[1].endMonth); // 단일 회차
+    expect(segments[2].phase).toBe(3);
+  });
+
+  it('총변제액 ≤ 총원금이면 빈 배열 (단계변제 불필요)', () => {
+    const segments = computePhasedRepaySegments(creditors, 100_000, 36);
+    // 100,000 × 36 = 3,600,000 < 8,000,000 (총원금)
+    expect(segments).toHaveLength(0);
   });
 });

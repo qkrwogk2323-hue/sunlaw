@@ -50,7 +50,7 @@ export type { ScheduleAdjustmentInput, ScheduleAdjustmentResult, MonthlyPaymentR
 export { LEIBNIZ_REHAB, presentValue } from './leibniz';
 
 // 변제 스케줄
-export { generateRepaySchedule, generateMonthlyDetailSchedule, computeRepayStartDate, validateScheduleTotals } from './schedule-generator';
+export { generateRepaySchedule, generateMonthlyDetailSchedule, computeRepayStartDate, computePhasedRepaySegments, validateScheduleTotals } from './schedule-generator';
 
 // 검증
 export { validateResidentFront, validateResidentBack, formatPhoneNumber, formatMoney, parseMoney, validateDebtLimits, validateRepayMonths } from './validators';

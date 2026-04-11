@@ -483,7 +483,7 @@ export function RehabCreditorsTab({
         ) : (
           <div className="space-y-2">
             {creditors.map((c, idx) => (
-              <div key={c.id} className="rounded-md border border-slate-100 bg-slate-50/50">
+              <div key={c.id} className="rounded-md border border-slate-100 bg-slate-50/50 overflow-hidden">
                 {/* 요약 행 */}
                 <div className="flex items-center gap-3 px-3 py-2">
                   <span className="w-8 text-center text-xs font-medium text-slate-400">{c.bond_number}</span>
