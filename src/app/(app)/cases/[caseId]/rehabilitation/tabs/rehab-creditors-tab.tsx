@@ -9,8 +9,9 @@ import {
   upsertRehabSecuredProperty,
 } from '@/lib/actions/rehabilitation-actions';
 import { searchFinancialInstitution, formatMoney, parseMoney } from '@/lib/rehabilitation';
-import { Plus, Trash2, Save, Search, ChevronDown, ChevronUp, Users, FileText } from 'lucide-react';
+import { Plus, Trash2, Save, Search, ChevronDown, ChevronUp, Users, FileText, Download } from 'lucide-react';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
+import { convertToEcourtCSV, downloadCSVBlob } from '@/lib/rehabilitation/ecourt-csv';
 
 interface RehabCreditorsTabProps {
   caseId: string;
@@ -1045,8 +1046,34 @@ export function RehabCreditorsTab({
         </section>
       )}
 
-      {/* 저장 버튼 */}
-      <div className="flex justify-end">
+      {/* 저장 + CSV 다운로드 */}
+      <div className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            const rows = creditors.map((c) => ({
+              bondNumber: c.bond_number,
+              name: c.creditor_name,
+              classify: c.classify,
+              postalCode: c.postal_code,
+              address: c.address,
+              phone: c.phone,
+              fax: c.fax,
+              mobile: c.mobile,
+              bondCause: c.bond_cause,
+              capital: c.capital,
+              interest: c.interest,
+            }));
+            const csv = convertToEcourtCSV(rows);
+            downloadCSVBlob(csv, `전자소송_채권자목록_${new Date().toISOString().split('T')[0]}.csv`);
+          }}
+          disabled={creditors.length === 0}
+          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+          aria-label="전자소송 CSV 다운로드"
+        >
+          <Download className="h-4 w-4" />
+          전자소송 CSV
+        </button>
         <button
           type="button"
           onClick={handleSave}

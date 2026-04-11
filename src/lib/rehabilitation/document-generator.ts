@@ -32,7 +32,9 @@ export type DocumentType =
   | 'income_statement'
   | 'affidavit'
   | 'repayment_plan'
-  | 'cover_page';
+  | 'cover_page'
+  | 'creditor_summary'
+  | 'document_checklist';
 
 export interface DocumentData {
   application: Record<string, any> | null;
@@ -1890,6 +1892,10 @@ export function generateDocument(type: DocumentType, data: DocumentData): string
       return generateRepaymentPlan(data);
     case 'cover_page':
       return generateCoverPage(data);
+    case 'creditor_summary':
+      return generateCreditorSummary(data);
+    case 'document_checklist':
+      return generateDocumentChecklist(data);
     default:
       throw new Error(`Unknown document type: ${type}`);
   }
@@ -1947,4 +1953,167 @@ function generateCoverPage(data: DocumentData): string {
 </div>`;
 
   return wrapDocument(content, '개인회생절차개시신청서 표지');
+}
+
+/**
+ * 채권자목록 요약표
+ */
+function generateCreditorSummary(data: DocumentData): string {
+  const creditors = data.creditors || [];
+  const fmt = (n: number) => n.toLocaleString('ko-KR');
+
+  const totalCapital = creditors.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
+  const totalInterest = creditors.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
+  const totalDebt = totalCapital + totalInterest;
+
+  const secured = creditors.filter((c: Record<string, any>) => c.is_secured);
+  const priority = creditors.filter((c: Record<string, any>) => c.has_priority_repay);
+  const unsecured = creditors.filter((c: Record<string, any>) => !c.is_secured && !c.has_priority_repay);
+
+  const secCapital = secured.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
+  const secInterest = secured.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
+  const priCapital = priority.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
+  const priInterest = priority.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
+  const unsCapital = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
+  const unsInterest = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
+
+  const content = `
+<h2 style="text-align:center;margin-bottom:20px">채 권 자 목 록 요 약 표</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;width:200px;text-align:left">총 채권자 수</th>
+      <td style="border:1px solid #000;padding:6px 12px">${creditors.length}명</td></tr>
+  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;text-align:left">채권 현재액 총합계</th>
+      <td style="border:1px solid #000;padding:6px 12px;text-align:right">${fmt(totalDebt)}원</td></tr>
+  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;text-align:left">　원금 합계</th>
+      <td style="border:1px solid #000;padding:6px 12px;text-align:right">${fmt(totalCapital)}원</td></tr>
+  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;text-align:left">　이자 합계</th>
+      <td style="border:1px solid #000;padding:6px 12px;text-align:right">${fmt(totalInterest)}원</td></tr>
+</table>
+<h3 style="margin-bottom:10px">채권 구분별 합계</h3>
+<table style="width:100%;border-collapse:collapse">
+  <thead>
+    <tr style="background:#f5f5f5">
+      <th style="border:1px solid #000;padding:6px 8px">구분</th>
+      <th style="border:1px solid #000;padding:6px 8px">채권자수</th>
+      <th style="border:1px solid #000;padding:6px 8px">원금</th>
+      <th style="border:1px solid #000;padding:6px 8px">이자</th>
+      <th style="border:1px solid #000;padding:6px 8px">합계</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border:1px solid #ccc;padding:5px 8px">우선변제권 채권</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:center">${priority.length}명</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(priCapital)}원</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(priInterest)}원</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(priCapital + priInterest)}원</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ccc;padding:5px 8px">담보부 회생채권</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:center">${secured.length}명</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(secCapital)}원</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(secInterest)}원</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(secCapital + secInterest)}원</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ccc;padding:5px 8px">무담보 회생채권</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:center">${unsecured.length}명</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(unsCapital)}원</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(unsInterest)}원</td>
+      <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${fmt(unsCapital + unsInterest)}원</td>
+    </tr>
+    <tr style="font-weight:bold;background:#f0f0f0">
+      <td style="border:1px solid #000;padding:5px 8px">합 계</td>
+      <td style="border:1px solid #000;padding:5px 8px;text-align:center">${creditors.length}명</td>
+      <td style="border:1px solid #000;padding:5px 8px;text-align:right">${fmt(totalCapital)}원</td>
+      <td style="border:1px solid #000;padding:5px 8px;text-align:right">${fmt(totalInterest)}원</td>
+      <td style="border:1px solid #000;padding:5px 8px;text-align:right">${fmt(totalDebt)}원</td>
+    </tr>
+  </tbody>
+</table>`;
+
+  return wrapDocument(content, '채권자목록 요약표');
+}
+
+/**
+ * 자료제출목록 — 별지서식 기반 체크리스트
+ * 처리지침 §5, 별지서식 자료제출목록
+ */
+function generateDocumentChecklist(data: DocumentData): string {
+  const app = data.application || {};
+  const debtorName = esc(app.applicant_name || '');
+
+  const categories = [
+    {
+      title: '1. 인적 사항 및 주거 관련 서류',
+      items: [
+        '주민등록등본(세대주 및 전입세대 열람 제한 여부 기재된 것)',
+        '가족관계증명서',
+        '혼인관계증명서',
+        '주민등록초본(주소이동사항 포함)',
+        '임대차계약서 사본',
+      ],
+    },
+    {
+      title: '2. 채무 관련 서류',
+      items: [
+        '채무증빙자료(금전소비대차계약서, 카드사용대금명세서, 채무독촉장, 지급명령정본, 판결문 등) 사본',
+        '채무자 신용정보조회서(4대 신용정보조회서)',
+        '체납세금내역서(시·군·구청 및 세무서 발행) 또는 납세증명서',
+      ],
+    },
+    {
+      title: '3. 재산 관련 서류 – 부동산',
+      items: ['부동산등기사항전부증명서', '건축물대장 등본', '토지대장 등본'],
+    },
+    {
+      title: '4. 재산 관련 서류 – 자동차',
+      items: ['자동차등록원부(갑구)', '자동차 시세 확인 자료'],
+    },
+    {
+      title: '5. 소득 관련 서류 – 급여소득자',
+      items: [
+        '급여증명서(최근 2년분)와 근로소득세 원천징수영수증 사본',
+        '급여입금통장사본(최근 2년분)',
+        '사용자 작성의 퇴직금 계산서 등 증명서',
+        '재직증명서 또는 사업자등록증이 첨부된 사용자의 확인서',
+      ],
+    },
+    {
+      title: '6. 재산 관련 서류 – 기타',
+      items: [
+        '부동산에 관한 객관적인 시가 확인 자료',
+        '보험가입내역조회 및 해약환급금 예상액',
+        '최근 2년 이내 재산변동이 있는 경우 소명자료',
+      ],
+    },
+    {
+      title: '7. 금융거래내역',
+      items: [
+        '채무자 본인 명의의 모든 예금 거래 통장의 사본(최근 1년분)',
+        '주식, 보험, 예금, 저축, 기타 금융자산에 관한 소명 자료',
+      ],
+    },
+  ];
+
+  const rows = categories
+    .map(
+      (cat) => `
+    <tr><td colspan="2" style="border:1px solid #ccc;padding:6px 10px;background:#f5f5f5;font-weight:bold">${esc(cat.title)}</td></tr>
+    ${cat.items.map((item) => `<tr><td style="border:1px solid #ccc;padding:4px 10px;width:30px;text-align:center">□</td><td style="border:1px solid #ccc;padding:4px 10px">${esc(item)}</td></tr>`).join('')}`,
+    )
+    .join('');
+
+  const content = `
+<h2 style="text-align:center;margin-bottom:10px">자 료 제 출 목 록</h2>
+<p style="text-align:right;margin-bottom:16px">채무자 ${debtorName}　(인)</p>
+<p style="font-size:11px;margin-bottom:12px;color:#666">
+  ※ 해당 □란에 ∨ 표시하고 뒷면에 제출하는 서류를 순서대로 첨부하여 제출합니다.<br>
+  ※ 관공서 작성 서류는 신청일로부터 2개월 내 발급된 것이어야 합니다.
+</p>
+<table style="width:100%;border-collapse:collapse">
+  ${rows}
+</table>`;
+
+  return wrapDocument(content, '자료제출목록');
 }

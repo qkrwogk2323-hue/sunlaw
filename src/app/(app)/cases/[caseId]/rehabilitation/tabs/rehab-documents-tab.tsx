@@ -79,6 +79,8 @@ const DOCUMENT_TYPES: {
   { key: 'income_statement', label: '수입 및 지출에 관한 목록', description: '월 소득/지출 현황' },
   { key: 'affidavit', label: '진술서', description: '채무 경위 진술서' },
   { key: 'repayment_plan', label: '변제계획안', description: '변제계획안 제출서' },
+  { key: 'creditor_summary', label: '채권자목록 요약표', description: '총 채권액·담보/무담보 구분·채권자 수 요약' },
+  { key: 'document_checklist', label: '자료제출목록', description: '법원 제출 서류 체크리스트 (별지서식)', group: '기타' },
 ];
 
 export function RehabDocumentsTab({
@@ -89,6 +91,15 @@ export function RehabDocumentsTab({
   const { success: toastSuccess, error: toastError } = useToast();
   const [loadingDoc, setLoadingDoc] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+
+  // 부속서류 포함 옵션
+  const [attachmentOptions, setAttachmentOptions] = useState({
+    include_creditor_list: true,
+    include_property_list: true,
+    include_income_statement: true,
+    include_affidavit: true,
+    include_creditor_summary: false,
+  });
   const [previewTitle, setPreviewTitle] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -228,6 +239,32 @@ export function RehabDocumentsTab({
           모든 탭의 입력이 완료된 후 문서를 출력해주세요.
         </p>
       </div>
+
+      {/* 부속서류 포함 옵션 */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">부속서류 포함 옵션</h2>
+        <p className="mb-3 text-xs text-slate-500">전체 출력 시 포함할 부속서류를 선택합니다.</p>
+        <div className="flex flex-wrap gap-4">
+          {([
+            { key: 'include_creditor_list', label: '채권자 목록' },
+            { key: 'include_property_list', label: '재산 목록' },
+            { key: 'include_income_statement', label: '수입·지출 목록' },
+            { key: 'include_affidavit', label: '진술서' },
+            { key: 'include_creditor_summary', label: '채권자목록 요약표' },
+          ] as const).map((opt) => (
+            <label key={opt.key} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={attachmentOptions[opt.key]}
+                onChange={(e) => setAttachmentOptions((prev) => ({ ...prev, [opt.key]: e.target.checked }))}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                aria-label={`${opt.label} 포함`}
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </section>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3">
