@@ -45,6 +45,124 @@ export function generateRepaySchedule(
     // 조세채권이 없으면 일반 sequential로 폴백
   }
 
+  // 우선변제채권 분리 (법 §583, §614①: 100% 변제 필수)
+  const hasPriority = creditors.some((c) => c.hasPriorityRepay);
+  if (hasPriority) {
+    return generatePrioritySchedule(creditors, monthlyRepay, repayMonths, disposeAmount, repayType, capitalOnly);
+  }
+
+  return generateProRataSchedule(creditors, monthlyRepay, repayMonths, disposeAmount, repayType, capitalOnly);
+}
+
+/**
+ * 우선변제채권 100% 보장 스케줄 (법 §583, §614①)
+ *
+ * Phase 1: 우선변제채권 100% 배분
+ * Phase 2: 잔여 예산을 일반 채권에 pro-rata
+ */
+function generatePrioritySchedule(
+  creditors: RehabCreditor[],
+  monthlyRepay: number,
+  repayMonths: number,
+  disposeAmount: number,
+  repayType: RepayType,
+  capitalOnly: boolean,
+): CreditorRepaySchedule[] {
+  const totalRepayTarget = monthlyRepay * repayMonths + disposeAmount;
+
+  const priorityCreditors = creditors.filter((c) => c.hasPriorityRepay);
+  const generalCreditors = creditors.filter((c) => !c.hasPriorityRepay);
+
+  // 우선변제: 원리금 100% (capitalOnly에서도 우선변제는 전액)
+  const priorityTotal = priorityCreditors.reduce(
+    (s, c) => s + (c.capital || 0) + (c.interest || 0), 0,
+  );
+
+  // 일반 채권 예산 = 총 예산 - 우선변제 총액
+  const generalBudget = Math.max(0, totalRepayTarget - priorityTotal);
+
+  const results: CreditorRepaySchedule[] = [];
+
+  // Phase 1: 우선변제채권 — 100% 배분
+  let priorityMonthlyAllocated = 0;
+  const priorityMonthlyBudget = repayMonths > 0 ? Math.ceil(priorityTotal / repayMonths) : 0;
+
+  priorityCreditors.forEach((creditor, idx) => {
+    const debt = (creditor.capital || 0) + (creditor.interest || 0);
+    const total = debt; // 100%
+    const ratio = priorityTotal > 0 ? debt / (priorityTotal + generalCreditors.reduce((s, c) => s + (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0)), 0)) : 0;
+
+    let monthly: number;
+    if (idx === priorityCreditors.length - 1) {
+      monthly = priorityMonthlyBudget - priorityMonthlyAllocated;
+    } else {
+      monthly = priorityTotal > 0 ? Math.round(priorityMonthlyBudget * debt / priorityTotal) : 0;
+      priorityMonthlyAllocated += monthly;
+    }
+
+    results.push({
+      creditorId: creditor.id,
+      ratio,
+      monthlyAmount: monthly,
+      totalAmount: total,
+      capitalRepay: creditor.capital || 0,
+      interestRepay: creditor.interest || 0,
+    });
+  });
+
+  // Phase 2: 일반 채권 — 잔여 예산 pro-rata
+  const generalMonthly = Math.max(0, monthlyRepay - priorityMonthlyBudget);
+  if (generalCreditors.length > 0 && generalBudget > 0) {
+    const generalSchedule = generateProRataSchedule(
+      generalCreditors, generalMonthly, repayMonths, 0, repayType, capitalOnly,
+    );
+    // 일반 스케줄의 총액을 generalBudget에 맞게 보정
+    const rawTotal = generalSchedule.reduce((s, r) => s + r.totalAmount, 0);
+    const scale = rawTotal > 0 ? generalBudget / rawTotal : 0;
+
+    generalSchedule.forEach((s) => {
+      const adjTotal = Math.round(s.totalAmount * scale);
+      const adjMonthly = Math.round(s.monthlyAmount * scale);
+      results.push({
+        ...s,
+        totalAmount: adjTotal,
+        monthlyAmount: adjMonthly,
+        capitalRepay: capitalOnly ? adjTotal : Math.min(
+          creditors.find((c) => c.id === s.creditorId)?.capital || 0, adjTotal,
+        ),
+        interestRepay: capitalOnly ? 0 : Math.max(0, adjTotal - (
+          creditors.find((c) => c.id === s.creditorId)?.capital || 0
+        )),
+      });
+    });
+  } else {
+    // 일반 채권에 배분할 예산 없음 (전액 우선변제로 소진)
+    generalCreditors.forEach((c) => {
+      results.push({
+        creditorId: c.id,
+        ratio: 0,
+        monthlyAmount: 0,
+        totalAmount: 0,
+        capitalRepay: 0,
+        interestRepay: 0,
+      });
+    });
+  }
+
+  return results;
+}
+
+/**
+ * 일반 pro-rata 배분 (우선변제 없는 경우)
+ */
+function generateProRataSchedule(
+  creditors: RehabCreditor[],
+  monthlyRepay: number,
+  repayMonths: number,
+  disposeAmount: number,
+  repayType: RepayType,
+  capitalOnly: boolean,
+): CreditorRepaySchedule[] {
   const totalDebt = creditors.reduce(
     (s, c) => s + (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0)),
     0,
@@ -77,15 +195,12 @@ export function generateRepaySchedule(
     let interestRepay: number;
 
     if (capitalOnly) {
-      // 원금만 변제 (capital36 등): 이자는 면책
       capitalRepay = total;
       interestRepay = 0;
     } else if (repayType === 'sequential') {
-      // 원리금변제: 원금 먼저, 잔여분이 이자
       capitalRepay = Math.min(creditor.capital || 0, total);
       interestRepay = Math.max(0, total - (creditor.capital || 0));
     } else {
-      // 원리금합산변제: 비율대로
       const capRatio = creditorDebt > 0
         ? (creditor.capital || 0) / creditorDebt
         : 0;

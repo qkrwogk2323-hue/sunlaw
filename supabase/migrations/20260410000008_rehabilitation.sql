@@ -474,6 +474,15 @@ create table if not exists public.rehabilitation_prohibition_orders (
 -- NOTE: indexes → 011, RLS → 010
 
 -- ───────────────────────────────────────────────────────────────────────────
+-- 레거시 보정: repay_period_option 디폴트 'capital60' → 'capital36'
+-- 법적 기본은 36개월(법 §611, 지침 §8). COLAW 마이그레이션 시 60개월로 잘못 설정된 건 보정.
+-- ───────────────────────────────────────────────────────────────────────────
+update public.rehabilitation_income_settings
+  set repay_period_option = 'capital36'
+where repay_period_option = 'capital60'
+  and repay_months is null;  -- 사용자가 명시적으로 설정한 건 제외
+
+-- ───────────────────────────────────────────────────────────────────────────
 -- D5100 갭 보강 — 기존 테이블 컬럼 추가만 (신규 테이블 없음)
 -- ───────────────────────────────────────────────────────────────────────────
 -- D5110 변제계획안 → rehabilitation_income_settings에 이미 존재

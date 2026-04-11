@@ -131,7 +131,7 @@ export type RepayPeriodOption =
   | 'full3y';
 
 export interface RepaymentInput {
-  creditors: Pick<RehabCreditor, 'capital' | 'interest' | 'isSecured' | 'securedCollateralValue'>[];
+  creditors: Pick<RehabCreditor, 'capital' | 'interest' | 'isSecured' | 'securedCollateralValue' | 'hasPriorityRepay'>[];
   securedResults: SecuredAllocationResult[];
   monthlyIncome: number;
   livingCost: number;
@@ -160,6 +160,10 @@ export interface RepaymentResult {
   securedDebt: number;
   unsecuredDebt: number;
   liquidationWarning: boolean;
+  /** 우선변제채권 총액 (has_priority_repay=true 채권의 원리금 합) */
+  priorityDebt: number;
+  /** 우선변제 충분성 경고 — 가용소득이 우선변제 총액보다 적을 때 */
+  priorityInsufficient: boolean;
 }
 
 export type RepayType = 'sequential' | 'combined' | 'tieredTaxPriority';

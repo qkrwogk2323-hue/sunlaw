@@ -166,6 +166,11 @@ export function calculateRepayment(input: RepaymentInput): RepaymentResult | nul
   const { totalDebt, totalCapital, totalInterest, securedDebt, unsecuredDebt, unsecuredCapital } =
     getDebtSummary(input.creditors, input.securedResults);
 
+  // 우선변제채권 총액 (법 §583, §614①: 100% 변제 필수)
+  const priorityDebt = input.creditors
+    .filter((c) => c.hasPriorityRepay)
+    .reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+
   const monthlyAvailable = calculateMonthlyAvailable(
     input.monthlyIncome,
     input.livingCost,
@@ -185,11 +190,24 @@ export function calculateRepayment(input: RepaymentInput): RepaymentResult | nul
     monthlyAvailable,
   );
 
+  // 우선변제 충분성 검증: 총 가용소득 < 우선변제 총액이면 경고
+  const totalBudget = monthlyAvailable * repayMonths + input.disposeAmount;
+  const priorityInsufficient = priorityDebt > 0 && totalBudget < priorityDebt;
+
   // 월 변제액 = min(월 가용소득, 목표액 / 변제개월)
+  // 단, 우선변제채권이 있으면 최소한 우선변제 완납 가능한 수준 보장
   let monthlyRepay = Math.min(
     monthlyAvailable,
     Math.ceil(targetAmount / repayMonths),
   );
+
+  // 우선변제채권 100% 보장: 월 변제액이 우선변제 완납에 부족하면 상향
+  if (priorityDebt > 0 && !priorityInsufficient) {
+    const minMonthlyForPriority = Math.ceil(priorityDebt / repayMonths);
+    if (monthlyRepay < minMonthlyForPriority) {
+      monthlyRepay = Math.min(monthlyAvailable, minMonthlyForPriority);
+    }
+  }
 
   // 청산가치보장 원칙 검증
   const totalRepayAmount = monthlyRepay * repayMonths + input.disposeAmount;
@@ -223,6 +241,8 @@ export function calculateRepayment(input: RepaymentInput): RepaymentResult | nul
     securedDebt,
     unsecuredDebt,
     liquidationWarning,
+    priorityDebt,
+    priorityInsufficient,
   };
 }
 
@@ -256,5 +276,7 @@ export function resetRepayPeriod(
     securedDebt: 0,
     unsecuredDebt: 0,
     liquidationWarning: false,
+    priorityDebt: 0,
+    priorityInsufficient: false,
   };
 }

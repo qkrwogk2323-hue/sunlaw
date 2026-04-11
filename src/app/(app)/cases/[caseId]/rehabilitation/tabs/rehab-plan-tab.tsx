@@ -81,7 +81,7 @@ export function RehabPlanTab({
         lienPriority: (c.lien_priority as number) || 1,
         lienType: (c.lien_type as string) || '',
         maxClaimAmount: (c.max_claim_amount as number) || 0,
-        hasPriorityRepay: false,
+        hasPriorityRepay: (c.has_priority_repay as boolean) || false,
         isUnsettled: false,
         isAnnuityDebt: false,
         applyRestructuring: false,
@@ -165,6 +165,7 @@ export function RehabPlanTab({
         interest: c.interest,
         isSecured: c.isSecured,
         securedCollateralValue: c.securedCollateralValue,
+        hasPriorityRepay: c.hasPriorityRepay,
       })),
       securedResults,
       monthlyIncome,
@@ -532,6 +533,19 @@ export function RehabPlanTab({
       {repaymentResult && (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="mb-3 text-base font-semibold text-slate-800">변제계획 요약</h2>
+
+          {repaymentResult.priorityInsufficient && (
+            <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+              <strong>변제계획 수립 불가:</strong> 가용소득이 우선변제채권 총액({formatMoney(repaymentResult.priorityDebt)}원)보다 적습니다.
+              변제기간 연장(최대 60개월) 또는 가용소득 증액이 필요합니다.
+            </div>
+          )}
+
+          {repaymentResult.priorityDebt > 0 && !repaymentResult.priorityInsufficient && (
+            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700" role="alert">
+              우선변제채권 {formatMoney(repaymentResult.priorityDebt)}원이 100% 변제 보장됩니다 (법 §583, §614①).
+            </div>
+          )}
 
           {repaymentResult.liquidationWarning && (
             <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700" role="alert">

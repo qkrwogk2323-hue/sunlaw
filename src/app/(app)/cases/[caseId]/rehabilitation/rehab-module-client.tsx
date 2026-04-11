@@ -134,6 +134,8 @@ export function RehabModuleClient({
             organizationId={organizationId}
             incomeSettings={incomeSettings}
             familyMembers={familyMembers}
+            properties={properties}
+            propertyDeductions={propertyDeductions}
           />
         )}
         {activeTab === 'affidavit' && (

@@ -3,7 +3,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
-import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, formatMoney, parseMoney, computeAnnualAmount } from '@/lib/rehabilitation';
+import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, calculateLiquidationValue, formatMoney, parseMoney, computeAnnualAmount } from '@/lib/rehabilitation';
+import type { RehabPropertyItem } from '@/lib/rehabilitation';
 import { Save, Plus, Trash2 } from 'lucide-react';
 
 interface RehabIncomeTabProps {
@@ -11,6 +12,8 @@ interface RehabIncomeTabProps {
   organizationId: string;
   incomeSettings: Record<string, unknown> | null;
   familyMembers: Record<string, unknown>[];
+  properties?: Record<string, unknown>[];
+  propertyDeductions?: Record<string, unknown>[];
 }
 
 export function RehabIncomeTab({
@@ -18,6 +21,8 @@ export function RehabIncomeTab({
   organizationId,
   incomeSettings,
   familyMembers,
+  properties: rawProperties = [],
+  propertyDeductions: rawDeductions = [],
 }: RehabIncomeTabProps) {
   const { success, error } = useToast();
   const [saving, setSaving] = useState(false);
@@ -87,6 +92,24 @@ export function RehabIncomeTab({
     [form.monthly_income, livingCost, form.extra_living_cost, form.child_support, form.trustee_comm_rate],
   );
 
+  // 청산가치 — 재산목록에서 자동 계산 (변제계획 탭과 동일 파이프라인)
+  const liquidationValue = useMemo(() => {
+    if (rawProperties.length === 0) return 0;
+    const propertyItems: RehabPropertyItem[] = rawProperties.map((p) => ({
+      id: (p.id as string) || '',
+      category: (p.category as string) || 'cash',
+      detail: (p.detail as string) || '',
+      amount: (p.amount as number) || 0,
+      seizure: (p.seizure as string) || '',
+      repayUse: (p.repay_use as string) || '',
+      isProtection: (p.is_protection as boolean) || false,
+    }));
+    const deductionMap = Object.fromEntries(
+      rawDeductions.map((d) => [d.category as string, d.deduction_amount as number]),
+    );
+    return calculateLiquidationValue(propertyItems, deductionMap).total;
+  }, [rawProperties, rawDeductions]);
+
   const updateField = useCallback((field: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
@@ -140,6 +163,30 @@ export function RehabIncomeTab({
         </p>
         {monthlyAvailable <= 0 && (
           <p className="mt-1 text-xs text-red-600">월 소득이 생계비보다 적어 변제가 어렵습니다</p>
+        )}
+      </div>
+
+      {/* 청산가치 요약 — 재산 탭 데이터 자동 연동 */}
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-600">청산가치 (재산목록 합계)</p>
+            <p className="mt-1 text-lg font-bold text-slate-800">{formatMoney(liquidationValue)}원</p>
+          </div>
+          {liquidationValue === 0 && rawProperties.length === 0 && (
+            <p className="text-xs text-amber-600">재산 탭에서 재산을 먼저 등록해주세요</p>
+          )}
+          {liquidationValue === 0 && rawProperties.length > 0 && (
+            <p className="text-xs text-amber-600">재산이 등록되어 있으나 청산가치가 0원입니다. 금액을 확인해주세요.</p>
+          )}
+        </div>
+        {monthlyAvailable > 0 && liquidationValue > 0 && (
+          <p className="mt-2 text-xs text-slate-500">
+            36개월 총 변제 예정액: {formatMoney(monthlyAvailable * 36)}원
+            {monthlyAvailable * 36 < liquidationValue
+              ? ' — 청산가치보장 미달, 재산처분 투입 또는 변제기간 연장 필요'
+              : ' — 청산가치보장 충족'}
+          </p>
         )}
       </div>
 

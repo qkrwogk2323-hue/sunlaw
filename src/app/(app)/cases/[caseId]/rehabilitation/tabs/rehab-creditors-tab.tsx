@@ -251,9 +251,32 @@ export function RehabCreditorsTab({
     return parts.join(', ');
   }, []);
 
+  // 채권자 번호 자동 재정렬 (재단→우선→별제→일반→미확정)
+  const renumberCreditors = useCallback((): CreditorForm[] => {
+    const priorityOrder = (c: CreditorForm): number => {
+      if (c.has_priority_repay) return 0;  // 재단/우선변제
+      if (c.is_secured) return 1;          // 별제권부
+      if (c.is_unsettled) return 3;        // 미확정
+      return 2;                            // 일반
+    };
+
+    const sorted = [...creditors].sort((a, b) => {
+      const pa = priorityOrder(a);
+      const pb = priorityOrder(b);
+      if (pa !== pb) return pa - pb;
+      return a.bond_number - b.bond_number;
+    });
+    const renumbered = sorted.map((c, idx) => ({ ...c, bond_number: idx + 1 }));
+    setCreditors(renumbered);
+    return renumbered;
+  }, [creditors]);
+
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
+      // 저장 전 채권자 번호 재정렬 (재단→우선→별제→일반→미확정)
+      const renumbered = renumberCreditors();
+
       // 채권자 설정
       const settingsResult = await upsertRehabCreditorSettings(caseId, organizationId, {
         base_date: settings.base_date || null,
@@ -267,8 +290,8 @@ export function RehabCreditorsTab({
         return;
       }
 
-      // 채권자 목록
-      for (const c of creditors) {
+      // 채권자 목록 (재정렬된 bond_number 포함)
+      for (const c of renumbered) {
         const { isNew, expanded, id: formId, ...data } = c;
         const result = await upsertRehabCreditor(caseId, organizationId, data, isNew ? undefined : formId);
         if (!result.ok) {
