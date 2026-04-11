@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { FileText, Download, Printer, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/toast-provider';
+import { PrintFrame } from '@/components/ui/print-frame';
 import { generateRehabDocument, upsertProhibitionOrder } from '@/lib/actions/rehabilitation-actions';
 import type { DocumentType } from '@/lib/rehabilitation/document-generator';
 
@@ -81,6 +82,15 @@ const DOCUMENT_TYPES: {
   { key: 'repayment_plan', label: '변제계획안', description: '변제계획안 제출서' },
   { key: 'creditor_summary', label: '채권자목록 요약표', description: '총 채권액·담보/무담보 구분·채권자 수 요약' },
   { key: 'document_checklist', label: '자료제출목록', description: '법원 제출 서류 체크리스트 (별지서식)', group: '기타' },
+];
+
+/** 부속서류 체크박스 → DocumentType 매핑 */
+const ATTACHMENT_DOC_MAP: { optKey: string; docType: DocumentType; label: string }[] = [
+  { optKey: 'include_creditor_list', docType: 'creditor_list', label: '채권자 목록' },
+  { optKey: 'include_property_list', docType: 'property_list', label: '재산 목록' },
+  { optKey: 'include_income_statement', docType: 'income_statement', label: '수입·지출 목록' },
+  { optKey: 'include_affidavit', docType: 'affidavit', label: '진술서' },
+  { optKey: 'include_creditor_summary', docType: 'creditor_summary', label: '채권자목록 요약표' },
 ];
 
 export function RehabDocumentsTab({
@@ -218,16 +228,52 @@ export function RehabDocumentsTab({
     [caseId, organizationId],
   );
 
-  const handlePrint = useCallback(() => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.print();
+  // PrintFrame 상태
+  const [printHtml, setPrintHtml] = useState<string | null>(null);
+
+  const handlePrintPreview = useCallback(() => {
+    if (previewHtml) {
+      setPrintHtml(previewHtml);
     }
-  }, []);
+  }, [previewHtml]);
 
   const closePreview = useCallback(() => {
     setPreviewHtml(null);
     setPreviewTitle('');
   }, []);
+
+  // 부속서류 전체출력
+  const [batchProgress, setBatchProgress] = useState<string | null>(null);
+
+  const handleBatchPrint = useCallback(async () => {
+    const selected = ATTACHMENT_DOC_MAP.filter((m) => attachmentOptions[m.optKey as keyof typeof attachmentOptions]);
+    if (selected.length === 0) {
+      toastError('선택 오류', { message: '출력할 부속서류를 1개 이상 선택해주세요.' });
+      return;
+    }
+    setError(null);
+    const htmlParts: string[] = [];
+    for (let i = 0; i < selected.length; i++) {
+      const item = selected[i];
+      setBatchProgress(`${i + 1}/${selected.length} 생성 중... (${item.label})`);
+      try {
+        const result = await generateRehabDocument(caseId, organizationId, item.docType);
+        if (result.ok) {
+          // 첫 문서 이후에는 page-break 삽입
+          if (i > 0) htmlParts.push('<div class="page-break"></div>');
+          htmlParts.push(result.html);
+        } else {
+          toastError(`${item.label} 생성 실패`, { message: result.userMessage });
+        }
+      } catch {
+        toastError(`${item.label} 생성 오류`, { message: '문서 생성 중 오류가 발생했습니다.' });
+      }
+    }
+    setBatchProgress(null);
+    if (htmlParts.length > 0) {
+      setPrintHtml(htmlParts.join('\n'));
+    }
+  }, [attachmentOptions, caseId, organizationId, toastError]);
 
   return (
     <div className="space-y-6">
@@ -263,6 +309,19 @@ export function RehabDocumentsTab({
               {opt.label}
             </label>
           ))}
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+            onClick={handleBatchPrint}
+            disabled={!!batchProgress}
+            aria-label="부속서류 전체출력"
+          >
+            <Printer className="h-4 w-4" />
+            {batchProgress || '전체출력 (인쇄 / PDF 저장)'}
+          </button>
+          {batchProgress && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
         </div>
       </section>
 
@@ -630,11 +689,11 @@ export function RehabDocumentsTab({
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-                  onClick={handlePrint}
-                  aria-label="인쇄"
+                  onClick={handlePrintPreview}
+                  aria-label="인쇄 / PDF 저장"
                 >
                   <Printer className="h-3.5 w-3.5" />
-                  인쇄
+                  인쇄 / PDF 저장
                 </button>
                 <button
                   type="button"
@@ -653,11 +712,19 @@ export function RehabDocumentsTab({
                 srcDoc={previewHtml}
                 className="h-full w-full border-0"
                 title={`${previewTitle} 미리보기`}
-                sandbox="allow-same-origin allow-popups"
+                sandbox="allow-same-origin allow-modals"
               />
             </div>
           </div>
         </div>
+      )}
+
+      {/* PrintFrame — 인쇄/PDF 출력 */}
+      {printHtml && (
+        <PrintFrame
+          html={printHtml}
+          onClose={() => setPrintHtml(null)}
+        />
       )}
     </div>
   );

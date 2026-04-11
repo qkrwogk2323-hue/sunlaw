@@ -448,7 +448,6 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
   const mapped: Record<string, unknown> = {
     median_income_year: form.income_year ?? new Date().getFullYear(),
     net_salary: form.monthly_income ?? 0,
-    gross_salary: form.monthly_income ?? 0,
     living_cost: form.living_cost ?? 0,
     living_cost_rate: form.living_cost_rate ?? 100,
     child_support: form.child_support ?? 0,

@@ -234,17 +234,52 @@ export function RehabPlanTab({
     const rateStr = repaymentResult.repayRate.toFixed(2);
     const startDate = (incomeSettings?.repayment_start_date as string) || '변제개시일';
     const months = repaymentResult.repayMonths;
+    const incomeTypeLabel = (incomeSettings?.income_type as string) === 'business' ? '영업' : '급여';
+
+    // D5110 vs D5111 판별
+    const formType = determineFormType(repaymentResult.presentValue, liquidationValue);
+    const isD5111 = formType === 'D5111';
+
+    // 제5항: 변제자금의 조달방법
+    let section5: string;
+    if (isD5111) {
+      const disposal = calculateDisposalAmount(
+        liquidationValue,
+        repaymentResult.presentValue ?? 0,
+        1,
+        trusteeCommRate > 0,
+      );
+      section5 = `변제자금은 신청인의 ${incomeTypeLabel}소득 및 재산처분에 의하여 조달한다.\n가용소득에 의한 변제: 매월 ${formatMoney(repaymentResult.monthlyRepay)}원\n재산처분 변제투입예정액: ${formatMoney(disposal)}원`;
+    } else {
+      section5 = `변제자금은 신청인의 ${incomeTypeLabel}소득으로 조달한다.${disposeAmount > 0 ? `\n처분할 재산의 변제투입예정액: ${formatMoney(disposeAmount)}원` : ''}`;
+    }
+
+    // 제9항: 처분할 재산의 처분방법
+    let section9: string;
+    if (isD5111) {
+      const disposableProps = propertyItems.filter((p) => !p.isProtection && p.amount > 0);
+      if (disposableProps.length > 0) {
+        const propList = disposableProps
+          .map((p) => `- ${p.detail || p.category}: ${formatMoney(p.amount)}원`)
+          .join('\n');
+        section9 = `다음 재산을 환가하여 변제에 투입하기로 한다.\n${propList}`;
+      } else {
+        section9 = '처분할 재산의 처분 대금은 변제기간 중 처분하여 일시변제에 투입하기로 한다.';
+      }
+    } else {
+      section9 = '해당 없음.';
+    }
 
     const defaults = [
       `변제계획안의 기간은 ${startDate}부터 ${months}개월로 한다.`,
       `신청인은 매월 ${formatMoney(repaymentResult.monthlyRepay)}원을 개인회생위원에게 납부하고, 개인회생위원은 이를 각 채권자에게 그 채권액의 비율에 따라 안분 변제한다.`,
       `총 채무액 ${formatMoney(totalDebt)}원 중 ${formatMoney(repaymentResult.totalRepayAmount)}원을 변제한다 (변제율 ${rateStr}%).\n원금 ${formatMoney(repaymentResult.totalCapital)}원, 이자 ${formatMoney(repaymentResult.totalInterest)}원.`,
       `별첨 채권자별 변제계획표에 의한다.`,
-      `변제자금은 신청인의 ${(incomeSettings?.income_type as string) === 'business' ? '영업' : '급여'}소득으로 조달한다.${disposeAmount > 0 ? `\n처분할 재산의 변제투입예정액: ${formatMoney(disposeAmount)}원` : ''}`,
+      section5,
       `부인채권이 있는 경우 이를 환수하여 변제계획에 포함하기로 한다.`,
       `변제계획에 따른 변제를 완료한 때에는 나머지 채무에 대하여 면책을 받기로 한다.`,
       `특별조항 없음.`,
-      `${disposeAmount > 0 ? '처분할 재산의 처분 대금은 변제기간 중 처분하여 일시변제에 투입하기로 한다.' : '처분할 재산 없음.'}`,
+      section9,
       `기타 사항 없음.`,
     ];
 
@@ -252,7 +287,7 @@ export function RehabPlanTab({
       prev.map((existing, i) => existing.trim() ? existing : defaults[i]),
     );
     success('자동채움 완료', { message: '빈 항목만 자동 입력되었습니다.' });
-  }, [repaymentResult, incomeSettings, disposeAmount, success]);
+  }, [repaymentResult, incomeSettings, disposeAmount, liquidationValue, trusteeCommRate, propertyItems, success]);
 
   // 변제계획안 10항 저장
   const handleSaveSections = useCallback(async () => {
