@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
 import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, calculateLiquidationValue, formatMoney, parseMoney, computeAnnualAmount } from '@/lib/rehabilitation';
@@ -50,6 +50,33 @@ export function RehabIncomeTab({
     trustee_comm_rate: (incomeSettings?.trustee_comm_rate as number) || 0,
     dispose_amount: (incomeSettings?.dispose_amount as number) || 0,
   });
+
+  // 추가생계비 항목별 (§3-3a: 주거비, 교육비, 의료비, 기타)
+  type LivingCostItem = { category: string; amount: number; reason: string };
+  const [additionalLivingCosts, setAdditionalLivingCosts] = useState<LivingCostItem[]>(
+    (Array.isArray(incomeSettings?.additional_living_costs) ? incomeSettings.additional_living_costs : []) as LivingCostItem[],
+  );
+
+  // 처분재산 항목별
+  type DisposeItem = { category: string; amount: number; description: string };
+  const [disposeItems, setDisposeItems] = useState<DisposeItem[]>(
+    (Array.isArray(incomeSettings?.dispose_items) ? incomeSettings.dispose_items : []) as DisposeItem[],
+  );
+
+  // 항목별 합계 → 단일 필드 동기화
+  useEffect(() => {
+    if (additionalLivingCosts.length > 0) {
+      const total = additionalLivingCosts.reduce((s, i) => s + (i.amount || 0), 0);
+      setForm((prev) => ({ ...prev, extra_living_cost: total }));
+    }
+  }, [additionalLivingCosts]);
+
+  useEffect(() => {
+    if (disposeItems.length > 0) {
+      const total = disposeItems.reduce((s, i) => s + (i.amount || 0), 0);
+      setForm((prev) => ({ ...prev, dispose_amount: total }));
+    }
+  }, [disposeItems]);
 
   // D5103 수입 명목별 breakdown
   type IncomeRow = { label: string; period_type: '월' | '분기' | '반기' | '연'; amount: number; annual_amount: number; has_seizure: boolean };
@@ -127,9 +154,11 @@ export function RehabIncomeTab({
         living_cost: livingCost,
         living_cost_rate: form.living_cost_rate,
         extra_living_cost: form.extra_living_cost,
+        additional_living_costs: additionalLivingCosts,
         child_support: form.child_support,
         trustee_comm_rate: form.trustee_comm_rate,
         dispose_amount: form.dispose_amount,
+        dispose_items: disposeItems,
         dependent_count: dependentCount,
         income_breakdown: incomeBreakdown,
         expense_breakdown: expenseBreakdown,
@@ -213,16 +242,82 @@ export function RehabIncomeTab({
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="dispose_amount" className="text-sm font-medium text-slate-700">처분재산 변제투입액 (원)</label>
+            <label htmlFor="dispose_amount" className="text-sm font-medium text-slate-700">처분재산 변제투입액 합계 (원)</label>
             <input
               id="dispose_amount"
               type="text"
               value={form.dispose_amount ? formatMoney(form.dispose_amount) : ''}
               onChange={(e) => updateField('dispose_amount', parseMoney(e.target.value))}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              readOnly={disposeItems.length > 0}
+              className={`w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${disposeItems.length > 0 ? 'bg-slate-50 text-slate-500' : ''}`}
               placeholder="0"
             />
+            {disposeItems.length > 0 && (
+              <p className="text-xs text-slate-400">항목별 합계 자동 반영</p>
+            )}
           </div>
+        </div>
+
+        {/* 처분재산 항목별 입력 */}
+        <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-blue-700">처분재산 항목별</h3>
+            <button
+              type="button"
+              onClick={() => setDisposeItems((prev) => [...prev, { category: '부동산', amount: 0, description: '' }])}
+              className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-200"
+              aria-label="처분재산 항목 추가"
+            >
+              + 항목 추가
+            </button>
+          </div>
+          {disposeItems.length === 0 ? (
+            <p className="text-xs text-blue-600">처분할 재산이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {disposeItems.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <select
+                    value={item.category}
+                    onChange={(e) => setDisposeItems((prev) => prev.map((v, i) => i === idx ? { ...v, category: e.target.value } : v))}
+                    className="w-24 rounded border border-blue-300 px-2 py-1 text-xs"
+                    aria-label="처분재산 유형"
+                  >
+                    <option value="부동산">부동산</option>
+                    <option value="차량">차량</option>
+                    <option value="보증금">보증금</option>
+                    <option value="보험해약금">보험해약금</option>
+                    <option value="기타">기타</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={item.amount ? formatMoney(item.amount) : ''}
+                    onChange={(e) => setDisposeItems((prev) => prev.map((v, i) => i === idx ? { ...v, amount: parseMoney(e.target.value) } : v))}
+                    className="w-28 rounded border border-blue-300 px-2 py-1 text-xs text-right"
+                    placeholder="금액"
+                    aria-label="처분재산 금액"
+                  />
+                  <input
+                    type="text"
+                    value={item.description}
+                    onChange={(e) => setDisposeItems((prev) => prev.map((v, i) => i === idx ? { ...v, description: e.target.value } : v))}
+                    className="flex-1 rounded border border-blue-300 px-2 py-1 text-xs"
+                    placeholder="설명 (소재, 면적 등)"
+                    aria-label="처분재산 설명"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDisposeItems((prev) => prev.filter((_, i) => i !== idx))}
+                    className="rounded p-1 text-red-400 hover:text-red-600"
+                    aria-label="항목 삭제"
+                  >×</button>
+                </div>
+              ))}
+              <div className="text-right text-xs font-medium text-blue-700">
+                합계: {formatMoney(disposeItems.reduce((s, i) => s + (i.amount || 0), 0))}원
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -326,18 +421,83 @@ export function RehabIncomeTab({
       {/* 추가 비용 */}
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="mb-4 text-base font-semibold text-slate-800">추가 비용</h2>
+
+        {/* 추가 생계비 항목별 입력 */}
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-amber-700">추가 생계비 항목별 (법원 승인 필요)</h3>
+            <button
+              type="button"
+              onClick={() => setAdditionalLivingCosts((prev) => [...prev, { category: '주거비', amount: 0, reason: '' }])}
+              className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-200"
+              aria-label="추가생계비 항목 추가"
+            >
+              + 항목 추가
+            </button>
+          </div>
+          {additionalLivingCosts.length === 0 ? (
+            <p className="text-xs text-amber-600">추가 생계비 항목이 없습니다. 기준중위소득 60% 초과 시 항목을 추가하세요.</p>
+          ) : (
+            <div className="space-y-2">
+              {additionalLivingCosts.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <select
+                    value={item.category}
+                    onChange={(e) => setAdditionalLivingCosts((prev) => prev.map((v, i) => i === idx ? { ...v, category: e.target.value } : v))}
+                    className="w-24 rounded border border-amber-300 px-2 py-1 text-xs"
+                    aria-label="추가생계비 유형"
+                  >
+                    <option value="주거비">주거비</option>
+                    <option value="교육비">교육비</option>
+                    <option value="의료비">의료비</option>
+                    <option value="기타">기타</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={item.amount ? formatMoney(item.amount) : ''}
+                    onChange={(e) => setAdditionalLivingCosts((prev) => prev.map((v, i) => i === idx ? { ...v, amount: parseMoney(e.target.value) } : v))}
+                    className="w-28 rounded border border-amber-300 px-2 py-1 text-xs text-right"
+                    placeholder="금액"
+                    aria-label="추가생계비 금액"
+                  />
+                  <input
+                    type="text"
+                    value={item.reason}
+                    onChange={(e) => setAdditionalLivingCosts((prev) => prev.map((v, i) => i === idx ? { ...v, reason: e.target.value } : v))}
+                    className="flex-1 rounded border border-amber-300 px-2 py-1 text-xs"
+                    placeholder="사유"
+                    aria-label="추가생계비 사유"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAdditionalLivingCosts((prev) => prev.filter((_, i) => i !== idx))}
+                    className="rounded p-1 text-red-400 hover:text-red-600"
+                    aria-label="항목 삭제"
+                  >×</button>
+                </div>
+              ))}
+              <div className="text-right text-xs font-medium text-amber-700">
+                합계: {formatMoney(additionalLivingCosts.reduce((s, i) => s + (i.amount || 0), 0))}원
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-1">
-            <label htmlFor="extra_living_cost" className="text-sm font-medium text-slate-700">추가 생계비 (원)</label>
+            <label htmlFor="extra_living_cost" className="text-sm font-medium text-slate-700">추가 생계비 합계 (원)</label>
             <input
               id="extra_living_cost"
               type="text"
               value={form.extra_living_cost ? formatMoney(form.extra_living_cost) : ''}
               onChange={(e) => updateField('extra_living_cost', parseMoney(e.target.value))}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              readOnly={additionalLivingCosts.length > 0}
+              className={`w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${additionalLivingCosts.length > 0 ? 'bg-slate-50 text-slate-500' : ''}`}
               placeholder="0"
             />
-            <p className="text-xs text-slate-400">의료비, 교육비 등 법원 인정 추가 비용</p>
+            {additionalLivingCosts.length > 0 && (
+              <p className="text-xs text-slate-400">항목별 합계 자동 반영</p>
+            )}
           </div>
           <div className="space-y-1">
             <label htmlFor="child_support" className="text-sm font-medium text-slate-700">양육비 (원)</label>

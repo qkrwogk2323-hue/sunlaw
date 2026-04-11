@@ -329,10 +329,12 @@ create table if not exists public.rehabilitation_income_settings (
                        check (living_cost_range in ('within','exceed')),
   extra_living_cost    bigint not null default 0,
   extra_living_percent numeric(5,2) not null default 0,
+  additional_living_costs jsonb default '[]',  -- [{category, amount, reason}]
 
   trustee_comm_rate    numeric(5,2) not null default 0,
   child_support        bigint not null default 0,
   dispose_amount       bigint not null default 0,
+  dispose_items        jsonb default '[]',     -- [{category, amount, description}]
   dispose_period       text,
 
   -- 변제기간 설정 (0090: period_setting, 0091: default capital36, 0094: nullable)
