@@ -118,16 +118,16 @@ function baseStyles(): string {
     }
 
     html, body {
-      font-family: 'Batang', '바탕', 'Noto Sans KR', serif;
+      font-family: '휴먼명조', 'Batang', serif;
       font-size: 12pt;
       color: #000;
-      line-height: 1.4;
+      line-height: 200%;
       background: white;
     }
 
     @page {
       size: A4 portrait;
-      margin: 20mm;
+      margin: 45mm 20mm 30mm 20mm;
     }
 
     @media print {
@@ -191,6 +191,8 @@ function baseStyles(): string {
       width: 100%;
       border-collapse: collapse;
       margin: 10px 0;
+      font-size: 10pt;
+      line-height: 160%;
     }
 
     th, td {

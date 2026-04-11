@@ -6,14 +6,14 @@ const PRINT_STYLES = `
 @media print {
   @page {
     size: A4;
-    margin: 20mm;
+    margin: 45mm 20mm 30mm 20mm;
   }
   body {
     margin: 0;
     padding: 0;
-    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
-    font-size: 11pt;
-    line-height: 1.6;
+    font-family: '휴먼명조', 'Batang', serif;
+    font-size: 12pt;
+    line-height: 200%;
     color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -21,19 +21,20 @@ const PRINT_STYLES = `
   .page-break {
     page-break-before: always;
   }
-  table { page-break-inside: avoid; }
+  table { page-break-inside: avoid; font-size: 10pt; line-height: 160%; }
   h1, h2, h3 { page-break-after: avoid; }
 }
 @media screen {
   body {
-    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
-    font-size: 11pt;
-    line-height: 1.6;
+    font-family: '휴먼명조', 'Batang', serif;
+    font-size: 12pt;
+    line-height: 200%;
     color: #000;
     max-width: 210mm;
     margin: 0 auto;
-    padding: 20mm;
+    padding: 45mm 20mm 30mm 20mm;
   }
+  table { font-size: 10pt; line-height: 160%; }
 }
 `;
 
