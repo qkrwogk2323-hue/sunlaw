@@ -66,7 +66,8 @@ const DOCUMENT_TYPES: {
   group?: string;
 }[] = [
   // ── 필수 신청 문서 ──
-  { key: 'application', label: '개인회생 신청서', description: '법원 제출용 개시신청서', group: '필수 신청 문서' },
+  { key: 'cover_page', label: '표지', description: '법원 제출용 표지', group: '필수 신청 문서' },
+  { key: 'application', label: '개인회생 신청서', description: '법원 제출용 개시신청서' },
   { key: 'delegation', label: '위임장', description: '변호사/법무사 위임장' },
   { key: 'delegation_with_attorney', label: '위임장 + 담당변호사지정서', description: '법무법인 위임 시 (위임장+지정서 통합)' },
   { key: 'attorney_designation', label: '담당변호사지정서', description: '법무법인 소속 담당변호사 지정' },

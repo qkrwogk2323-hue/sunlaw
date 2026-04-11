@@ -31,7 +31,8 @@ export type DocumentType =
   | 'property_list'
   | 'income_statement'
   | 'affidavit'
-  | 'repayment_plan';
+  | 'repayment_plan'
+  | 'cover_page';
 
 export interface DocumentData {
   application: Record<string, any> | null;
@@ -1887,7 +1888,63 @@ export function generateDocument(type: DocumentType, data: DocumentData): string
       return generateAffidavit(data);
     case 'repayment_plan':
       return generateRepaymentPlan(data);
+    case 'cover_page':
+      return generateCoverPage(data);
     default:
       throw new Error(`Unknown document type: ${type}`);
   }
+}
+
+/**
+ * 표지 — 법원 제출용 개인회생서류 표지
+ */
+function generateCoverPage(data: DocumentData): string {
+  const app = data.application || {};
+  const courtName = esc(app.court_name || '○○회생법원');
+  const caseYear = app.case_year || new Date().getFullYear();
+  const caseNum = esc(app.case_number || '');
+  const debtorName = esc(app.applicant_name || '');
+  const debtorBirth = esc(app.resident_number_front || '');
+  const agentType = esc(app.agent_type || '');
+  const agentName = esc(app.agent_name || '');
+  const agentLawFirm = esc(app.agent_law_firm || '');
+  const filingDate = app.application_date || app.filing_date || '';
+  const filingStr = filingDate
+    ? `${filingDate.slice(0, 4)}. ${parseInt(filingDate.slice(5, 7))}. ${parseInt(filingDate.slice(8, 10))}.`
+    : `${new Date().getFullYear()}. . .`;
+
+  const agentLine = agentLawFirm
+    ? `${agentLawFirm}<br>담당 ${agentType} ${agentName}`
+    : agentName ? `${agentType} ${agentName}` : '';
+
+  const content = `
+<div style="text-align:center;padding:80px 40px;font-family:'Batang','바탕',serif">
+  <div style="font-size:16px;color:#666;margin-bottom:60px">${courtName}</div>
+
+  <div style="font-size:14px;margin-bottom:8px">
+    ${caseYear}개회${caseNum ? ` ${caseNum}` : '         '}호
+  </div>
+
+  <h1 style="font-size:28px;font-weight:700;margin:40px 0;letter-spacing:8px">
+    개인회생절차개시신청서
+  </h1>
+
+  <div style="font-size:16px;margin:40px 0;line-height:2.2">
+    <div>채무자 ${debtorName}${debtorBirth ? ` (${debtorBirth}-*******` + ')' : ''}</div>
+  </div>
+
+  <div style="margin-top:60px;font-size:14px;line-height:2">
+    ${agentLine ? `<div>${agentLine}</div>` : ''}
+  </div>
+
+  <div style="margin-top:80px;font-size:14px">
+    ${filingStr}
+  </div>
+
+  <div style="margin-top:20px;font-size:14px;font-weight:700">
+    ${courtName} 귀중
+  </div>
+</div>`;
+
+  return wrapDocument(content, '개인회생절차개시신청서 표지');
 }

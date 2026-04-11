@@ -274,6 +274,36 @@ export const d5114Schema = z.object({
   application_date: z.string().optional(),                 // YYYY-MM-DD
 });
 
+// ─── D5113 중지명령 신청서 ──────────────────────────────────────
+// 법 §593: 이미 진행 중인 강제집행 등의 절차를 중지하는 명령 신청
+export const d5113Schema = z.object({
+  court_name: z.string().min(1, '법원명 필수'),
+  case_year: z.number().int().optional(),
+  case_number: z.string().optional(),
+
+  applicant_name: z.string().min(1, '신청인 이름 필수'),
+  resident_number_front: z.string().optional(),
+  registered_address: z.string().optional(),
+  current_address: z.string().optional(),
+
+  // 중지 대상 사건
+  target_case_number: z.string().min(1, '중지 대상 사건번호 필수'),
+  target_creditor: z.string().optional(),                   // 집행채권자
+  target_court: z.string().optional(),                      // 집행법원
+
+  // 집행 종류
+  execution_types: z.array(z.enum([
+    '채권압류및추심명령',
+    '채권압류및전부명령',
+    '부동산경매',
+    '자동차경매',
+    '유체동산압류',
+  ])).min(1, '집행 종류를 1개 이상 선택하세요'),
+
+  reason_detail: z.string().optional(),
+  application_date: z.string().optional(),
+});
+
 // ─── 검증 함수 ───────────────────────────────────────────────────
 export function validateD5108(data: unknown) {
   const r = d5108Schema.safeParse(data);
@@ -297,6 +327,11 @@ export function validateD5106(data: unknown) {
 
 export function validateD5112(data: unknown) {
   const r = d5112Schema.safeParse(data);
+  return r.success ? { ok: true as const, data: r.data } : { ok: false as const, error: r.error.issues.map(i => i.message).join(', ') };
+}
+
+export function validateD5113(data: unknown) {
+  const r = d5113Schema.safeParse(data);
   return r.success ? { ok: true as const, data: r.data } : { ok: false as const, error: r.error.issues.map(i => i.message).join(', ') };
 }
 

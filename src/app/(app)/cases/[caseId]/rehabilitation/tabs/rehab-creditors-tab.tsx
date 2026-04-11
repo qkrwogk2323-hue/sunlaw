@@ -252,14 +252,23 @@ export function RehabCreditorsTab({
   }, []);
 
   // 채권자 번호 자동 재정렬 (재단→우선→별제→일반→미확정)
-  const renumberCreditors = useCallback((): CreditorForm[] => {
+  // 채권자 번호 불변 규칙:
+  // - 기존 DB 채권자가 있으면 번호 재정렬 안 함 (결번 허용)
+  // - 최초 저장 (전원 isNew) 시에만 분류 순서로 재정렬
+  // - 신규 추가 시: max(기존 bond_number) + 1 부여 (addCreditor/addFromSearch에서 처리)
+  const prepareForSave = useCallback((): CreditorForm[] => {
+    const hasExisting = creditors.some((c) => !c.isNew);
+    if (hasExisting) {
+      // 기존 채권자 존재 → 번호 유지, 상태만 반환
+      return creditors;
+    }
+    // 전원 신규 → 분류 순서로 재정렬
     const priorityOrder = (c: CreditorForm): number => {
-      if (c.has_priority_repay) return 0;  // 재단/우선변제
-      if (c.is_secured) return 1;          // 별제권부
-      if (c.is_unsettled) return 3;        // 미확정
-      return 2;                            // 일반
+      if (c.has_priority_repay) return 0;
+      if (c.is_secured) return 1;
+      if (c.is_unsettled) return 3;
+      return 2;
     };
-
     const sorted = [...creditors].sort((a, b) => {
       const pa = priorityOrder(a);
       const pb = priorityOrder(b);
@@ -274,8 +283,8 @@ export function RehabCreditorsTab({
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      // 저장 전 채권자 번호 재정렬 (재단→우선→별제→일반→미확정)
-      const renumbered = renumberCreditors();
+      // 채권자 번호 준비 (최초 저장 시에만 재정렬)
+      const prepared = prepareForSave();
 
       // 채권자 설정
       const settingsResult = await upsertRehabCreditorSettings(caseId, organizationId, {
@@ -290,8 +299,8 @@ export function RehabCreditorsTab({
         return;
       }
 
-      // 채권자 목록 (재정렬된 bond_number 포함)
-      for (const c of renumbered) {
+      // 채권자 목록
+      for (const c of prepared) {
         const { isNew, expanded, id: formId, ...data } = c;
         const result = await upsertRehabCreditor(caseId, organizationId, data, isNew ? undefined : formId);
         if (!result.ok) {
@@ -304,7 +313,7 @@ export function RehabCreditorsTab({
     } finally {
       setSaving(false);
     }
-  }, [settings, creditors, caseId, organizationId, success, error]);
+  }, [settings, creditors, caseId, organizationId, success, error, prepareForSave]);
 
   return (
     <div className="space-y-6">
