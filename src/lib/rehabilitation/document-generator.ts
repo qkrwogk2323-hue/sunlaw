@@ -861,7 +861,7 @@ function generateSecuredCreditorTable(
       </tr>`;
     lienDetailsRows = `
       <tr>
-        <td colspan="6" style="height: 40px; text-align: center; color: #888; vertical-align: middle;">
+        <td colspan="5" style="height: 40px; text-align: center; color: #888; vertical-align: middle;">
           해당 사항 없음
         </td>
       </tr>`;
@@ -906,17 +906,13 @@ function generateSecuredCreditorTable(
       const propertyDesc = property
         ? `${property.property_type || ''} ${property.detail || ''}`
         : '';
-      const lienDesc = [
-        lienType ? `담보종류: ${esc(lienType)}` : '',
-        lienPriority ? `순위: ${esc(String(lienPriority))}` : '',
-        propertyDesc ? `목적물: ${esc(propertyDesc.trim())}` : '',
-        maxClaimAmount > 0 ? `채권최고액: ${formatAmount(maxClaimAmount)}` : '',
-      ].filter(Boolean).join(' / ');
-
       lienDetailsRows += `
         <tr>
           <td style="text-align: center;">${esc(String(bondNumber))}</td>
-          <td colspan="5" style="font-size: 9pt; padding: 6px 8px;">${lienDesc || '&nbsp;'}</td>
+          <td style="text-align: center;">${esc(lienType) || '-'}</td>
+          <td style="text-align: center;">${lienPriority ? esc(String(lienPriority)) : '-'}</td>
+          <td>${esc(propertyDesc.trim()) || '-'}</td>
+          <td style="text-align: right;">${maxClaimAmount > 0 ? formatAmount(maxClaimAmount) : '-'}</td>
         </tr>`;
     });
   }
@@ -943,11 +939,14 @@ function generateSecuredCreditorTable(
 
     <table style="margin-top: 10px;">
       <tr>
-        <th colspan="6" style="text-align: center;">⑥별제권 등의 내용 및 목적물</th>
+        <th colspan="5" style="text-align: center;">⑥별제권 등의 내용 및 목적물</th>
       </tr>
       <tr>
         <th style="width: 8%; text-align: center;">채권<br/>번호</th>
-        <th colspan="5" style="text-align: center;">별제권 등의 내용</th>
+        <th style="width: 20%; text-align: center;">담보종류</th>
+        <th style="width: 8%; text-align: center;">순위</th>
+        <th style="width: 34%; text-align: center;">목적물</th>
+        <th style="width: 15%; text-align: center;">채권최고액</th>
       </tr>
       ${lienDetailsRows}
     </table>`;
@@ -1979,17 +1978,29 @@ function generateCreditorSummary(data: DocumentData): string {
   const unsCapital = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
   const unsInterest = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
 
+  const securedTotal = secCapital + secInterest;
+  const unsecuredTotal = totalDebt - securedTotal;
+
   const content = `
 <h2 style="text-align:center;margin-bottom:20px">채 권 자 목 록 요 약 표</h2>
 <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;width:200px;text-align:left">총 채권자 수</th>
-      <td style="border:1px solid #000;padding:6px 12px">${creditors.length}명</td></tr>
-  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;text-align:left">채권 현재액 총합계</th>
-      <td style="border:1px solid #000;padding:6px 12px;text-align:right">${fmt(totalDebt)}원</td></tr>
-  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;text-align:left">　원금 합계</th>
-      <td style="border:1px solid #000;padding:6px 12px;text-align:right">${fmt(totalCapital)}원</td></tr>
-  <tr><th style="border:1px solid #000;padding:6px 12px;background:#f5f5f5;text-align:left">　이자 합계</th>
-      <td style="border:1px solid #000;padding:6px 12px;text-align:right">${fmt(totalInterest)}원</td></tr>
+  <tr>
+    <td rowspan="3" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold;vertical-align:middle;width:12%">채권현재액</td>
+    <td style="border:1px solid #000;padding:6px 8px;text-align:center;width:8%">합계</td>
+    <td style="border:1px solid #000;padding:6px 8px;text-align:right;width:15%">${fmt(totalDebt)}원</td>
+    <td rowspan="3" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold;vertical-align:middle;width:15%">담보부 회생<br/>채권액의 합계</td>
+    <td rowspan="3" style="border:1px solid #000;padding:8px;text-align:right;vertical-align:middle;width:15%">${fmt(securedTotal)}원</td>
+    <td rowspan="3" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold;vertical-align:middle;width:15%">무담보 회생<br/>채권액의 합계</td>
+    <td rowspan="3" style="border:1px solid #000;padding:8px;text-align:right;vertical-align:middle;width:15%">${fmt(unsecuredTotal)}원</td>
+  </tr>
+  <tr>
+    <td style="border:1px solid #000;padding:6px 8px;text-align:center">원금</td>
+    <td style="border:1px solid #000;padding:6px 8px;text-align:right">${fmt(totalCapital)}원</td>
+  </tr>
+  <tr>
+    <td style="border:1px solid #000;padding:6px 8px;text-align:center">이자</td>
+    <td style="border:1px solid #000;padding:6px 8px;text-align:right">${fmt(totalInterest)}원</td>
+  </tr>
 </table>
 <h3 style="margin-bottom:10px">채권 구분별 합계</h3>
 <table style="width:100%;border-collapse:collapse">
