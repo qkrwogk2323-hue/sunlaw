@@ -6,7 +6,7 @@
  * - combined (원리금합산변제): 원금과 이자를 비율대로 동시 변제
  */
 
-import type { RehabCreditor, RepayType, CreditorRepaySchedule, TieredScheduleSegment } from './types';
+import type { RehabCreditor, RepayType, CreditorRepaySchedule, TieredScheduleSegment, MonthlyDetailRow } from './types';
 import { classifyCreditor } from './creditor-classification';
 
 /**
@@ -405,6 +405,46 @@ export function computeTieredSegments(
   }
 
   return segments;
+}
+
+/**
+ * 월별 상세 변제 스케줄을 생성합니다.
+ * 1~N회차까지 채권자별 월변제액과 누적액을 계산합니다.
+ *
+ * @param schedule - generateRepaySchedule 결과
+ * @param repayMonths - 변제기간 (개월)
+ * @param startDate - 변제시작일 (YYYY-MM-DD) 또는 null
+ */
+export function generateMonthlyDetailSchedule(
+  schedule: CreditorRepaySchedule[],
+  repayMonths: number,
+  startDate: string | null,
+): MonthlyDetailRow[] {
+  if (schedule.length === 0 || repayMonths <= 0) return [];
+
+  const start = startDate ? new Date(startDate) : new Date();
+  const cumulatives = new Map<string, number>();
+  for (const s of schedule) cumulatives.set(s.creditorId, 0);
+
+  const rows: MonthlyDetailRow[] = [];
+  for (let m = 1; m <= repayMonths; m++) {
+    const payDate = new Date(start);
+    payDate.setMonth(payDate.getMonth() + m - 1);
+    const dateLabel = `${payDate.getFullYear()}.${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+
+    let rowTotal = 0;
+    const creditorPayments = schedule.map((s) => {
+      const prev = cumulatives.get(s.creditorId) || 0;
+      const cumulative = prev + s.monthlyAmount;
+      cumulatives.set(s.creditorId, cumulative);
+      rowTotal += s.monthlyAmount;
+      return { creditorId: s.creditorId, amount: s.monthlyAmount, cumulative };
+    });
+
+    rows.push({ month: m, dateLabel, creditorPayments, rowTotal });
+  }
+
+  return rows;
 }
 
 /**

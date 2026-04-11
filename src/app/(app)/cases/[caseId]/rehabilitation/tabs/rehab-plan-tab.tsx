@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useTransition } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
-import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
+import { upsertRehabIncomeSettings, upsertRehabPlanSections } from '@/lib/actions/rehabilitation-actions';
 import {
   calculateRepayment,
   calculateSecuredAllocations,
@@ -34,6 +34,19 @@ interface RehabPlanTabProps {
   planSections: Record<string, unknown>[];
 }
 
+const PLAN_SECTION_LABELS = [
+  '제1항: 변제기간',
+  '제2항: 변제방법',
+  '제3항: 변제액과 변제율',
+  '제4항: 채권자별 변제계획표',
+  '제5항: 변제자금의 조달방법',
+  '제6항: 부인채권의 처리',
+  '제7항: 면책조항',
+  '제8항: 특별조항',
+  '제9항: 처분할 재산의 처분방법',
+  '제10항: 기타 사항',
+];
+
 export function RehabPlanTab({
   caseId,
   organizationId,
@@ -43,6 +56,7 @@ export function RehabPlanTab({
   propertyDeductions: rawDeductions,
   incomeSettings,
   familyMembers,
+  planSections: rawPlanSections,
 }: RehabPlanTabProps) {
   const { success, error } = useToast();
   const [isSaving, startSaveTransition] = useTransition();
@@ -52,6 +66,17 @@ export function RehabPlanTab({
   const [repayOption, setRepayOption] = useState<RepayPeriodOption>(initialOption);
   const [repayType, setRepayType] = useState<RepayType>('sequential');
   const [formMode, setFormMode] = useState<'standard' | 'simple'>('standard');
+
+  // 변제계획안 10항
+  const [planSections, setPlanSections] = useState<string[]>(() => {
+    const arr = Array(10).fill('');
+    for (const s of rawPlanSections) {
+      const num = (s.section_number as number) || 0;
+      if (num >= 1 && num <= 10) arr[num - 1] = (s.content as string) || '';
+    }
+    return arr;
+  });
+  const [savingSections, setSavingSections] = useState(false);
 
   // 데이터 변환
   const creditors: RehabCreditor[] = useMemo(
@@ -199,6 +224,49 @@ export function RehabPlanTab({
       }
     });
   }, [caseId, organizationId, repayOption, repaymentResult, success, error, startSaveTransition]);
+
+  // 변제계획안 10항 자동채움
+  const autoFillPlanSections = useCallback(() => {
+    if (!repaymentResult) return;
+    const totalDebt = repaymentResult.totalDebt;
+    const rateStr = repaymentResult.repayRate.toFixed(2);
+    const startDate = (incomeSettings?.repayment_start_date as string) || '변제개시일';
+    const months = repaymentResult.repayMonths;
+
+    const defaults = [
+      `변제계획안의 기간은 ${startDate}부터 ${months}개월로 한다.`,
+      `신청인은 매월 ${formatMoney(repaymentResult.monthlyRepay)}원을 개인회생위원에게 납부하고, 개인회생위원은 이를 각 채권자에게 그 채권액의 비율에 따라 안분 변제한다.`,
+      `총 채무액 ${formatMoney(totalDebt)}원 중 ${formatMoney(repaymentResult.totalRepayAmount)}원을 변제한다 (변제율 ${rateStr}%).\n원금 ${formatMoney(repaymentResult.totalCapital)}원, 이자 ${formatMoney(repaymentResult.totalInterest)}원.`,
+      `별첨 채권자별 변제계획표에 의한다.`,
+      `변제자금은 신청인의 ${(incomeSettings?.income_type as string) === 'business' ? '영업' : '급여'}소득으로 조달한다.${disposeAmount > 0 ? `\n처분할 재산의 변제투입예정액: ${formatMoney(disposeAmount)}원` : ''}`,
+      `부인채권이 있는 경우 이를 환수하여 변제계획에 포함하기로 한다.`,
+      `변제계획에 따른 변제를 완료한 때에는 나머지 채무에 대하여 면책을 받기로 한다.`,
+      `특별조항 없음.`,
+      `${disposeAmount > 0 ? '처분할 재산의 처분 대금은 변제기간 중 처분하여 일시변제에 투입하기로 한다.' : '처분할 재산 없음.'}`,
+      `기타 사항 없음.`,
+    ];
+
+    setPlanSections((prev) =>
+      prev.map((existing, i) => existing.trim() ? existing : defaults[i]),
+    );
+    success('자동채움 완료', { message: '빈 항목만 자동 입력되었습니다.' });
+  }, [repaymentResult, incomeSettings, disposeAmount, success]);
+
+  // 변제계획안 10항 저장
+  const handleSaveSections = useCallback(async () => {
+    setSavingSections(true);
+    const sections = planSections.map((content, i) => ({
+      section_number: i + 1,
+      content,
+    }));
+    const result = await upsertRehabPlanSections(caseId, organizationId, sections);
+    if (result.ok) {
+      success('변제계획안 10항 저장 완료');
+    } else {
+      error('저장 실패', { message: result.userMessage || '저장에 실패했습니다.' });
+    }
+    setSavingSections(false);
+  }, [caseId, organizationId, planSections, success, error]);
 
   // capitalOnly: 원금만 변제하는 옵션인지 (이자 면책)
   const isCapitalOnly = ['capital36', 'capital60', 'capital100_3y', 'capital100_5y'].includes(repayOption);
@@ -680,6 +748,50 @@ export function RehabPlanTab({
           <p className="mt-1 text-center text-xs text-slate-500">저장해야 문서 출력에 반영됩니다</p>
         </div>
       )}
+
+      {/* 변제계획안 10항 편집 */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-800">변제계획안 10항</h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={autoFillPlanSections}
+              disabled={!repaymentResult}
+              className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors"
+              aria-label="자동채움"
+            >
+              자동채움
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveSections}
+              disabled={savingSections}
+              className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              aria-label="10항 저장"
+            >
+              {savingSections ? '저장 중...' : '10항 저장'}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {PLAN_SECTION_LABELS.map((label, i) => (
+            <div key={i} className="space-y-1">
+              <label htmlFor={`plan-section-${i}`} className="text-xs font-semibold text-slate-700">
+                {label}
+              </label>
+              <textarea
+                id={`plan-section-${i}`}
+                rows={3}
+                value={planSections[i]}
+                onChange={(e) => setPlanSections((prev) => prev.map((v, j) => j === i ? e.target.value : v))}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder={`${label} 내용을 입력하세요`}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* 별제권 배분 결과 */}
       {securedResults.length > 0 && (

@@ -184,7 +184,7 @@ export function RehabApplicantTab({
       trustee_bank_account: (a.trustee_bank_account as string) || '',
 
       // 기존 신청 여부
-      has_prior_application: Array.isArray(a.prior_applications) && (a.prior_applications as unknown[]).length > 0,
+      prior_applications: (Array.isArray(a.prior_applications) ? a.prior_applications : []) as { type: string; name: string; case_number: string }[],
 
       // 대리인
       agent_type: (a.agent_type as string) || '',
@@ -741,17 +741,21 @@ export function RehabApplicantTab({
             </div>
             {form.repayment_start_uncertain && (
               <div className="space-y-1">
-                <label htmlFor="repayment_start_day" className="text-sm font-medium text-slate-700">인가 후 일수</label>
-                <div className="flex items-center gap-2">
-                  <input
+                <label htmlFor="repayment_start_day" className="text-sm font-medium text-slate-700">변제개시일</label>
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <span>인가결정 후 최초로 도래하는 월의</span>
+                  <select
                     id="repayment_start_day"
-                    type="number"
-                    min={0}
-                    value={form.repayment_start_day || ''}
-                    onChange={(e) => updateField('repayment_start_day', parseInt(e.target.value) || 0)}
-                    className="w-20 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-slate-500">일 후</span>
+                    value={form.repayment_start_day || 25}
+                    onChange={(e) => updateField('repayment_start_day', parseInt(e.target.value) || 25)}
+                    className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    aria-label="변제일 선택"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{i + 1}</option>
+                    ))}
+                  </select>
+                  <span>일부터 변제를 개시함</span>
                 </div>
               </div>
             )}
@@ -785,6 +789,56 @@ export function RehabApplicantTab({
               />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ═══ 기존 파산/회생 신청 여부 ═══ */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-slate-700">주채무자 등이 이미 법원에 개인파산 또는 개인회생 신청한 경우</h3>
+        <div className="space-y-3">
+          {(['주채무자', '보증채무자', '연대채무자', '배우자'] as const).map((type) => {
+            const entry = form.prior_applications.find((p) => p.type === type);
+            return (
+              <div key={type} className="flex items-center gap-3">
+                <label className="flex w-24 items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!entry}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        updateField('prior_applications', [...form.prior_applications, { type, name: '', case_number: '' }]);
+                      } else {
+                        updateField('prior_applications', form.prior_applications.filter((p) => p.type !== type));
+                      }
+                    }}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                    aria-label={`${type} 선택`}
+                  />
+                  {type}
+                </label>
+                {entry && (
+                  <>
+                    <input
+                      type="text"
+                      value={entry.name}
+                      onChange={(e) => updateField('prior_applications', form.prior_applications.map((p) => p.type === type ? { ...p, name: e.target.value } : p))}
+                      className="w-32 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                      placeholder="성명"
+                      aria-label={`${type} 성명`}
+                    />
+                    <input
+                      type="text"
+                      value={entry.case_number}
+                      onChange={(e) => updateField('prior_applications', form.prior_applications.map((p) => p.type === type ? { ...p, case_number: e.target.value } : p))}
+                      className="w-40 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                      placeholder="사건번호"
+                      aria-label={`${type} 사건번호`}
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 

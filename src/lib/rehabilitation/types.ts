@@ -168,6 +168,14 @@ export interface RepaymentResult {
 
 export type RepayType = 'sequential' | 'combined' | 'tieredTaxPriority';
 
+/** 월별 상세 변제 스케줄 — 회차별 채권자별 변제액 */
+export interface MonthlyDetailRow {
+  month: number;
+  dateLabel: string;
+  creditorPayments: { creditorId: string; amount: number; cumulative: number }[];
+  rowTotal: number;
+}
+
 export interface CreditorRepaySchedule {
   creditorId: string;
   ratio: number;

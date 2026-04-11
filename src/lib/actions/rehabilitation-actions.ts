@@ -69,6 +69,9 @@ function mapApplicationFormToDb(form: Record<string, unknown>) {
     agent_fax: form.agent_fax || null,
     agent_address: addr('agt'),
 
+    // 기존 신청 여부
+    prior_applications: form.prior_applications || [],
+
     // 문서 옵션
     info_request_form: form.info_request_form ?? false,
     ecourt_agreement: form.ecourt_agreement ?? false,
@@ -715,5 +718,49 @@ export async function upsertProhibitionOrder(
   } catch (e) {
     console.error('[upsertProhibitionOrder]', e);
     return { ok: false, code: 'UNEXPECTED', userMessage: '금지명령 신청서 저장 중 오류가 발생했습니다.' };
+  }
+}
+
+// ─── 변제계획안 10항 일괄 저장 ───
+
+export async function upsertRehabPlanSections(
+  caseId: string,
+  organizationId: string,
+  sections: { section_number: number; content: string }[],
+) {
+  try {
+    const auth = await requireAuthenticatedUser();
+    const membership = findMembership(auth, organizationId);
+    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+
+    const supabase = await createSupabaseServerClient();
+
+    for (const s of sections) {
+      const { data: existing } = await supabase
+        .from('rehabilitation_plan_sections')
+        .select('id')
+        .eq('case_id', caseId)
+        .eq('section_number', s.section_number)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('rehabilitation_plan_sections')
+          .update({ content: s.content, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+        if (error) return { ok: false, code: 'DB_ERROR', userMessage: `제${s.section_number}항 저장에 실패했습니다.` };
+      } else {
+        const { error } = await supabase
+          .from('rehabilitation_plan_sections')
+          .insert({ case_id: caseId, section_number: s.section_number, content: s.content });
+        if (error) return { ok: false, code: 'DB_ERROR', userMessage: `제${s.section_number}항 생성에 실패했습니다.` };
+      }
+    }
+
+    revalidatePath(`/cases/${caseId}/rehabilitation`);
+    return { ok: true };
+  } catch (e) {
+    console.error('[upsertRehabPlanSections]', e);
+    return { ok: false, code: 'UNEXPECTED', userMessage: '변제계획안 저장 중 오류가 발생했습니다.' };
   }
 }
