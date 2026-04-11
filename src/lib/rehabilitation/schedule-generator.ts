@@ -408,6 +408,42 @@ export function computeTieredSegments(
 }
 
 /**
+ * 변제시작일 자동 산출
+ *
+ * 방법 1: 확정된 날짜 (repaymentStartDate가 있으면 그대로 사용)
+ * 방법 2: "인가결정 후 최초로 도래하는 월의 N일" (불특정 모드)
+ *   → filingDate(제출일) + 60~90일 ≈ 약 3개월 후를 인가일로 추정
+ *   → 인가일 다음 달의 N일이 변제시작일
+ * 방법 3: 둘 다 없으면 제출일 + 75일(중간값) 기준 추정
+ *
+ * @returns YYYY-MM-DD 형식 문자열
+ */
+export function computeRepayStartDate(opts: {
+  repaymentStartDate?: string | null;
+  repaymentStartUncertain?: boolean;
+  repaymentStartDay?: number;
+  filingDate?: string | null;
+}): string {
+  // 확정된 날짜가 있으면 그대로
+  if (opts.repaymentStartDate && !opts.repaymentStartUncertain) {
+    return opts.repaymentStartDate;
+  }
+
+  // 인가일 추정: 제출일 + 75일 (60~90일 중간)
+  const filing = opts.filingDate ? new Date(opts.filingDate) : new Date();
+  const estimatedApproval = new Date(filing);
+  estimatedApproval.setDate(estimatedApproval.getDate() + 75);
+
+  // 인가결정 후 최초로 도래하는 월의 N일
+  const day = opts.repaymentStartDay || 25;
+  const nextMonth = new Date(estimatedApproval);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  nextMonth.setDate(Math.min(day, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate()));
+
+  return `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(nextMonth.getDate()).padStart(2, '0')}`;
+}
+
+/**
  * 월별 상세 변제 스케줄을 생성합니다.
  * 1~N회차까지 채권자별 월변제액과 누적액을 계산합니다.
  *

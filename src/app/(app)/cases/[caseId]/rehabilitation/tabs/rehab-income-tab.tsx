@@ -68,6 +68,8 @@ export function RehabIncomeTab({
     if (additionalLivingCosts.length > 0) {
       const total = additionalLivingCosts.reduce((s, i) => s + (i.amount || 0), 0);
       setForm((prev) => ({ ...prev, extra_living_cost: total }));
+    } else {
+      setForm((prev) => ({ ...prev, extra_living_cost: 0 }));
     }
   }, [additionalLivingCosts]);
 
@@ -75,6 +77,8 @@ export function RehabIncomeTab({
     if (disposeItems.length > 0) {
       const total = disposeItems.reduce((s, i) => s + (i.amount || 0), 0);
       setForm((prev) => ({ ...prev, dispose_amount: total }));
+    } else {
+      setForm((prev) => ({ ...prev, dispose_amount: 0 }));
     }
   }, [disposeItems]);
 

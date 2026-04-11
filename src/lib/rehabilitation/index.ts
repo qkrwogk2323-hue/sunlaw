@@ -32,7 +32,7 @@ export { calculateSecuredAllocations, getSecuredAllocationTotals, getLiquidation
 export { PROPERTY_CATEGORIES, getCategoryDef, calculateCategorySubtotal, calculateLiquidationValue } from './property-valuation';
 
 // 변제계획 계산
-export { calculateRepayment, calculateMonthlyAvailable, getDebtSummary, checkEligibility, resetRepayPeriod, SECURED_LIMIT, UNSECURED_LIMIT } from './repayment-calculator';
+export { calculateRepayment, calculateMonthlyAvailable, getDebtSummary, checkEligibility, resetRepayPeriod, determineFormType, calculateDisposalAmount, allocateDisposalToCreditors, SECURED_LIMIT, UNSECURED_LIMIT } from './repayment-calculator';
 
 // 변제기간 자동결정 (P1-2)
 export { decideRepaymentPeriod } from './repayment-period';
@@ -50,7 +50,7 @@ export type { ScheduleAdjustmentInput, ScheduleAdjustmentResult, MonthlyPaymentR
 export { LEIBNIZ_REHAB, presentValue } from './leibniz';
 
 // 변제 스케줄
-export { generateRepaySchedule, generateMonthlyDetailSchedule, validateScheduleTotals } from './schedule-generator';
+export { generateRepaySchedule, generateMonthlyDetailSchedule, computeRepayStartDate, validateScheduleTotals } from './schedule-generator';
 
 // 검증
 export { validateResidentFront, validateResidentBack, formatPhoneNumber, formatMoney, parseMoney, validateDebtLimits, validateRepayMonths } from './validators';

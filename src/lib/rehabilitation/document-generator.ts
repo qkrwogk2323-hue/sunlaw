@@ -1967,7 +1967,7 @@ function generateCreditorSummary(data: DocumentData): string {
   const totalDebt = totalCapital + totalInterest;
 
   const secured = creditors.filter((c: Record<string, any>) => c.is_secured);
-  const priority = creditors.filter((c: Record<string, any>) => c.has_priority_repay);
+  const priority = creditors.filter((c: Record<string, any>) => c.has_priority_repay && !c.is_secured);
   const unsecured = creditors.filter((c: Record<string, any>) => !c.is_secured && !c.has_priority_repay);
 
   const secCapital = secured.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);

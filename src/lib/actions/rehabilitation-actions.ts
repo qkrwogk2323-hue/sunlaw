@@ -450,23 +450,18 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
     net_salary: form.monthly_income ?? 0,
     living_cost: form.living_cost ?? 0,
     living_cost_rate: form.living_cost_rate ?? 100,
-    extra_living_cost: form.extra_living_cost ?? 0,
     child_support: form.child_support ?? 0,
     trustee_comm_rate: form.trustee_comm_rate ?? 0,
-    dispose_amount: form.dispose_amount ?? 0,
-    // 항목별 jsonb + 합계 동기화
-    ...(form.additional_living_costs !== undefined ? {
-      additional_living_costs: form.additional_living_costs,
-      extra_living_cost: Array.isArray(form.additional_living_costs)
-        ? (form.additional_living_costs as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
-        : (form.extra_living_cost ?? 0),
-    } : {}),
-    ...(form.dispose_items !== undefined ? {
-      dispose_items: form.dispose_items,
-      dispose_amount: Array.isArray(form.dispose_items)
-        ? (form.dispose_items as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
-        : (form.dispose_amount ?? 0),
-    } : {}),
+    // 추가생계비: jsonb가 있으면 합산, 없으면 단일 필드
+    extra_living_cost: Array.isArray(form.additional_living_costs)
+      ? (form.additional_living_costs as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
+      : (form.extra_living_cost ?? 0),
+    ...(form.additional_living_costs !== undefined ? { additional_living_costs: form.additional_living_costs } : {}),
+    // 처분재산: jsonb가 있으면 합산, 없으면 단일 필드
+    dispose_amount: Array.isArray(form.dispose_items)
+      ? (form.dispose_items as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
+      : (form.dispose_amount ?? 0),
+    ...(form.dispose_items !== undefined ? { dispose_items: form.dispose_items } : {}),
   };
   // 변제계획 탭에서 저장하는 필드 (있을 때만 포함)
   if (form.repay_period_option !== undefined) mapped.repay_period_option = form.repay_period_option;

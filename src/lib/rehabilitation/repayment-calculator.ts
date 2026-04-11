@@ -280,3 +280,73 @@ export function resetRepayPeriod(
     priorityInsufficient: false,
   };
 }
+
+/**
+ * D5110 vs D5111 양식 판정 (가이드 p.5, CLAUDE.md)
+ *
+ * 현재가치(가용소득 총변제) > 청산가치 → D5110 (가용소득만)
+ * 현재가치(가용소득 총변제) ≤ 청산가치 → D5111 (가용소득+재산처분)
+ */
+export function determineFormType(
+  presentValue: number | null,
+  liquidationValue: number,
+): 'D5110' | 'D5111' {
+  if (presentValue == null || presentValue <= liquidationValue) return 'D5111';
+  return 'D5110';
+}
+
+/**
+ * D5111 재산처분 변제투입예정액 계산 (가이드 p.17, CLAUDE.md §5-6)
+ *
+ * (O) = { (J)청산가치 - (L)현재가치 } × 승수  [올림]
+ *   승수: 변제기한 1년이내 = 1.3, 2년이내 = 1.5
+ *   외부 위원 시: 위 × 0.99 (1% 보수 차감, 소수점 반올림)
+ *
+ * @returns 실제 변제투입예정액 (O)
+ */
+export function calculateDisposalAmount(
+  liquidationValue: number,
+  presentValue: number,
+  disposeDeadlineYears: 1 | 2,
+  isExternalTrustee: boolean,
+): number {
+  const gap = Math.max(0, liquidationValue - presentValue);
+  if (gap === 0) return 0;
+
+  const multiplier = disposeDeadlineYears <= 1 ? 1.3 : 1.5;
+  let amount = Math.ceil(gap * multiplier);
+
+  if (isExternalTrustee) {
+    const fee = Math.round(amount * 0.01);
+    amount = amount - fee;
+  }
+
+  return amount;
+}
+
+/**
+ * D5111 재산처분 채권자별 배분 (가이드 p.16)
+ *
+ * (P) = (O) × { (D)해당 채권 / (G)총 채권 }  [올림]
+ */
+export function allocateDisposalToCreditors(
+  disposalAmount: number,
+  creditors: { id: string; claim: number }[],
+): { creditorId: string; amount: number }[] {
+  const totalClaim = creditors.reduce((s, c) => s + c.claim, 0);
+  if (totalClaim === 0 || disposalAmount === 0) {
+    return creditors.map((c) => ({ creditorId: c.id, amount: 0 }));
+  }
+
+  let allocated = 0;
+  return creditors.map((c, idx) => {
+    let amount: number;
+    if (idx === creditors.length - 1) {
+      amount = disposalAmount - allocated;
+    } else {
+      amount = Math.ceil(disposalAmount * c.claim / totalClaim);
+      allocated += amount;
+    }
+    return { creditorId: c.id, amount };
+  });
+}

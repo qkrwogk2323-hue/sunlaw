@@ -11,6 +11,8 @@ import {
   validateScheduleTotals,
   getLivingCost,
   calculateMonthlyAvailable,
+  determineFormType,
+  calculateDisposalAmount,
   formatMoney,
 } from '@/lib/rehabilitation';
 import type {
@@ -614,6 +616,25 @@ export function RehabPlanTab({
               우선변제채권 {formatMoney(repaymentResult.priorityDebt)}원이 100% 변제 보장됩니다 (법 §583, §614①).
             </div>
           )}
+
+          {/* D5110 vs D5111 자동 판정 */}
+          {(() => {
+            const formType = determineFormType(repaymentResult.presentValue, liquidationValue);
+            return formType === 'D5111' ? (
+              <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                <strong>D5111 (재산처분 필요):</strong> 가용소득 총변제의 현재가치({formatMoney(repaymentResult.presentValue ?? 0)}원)가
+                청산가치({formatMoney(liquidationValue)}원) 이하입니다.
+                {(() => {
+                  const disposal = calculateDisposalAmount(liquidationValue, repaymentResult.presentValue ?? 0, 1, trusteeCommRate > 0);
+                  return disposal > 0 ? ` 변제투입예정액: ${formatMoney(disposal)}원 (1년이내, 승수 1.3)` : '';
+                })()}
+              </div>
+            ) : (
+              <div className="mb-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700" role="alert">
+                <strong>D5110 (가용소득만):</strong> 재산처분 불필요. 현재가치({formatMoney(repaymentResult.presentValue ?? 0)}원) &gt; 청산가치({formatMoney(liquidationValue)}원).
+              </div>
+            );
+          })()}
 
           {repaymentResult.liquidationWarning && (
             <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700" role="alert">
