@@ -52,7 +52,7 @@ describe('변제기간 6규칙 (P1-8)', () => {
       setting: 6,
       creditors: kimHanGyeong,
       monthlyAvailable: 561_457,
-      liquidationValue: 18_961_470,
+      liquidationValue: 18_961_469,
       forcedMonths: 36,
     });
     expect(r.targetPrincipal).toBe(52_164_516);
@@ -70,7 +70,7 @@ describe('변제기간 6규칙 (P1-8)', () => {
       setting: 1,
       creditors: kimHanGyeong,
       monthlyAvailable: 561_457,
-      liquidationValue: 18_961_470,
+      liquidationValue: 18_961_469,
     });
     expect(r.months).toBe(60);
     expect(r.targetPrincipal).toBe(52_164_516);
@@ -82,7 +82,7 @@ describe('변제기간 6규칙 (P1-8)', () => {
       setting: 2,
       creditors: kimHanGyeong,
       monthlyAvailable: 561_457,
-      liquidationValue: 18_961_470,
+      liquidationValue: 18_961_469,
     });
     expect(r.months).toBe(60);
     expect(r.targetInterest).toBe(4_549_968);
@@ -94,7 +94,7 @@ describe('변제기간 6규칙 (P1-8)', () => {
       setting: 5,
       creditors: kimHanGyeong,
       monthlyAvailable: 561_457,
-      liquidationValue: 18_961_470,
+      liquidationValue: 18_961_469,
     });
     expect(r.months).toBe(36);
     expect(r.targetInterest).toBe(4_549_968);
@@ -133,7 +133,7 @@ describe('변제기간 6규칙 (P1-8)', () => {
       setting: 1,
       creditors: kimHanGyeong,
       monthlyAvailable: 561_457,
-      liquidationValue: 18_961_470,
+      liquidationValue: 18_961_469,
       forcedMonths: 36,
     });
     expect(r.months).toBe(36);

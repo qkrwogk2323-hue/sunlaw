@@ -7,7 +7,7 @@
  * - leibniz(n) = (1 - (1 + 5/1200)^-n) / (5/1200)
  * - 회생현가계수(n) = leibniz(n - 3) + 3
  *
- * 값은 공표 4자리 표값을 그대로 사용. 곱셈 후 원 단위 반올림.
+ * 값은 공표 4자리 표값을 그대로 사용. 곱셈 후 원 미만 '버림' (가이드 p.13).
  *
  * 검증:
  *   leib(33) = 30.77199539... → +3 = 33.7719
@@ -22,15 +22,15 @@ export const LEIBNIZ_REHAB: Record<number, number> = {
 };
 
 /**
- * 월변제금 × 현가계수 → 현재가치 (원 단위 반올림)
+ * 월변제금 × 현가계수 → 현재가치 (원 미만 버림, 가이드 p.13)
  *
- * 김한경 검증:
- *   561,457 × 33.7719 = 18,961,469.66 → 18,961,470
+ * 갑OO 검증:
+ *   309,631 × 33.7719 = 10,456,856.9... → 10,456,856 (버림)
  */
 export function presentValue(monthlyPayment: number, months: 36 | 48 | 60): number {
   const factor = LEIBNIZ_REHAB[months];
   if (!factor) throw new Error(`지원되지 않는 변제개월: ${months}`);
-  return Math.round(monthlyPayment * factor);
+  return Math.floor(monthlyPayment * factor);
 }
 
 // ─── 하위 호환 ─────────────────────────────────────────────────────
@@ -47,5 +47,5 @@ export function getLeibnizCoefficient(months: number): number | null {
 export function discountByLeibniz(monthlyAvailable: number, months: number): number | null {
   const k = LEIBNIZ_REHAB[months];
   if (k == null) return null;
-  return Math.round(monthlyAvailable * k);
+  return Math.floor(monthlyAvailable * k);
 }

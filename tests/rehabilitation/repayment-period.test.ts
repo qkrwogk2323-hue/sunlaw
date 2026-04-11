@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { decideRepaymentPeriod } from '@/lib/rehabilitation/repayment-period';
 
 describe('변제기간 자동결정 (P1-2)', () => {
-  it('김한경: 36개월 통과 (청산가치 18,961,470)', () => {
+  it('김한경: 36개월 통과 (청산가치 18,961,469, 버림)', () => {
     const result = decideRepaymentPeriod({
       monthlyPayment: 561_457,
-      liquidationValue: 18_961_470,
+      liquidationValue: 18_961_469,
       unsecuredTotal: 73_405_688,
     });
     expect(result.period).toBe(36);
     expect(result.reason).toBe('minimum_36');
-    expect(result.pvAtPeriod).toBe(18_961_470);
+    expect(result.pvAtPeriod).toBe(18_961_469);
   });
 
   it('60개월 필요 케이스 — 36/48 모두 청산가치 미달', () => {
@@ -61,7 +61,7 @@ describe('변제기간 자동결정 (P1-2)', () => {
       liquidationValue: 0,
       unsecuredTotal: 73_405_688,
     });
-    // pv = 18,961,470 / 73,405,688 ≈ 0.2583 (25.83%)
+    // pv = 18,961,469 / 73,405,688 ≈ 0.2583 (25.83%)
     expect(result.rateAtPeriod).toBeCloseTo(0.2583, 4);
   });
 
