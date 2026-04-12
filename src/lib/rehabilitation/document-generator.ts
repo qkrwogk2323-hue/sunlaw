@@ -34,7 +34,9 @@ export type DocumentType =
   | 'repayment_plan'
   | 'cover_page'
   | 'creditor_summary'
-  | 'document_checklist';
+  | 'document_checklist'
+  | 'excluded_property_list'
+  | 'exempt_property_application';
 
 export interface DocumentData {
   application: Record<string, any> | null;
@@ -1145,6 +1147,46 @@ function generateCreditorList(data: DocumentData): string {
     <h3>부속서류 1. 별제권부채권 및 이에 준하는 채권의 내역</h3>
 
     ${generateSecuredCreditorTable(creditors, data.securedProperties, assessmentDate)}
+
+    ${(() => {
+      // 부속서류 2: 미확정채권 내역
+      const unsettledCreditors = creditors.filter((c: any) =>
+        c.is_unsettled || (c.is_secured && (c.remaining_unsecured || 0) > 0)
+      );
+      if (unsettledCreditors.length === 0) return '';
+      let rows = '';
+      unsettledCreditors.forEach((c: any) => {
+        const bondNum = c.bond_number || '';
+        const name = c.creditor_name || '';
+        const cause = c.bond_cause || '';
+        const reason = c.is_unsettled
+          ? (c.unsettled_reason || '채권액 미확정')
+          : '별제권행사 부족액';
+        const amount = c.is_unsettled
+          ? (c.unsettled_amount || c.capital || 0)
+          : (c.remaining_unsecured || 0);
+        rows += `<tr>
+          <td style="text-align: center;">${esc(String(bondNum))}</td>
+          <td style="text-align: center;">${esc(name)}</td>
+          <td>${esc(cause)}</td>
+          <td>${esc(reason)}</td>
+          <td style="text-align: right;">${formatAmount(amount)}</td>
+        </tr>`;
+      });
+      return `
+        <div class="page-break"></div>
+        <h3>부속서류 2. 다툼이 예상되는 채권의 내역</h3>
+        <table>
+          <tr>
+            <th style="width: 10%;">채권번호</th>
+            <th style="width: 20%;">채권자명</th>
+            <th style="width: 25%;">채권의 원인</th>
+            <th style="width: 25%;">미확정 사유</th>
+            <th style="width: 20%;">미확정 금액(원)</th>
+          </tr>
+          ${rows}
+        </table>`;
+    })()}
   `;
 
   return wrapDocument(content, '채권자목록');
@@ -1915,9 +1957,37 @@ export function generateDocument(type: DocumentType, data: DocumentData): string
       return generateCreditorSummary(data);
     case 'document_checklist':
       return generateDocumentChecklist(data);
+    case 'excluded_property_list':
+      return generateExcludedPropertyList(data);
+    case 'exempt_property_application':
+      return generateExemptPropertyApplication(data);
     default:
       throw new Error(`Unknown document type: ${type}`);
   }
+}
+
+/**
+ * 전체 문서 일괄 생성
+ * 각 DocumentType을 순회하며 generateDocument() 호출.
+ * 개별 문서 에러 시 해당 타입만 스킵.
+ */
+export function generateAllDocuments(data: DocumentData): Map<DocumentType, string> {
+  const allTypes: DocumentType[] = [
+    'application', 'delegation', 'delegation_with_attorney', 'attorney_designation',
+    'prohibition_order', 'stay_order', 'creditor_list', 'property_list',
+    'income_statement', 'affidavit', 'repayment_plan', 'cover_page',
+    'creditor_summary', 'document_checklist', 'excluded_property_list',
+    'exempt_property_application',
+  ];
+  const results = new Map<DocumentType, string>();
+  for (const type of allTypes) {
+    try {
+      results.set(type, generateDocument(type, data));
+    } catch {
+      // 개별 문서 에러 시 스킵
+    }
+  }
+  return results;
 }
 
 /**
@@ -2147,4 +2217,115 @@ function generateDocumentChecklist(data: DocumentData): string {
 </table>`;
 
   return wrapDocument(content, '자료제출목록');
+}
+
+/**
+ * D5108 개인회생재단에 속하지 않는 재산목록 제출서
+ * 법 §580③, §383①에 따른 압류금지재산
+ */
+function generateExcludedPropertyList(data: DocumentData): string {
+  const app = data.application || {};
+  const debtorName = esc(app.applicant_name || '');
+  const courtName = esc(app.court_name || app.court_detail || '');
+  const caseYear = app.case_year || '';
+  const caseNum = app.case_number || '';
+  const caseDisplay = caseYear && caseNum ? `${caseYear} ${caseNum}` : caseNum || '';
+
+  const items = (data.properties || []).filter(
+    (p: any) => p.exemption_statute && String(p.exemption_statute).trim(),
+  );
+
+  let tableHtml: string;
+  if (items.length === 0) {
+    tableHtml = '<p style="text-align:center;margin:40px 0;">해당 사항 없음</p>';
+  } else {
+    let rows = '';
+    items.forEach((p: any, idx: number) => {
+      rows += `<tr>
+        <td style="text-align:center;">${idx + 1}</td>
+        <td>${esc(p.detail || p.category || '')}</td>
+        <td style="text-align:right;">${formatAmount(p.amount || 0)}</td>
+        <td>${esc(p.exemption_statute || '')}</td>
+      </tr>`;
+    });
+    tableHtml = `<table>
+      <tr>
+        <th style="width:8%;">번호</th>
+        <th style="width:40%;">재산의 표시</th>
+        <th style="width:25%;">금액(원)</th>
+        <th style="width:27%;">압류금지 근거</th>
+      </tr>
+      ${rows}
+    </table>`;
+  }
+
+  const content = `
+    <h1>개인회생재단에 속하지 않는 재산목록 제출서</h1>
+    <p style="text-align:center;margin-bottom:20px;">
+      사 건: ${courtName} ${esc(caseDisplay)} 개인회생<br/>
+      채 무 자: ${debtorName}
+    </p>
+    <p>채무자 회생 및 파산에 관한 법률 제580조 제3항에 의하여 아래와 같이 개인회생재단에 속하지 않는 재산의 목록을 제출합니다.</p>
+    ${tableHtml}
+    <p style="text-align:right;margin-top:40px;">${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+    <p style="text-align:right;">채무자 ${debtorName}　(인)</p>
+  `;
+
+  return wrapDocument(content, '개인회생재단에 속하지 않는 재산목록 제출서');
+}
+
+/**
+ * D5109 면제재산 결정신청서
+ * 법 §383②: 주거용 임차보증금 / 6개월간 생계비
+ */
+function generateExemptPropertyApplication(data: DocumentData): string {
+  const app = data.application || {};
+  const debtorName = esc(app.applicant_name || '');
+  const courtName = esc(app.court_name || app.court_detail || '');
+  const caseYear = app.case_year || '';
+  const caseNum = app.case_number || '';
+  const caseDisplay = caseYear && caseNum ? `${caseYear} ${caseNum}` : caseNum || '';
+
+  const items = (data.properties || []).filter(
+    (p: any) => p.category === 'exempt_housing' || p.category === 'exempt_living',
+  );
+
+  let tableHtml: string;
+  if (items.length === 0) {
+    tableHtml = '<p style="text-align:center;margin:40px 0;">해당 사항 없음</p>';
+  } else {
+    let rows = '';
+    items.forEach((p: any, idx: number) => {
+      const typeLabel = p.category === 'exempt_housing' ? '주거용 임차보증금' : '6개월간 생계비';
+      rows += `<tr>
+        <td style="text-align:center;">${idx + 1}</td>
+        <td style="text-align:center;">${esc(typeLabel)}</td>
+        <td>${esc(p.detail || '')}</td>
+        <td style="text-align:right;">${formatAmount(p.amount || 0)}</td>
+      </tr>`;
+    });
+    tableHtml = `<table>
+      <tr>
+        <th style="width:8%;">번호</th>
+        <th style="width:22%;">유형</th>
+        <th style="width:42%;">재산의 표시</th>
+        <th style="width:28%;">금액(원)</th>
+      </tr>
+      ${rows}
+    </table>`;
+  }
+
+  const content = `
+    <h1>면제재산 결정신청서</h1>
+    <p style="text-align:center;margin-bottom:20px;">
+      사 건: ${courtName} ${esc(caseDisplay)} 개인회생<br/>
+      채 무 자: ${debtorName}
+    </p>
+    <p>채무자 회생 및 파산에 관한 법률 제383조 제2항에 의하여 아래 재산에 대한 면제결정을 구합니다.</p>
+    ${tableHtml}
+    <p style="text-align:right;margin-top:40px;">${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월 ${new Date().getDate()}일</p>
+    <p style="text-align:right;">채무자 ${debtorName}　(인)</p>
+  `;
+
+  return wrapDocument(content, '면제재산 결정신청서');
 }

@@ -156,6 +156,7 @@ export function RehabModuleClient({
             incomeSettings={incomeSettings}
             familyMembers={familyMembers}
             planSections={planSections}
+            applicationDate={(application?.application_date as string) ?? null}
           />
         )}
         {activeTab === 'documents' && (

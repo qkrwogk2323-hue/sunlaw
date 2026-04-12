@@ -870,13 +870,22 @@ export function RehabCreditorsTab({
                           <select
                             id={`cr-bondtype-${idx}`}
                             value={c.bond_type}
-                            onChange={(e) => updateCreditor(idx, 'bond_type', e.target.value)}
+                            onChange={(e) => {
+                              const newType = e.target.value;
+                              updateCreditor(idx, 'bond_type', newType);
+                              if ((newType === '보증채무' || newType === '연대보증') && c.guarantor_amount === 0 && !c.is_unsettled) {
+                                updateCreditor(idx, 'is_unsettled', true);
+                              }
+                            }}
                             className="w-full rounded border border-purple-200 px-2 py-1.5 text-sm"
                           >
                             <option value="주채무">주채무</option>
                             <option value="보증채무">보증채무</option>
                             <option value="연대보증">연대보증</option>
                           </select>
+                          {(c.bond_type === '보증채무' || c.bond_type === '연대보증') && c.is_unsettled && (
+                            <p className="mt-1 text-xs text-purple-500">대위변제 전 보증채무는 장래구상권으로 미확정채권 처리됩니다</p>
+                          )}
                         </div>
                         {(c.bond_type === '보증채무' || c.bond_type === '연대보증') && (
                           <div className="space-y-1">

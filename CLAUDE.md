@@ -733,6 +733,51 @@ if monthlyRepay × repayMonths < priorityDebt:
 - `livingCostRate < 100`: "기준중위소득 60% 보장 위배 가능" 경고를 표시해야 한다
 - `livingCostRate > 200`: "생계비율이 200% 초과 — 법원 이례적 승인 필요" 경고를 표시해야 한다
 
+### D5106 부속서류 2 자동 생성 (법원서식 D5106)
+
+- 대상: `is_unsettled === true`인 채권자 + `is_secured && remaining_unsecured > 0`인 채권자
+- 컬럼: 채권번호 / 채권자명 / 채권의 원인 / 미확정 사유 / 미확정 금액(원)
+- 미확정 사유: `is_unsettled` → `unsettled_reason` 또는 "채권액 미확정", 별제권 부족액 → "별제권행사 부족액"
+- 해당 채권자가 없으면 부속서류 2 페이지를 생략해야 한다
+- `generateCreditorList()` 반환 HTML 끝에 page-break로 이어 붙인다
+
+### D5108 재단미속재산 문서 출력 (법 §580③, §383①)
+
+- `generateExcludedPropertyList(data)` — DocumentType `'excluded_property_list'`
+- 대상: properties 중 `exemption_statute`가 존재하는 항목
+- 컬럼: 번호 / 재산의 표시 / 금액(원) / 압류금지 근거
+- 해당 없으면 "해당 사항 없음" 표시
+
+### D5109 면제재산 결정신청서 출력 (법 §383②)
+
+- `generateExemptPropertyApplication(data)` — DocumentType `'exempt_property_application'`
+- 대상: properties 중 category가 `'exempt_housing'` 또는 `'exempt_living'`
+- 컬럼: 번호 / 유형(주거용 임차보증금/6개월간 생계비) / 재산의 표시 / 금액(원)
+- 신청 이유: "채무자 회생 및 파산에 관한 법률 제383조 제2항에 의하여 위 재산에 대한 면제결정을 구합니다."
+- 해당 없으면 "해당 사항 없음" 표시
+
+### 보증채무 미확정 자동 체크 (REHABILITATION_LAW_RULES.md §7)
+
+- `bond_type`을 '보증채무' 또는 '연대보증'으로 변경할 때:
+  - `guarantor_amount === 0`이고 `is_unsettled === false`이면 `is_unsettled`를 true로 자동 설정해야 한다
+  - 안내: "대위변제 전 보증채무는 장래구상권으로 미확정채권 처리됩니다"
+- 사용자가 `is_unsettled`를 수동 해제 가능 (강제 잠금 아님)
+- 이유: 보증인이 아직 변제하지 않은 장래 구상채권은 미확정채권으로 처리해야 한다
+
+### 통합 자동작성 엔진 (document-generator.ts)
+
+- `generateAllDocuments(data)` → `Map<DocumentType, string>` 반환
+- 모든 DocumentType을 순회하며 `generateDocument(type, data)` 호출
+- 개별 문서 에러 시 해당 타입만 스킵, 나머지 계속 진행
+- DocumentType 전체 목록: application, delegation, delegation_with_attorney, attorney_designation, prohibition_order, stay_order, creditor_list, property_list, income_statement, affidavit, repayment_plan, cover_page, creditor_summary, document_checklist, excluded_property_list, exempt_property_application
+
+### 변제개시일 기본값 제안 (처리지침 §7③)
+
+- `application_date`가 있고 `repayment_start_date`가 비어있으면:
+  - `application_date + 90일`을 기본값으로 제안해야 한다
+  - 안내: "변제개시일은 개시신청일로부터 60~90일 이내로 정하는 것이 일반적입니다 (권고사항)"
+- 사용자가 자유롭게 수정 가능 (강제 아님)
+
 ### 전자소송 CSV 양식 (법원 전자소송 시스템)
 
 - 헤더: `채권자번호,채권자명,법인/개인,우편번호,도로명주소1,도로명주소2,전화번호,팩스번호,휴대전화번호,채권의원인,원금,이자`

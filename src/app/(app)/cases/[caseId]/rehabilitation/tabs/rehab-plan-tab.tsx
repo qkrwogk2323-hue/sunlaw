@@ -35,6 +35,7 @@ interface RehabPlanTabProps {
   incomeSettings: Record<string, unknown> | null;
   familyMembers: Record<string, unknown>[];
   planSections: Record<string, unknown>[];
+  applicationDate?: string | null;
 }
 
 const PLAN_SECTION_LABELS = [
@@ -60,6 +61,7 @@ export function RehabPlanTab({
   incomeSettings,
   familyMembers,
   planSections: rawPlanSections,
+  applicationDate,
 }: RehabPlanTabProps) {
   const { success, error } = useToast();
   const [isSaving, startSaveTransition] = useTransition();
@@ -189,6 +191,17 @@ export function RehabPlanTab({
   const trusteeCommRate = (incomeSettings?.trustee_comm_rate as number) || 0;
   const disposeAmount = (incomeSettings?.dispose_amount as number) || 0;
   const disposePeriod: 1 | 2 = (Number(incomeSettings?.dispose_period) || 1) <= 1 ? 1 : 2;
+
+  // 변제개시일 기본값 제안: 개시신청일 + 90일
+  const currentStartDate = incomeSettings?.repayment_start_date as string | undefined;
+  const suggestedStartDate = useMemo(() => {
+    if (currentStartDate) return null; // 이미 설정됨
+    if (!applicationDate) return null;
+    const d = new Date(applicationDate);
+    if (isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() + 90);
+    return d.toISOString().slice(0, 10);
+  }, [applicationDate, currentStartDate]);
 
   // 변제계획 계산
   const repaymentResult = useMemo(() => {
@@ -642,6 +655,15 @@ export function RehabPlanTab({
           </div>
         </div>
       </section>
+
+      {/* 변제개시일 제안 */}
+      {suggestedStartDate && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700" role="status">
+          변제개시일이 미설정입니다. 개시신청일({applicationDate}) 기준 제안일: <strong>{suggestedStartDate}</strong>
+          <br />
+          <span className="text-xs text-blue-500">변제개시일은 개시신청일로부터 60~90일 이내로 정하는 것이 일반적입니다 (권고사항)</span>
+        </div>
+      )}
 
       {/* 별제권↔재산목록 크로스 검증 경고 */}
       {securedPropertyWarnings.length > 0 && (
