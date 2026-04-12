@@ -326,7 +326,7 @@ D5111 투입액: `(O) = {(J)청산가치 - (L)현재가치} × 승수` [올림]
 ```
 할인율: 민법 §379 연 5%, 월 복리. 적립기간 3개월.
 
-### 회차별 단계변제 (미구현)
+### 회차별 단계변제
 
 원금 전부 + 이자 일부 변제 시:
 Phase 1 (원금안분) → Phase 2 (원금잔+이자혼합) → Phase 3 (이자안분).
@@ -760,5 +760,9 @@ src/lib/rehabilitation/
 ├── repayment-period.ts      # 변제기간 자동결정
 ├── validators.ts            # 주민번호·전화번호·채무한도 검증
 ├── property-schemas.ts      # 재산 카테고리별 Zod 스키마
-└── income-expense-schemas.ts # 수입/지출 서식 스키마
+├── income-expense-schemas.ts # 수입/지출 서식 스키마
+├── financial-institutions.ts # 금융기관 코드·명칭 매핑
+├── repayment-rate.ts         # 변제율 계산 (가이드 §2)
+├── types.ts                  # 공통 타입 정의
+└── index.ts                  # barrel export
 ```

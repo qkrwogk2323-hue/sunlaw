@@ -154,15 +154,13 @@ export function validateSecuredVsProperties(
         });
       }
     } else {
-      // 매핑에 없는 유형 — 재산목록 전체에서 유사 항목 존재 여부 체크
-      if (propertyItems.length === 0) {
-        warnings.push({
-          securedPropertyId: sp.id,
-          propertyType: type,
-          description: sp.description,
-          message: `별제권 담보물건 '${type} ${sp.description}'이(가) 재산목록에 등록되지 않았습니다. 법원 제출 시 재산목록↔채권자목록 간 모순이 발생할 수 있습니다.`,
-        });
-      }
+      // 매핑에 없는 유형 — 대응 카테고리를 판단할 수 없으므로 항상 경고
+      warnings.push({
+        securedPropertyId: sp.id,
+        propertyType: type,
+        description: sp.description,
+        message: `별제권 담보물건 '${type} ${sp.description}'의 유형이 재산목록 카테고리에 매핑되지 않았습니다. 재산목록에 대응 항목이 있는지 직접 확인해 주세요.`,
+      });
     }
   }
 
