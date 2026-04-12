@@ -126,7 +126,6 @@ create table if not exists public.cases (
   deadline_final_appeal date,
   cover_notes text,
   insolvency_subtype public.insolvency_subtype,
-  colaw_case_basic_seq text,
   unique (organization_id, reference_no)
 );
 

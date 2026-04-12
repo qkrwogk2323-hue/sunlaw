@@ -22,8 +22,8 @@
 -- ───────────────────────────────────────────────────────────────────────────
 -- SECTION 1: Rehabilitation Application (0086 + 0087 law firm columns)
 -- ───────────────────────────────────────────────────────────────────────────
--- NOTE: colaw_case_basic_seq는 003_core_tables의 cases CREATE TABLE에 포함.
---       ux_cases_colaw_case_basic_seq 인덱스는 011_indexes.sql에 포함.
+-- NOTE: case_basic_seq는 003_core_tables의 cases CREATE TABLE에 포함.
+--       해당 인덱스는 011_indexes.sql에 포함.
 
 create table if not exists public.rehabilitation_applications (
   id              uuid primary key default gen_random_uuid(),
@@ -222,7 +222,7 @@ create table if not exists public.rehabilitation_creditors (
 );
 
 comment on column public.rehabilitation_creditors.classify is
-  '인격구분: 자연인/법인/국가/지방자치단체. 콜로 인격구분 select와 1:1 대응 (0096)';
+  '인격구분: 자연인/법인/국가/지방자치단체';
 
 -- 0088 제약: 별제권부와 기타 미확정은 상호 배타
 alter table public.rehabilitation_creditors
@@ -312,18 +312,17 @@ create table if not exists public.rehabilitation_family_members (
 -- ───────────────────────────────────────────────────────────────────────────
 -- Final state after consolidation:
 -- - 0086: base columns
--- - 0089: living_cost_rate added with default 100 (colaw semantics)
--- - 0090: period_setting added with default 6 (1-6 rule engine)
--- - 0091: repay_period_option default set to capital36 (from capital60)
--- - 0094: repay_months and repay_period_option made nullable
--- - 0095: living_cost_rate default confirmed as 100 (semantics: baseline60 × rate/100)
+-- - living_cost_rate: 생계비율(처리지침 §7②), default 100
+-- - period_setting: 변제기간설정(CLAUDE.md §변제기간 6규칙), default 6
+-- - repay_period_option: default capital36 (법 §611 기본 36개월)
+-- - repay_months, repay_period_option: nullable (미설정 허용)
+-- - living_cost_rate default 100 확정 (semantics: baseline60 × rate/100)
 -- ───────────────────────────────────────────────────────────────────────────
 
 create table if not exists public.rehabilitation_income_settings (
   id               uuid primary key default gen_random_uuid(),
   case_id          uuid not null references public.cases(id) on delete cascade,
 
-  gross_salary         bigint not null default 0,
   net_salary           bigint not null default 0,
   extra_income         bigint not null default 0,
 
@@ -342,14 +341,14 @@ create table if not exists public.rehabilitation_income_settings (
   dispose_items        jsonb default '[]',     -- [{category, amount, description}]
   dispose_period       text,
 
-  -- 변제기간 설정 (0090: period_setting, 0091: default capital36, 0094: nullable)
-  repay_period_option  text default 'capital36',  -- nullable (0094)
-  repay_months         integer default 60,        -- nullable (0094)
+  -- 변제기간 설정 (변제기간설정 6규칙, default capital36, nullable)
+  repay_period_option  text default 'capital36',  -- nullable
+  repay_months         integer default 60,        -- nullable
   repay_rate_display   text not null default '2',
 
-  -- COLAW 필드 (0089: living_cost_rate, 0090: period_setting)
-  living_cost_rate     numeric(5,2) not null default 100,  -- 0089/0095: default 100
-  period_setting       smallint not null default 6         -- 0090: 1-6 rule
+  -- 생계비율·변제기간설정
+  living_cost_rate     numeric(5,2) not null default 100,  -- 생계비율(처리지침 §7②): default 100
+  period_setting       smallint not null default 6         -- 변제기간설정(CLAUDE.md §변제기간 6규칙): 1-6
                        check (period_setting between 1 and 6),
 
   -- D5103 수입/지출 항목별 breakdown (법원 양식 명목별 출력용, Zod 검증)
@@ -382,16 +381,16 @@ create table if not exists public.rehabilitation_income_settings (
 );
 
 comment on column public.rehabilitation_income_settings.living_cost_rate is
-  'colaw lowestlivingmoneyrate (%) — baseline60(=기준중위소득×60%) × rate/100. default 100 = 60% 그대로 (회생법원 표준). 150 = 90% (가족 부양 등). 0089 origin, 0093/0095 의미론 명확화.';
+  '생계비율(처리지침 §7②) (%) — baseline60(=기준중위소득×60%) × rate/100. default 100 = 60% 그대로 (회생법원 표준). 150 = 90% (가족 부양 등).';
 
 comment on column public.rehabilitation_income_settings.period_setting is
-  'colaw repaymentperiodsetting (1~6 변제기간 자동결정 규칙). 기본 6=원금만 변제';
+  '변제기간설정(CLAUDE.md §변제기간 6규칙) (1~6 변제기간 자동결정 규칙). 기본 6=원금만 변제';
 
 comment on column public.rehabilitation_income_settings.repay_period_option is
-  'nullable (0094): 변제기간 옵션 선택. capital36 | capital60 등. 미설정 가능 (NULL).';
+  'nullable: 변제기간 옵션 선택. capital36 | capital60 등. 미설정 가능 (NULL).';
 
 comment on column public.rehabilitation_income_settings.repay_months is
-  'nullable (0094): 변제기간 개월 수. 36 or 60. 미설정 가능 (NULL).';
+  'nullable: 변제기간 개월 수. 36 or 60. 미설정 가능 (NULL).';
 
 -- NOTE: RLS → 010_rls_policies.sql
 
@@ -482,7 +481,7 @@ create table if not exists public.rehabilitation_prohibition_orders (
 
 -- ───────────────────────────────────────────────────────────────────────────
 -- 레거시 보정: repay_period_option 디폴트 'capital60' → 'capital36'
--- 법적 기본은 36개월(법 §611, 지침 §8). COLAW 마이그레이션 시 60개월로 잘못 설정된 건 보정.
+-- 법적 기본은 36개월(법 §611, 지침 §8). 레거시 마이그레이션 시 60개월로 잘못 설정된 건 보정.
 -- ───────────────────────────────────────────────────────────────────────────
 update public.rehabilitation_income_settings
   set repay_period_option = 'capital36'

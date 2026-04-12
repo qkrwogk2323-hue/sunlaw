@@ -1,13 +1,13 @@
 /**
  * 월가용소득 공식 확장 (P1-7)
  *
- * colaw anatomy §2.3 / §2.4 기반:
+ * 처리지침 §7, 가이드 p.37 기반:
  *   월가용소득 = 월평균소득
  *              − 실적용생계비 (= baseline60 × rate/100 + extraFamilyLowMoney)
- *              − 양육비 (resurchildsupportmoney)
- *              − 회생위원보수 (월소득 × outsideresuremember_rate/100)
+ *              − 양육비
+ *              − 회생위원보수 (월소득 × 보수율/100)
  *
- * 김한경 케이스 (anatomy §2.3):
+ * 김한경 케이스:
  *   monthlyIncome = 2,100,000
  *   householdSize = 1, year = 2026
  *   livingCostRate = 150% → afterRate = 1,538,543
@@ -20,13 +20,13 @@ export interface MonthlyAvailableInput {
   monthlyIncome: number;
   householdSize: number;
   year: number;
-  /** colaw lowestlivingmoneyrate, % 단위, 기본 100 */
+  /** 생계비율(처리지침 §7②), % 단위, 기본 100 */
   livingCostRate?: number;
-  /** colaw usingfamily_low_money */
+  /** 추가생계비 (처리지침 §7②) */
   extraFamilyLowMoney?: number;
-  /** colaw resurchildsupportmoney (월) */
+  /** 양육비 (월) */
   childSupport?: number;
-  /** colaw outsideresuremember_rate, % 단위 */
+  /** 회생위원 보수율, % 단위 */
   trusteeCommissionRate?: number;
 }
 

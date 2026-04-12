@@ -211,8 +211,7 @@ function extractColawExpected(snap: any) {
   const summary = snap.summary || {};
   const creditors = snap.creditors || [];
 
-  // 콜로 ground truth는 income/summary 텍스트에서 파싱
-  const monthlyIncome = parseAmount(income.net_salary || income.gross_salary);
+  const monthlyIncome = parseAmount(income.net_salary);
   const livingCost = parseAmount(income.living_cost);
   const repayMonths = parseInt(income.repay_months || '0', 10) || null;
   const totalDebt = parseAmount(summary.total_debt);

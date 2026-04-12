@@ -115,14 +115,14 @@ export function adjustLivingCost(
   };
 }
 
-// ─── P1-7: colaw 생계비 공식 (증액률 + 추가생계비) ────────────────
+// ─── P1-7: 생계비 공식(처리지침 §7②, 가이드 p.37) (증액률 + 추가생계비) ───
 
 export interface LivingCostOptions {
   householdSize: number;
   year: number;
-  /** colaw lowestlivingmoneyrate (%, 기본 100 = 60% 그대로) */
+  /** 생계비율(처리지침 §7②) (%, 기본 100 = 60% 그대로) */
   rate?: number;
-  /** colaw usingfamily_low_money (추가생계비) */
+  /** 추가생계비 (처리지침 §7②) */
   extraFamilyLowMoney?: number;
 }
 
@@ -138,13 +138,13 @@ export interface LivingCostResult {
 }
 
 /**
- * colaw 공식 기반 생계비 계산.
+ * 생계비 공식(처리지침 §7②, 가이드 p.37) 기반 생계비 계산.
  *
  * lowMoney(=baseline60) × (rate/100) + 추가생계비
  *
  * 김한경 케이스(rate=150, baseline 1,538,542):
  *   afterRate = round(1,538,542 × 1.5) = 2,307,813
- *   ※ colaw의 lowMoney(1,025,695)는 별도 산출 기반이며, VS는 60% 테이블 직접 사용
+ *   ※ VS는 보건복지부 고시 60% 테이블을 직접 사용
  */
 export function computeLivingCost(opts: LivingCostOptions): LivingCostResult {
   const baseline60 = minimumLivingCost(opts.householdSize, opts.year);

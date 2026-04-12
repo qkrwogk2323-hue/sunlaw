@@ -16,7 +16,7 @@ export const UNSECURED_LIMIT = 1_000_000_000;
 /**
  * 채무 총액 정보를 계산합니다.
  *
- * unsecuredCapital: 변제율 분모 (회생법원 양식 + colaw anatomy 기준)
+ * unsecuredCapital: 변제율 분모 (회생법원 양식 기준)
  *   = 무담보 채권 원금 합계
  *   - 일반 무담보: 채권자 capital 전액
  *   - 별제권부: max(0, capital - secured_collateral_value) 부족분만
@@ -224,7 +224,7 @@ export function calculateRepayment(input: RepaymentInput): RepaymentResult | nul
   }
 
   const finalTotalRepay = monthlyRepay * repayMonths + input.disposeAmount;
-  // 변제율 분모: 무담보 원금 (회생법원 양식 + colaw anatomy 일치)
+  // 변제율 분모: 무담보 원금 (회생법원 양식 기준)
   // 0이면 totalCapital fallback
   const rateDenominator = unsecuredCapital > 0 ? unsecuredCapital : totalCapital;
   const repayRate = rateDenominator > 0

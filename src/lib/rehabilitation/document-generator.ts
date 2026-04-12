@@ -8,7 +8,7 @@ import { buildAdjustedSchedule } from './rounding';
  * 개인회생 법원 제출 문서 생성기
  *
  * 한국 개인회생 절차에 필요한 모든 법원 제출 문서를 HTML 형식으로 생성합니다.
- * colaw.co.kr 출력 형식과 정확히 일치하도록 설계되었습니다.
+ * 법원서식 D51xx 출력 형식과 정확히 일치하도록 설계되었습니다.
  *
  * 문서 타입:
  * - application: 개시신청서 (신청서 + 신청이유서 + 첨부서류 + 정보수신신청서)
@@ -335,7 +335,7 @@ function generateApplication(data: DocumentData): string {
   const agentFax = app.agent_fax || '';
   const agentLawFirm = app.agent_law_firm || agentName || '';
 
-  // colaw 형식: "인천지방법원 2025 개회 101101 호" → cases.case_number에 "2025 개회 101101" 형태로 저장됨
+  // 법원서식 D5100 형식: "인천지방법원 2025 개회 101101 호" → cases.case_number에 "2025 개회 101101" 형태로 저장됨
   const headerLine = courtName && caseNumber
     ? `${courtName} ${caseNumber} 호`
     : courtName
@@ -996,7 +996,7 @@ function generateCreditorList(data: DocumentData): string {
 
   const totalAmount = totalCapital + totalInterest;
 
-  // colaw 형식: "광주지법 2026 호  채무자 조재근(950809-*******)"
+  // 법원서식 D5106 형식: "광주지법 2026 호  채무자 조재근(950809-*******)"
   const headerLine = `${courtName} ${caseNumberDisplay}  채무자 ${esc(debtorName)}(${esc(debtorBirth)}-*******)`;
 
   // 가지번호 표시를 위해 채권자 정렬: 주채무자 뒤에 보증채무자 배치
@@ -1035,7 +1035,7 @@ function generateCreditorList(data: DocumentData): string {
     const attachmentCheck = attachments.length > 0 ? '■' : '□';
     const attachmentNums = attachments.length > 0 ? ` (${attachments.join(', ')})` : '';
 
-    // 주소/연락처: colaw 형식 — 주소 위에, 전화/팩스/휴대전화 아래에 표시
+    // 주소/연락처: 법원서식 D5106 형식 — 주소 위에, 전화/팩스/휴대전화 아래에 표시
     const addressHtml = address
       ? `(주소) ${esc(address)}`
       : '';
@@ -1054,7 +1054,7 @@ function generateCreditorList(data: DocumentData): string {
       ? esc(cred.bond_content)
       : `원리금 ${formatAmountNoUnit(totalClaim)}원 및 그 중 원금 ${formatAmountNoUnit(capital)}원에 대한 연체이율의 비율에 의한 금원.`;
 
-    // 채권의 원인: colaw 형식 — "YYYY.MM.DD 자 학자금대출" 등
+    // 채권의 원인: 법원서식 D5106 형식 — "YYYY.MM.DD 자 학자금대출" 등
     const causeDisplay = cause || '';
 
     creditorRows += `
@@ -1903,7 +1903,7 @@ function generateRepaymentPlan(data: DocumentData): string {
       </tr>
       ${(() => {
         // 변제율 단일 분모: 무담보 원금 (이자 제외, 별제권 충당분 제외)
-        // 회생법원 양식 + colaw anatomy 39% 일치 — repayment-calculator.getDebtSummary.unsecuredCapital과 동일 산식
+        // 회생법원 양식 기준 — repayment-calculator.getDebtSummary.unsecuredCapital과 동일 산식
         const unsecuredDenom = (data.creditors || []).reduce((sum: number, c: any) => {
           const cap = Number(c.capital) || 0;
           if (c.is_secured) {
@@ -1981,12 +1981,12 @@ function generateRepaymentPlan(data: DocumentData): string {
       const credList = data.creditors || [];
       // P1-9: buildAdjustedSchedule로 회차별 월변제액 분배
       // totalTarget 미지정 시 base × months → diff=0 → 모든 회차 동일
-      // 향후 colaw K_observed를 incomeSettings에 저장하면 totalTarget으로 주입
-      const colawTotalTarget = Number(incomeSettings.total_repay_amount) || 0;
+      // 향후 저장된 총변제액을 incomeSettings에서 읽어 totalTarget으로 주입
+      const savedTotalTarget = Number(incomeSettings.total_repay_amount) || 0;
       const schedule = buildAdjustedSchedule({
         monthlyAvailable: availableIncome,
         months: planDurationMonths,
-        totalTarget: colawTotalTarget > 0 ? colawTotalTarget : undefined,
+        totalTarget: savedTotalTarget > 0 ? savedTotalTarget : undefined,
       });
 
       const rows: string[] = [];

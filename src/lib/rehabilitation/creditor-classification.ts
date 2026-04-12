@@ -1,7 +1,7 @@
 /**
  * 채권자 분류 함수 (확정 / 미확정 / 별제권 담보 충당분 도출)
  *
- * colaw 핸들러 분석 결과 (2026-04-07):
+ * 채권분류(CLAUDE.md §채권자 분류 3경로):
  *   - 별제권부 담보 부족액 = totalClaim − securedCollateralValue
  *   - 기타 미확정 (신탁재산 등) = totalClaim 전액
  *   - 두 경로는 상호 배타

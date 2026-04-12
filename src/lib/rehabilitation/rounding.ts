@@ -1,7 +1,7 @@
 /**
  * 라운딩 + 마지막달 보정 (P1-9)
  *
- * colaw 관행 (anatomy §9.5 김한경 검증):
+ * 가이드 p.12 라운딩 관행 (김한경 검증):
  *   1) basePayment = floor(monthlyAvailable)
  *   2) totalTarget = 정책별 목표값 (없으면 basePayment × months)
  *   3) diff = totalTarget − basePayment × months
@@ -98,7 +98,7 @@ export function buildAdjustedSchedule(
   };
 }
 
-// ─── 변제율 표기 자리수 (anatomy §2.7 paymentratepointdisplay) ───
+// ─── 변제율 표기 자리수 (가이드 §2 변제율) ───
 
 /**
  * 변제율 포맷팅

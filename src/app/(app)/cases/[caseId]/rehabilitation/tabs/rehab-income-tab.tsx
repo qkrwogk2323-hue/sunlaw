@@ -39,7 +39,7 @@ export function RehabIncomeTab({
       (incomeSettings?.net_salary as number) ||
       (incomeSettings?.monthly_income as number) ||
       0,
-    // colaw 의미론: rate=100 → baseline60 그대로 사용 (= 기준중위소득의 60%).
+    // 처리지침 기준: rate=100 → baseline60 그대로 사용 (= 기준중위소득의 60%).
     // rate=150 → baseline60 × 1.5 = 기준중위소득의 90%. (DB default 100, 0089 origin)
     living_cost_rate:
       (incomeSettings?.living_cost_rate as number) ?? 100,
@@ -96,7 +96,7 @@ export function RehabIncomeTab({
     ((incomeSettings?.expense_breakdown as ExpenseRow[]) || [])
   );
 
-  // colaw 의미론: 권장 생계비 = baseline60(=기준중위소득×60%) × rate/100
+  // 처리지침 기준: 권장 생계비 = baseline60(=기준중위소득×60%) × rate/100
   // rate=100이면 baseline60 그대로 (= 기준중위소득의 60%, 회생법원 표준)
   const recommendedLivingCost = useMemo(
     () => computeLivingCost({
