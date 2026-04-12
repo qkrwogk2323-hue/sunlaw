@@ -181,9 +181,9 @@ function generateProRataSchedule(
     let total: number;
 
     if (idx === creditors.length - 1) {
-      // 마지막 채권자: 잔여분 배분 (올림 오차 보정)
-      monthly = monthlyRepay - monthlyAllocated;
-      total = totalRepayTarget - totalAllocated;
+      // 마지막 채권자: 잔여분 흡수 (올림 오차 보정) — Math.max(0) 방어
+      monthly = Math.max(0, monthlyRepay - monthlyAllocated);
+      total = Math.max(0, totalRepayTarget - totalAllocated);
     } else {
       // 가이드 p.12: "원 미만은 '올림'으로 처리"
       monthly = Math.ceil(monthlyRepay * ratio);

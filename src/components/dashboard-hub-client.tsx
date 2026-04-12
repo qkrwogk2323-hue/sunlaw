@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
-import { BellRing, Bot, ChevronRight, Link2, Minus, Plus, Search, ThumbsDown, Upload } from 'lucide-react';
+import { BellRing, Bot, ChevronRight, Link2, MessageSquare, Minus, Plus, Search, ThumbsDown, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, segmentStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1708,7 +1708,11 @@ export function DashboardHubClient({
                       );
                     })
                   ) : (
-                    <p className="px-2 py-12 text-center text-sm text-slate-500">오늘 작성된 조직소통 대화가 없습니다.</p>
+                    <div className="px-2 py-12 text-center text-slate-400">
+                      <MessageSquare className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                      <p className="font-medium">오늘 작성된 조직소통 대화가 없습니다</p>
+                      <p className="mt-1 text-sm">아래 입력란에서 조직 내부 메시지를 보내 보세요</p>
+                    </div>
                   )}
                 </div>
 

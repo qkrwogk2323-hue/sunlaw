@@ -49,12 +49,16 @@ export function computeMonthlyAvailable(input: MonthlyAvailableInput): MonthlyAv
 
   const childSupport = Math.max(0, Math.round(input.childSupport ?? 0));
   const commissionRate = input.trusteeCommissionRate ?? 0;
-  const trusteeCommission = Math.max(
-    0,
-    Math.round((input.monthlyIncome * commissionRate) / 100),
-  );
 
-  const raw = input.monthlyIncome - livingCost.applied - childSupport - trusteeCommission;
+  // CLAUDE.md: ③ 월 가용소득 = ① 월소득 − ② 생계비 − 양육비
+  // ④ 회생위원 보수 = ③ × commissionRate/100 (반올림)
+  // ⑤ 월 실제 가용소득 = ③ − ④
+  const preCommissionAvailable = input.monthlyIncome - livingCost.applied - childSupport;
+  const trusteeCommission = commissionRate > 0
+    ? Math.max(0, Math.round((preCommissionAvailable * commissionRate) / 100))
+    : 0;
+
+  const raw = preCommissionAvailable - trusteeCommission;
   const monthlyAvailable = Math.max(0, Math.floor(raw));
 
   const warnings: string[] = [];

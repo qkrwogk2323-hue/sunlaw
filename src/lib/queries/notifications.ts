@@ -312,6 +312,7 @@ export async function getNotificationCenter(limit = 20) {
     .select(upgradedNotificationSelect)
     .eq('recipient_profile_id', auth.user.id)
     .is('trashed_at', null)
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(limit);
 

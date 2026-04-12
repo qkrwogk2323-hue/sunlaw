@@ -1673,17 +1673,95 @@ function generateRepaymentPlan(data: DocumentData): string {
       </tr>
     </table>
 
-    <p style="margin-top: 15px;"><strong>나. 기타 개인회생재단채권</strong> [ 해당있음 □ / 해당없음 ■ ]</p>
+    ${(() => {
+      // 재산처분 여부 판단 (D5110 vs D5111)
+      const liqValueForForm = (() => {
+        const ps = data.properties || [];
+        const ds = data.propertyDeductions || [];
+        const pv = ps.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+        const dv = ds.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+        return Math.max(0, pv - dv);
+      })();
+      const totalRepayForForm = Math.floor(availableIncome) * planDurationMonths;
+      const leibnizCoefs: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
+      const pvCoef = leibnizCoefs[planDurationMonths];
+      const pvForForm = pvCoef ? Math.floor(availableIncome * pvCoef) : totalRepayForForm;
+      const needsDisposal = pvForForm <= liqValueForForm; // D5111
 
-    <h3>3. 기타 개인회생재단채권에 대한 변제</h3>
-    <p style="height: 40px;"></p>
+      return `
+    <p style="margin-top: 15px;"><strong>나. 재산</strong> [ 해당${needsDisposal ? '있음 ■' : '없음 ■'} / 해당${needsDisposal ? '없음 □' : '있음 □'} ]</p>
+    ${needsDisposal ? `
+    <p style="margin-left: 20px; font-size: 0.95em;">
+      현재가치(${formatAmount(pvForForm)})가 청산가치(${formatAmount(liqValueForForm)})에 미달하므로
+      재산처분에 의한 변제가 병행됩니다 (D5111 양식).
+    </p>` : ''}`;
+    })()}
+
+    <h3>3. 개인회생재단채권에 대한 변제</h3>
+    ${(() => {
+      // 재단채권: 회생위원 보수 + 기타 재단채권
+      const commRate = Number(incomeSettings.trustee_comm_rate) || 0;
+      const hasExternalTrustee = commRate > 0;
+      const trusteeCommAmt = hasExternalTrustee ? monthlyResult.trusteeCommission : 0;
+
+      if (!hasExternalTrustee) {
+        return `
+    <p>[ 해당있음 □ / 해당없음 ■ ]</p>
+    <p><strong>가. 회생위원의 보수 및 비용</strong></p>
+    <p style="margin-left: 20px;">법원사무관이 회생위원으로 선임되어 별도의 보수가 발생하지 않습니다.</p>
+    <p><strong>나. 기타 개인회생재단채권</strong></p>
+    <p style="margin-left: 20px;">해당 없음</p>`;
+      }
+
+      return `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <p><strong>가. 회생위원의 보수 및 비용</strong></p>
+    <table style="margin: 10px 0;">
+      <tr><th style="width: 50%;">항목</th><th style="width: 50%; text-align: right;">금액</th></tr>
+      <tr><td>월 가용소득(③)의 ${commRate}%</td><td style="text-align: right;">${formatAmount(trusteeCommAmt)}/월</td></tr>
+    </table>
+    <p><strong>나. 기타 개인회생재단채권</strong></p>
+    <p style="margin-left: 20px;">해당 없음</p>`;
+    })()}
 
     <h3>4. 일반의 우선권 있는 개인회생채권에 대한 변제</h3>
-    <p style="height: 40px;"></p>
+    ${(() => {
+      const priorityCreditors = (data.creditors || []).filter(
+        (c: any) => c.has_priority_repay && !c.is_secured
+      );
+      if (priorityCreditors.length === 0) {
+        return `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`;
+      }
+      const rows = priorityCreditors.map((c: any) => `
+        <tr>
+          <td style="text-align: center;">${esc(c.bond_number?.toString() || '')}</td>
+          <td>${esc(c.creditor_name || '')}</td>
+          <td style="text-align: right;">${formatAmount((Number(c.capital) || 0) + (Number(c.interest) || 0))}</td>
+          <td>${esc(c.bond_cause || '')}</td>
+          <td>변제개시일부터 변제기간 내 전액 변제</td>
+        </tr>`).join('');
+      return `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <table style="margin: 10px 0;">
+      <tr>
+        <th style="width: 8%; text-align: center;">번호</th>
+        <th style="width: 22%;">채권자명</th>
+        <th style="width: 20%; text-align: right;">채권현재액</th>
+        <th style="width: 25%;">채권발생원인</th>
+        <th style="width: 25%;">변제방법</th>
+      </tr>
+      ${rows}
+    </table>`;
+    })()}
 
     <h3>5. 별제권부 채권 및 이에 준하는 채권의 처리</h3>
+    ${(() => {
+      const securedCreditors = (data.creditors || []).filter((c: any) => c.is_secured);
+      if (securedCreditors.length === 0) {
+        return `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`;
+      }
+      return `
     <p>[ 해당있음 ■ / 해당없음 □ ]</p>
-
     <p><strong>가. 채권의 내용</strong></p>
     <table style="margin: 10px 0;">
       <tr>
@@ -1694,9 +1772,49 @@ function generateRepaymentPlan(data: DocumentData): string {
         <th style="width: 20%; text-align: center;">총변제액</th>
       </tr>
       ${creditorTableRows}
-    </table>
+    </table>`;
+    })()}
 
     <div class="page-break"></div>
+
+    <h3>6. 일반 개인회생채권에 대한 변제</h3>
+    <p><strong>가. 가용소득에 의한 변제</strong></p>
+    <p style="margin-left: 20px;">(1) 월 변제예정(유보)액 및 총 변제예정(유보)액: [원금] 기준 안분</p>
+    <p style="margin-left: 20px;">(2) 변제방법</p>
+    <p style="margin-left: 40px;">(가) 기간: ${planDurationMonths}개월, 횟수: ${planDurationMonths}회</p>
+    <p style="margin-left: 40px;">(나) 변제월 및 변제일: 매월 같은 날</p>
+
+    ${(() => {
+      // D5111일 때 "나. 재산의 처분에 의한 변제" 추가
+      const liqVal = (() => {
+        const ps = data.properties || [];
+        const ds = data.propertyDeductions || [];
+        const pv = ps.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+        const dv = ds.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+        return Math.max(0, pv - dv);
+      })();
+      const leibnizC: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
+      const coefD = leibnizC[planDurationMonths];
+      const pvD = coefD ? Math.floor(availableIncome * coefD) : Math.floor(availableIncome) * planDurationMonths;
+      const isD5111 = pvD <= liqVal;
+
+      if (!isD5111) return '';
+
+      const gap = Math.max(0, liqVal - pvD);
+      const disposePd = Number(data.incomeSettings?.dispose_period) || 1;
+      const multiplier = disposePd <= 1 ? 1.3 : 1.5;
+      const disposalAmount = Math.ceil(gap * multiplier);
+      const periodLabel = disposePd <= 1 ? '인가일부터 1년 내' : '인가일부터 2년 내';
+
+      return `
+    <p style="margin-top: 15px;"><strong>나. 재산의 처분에 의한 변제</strong></p>
+    <p style="margin-left: 20px;">(1) 변제투입예정액: ${formatAmount(disposalAmount)}원 ([원금] 기준 안분)</p>
+    <p style="margin-left: 20px;">(2) 변제방법</p>
+    <p style="margin-left: 40px;">(가) 변제기한: ${esc(periodLabel)}</p>
+    <p style="margin-left: 40px;">(나) 처분대금수령일로부터 1주일 이내 변제</p>
+    <p style="margin-left: 20px;">(3) 강제집행 등의 효력</p>
+    <p style="margin-left: 40px;">처분대상 재산에 대한 강제집행, 가압류 또는 가처분이 있는 경우 법 제615조 제3항에 불구하고 처분대상 재산의 처분에 대한 법원의 허가가 있는 때 그 효력을 잃는다.</p>`;
+    })()}
 
     <h3>개인회생채권 변제예정액표</h3>
 
@@ -1723,7 +1841,7 @@ function generateRepaymentPlan(data: DocumentData): string {
       // 라이프니츠 현가계수 (공표 4자리 표값)
       const leibniz: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
       const coef = leibniz[planDurationMonths];
-      const presentValue = coef ? Math.round(availableIncome * coef) : null;
+      const presentValue = coef ? Math.floor(availableIncome * coef) : null;
       return `
         <table style="margin: 10px 0;">
           <tr>
@@ -1750,24 +1868,25 @@ function generateRepaymentPlan(data: DocumentData): string {
       </p>` : ''}
 
     ${(() => {
-      // 변제율 (P1-3): (확정+미확정 변제총액) / (확정+미확정 채권총액)
-      const totalClaimMinusSecured = (data.creditors || []).reduce((sum: number, c: any) => {
-        const claim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
+      // 변제율 (CLAUDE.md): 총변제액 / 무담보원금 × 100 (반올림)
+      // 무담보원금 = 일반 무담보 원금 + 별제권 부족분 (담보 초과 미회수 원금)
+      const unsecuredCapitalForRate = (data.creditors || []).reduce((sum: number, c: any) => {
+        const cap = Number(c.capital) || 0;
         if (c.is_secured) {
-          const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
-          return sum + Math.max(0, claim - collateral);
+          const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
+          return sum + Math.max(0, cap - collateral);
         }
-        return sum + claim;
+        return sum + cap;
       }, 0);
       const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
-      const ratePercent = totalClaimMinusSecured > 0
-        ? Math.round((totalRepayAmount / totalClaimMinusSecured) * 1000) / 10
+      const ratePercent = unsecuredCapitalForRate > 0
+        ? Math.round((totalRepayAmount / unsecuredCapitalForRate) * 100)
         : 0;
       return `
         <p style="margin-top: 8px;">
           <strong>변제율: ${ratePercent}%</strong>
           <span style="color: #666; font-size: 0.85em;">
-            (총변제 ${formatAmount(totalRepayAmount)} / 확정+미확정 채권 ${formatAmount(totalClaimMinusSecured)})
+            (총변제 ${formatAmount(totalRepayAmount)} / 무담보원금 ${formatAmount(unsecuredCapitalForRate)})
           </span>
         </p>`;
     })()}
@@ -1796,7 +1915,7 @@ function generateRepaymentPlan(data: DocumentData): string {
 
         const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
         const overallRate = unsecuredDenom > 0
-          ? Math.round((totalRepayAmount / unsecuredDenom) * 1000) / 10
+          ? Math.round((totalRepayAmount / unsecuredDenom) * 100)
           : 0;
 
         return (data.creditors || []).map((cred: any, idx: number) => {
@@ -1808,9 +1927,9 @@ function generateRepaymentPlan(data: DocumentData): string {
             ? Math.max(0, cap - Math.min(Number(cred.secured_collateral_value) || 0, cap))
             : cap;
           const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
-          const mPay = Math.round(availableIncome * ratio);
+          const mPay = Math.ceil(availableIncome * ratio);
           const tPay = mPay * planDurationMonths;
-          const rRate = credUnsecured > 0 ? ((tPay / credUnsecured) * 100).toFixed(1) : '0.0';
+          const rRate = credUnsecured > 0 ? Math.round((tPay / credUnsecured) * 100) : 0;
           return `<tr>
             <td style="text-align: center;">${cred.bond_number || idx + 1}</td>
             <td style="text-align: center;">${esc(cred.creditor_name || '')}</td>
@@ -1879,14 +1998,14 @@ function generateRepaymentPlan(data: DocumentData): string {
           const cap = Number(cred.capital) || 0;
           const credDebt = cap + (Number(cred.interest) || 0);
           const ratio = totalDebt > 0 ? credDebt / totalDebt : 0;
-          // 마지막 채권자는 잔여 흡수 (라운딩 오차 보정)
+          // 마지막 채권자는 잔여 흡수 (올림 오차 보정) — CLAUDE.md: (E) Math.ceil
           const mPay = idx === credList.length - 1
             ? monthlyTotal - credList.slice(0, -1).reduce((s: number, c: any) => {
                 const d = (Number(c.capital) || 0) + (Number(c.interest) || 0);
                 const rt = totalDebt > 0 ? d / totalDebt : 0;
-                return s + Math.round(monthlyTotal * rt);
+                return s + Math.ceil(monthlyTotal * rt);
               }, 0)
-            : Math.round(monthlyTotal * ratio);
+            : Math.ceil(monthlyTotal * ratio);
           const credKey = cred.id || idx;
           const prev = cumulByCred.get(credKey) || 0;
           const cumul = prev + mPay;
@@ -1916,6 +2035,65 @@ function generateRepaymentPlan(data: DocumentData): string {
         </thead>
         <tbody>${rows.join('')}</tbody>
       </table>`;
+    })()}
+
+    <div class="page-break"></div>
+
+    <h3>7. 미확정 개인회생채권에 대한 조치</h3>
+    ${(() => {
+      const unsettledCreditors = (data.creditors || []).filter(
+        (c: any) => c.is_unsettled || c.is_other_unconfirmed
+      );
+      if (unsettledCreditors.length === 0) {
+        return `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`;
+      }
+      return `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <p><strong>가. 변제금액의 유보</strong></p>
+    <p style="margin-left: 20px;">
+      미확정 개인회생채권에 대하여는 확정될 때까지 그 변제금액을 유보합니다.
+    </p>
+    <p><strong>나. 미확정 개인회생채권에 대한 변제</strong></p>
+    <p style="margin-left: 20px;">
+      미확정 개인회생채권이 확정되는 때에는, 확정된 채권액을 기준으로 다른 [원금] 기준의 개인회생채권과의 사이에 [원금]에 비례하여 안분한 금액을 변제합니다.
+    </p>`;
+    })()}
+
+    <h3>8. 변제금원의 회생위원에 대한 임치 및 지급</h3>
+    <p>
+      ① 위 [ ${(() => {
+        const sections: string[] = [];
+        const commRate = Number(incomeSettings.trustee_comm_rate) || 0;
+        if (commRate > 0) sections.push('3');
+        const hasPriority = (data.creditors || []).some((c: any) => c.has_priority_repay && !c.is_secured);
+        if (hasPriority) sections.push('4');
+        const hasSecured = (data.creditors || []).some((c: any) => c.is_secured);
+        if (hasSecured) sections.push('5');
+        sections.push('6');
+        const hasUnsettled = (data.creditors || []).some((c: any) => c.is_unsettled || c.is_other_unconfirmed);
+        if (hasUnsettled) sections.push('7');
+        return sections.join(', ');
+      })()} ]항에 의하여 변제하여야 할 금원은 개인회생위원이 관리하는 예금계좌에 임치합니다.
+    </p>
+    <p>
+      ② 개인회생위원의 예금계좌: (추후 보완)
+    </p>
+
+    <h3>9. 면책의 범위 및 효력발생시기</h3>
+    <p>
+      변제계획에 따른 변제를 완료한 때에는, 변제계획에 의하여 변제되지 아니한 채무에 대하여는 면책됩니다.
+      다만, 채무자 회생 및 파산에 관한 법률 제625조 제2항 각호에 해당하는 청구권은 면책되지 아니합니다.
+    </p>
+
+    <h3>10. 기타사항</h3>
+    ${(() => {
+      const etcSection = (data.planSections || []).find((s: any) => s.section_key === 'etc' || s.section_number === 10);
+      if (etcSection && etcSection.content && etcSection.content.trim()) {
+        return `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <p style="margin-left: 20px;">${esc(etcSection.content)}</p>`;
+      }
+      return `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`;
     })()}
   `;
 

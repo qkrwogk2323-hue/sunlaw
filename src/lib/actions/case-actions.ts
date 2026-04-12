@@ -582,6 +582,25 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
       return { ok: false, code: writeResult.code, message: writeResult.message, resolution: writeResult.resolution };
     }
 
+    // Step: case_clients 자동 연결 — clientName이 있으면 provisional 의뢰인 레코드 생성
+    const clientName = `${formData.get('clientName') ?? ''}`.trim();
+    if (clientName) {
+      try {
+        await supabase.from('case_clients').insert({
+          organization_id: parsed.data.organizationId,
+          case_id: writeResult.caseId,
+          client_name: clientName,
+          relation_label: `${formData.get('clientRole') ?? ''}`.trim() || '의뢰인',
+          is_portal_enabled: false,
+          link_status: 'linked',
+          created_by: auth.user.id,
+          updated_by: auth.user.id,
+        });
+      } catch (clientLinkError) {
+        console.error('[createCaseAction] case_clients insert error (non-fatal):', clientLinkError);
+      }
+    }
+
     try {
       await runCreateCasePostProcessing({
         supabase,

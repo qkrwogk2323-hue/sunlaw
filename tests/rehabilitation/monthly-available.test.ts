@@ -65,9 +65,12 @@ describe('월가용소득 공식 확장 (P1-7)', () => {
       childSupport: 300_000,
       trusteeCommissionRate: 3,
     });
-    expect(r.trusteeCommission).toBe(90_000); // 3,000,000 × 3%
+    // CLAUDE.md: ④ = ③ × 3% (③ = 월소득 - 생계비 - 양육비)
+    const preComm = 3_000_000 - r.livingCost.applied - 300_000;
+    const expectedComm = Math.round((preComm * 3) / 100);
+    expect(r.trusteeCommission).toBe(expectedComm);
     expect(r.monthlyAvailable).toBe(
-      Math.max(0, Math.floor(3_000_000 - r.livingCost.applied - 300_000 - 90_000)),
+      Math.max(0, Math.floor(preComm - expectedComm)),
     );
   });
 

@@ -82,13 +82,16 @@ export function calculateMonthlyAvailable(
   trusteeCommRate: number,
 ): number {
   const totalExpense = livingCost + extraLivingCost + childSupport;
-  let available = monthlyIncome - totalExpense;
+  // ③ 월 가용소득 = ① 월소득 − ② 총생계비
+  const preCommission = monthlyIncome - totalExpense;
 
+  // ④ 회생위원 보수 = ③ × rate/100 (반올림) — CLAUDE.md 가용소득 공식
   if (trusteeCommRate > 0) {
-    available = Math.round(available * (1 - trusteeCommRate / 100));
+    const commission = Math.round((preCommission * trusteeCommRate) / 100);
+    return preCommission - commission;
   }
 
-  return available;
+  return preCommission;
 }
 
 /**
