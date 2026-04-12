@@ -53,6 +53,9 @@ type CreditorForm = {
   unsettled_reason: string;
   unsettled_amount: number;
   unsettled_text: string;
+  bond_type: '주채무' | '보증채무' | '연대보증';
+  parent_creditor_id: string | null;
+  sub_number: number | null;
   guarantor_name: string;
   guarantor_resident_hash: string;
   guarantor_amount: number;
@@ -60,6 +63,14 @@ type CreditorForm = {
   isNew: boolean;
   expanded: boolean;
 };
+
+function formatBondNumber(c: CreditorForm, all: CreditorForm[]): string {
+  if (c.parent_creditor_id && c.sub_number != null) {
+    const parent = all.find((p) => p.id === c.parent_creditor_id);
+    return parent ? `${parent.bond_number}-${c.sub_number}` : `?-${c.sub_number}`;
+  }
+  return String(c.bond_number);
+}
 
 let _creditorSeq = 0;
 function initCreditor(c: Record<string, unknown>): CreditorForm {
@@ -93,6 +104,9 @@ function initCreditor(c: Record<string, unknown>): CreditorForm {
     unsettled_reason: (c.unsettled_reason as string) || '',
     unsettled_amount: (c.unsettled_amount as number) || 0,
     unsettled_text: (c.unsettled_text as string) || '',
+    bond_type: (c.bond_type as '주채무' | '보증채무' | '연대보증') || '주채무',
+    parent_creditor_id: (c.parent_creditor_id as string) || null,
+    sub_number: (c.sub_number as number) ?? null,
     guarantor_name: (c.guarantor_name as string) || '',
     guarantor_resident_hash: (c.guarantor_resident_hash as string) || '',
     guarantor_amount: (c.guarantor_amount as number) || 0,
@@ -258,10 +272,23 @@ export function RehabCreditorsTab({
   // - 최초 저장 (전원 isNew) 시에만 분류 순서로 재정렬
   // - 신규 추가 시: max(기존 bond_number) + 1 부여 (addCreditor/addFromSearch에서 처리)
   const prepareForSave = useCallback((): CreditorForm[] => {
-    const hasExisting = creditors.some((c) => !c.isNew);
+    // 가지번호(sub_number) 자동 부여: 보증채무/연대보증이고 parent_creditor_id가 있는 경우
+    const withSubNumbers = creditors.map((c) => {
+      if ((c.bond_type === '보증채무' || c.bond_type === '연대보증') && c.parent_creditor_id) {
+        const siblings = creditors.filter(
+          (s) => s.parent_creditor_id === c.parent_creditor_id && s.id !== c.id
+        );
+        if (c.sub_number == null) {
+          const maxSub = siblings.reduce((max, s) => Math.max(max, s.sub_number ?? 0), 0);
+          return { ...c, sub_number: maxSub + 1 };
+        }
+      }
+      return c;
+    });
+
+    const hasExisting = withSubNumbers.some((c) => !c.isNew);
     if (hasExisting) {
-      // 기존 채권자 존재 → 번호 유지, 상태만 반환
-      return creditors;
+      return withSubNumbers;
     }
     // 전원 신규 → 분류 순서로 재정렬
     const priorityOrder = (c: CreditorForm): number => {
@@ -270,7 +297,7 @@ export function RehabCreditorsTab({
       if (c.is_unsettled) return 3;
       return 2;
     };
-    const sorted = [...creditors].sort((a, b) => {
+    const sorted = [...withSubNumbers].sort((a, b) => {
       const pa = priorityOrder(a);
       const pb = priorityOrder(b);
       if (pa !== pb) return pa - pb;
@@ -486,7 +513,7 @@ export function RehabCreditorsTab({
               <div key={c.id} className="rounded-md border border-slate-100 bg-slate-50/50 overflow-hidden">
                 {/* 요약 행 */}
                 <div className="flex items-center gap-3 px-3 py-2">
-                  <span className="w-8 text-center text-xs font-medium text-slate-400">{c.bond_number}</span>
+                  <span className="w-8 text-center text-xs font-medium text-slate-400">{formatBondNumber(c, creditors)}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
                     {c.creditor_name || '(미입력)'}
                     {c.branch_name && <span className="ml-1 text-xs text-slate-400">({c.branch_name})</span>}
@@ -834,9 +861,44 @@ export function RehabCreditorsTab({
                       </div>
                     )}
 
-                    {/* 보증인 정보 */}
+                    {/* 채무 유형·가지번호 */}
                     <div className="rounded-md bg-purple-50/50 p-3">
-                      <h4 className="mb-2 text-xs font-semibold text-purple-700">보증인 정보</h4>
+                      <h4 className="mb-2 text-xs font-semibold text-purple-700">채무 유형 / 보증인 정보</h4>
+                      <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-3">
+                        <div className="space-y-1">
+                          <label htmlFor={`cr-bondtype-${idx}`} className="text-xs font-medium text-purple-600">채무 유형</label>
+                          <select
+                            id={`cr-bondtype-${idx}`}
+                            value={c.bond_type}
+                            onChange={(e) => updateCreditor(idx, 'bond_type', e.target.value)}
+                            className="w-full rounded border border-purple-200 px-2 py-1.5 text-sm"
+                          >
+                            <option value="주채무">주채무</option>
+                            <option value="보증채무">보증채무</option>
+                            <option value="연대보증">연대보증</option>
+                          </select>
+                        </div>
+                        {(c.bond_type === '보증채무' || c.bond_type === '연대보증') && (
+                          <div className="space-y-1">
+                            <label htmlFor={`cr-parent-${idx}`} className="text-xs font-medium text-purple-600">주채무자 연결</label>
+                            <select
+                              id={`cr-parent-${idx}`}
+                              value={c.parent_creditor_id || ''}
+                              onChange={(e) => updateCreditor(idx, 'parent_creditor_id', e.target.value || null)}
+                              className="w-full rounded border border-purple-200 px-2 py-1.5 text-sm"
+                            >
+                              <option value="">선택</option>
+                              {creditors
+                                .filter((p) => p.id !== c.id && p.bond_type === '주채무')
+                                .map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.bond_number}번 {p.creditor_name || '(미입력)'}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                         <div className="space-y-1">
                           <label htmlFor={`cr-gname-${idx}`} className="text-xs font-medium text-purple-600">보증인 이름</label>
@@ -984,7 +1046,7 @@ export function RehabCreditorsTab({
               <tbody>
                 {creditors.map((c) => (
                   <tr key={c.id} className="border-b border-slate-100">
-                    <td className="px-2 py-2 text-center text-slate-500">{c.bond_number}</td>
+                    <td className="px-2 py-2 text-center text-slate-500">{formatBondNumber(c, creditors)}</td>
                     <td className="px-2 py-2">
                       <p className="font-medium text-slate-700">{c.creditor_name || '(미입력)'}</p>
                       {c.branch_name && <p className="text-xs text-slate-400">{c.branch_name}</p>}

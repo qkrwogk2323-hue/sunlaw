@@ -194,6 +194,11 @@ create table if not exists public.rehabilitation_creditors (
   unsettled_amount  bigint not null default 0,
   unsettled_text    text,
 
+  bond_type        text not null default '주채무'
+                   check (bond_type in ('주채무','보증채무','연대보증')),
+  parent_creditor_id uuid references public.rehabilitation_creditors(id) on delete set null,
+  sub_number       int,
+
   guarantor_name    text,
   guarantor_resident_hash text,
   guarantor_amount  bigint not null default 0,

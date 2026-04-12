@@ -258,6 +258,7 @@ CREATE INDEX IF NOT EXISTS idx_rehab_creditors_case ON public.rehabilitation_cre
 CREATE INDEX IF NOT EXISTS idx_rehab_creditors_org ON public.rehabilitation_creditors USING btree (organization_id);
 CREATE INDEX IF NOT EXISTS idx_rehab_creditors_secured ON public.rehabilitation_creditors USING btree (case_id, is_secured) WHERE (is_secured = true);
 CREATE INDEX IF NOT EXISTS idx_rehab_creditors_unconfirmed ON public.rehabilitation_creditors USING btree (case_id, is_other_unconfirmed) WHERE (is_other_unconfirmed = true);
+CREATE INDEX IF NOT EXISTS idx_rehab_creditors_parent ON public.rehabilitation_creditors(parent_creditor_id) WHERE parent_creditor_id IS NOT NULL;
 
 -- rehabilitation_family_members
 CREATE INDEX IF NOT EXISTS idx_rehab_family_case ON public.rehabilitation_family_members USING btree (case_id);

@@ -34,6 +34,9 @@ export interface RehabCreditor {
   unsettledReason: string;
   unsettledAmount: number;
   unsettledText: string;
+  bondType?: '주채무' | '보증채무' | '연대보증';
+  parentCreditorId?: string | null;
+  subNumber?: number | null;
   guarantorName: string;
   guarantorAmount: number;
   guarantorText: string;

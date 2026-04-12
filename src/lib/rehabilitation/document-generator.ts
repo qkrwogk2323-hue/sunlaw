@@ -997,9 +997,27 @@ function generateCreditorList(data: DocumentData): string {
   // colaw 형식: "광주지법 2026 호  채무자 조재근(950809-*******)"
   const headerLine = `${courtName} ${caseNumberDisplay}  채무자 ${esc(debtorName)}(${esc(debtorBirth)}-*******)`;
 
+  // 가지번호 표시를 위해 채권자 정렬: 주채무자 뒤에 보증채무자 배치
+  const sortedCreditors = [...creditors].sort((a: any, b: any) => {
+    const aNum = a.bond_number || 0;
+    const bNum = b.bond_number || 0;
+    // 보증채무자는 parent의 bond_number 기준으로 정렬
+    const aParent = a.parent_creditor_id ? creditors.find((p: any) => p.id === a.parent_creditor_id) : null;
+    const bParent = b.parent_creditor_id ? creditors.find((p: any) => p.id === b.parent_creditor_id) : null;
+    const aSortKey = aParent ? (aParent.bond_number || 0) + (a.sub_number || 0) * 0.01 : aNum;
+    const bSortKey = bParent ? (bParent.bond_number || 0) + (b.sub_number || 0) * 0.01 : bNum;
+    return aSortKey - bSortKey;
+  });
+
   let creditorRows = '';
-  creditors.forEach((cred: any, idx: number) => {
-    const bondNumber = cred.bond_number || String(idx + 1);
+  sortedCreditors.forEach((cred: any, idx: number) => {
+    // 가지번호: parent가 있으면 "부모번호-자식번호" 형태
+    const parentCred = cred.parent_creditor_id
+      ? creditors.find((p: any) => p.id === cred.parent_creditor_id)
+      : null;
+    const bondNumber = parentCred && cred.sub_number != null
+      ? `${parentCred.bond_number || '?'}-${cred.sub_number}`
+      : String(cred.bond_number || idx + 1);
     const creditorName = cred.creditor_name || '';
     const cause = cred.bond_cause || '';
     const address = cred.address || '';
