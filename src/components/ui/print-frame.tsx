@@ -21,8 +21,12 @@ const PRINT_STYLES = `
   .page-break {
     page-break-before: always;
   }
-  table { page-break-inside: avoid; font-size: 10pt; line-height: 160%; }
+  table { page-break-inside: avoid; font-size: 10pt; line-height: 160%; border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #333; padding: 6px 4px; }
+  th { background-color: #f5f5f5; font-weight: bold; text-align: center; }
   h1, h2, h3 { page-break-after: avoid; }
+  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20mm; }
+  @page { @bottom-center { content: counter(page) " / " counter(pages); font-size: 9pt; color: #666; } }
 }
 @media screen {
   body {
@@ -34,7 +38,10 @@ const PRINT_STYLES = `
     margin: 0 auto;
     padding: 45mm 20mm 30mm 20mm;
   }
-  table { font-size: 10pt; line-height: 160%; }
+  table { font-size: 10pt; line-height: 160%; border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #333; padding: 6px 4px; }
+  th { background-color: #f5f5f5; font-weight: bold; text-align: center; }
+  h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20mm; }
 }
 `;
 

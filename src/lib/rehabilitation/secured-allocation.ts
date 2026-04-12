@@ -27,6 +27,7 @@ export function getLiquidationValue(property: RehabSecuredProperty): number {
 export function getDefaultValuationRate(propertyType: string): number {
   switch (propertyType) {
     case '부동산': return 70;
+    case '자동차': return 50;
     case '임차보증금': return 100;
     case '예금': return 100;
     case '보험': return 100;
