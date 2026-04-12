@@ -94,9 +94,9 @@ function generatePrioritySchedule(
 
     let monthly: number;
     if (idx === priorityCreditors.length - 1) {
-      monthly = priorityMonthlyBudget - priorityMonthlyAllocated;
+      monthly = Math.max(0, priorityMonthlyBudget - priorityMonthlyAllocated);
     } else {
-      monthly = priorityTotal > 0 ? Math.round(priorityMonthlyBudget * debt / priorityTotal) : 0;
+      monthly = priorityTotal > 0 ? Math.ceil(priorityMonthlyBudget * debt / priorityTotal) : 0;
       priorityMonthlyAllocated += monthly;
     }
 
@@ -121,8 +121,8 @@ function generatePrioritySchedule(
     const scale = rawTotal > 0 ? generalBudget / rawTotal : 0;
 
     generalSchedule.forEach((s) => {
-      const adjTotal = Math.round(s.totalAmount * scale);
-      const adjMonthly = Math.round(s.monthlyAmount * scale);
+      const adjTotal = Math.ceil(s.totalAmount * scale);
+      const adjMonthly = Math.ceil(s.monthlyAmount * scale);
       results.push({
         ...s,
         totalAmount: adjTotal,
@@ -271,7 +271,7 @@ function generateTieredSchedule(
   // 1) 조세채권: 전액 완납
   for (const x of taxClaims) {
     const total = x.totalClaim;
-    const monthly = Math.round(total / repayMonths);
+    const monthly = Math.ceil(total / repayMonths);
     totalByCreditor.set(x.creditor.id, { monthly, total });
   }
 
@@ -285,12 +285,12 @@ function generateTieredSchedule(
     const ratio = othersAnchor > 0 ? anchorAmount / othersAnchor : 0;
     let total: number;
     if (idx === others.length - 1) {
-      total = unsecuredBudget - allocatedUnsecured;
+      total = Math.max(0, unsecuredBudget - allocatedUnsecured);
     } else {
-      total = Math.round(unsecuredBudget * ratio);
+      total = Math.ceil(unsecuredBudget * ratio);
       allocatedUnsecured += total;
     }
-    const monthly = Math.round(total / repayMonths);
+    const monthly = Math.ceil(total / repayMonths);
     totalByCreditor.set(x.creditor.id, { monthly, total });
   });
 
@@ -359,7 +359,7 @@ export function computeTieredSegments(
       monthlyAmount: monthlyRepay,
       targets: taxClaims.map((c) => {
         const debt = creditorDebtFn(c);
-        const share = Math.round(monthlyRepay * (taxTotal > 0 ? debt / taxTotal : 0));
+        const share = Math.ceil(monthlyRepay * (taxTotal > 0 ? debt / taxTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
     });
@@ -372,12 +372,12 @@ export function computeTieredSegments(
     const mixedTargets = [
       ...taxClaims.map((c) => {
         const debt = creditorDebtFn(c);
-        const share = Math.round(taxRemainder * (taxTotal > 0 ? debt / taxTotal : 0));
+        const share = Math.ceil(taxRemainder * (taxTotal > 0 ? debt / taxTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
       ...others.map((c) => {
         const debt = creditorDebtFn(c);
-        const share = Math.round(unsecuredPortion * (othersTotal > 0 ? debt / othersTotal : 0));
+        const share = Math.ceil(unsecuredPortion * (othersTotal > 0 ? debt / othersTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
     ];
@@ -398,7 +398,7 @@ export function computeTieredSegments(
       monthlyAmount: monthlyRepay,
       targets: others.map((c) => {
         const debt = creditorDebtFn(c);
-        const share = Math.round(monthlyRepay * (othersTotal > 0 ? debt / othersTotal : 0));
+        const share = Math.ceil(monthlyRepay * (othersTotal > 0 ? debt / othersTotal : 0));
         return { creditorId: c.id, monthlyShare: share };
       }),
     });
