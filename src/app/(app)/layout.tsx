@@ -21,8 +21,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="vs-shell min-h-screen">
-      <div className="mx-auto grid min-h-screen max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
           <NavBadgesAsync
             memberships={auth.memberships}
             profile={auth.profile}
