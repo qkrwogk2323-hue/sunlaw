@@ -1109,18 +1109,17 @@ function generateCreditorList(data: DocumentData): string {
 
     creditorRows += `
       <tr>
-        <td rowspan="4" style="width: 5%; text-align: center; vertical-align: middle;">${esc(String(bondNumber))}</td>
-        <td rowspan="4" style="width: 10%; text-align: center; vertical-align: middle;">${esc(creditorName)}</td>
-        <td colspan="2" style="width: 30%;">${esc(causeDisplay)}${subrogationNote ? `<br/><span style="color: #666; font-size: 9pt;">${subrogationNote}</span>` : ''}</td>
-        <td rowspan="4" style="width: 20%; font-size: 9pt; vertical-align: top; padding: 6px;">${fullAddressHtml}</td>
-        <td rowspan="4" style="width: 15%; text-align: center; vertical-align: middle; font-size: 9pt;">${attachmentCheck} 부속서류${attachmentNums}</td>
+        <td rowspan="4" style="width: 6%; text-align: center; vertical-align: middle;">${esc(String(bondNumber))}</td>
+        <td rowspan="4" style="width: 12%; text-align: center; vertical-align: middle;">${esc(creditorName)}</td>
+        <td colspan="2" style="width: 50%;">${esc(causeDisplay)}${subrogationNote ? `<br/><span style="color: #666; font-size: 9pt;">${subrogationNote}</span>` : ''}</td>
+        <td rowspan="4" style="width: 32%; font-size: 9pt; vertical-align: top; padding: 6px;">${fullAddressHtml}</td>
       </tr>
       <tr>
         <td colspan="2" style="font-size: 9pt;">${bondContent}</td>
       </tr>
       <tr>
-        <td style="width: 15%; font-size: 9pt; padding: 4px 6px;">채권현재액(원금)<br/><span style="float: right; font-weight: bold;">${formatAmountNoUnit(capital)}원</span></td>
-        <td style="width: 15%; font-size: 9pt; padding: 4px 6px;">${esc(capitalCompute)}</td>
+        <td style="width: 25%; font-size: 9pt; padding: 4px 6px;">채권현재액(원금)<br/><span style="float: right; font-weight: bold;">${formatAmountNoUnit(capital)}원</span></td>
+        <td style="width: 25%; font-size: 9pt; padding: 4px 6px;">${esc(capitalCompute)}</td>
       </tr>
       <tr>
         <td style="font-size: 9pt; padding: 4px 6px;">채권현재액(이자)<br/><span style="float: right; font-weight: bold;">${formatAmountNoUnit(interest)}원</span></td>
@@ -1172,18 +1171,17 @@ function generateCreditorList(data: DocumentData): string {
 
     <table>
       <tr>
-        <th rowspan="4" style="width: 5%;">채권<br/>번호</th>
-        <th rowspan="4" style="width: 10%;">채권자</th>
-        <th colspan="2" style="width: 30%;">채권의 원인</th>
-        <th rowspan="4" style="width: 20%;">주소 및 연락처</th>
-        <th rowspan="4" style="width: 15%;">부속서류<br/>유무</th>
+        <th rowspan="4" style="width: 6%;">채권<br/>번호</th>
+        <th rowspan="4" style="width: 12%;">채권자</th>
+        <th colspan="2" style="width: 50%;">채권의 원인</th>
+        <th rowspan="4" style="width: 32%;">주소 및 연락처</th>
       </tr>
       <tr>
         <th colspan="2">채권의 내용</th>
       </tr>
       <tr>
-        <th style="width: 15%;">채권현재액(원금)</th>
-        <th style="width: 15%;">산정근거</th>
+        <th style="width: 25%;">채권현재액(원금)</th>
+        <th style="width: 25%;">산정근거</th>
       </tr>
       <tr>
         <th>채권현재액(이자)</th>
