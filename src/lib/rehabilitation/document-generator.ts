@@ -702,30 +702,71 @@ function generateProhibitionOrder(data: DocumentData): string {
       ${agentPhone ? `<p style="margin-left: 40px;">전화: ${esc(agentPhone)}${agentFax ? `, 팩스: ${esc(agentFax)}` : ''}</p>` : ''}
     </div>
 
+    ${(() => {
+      const incomeType = data.incomeSettings?.income_type || app.income_type || 'salary';
+      const isBusiness = incomeType === 'business';
+      const caseDisplay = courtName && caseNumber ? `${esc(courtName)} ${esc(caseNumber)}` : '';
+
+      if (isBusiness) {
+        // ─── 영업소득자 ───
+        return `
     <div class="section">
       <h3 style="text-align: center;">신 청 취 지</h3>
       <div class="info-box">
-        <p>"신청인에 대한 개인회생절차 개시결정 전까지, 신청인의 재산 및 이에 대한 강제집행·가압류·가처분(이하 '강제집행 등'이라 한다)을 금지한다."</p>
-        <p>라는 결정을 구합니다.</p>
+        <p>신청인(채무자)에 대한 이 법원 ${caseDisplay} 개인회생절차의 개시신청에 대한 결정이 있을 때까지 다음의 각 절차 또는 행위를 금지한다.</p>
+        <p style="margin-top: 8px;">1. 개인회생채권에 기하여 채무자 소유의 유체동산(영업장 임차보증금반환채권, 영업을 통하여 얻는 채권, 예금채권 등 포함)에 대하여 하는 강제집행·가압류 또는 가처분.</p>
+        <p>2. 개인회생채권을 변제받거나 변제를 요구하는 일체의 행위. 다만, 소송행위를 제외한다.</p>
+        <p style="margin-top: 8px;">라는 결정을 구합니다.</p>
       </div>
     </div>
 
     <div class="section">
-      <h3 style="text-align: center;">신 청 이 유</h3>
+      <h3 style="text-align: center;">신 청 원 인</h3>
 
-      <p><strong>1. 개인회생절차 개시신청</strong></p>
-      <p style="text-indent: 20px;">신청인은 ${formatDate(app.application_date) || formatDate(new Date())} ${esc(courtName)}에 개인회생절차 개시를 신청하였습니다.</p>
+      <p>1. 신청인(채무자)은 현재 과다한 채무로 인하여 정상적인 변제가 곤란하여 귀원에 개인회생절차개시를 신청하였습니다. 신청인의 수입원은 영업을 통하여 발생하는 소득(매출)이며, 이는 변제계획 수행과 생계유지를 위한 사실상 유일한 재원입니다.</p>
 
-      <p style="margin-top: 15px;"><strong>2. 금지명령의 필요성</strong></p>
-      <p style="text-indent: 20px;">신청인의 총 채무액은 ${formatAmount(totalDebt)}이며, 채권자는 총 ${creditors.length}명(개)입니다. 개인회생절차 개시결정 전에 채권자들의 강제집행 등이 이루어질 경우, 신청인의 재산이 산일되어 변제계획의 수행이 불가능해질 우려가 있습니다.</p>
-      <p style="text-indent: 20px;">따라서 채무자 회생 및 파산에 관한 법률 제593조 제1항에 의하여, 개인회생절차 개시결정 시까지 신청인의 재산에 대한 강제집행 등을 금지하여 주시기 바랍니다.</p>
+      <p style="margin-top: 10px;">2. 그런데 개인회생채권자들에 의하여 신청인의 영업 관련 재산 및 수입원에 대한 강제집행·가압류 또는 이에 준하는 추심절차가 이미 진행 중이거나 가까운 시일 내 개시될 우려가 있습니다. 구체적으로 영업장 내 유체동산, 영업 관련 예금채권(매출대금 입금계좌), 영업을 통하여 얻는 채권(매출채권), 영업장 임차보증금반환채권 등이 집행 또는 보전처분의 대상이 될 수 있습니다.</p>
 
-      <p style="margin-top: 15px;"><strong>3. 소명방법</strong></p>
+      <p style="margin-top: 10px;">3. 이러한 개별적 권리행사가 계속될 경우 영업자금이 동결·유출되어 영업의 계속이 곤란해지고, 그 결과 신청인의 소득이 급감하여 변제계획의 수행 가능성이 현저히 저하될 우려가 큽니다. 또한 일부 채권자에게만 변제가 편중되어 채권자 간 형평을 해하게 될 우려도 있습니다.</p>
+
+      <p style="margin-top: 10px;">4. 따라서 개인회생절차개시 여부에 관한 결정이 있을 때까지, 개인회생채권에 기한 신청인 소유 유체동산(영업장 임차보증금반환채권, 영업을 통하여 얻는 채권, 예금채권 등 포함)에 대한 강제집행·가압류·가처분과, 개인회생채권을 변제받거나 변제를 요구하는 일체의 행위를 금지할 필요가 있어 이 신청에 이르렀습니다.</p>
+
+      <p style="margin-top: 15px;"><strong>소명방법</strong></p>
       <p style="text-indent: 20px;">1. 개인회생 개시신청서 사본</p>
       <p style="text-indent: 20px;">2. 채권자목록</p>
       <p style="text-indent: 20px;">3. 재산목록</p>
       <p style="text-indent: 20px;">4. 수입 및 지출에 관한 목록</p>
+    </div>`;
+      }
+
+      // ─── 급여소득자 (기본) ───
+      return `
+    <div class="section">
+      <h3 style="text-align: center;">신 청 취 지</h3>
+      <div class="info-box">
+        <p>신청인(채무자)에 대한 이 법원 ${caseDisplay} 개인회생 사건에 관하여 개인회생절차의 개시결정에 대한 결정이 있을 때까지 다음의 각 절차 또는 행위를 금지한다.</p>
+        <p style="margin-top: 8px;">1. 개인회생채권에 기하여 채무자 소유의 유체동산과 채무자가 사용자로부터 매월 지급받을 급료, 제수당, 상여금 기타 명목의 급여 및 퇴직금에 대하여 하는 강제집행·가압류 또는 가처분.</p>
+        <p>2. 개인회생채권을 변제받거나 변제를 요구하는 일체의 행위. 다만, 소송행위를 제외한다.</p>
+        <p style="margin-top: 8px;">라는 결정을 구합니다.</p>
+      </div>
     </div>
+
+    <div class="section">
+      <h3 style="text-align: center;">신 청 원 인</h3>
+
+      <p>1. 신청인(채무자)은 현재 과다한 채무로 인하여 정상적인 변제가 곤란하여 귀원에 개인회생절차개시를 신청하였습니다. 신청인의 수입원은 근로소득(급여)이며, 이는 변제계획 수행과 생계유지를 위한 사실상 유일한 재원입니다.</p>
+
+      <p style="margin-top: 10px;">2. 그런데 개인회생채권자들에 의한 신청인의 급여채권에 대한 강제집행·가압류 또는 이에 준하는 추심절차가 이미 진행 중이거나 가까운 시일 내 개시될 우려가 있습니다. 이러한 개별적 권리행사가 계속될 경우 일부 채권자에게 변제가 편중되어 채권자 간 형평이 해쳐지고, 신청인의 생계 및 변제계획 수행에도 중대한 지장이 초래될 우려가 큽니다.</p>
+
+      <p style="margin-top: 10px;">3. 따라서 개인회생절차개시 여부에 관한 결정이 있을 때까지, 개인회생채권에 기하여 신청인의 유체동산 및 매월 지급받을 급료, 제수당, 상여금 기타 명목의 급여, 퇴직금 등에 대한 강제집행·가압류·가처분 및 개인회생채권의 변제요구 등 일체의 개별적 권리행위를 금지할 필요가 있어 이 신청에 이르렀습니다.</p>
+
+      <p style="margin-top: 15px;"><strong>소명방법</strong></p>
+      <p style="text-indent: 20px;">1. 개인회생 개시신청서 사본</p>
+      <p style="text-indent: 20px;">2. 채권자목록</p>
+      <p style="text-indent: 20px;">3. 재산목록</p>
+      <p style="text-indent: 20px;">4. 수입 및 지출에 관한 목록</p>
+    </div>`;
+    })()}
 
     <div class="signature-area">
       <p>${formatDate(new Date())}</p>
