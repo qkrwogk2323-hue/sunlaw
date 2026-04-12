@@ -13,6 +13,7 @@ import {
   calculateMonthlyAvailable,
   determineFormType,
   calculateDisposalAmount,
+  validateSecuredVsProperties,
   formatMoney,
 } from '@/lib/rehabilitation';
 import type {
@@ -168,6 +169,12 @@ export function RehabPlanTab({
     [securedProperties, creditors],
   );
 
+  // 별제권↔재산목록 크로스 검증
+  const securedPropertyWarnings = useMemo(
+    () => validateSecuredVsProperties(securedProperties, propertyItems),
+    [securedProperties, propertyItems],
+  );
+
   // 소득 데이터 — DB 컬럼명 매핑 (median_income_year, net_salary)
   // dependentCount = 부양가족 수 (본인 제외). getLivingCost 내부에서 1+dependents로 가구수 계산
   const dependentCount = familyMembers.filter((m) => m.is_dependent).length;
@@ -181,6 +188,7 @@ export function RehabPlanTab({
   const childSupport = (incomeSettings?.child_support as number) || 0;
   const trusteeCommRate = (incomeSettings?.trustee_comm_rate as number) || 0;
   const disposeAmount = (incomeSettings?.dispose_amount as number) || 0;
+  const disposePeriod: 1 | 2 = (Number(incomeSettings?.dispose_period) || 1) <= 1 ? 1 : 2;
 
   // 변제계획 계산
   const repaymentResult = useMemo(() => {
@@ -246,7 +254,7 @@ export function RehabPlanTab({
       const disposal = calculateDisposalAmount(
         liquidationValue,
         repaymentResult.presentValue ?? 0,
-        1,
+        disposePeriod,
         trusteeCommRate > 0,
       );
       section5 = `변제자금은 신청인의 ${incomeTypeLabel}소득 및 재산처분에 의하여 조달한다.\n가용소득에 의한 변제: 매월 ${formatMoney(repaymentResult.monthlyRepay)}원\n재산처분 변제투입예정액: ${formatMoney(disposal)}원`;
@@ -287,7 +295,7 @@ export function RehabPlanTab({
       prev.map((existing, i) => existing.trim() ? existing : defaults[i]),
     );
     success('자동채움 완료', { message: '빈 항목만 자동 입력되었습니다.' });
-  }, [repaymentResult, incomeSettings, disposeAmount, liquidationValue, trusteeCommRate, propertyItems, success]);
+  }, [repaymentResult, incomeSettings, disposeAmount, disposePeriod, liquidationValue, trusteeCommRate, propertyItems, success]);
 
   // 변제계획안 10항 저장
   const handleSaveSections = useCallback(async () => {
@@ -635,6 +643,17 @@ export function RehabPlanTab({
         </div>
       </section>
 
+      {/* 별제권↔재산목록 크로스 검증 경고 */}
+      {securedPropertyWarnings.length > 0 && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" role="alert">
+          {securedPropertyWarnings.map((w) => (
+            <p key={w.securedPropertyId} className="mb-1 last:mb-0">
+              {w.message}
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* 계산 결과 요약 */}
       {repaymentResult && (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -661,8 +680,9 @@ export function RehabPlanTab({
                 <strong>D5111 (재산처분 필요):</strong> 가용소득 총변제의 현재가치({formatMoney(repaymentResult.presentValue ?? 0)}원)가
                 청산가치({formatMoney(liquidationValue)}원) 이하입니다.
                 {(() => {
-                  const disposal = calculateDisposalAmount(liquidationValue, repaymentResult.presentValue ?? 0, 1, trusteeCommRate > 0);
-                  return disposal > 0 ? ` 변제투입예정액: ${formatMoney(disposal)}원 (1년이내, 승수 1.3)` : '';
+                  const disposal = calculateDisposalAmount(liquidationValue, repaymentResult.presentValue ?? 0, disposePeriod, trusteeCommRate > 0);
+                  const multiplierLabel = disposePeriod <= 1 ? '1년이내, 승수 1.3' : '2년이내, 승수 1.5';
+                  return disposal > 0 ? ` 변제투입예정액: ${formatMoney(disposal)}원 (${multiplierLabel})` : '';
                 })()}
               </div>
             ) : (

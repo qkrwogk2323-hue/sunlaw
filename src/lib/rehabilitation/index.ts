@@ -29,7 +29,8 @@ export type { MonthlyAvailableInput, MonthlyAvailableResult } from './monthly-av
 export { calculateSecuredAllocations, getSecuredAllocationTotals, getLiquidationValue, getDefaultValuationRate } from './secured-allocation';
 
 // 재산 청산가치
-export { PROPERTY_CATEGORIES, getCategoryDef, calculateCategorySubtotal, calculateLiquidationValue } from './property-valuation';
+export { PROPERTY_CATEGORIES, getCategoryDef, calculateCategorySubtotal, calculateLiquidationValue, validateSecuredVsProperties } from './property-valuation';
+export type { SecuredPropertyWarning } from './property-valuation';
 
 // 변제계획 계산
 export { calculateRepayment, calculateMonthlyAvailable, getDebtSummary, checkEligibility, resetRepayPeriod, determineFormType, calculateDisposalAmount, allocateDisposalToCreditors, SECURED_LIMIT, UNSECURED_LIMIT } from './repayment-calculator';

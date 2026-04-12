@@ -1533,7 +1533,7 @@ function generateRepaymentPlan(data: DocumentData): string {
     const creditorName = cred.creditor_name || '';
     const principalAmount = Number(cred.capital) || 0;
     const ratio = totalDebt > 0 ? principalAmount / totalDebt : 0;
-    const monthlyPayment = Math.floor(availableIncome * ratio);
+    const monthlyPayment = Math.ceil(availableIncome * ratio);
     const totalPayment = monthlyPayment * planDurationMonths;
 
     creditorTableRows += `

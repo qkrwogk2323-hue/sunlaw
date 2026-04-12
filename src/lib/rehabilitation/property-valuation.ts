@@ -8,7 +8,7 @@
  * - 면제재산: 청산가치에 포함하지 않음
  */
 
-import type { PropertyCategoryDef, PropertyCategoryId, RehabPropertyItem } from './types';
+import type { PropertyCategoryDef, PropertyCategoryId, RehabPropertyItem, RehabSecuredProperty } from './types';
 
 /** 재산 카테고리 정의 (14개) */
 export const PROPERTY_CATEGORIES: PropertyCategoryDef[] = [
@@ -106,4 +106,65 @@ export function calculateLiquidationValue(
   }
 
   return { total, byCategory };
+}
+
+/**
+ * 별제권 담보물건 ↔ 재산목록 간 대응 항목이 없는 담보물건을 찾습니다.
+ *
+ * securedProperties의 propertyType을 재산목록 category와 대조하여
+ * 재산목록에 대응하는 카테고리 항목이 없는 경우 경고 대상으로 반환합니다.
+ */
+const SECURED_TO_PROPERTY_CATEGORY: Record<string, string[]> = {
+  부동산: ['realestate'],
+  자동차: ['car'],
+  임차보증금: ['lease'],
+  예금: ['deposit'],
+  보험: ['insurance'],
+  설비: ['equipment'],
+  채권: ['loan', 'sales'],
+};
+
+export interface SecuredPropertyWarning {
+  securedPropertyId: string;
+  propertyType: string;
+  description: string;
+  message: string;
+}
+
+export function validateSecuredVsProperties(
+  securedProperties: RehabSecuredProperty[],
+  propertyItems: RehabPropertyItem[],
+): SecuredPropertyWarning[] {
+  const warnings: SecuredPropertyWarning[] = [];
+  const propertyCategorySet = new Set(propertyItems.map(p => p.category));
+
+  for (const sp of securedProperties) {
+    const type = sp.propertyType.trim();
+    if (!type) continue;
+
+    const matchCategories = SECURED_TO_PROPERTY_CATEGORY[type];
+    if (matchCategories) {
+      const hasMatch = matchCategories.some(cat => propertyCategorySet.has(cat));
+      if (!hasMatch) {
+        warnings.push({
+          securedPropertyId: sp.id,
+          propertyType: type,
+          description: sp.description,
+          message: `별제권 담보물건 '${type} ${sp.description}'이(가) 재산목록에 등록되지 않았습니다. 법원 제출 시 재산목록↔채권자목록 간 모순이 발생할 수 있습니다.`,
+        });
+      }
+    } else {
+      // 매핑에 없는 유형 — 재산목록 전체에서 유사 항목 존재 여부 체크
+      if (propertyItems.length === 0) {
+        warnings.push({
+          securedPropertyId: sp.id,
+          propertyType: type,
+          description: sp.description,
+          message: `별제권 담보물건 '${type} ${sp.description}'이(가) 재산목록에 등록되지 않았습니다. 법원 제출 시 재산목록↔채권자목록 간 모순이 발생할 수 있습니다.`,
+        });
+      }
+    }
+  }
+
+  return warnings;
 }
