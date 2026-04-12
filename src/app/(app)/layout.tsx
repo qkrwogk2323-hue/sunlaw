@@ -6,7 +6,6 @@ import { BrandBanner } from '@/components/brand-banner';
 import { PageBackButton } from '@/components/page-back-button';
 import { EndSupportSessionForm } from '@/components/end-support-session-form';
 import { GlobalCommandPalette } from '@/components/global-command-palette';
-import { FloatingExportWidget } from '@/components/floating-export-widget';
 import { enforceAppEntryPolicy } from '@/lib/app-entry-policy';
 
 // auth/subscription은 쿠키 기반이므로 force-dynamic 불필요.
@@ -55,7 +54,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           ) : null}
           {children}
-          <FloatingExportWidget />
           <GlobalCommandPalette />
         </main>
       </div>
