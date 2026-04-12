@@ -147,6 +147,24 @@ export function RehabCreditorsTab({
     initialCreditors.map((c) => initCreditor(c)),
   );
 
+  // 보증인 검증: guarantor_name이 있는데 가지번호 자식이 없는 채권자 경고
+  const guarantorWarnings = useMemo(() => {
+    const warns: { bondNumber: number; creditorName: string; guarantorName: string; guarantorAmount: number }[] = [];
+    for (const c of creditors) {
+      if (!c.guarantor_name) continue;
+      const hasChild = creditors.some((ch) => ch.parent_creditor_id === c.id);
+      if (!hasChild) {
+        warns.push({
+          bondNumber: c.bond_number,
+          creditorName: c.creditor_name,
+          guarantorName: c.guarantor_name,
+          guarantorAmount: c.guarantor_amount,
+        });
+      }
+    }
+    return warns;
+  }, [creditors]);
+
   // 검색
   const searchResults = useMemo(() => {
     if (!searchKeyword.trim()) return [];
@@ -372,6 +390,22 @@ export function RehabCreditorsTab({
       {totals.unsecuredDebt >= 1_000_000_000 && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
           무담보부채무가 10억원 이상입니다. 개인회생 신청 대상이 아닐 수 있습니다.
+        </div>
+      )}
+
+      {/* 보증인 검증 경고 */}
+      {guarantorWarnings.length > 0 && (
+        <div className="rounded-md border border-purple-300 bg-purple-50 p-3 text-sm text-purple-800" role="alert">
+          <p className="mb-1 font-medium">보증인이 등록된 채권자에 가지번호 채권자가 없습니다</p>
+          {guarantorWarnings.map((w) => (
+            <p key={w.bondNumber} className="ml-2 text-xs">
+              {w.creditorName}({w.bondNumber}번) — 보증인: {w.guarantorName}
+              {w.guarantorAmount > 0
+                ? ` (대위변제 ${formatMoney(w.guarantorAmount)}원 → 가지번호 채권자 추가 필요)`
+                : ' (장래구상권 → 미확정채권 가지번호 추가 필요)'}
+            </p>
+          ))}
+          <p className="mt-1 text-xs text-purple-600">채무 유형을 &apos;보증채무&apos;로 설정하고 주채무자를 연결해 주세요.</p>
         </div>
       )}
 

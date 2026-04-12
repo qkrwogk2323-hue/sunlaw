@@ -153,6 +153,25 @@ function generatePrioritySchedule(
 }
 
 /**
+ * 채권자의 유효 채권액 (대위변제 중복 방지)
+ *
+ * CLAUDE.md: "주채무-보증채무 간 변제 중복 방지 — 보증채무의 안분 기준액은
+ * 주채무에서 이미 배분된 금액을 제외해야 한다"
+ *
+ * - 일부대위변제: 원채권자 원금 = 원금 - guarantorAmount
+ * - 전액대위변제: 원채권자 원금 = 0 (이자만 남음)
+ * - 보증채무(가지번호): guarantorAmount가 이 채권자의 구상채권액
+ */
+function getEffectiveDebt(c: RehabCreditor, capitalOnly: boolean): number {
+  const gAmount = c.guarantorAmount || 0;
+  // 주채무자이고 대위변제가 있으면 원금 차감
+  const effectiveCapital = gAmount > 0 && (c.bondType === '주채무' || !c.bondType)
+    ? Math.max(0, (c.capital || 0) - gAmount)
+    : (c.capital || 0);
+  return effectiveCapital + (capitalOnly ? 0 : (c.interest || 0));
+}
+
+/**
  * 일반 pro-rata 배분 (우선변제 없는 경우)
  */
 function generateProRataSchedule(
@@ -164,7 +183,7 @@ function generateProRataSchedule(
   capitalOnly: boolean,
 ): CreditorRepaySchedule[] {
   const totalDebt = creditors.reduce(
-    (s, c) => s + (c.capital || 0) + (capitalOnly ? 0 : (c.interest || 0)),
+    (s, c) => s + getEffectiveDebt(c, capitalOnly),
     0,
   );
   const totalRepayTarget = monthlyRepay * repayMonths + disposeAmount;
@@ -174,7 +193,7 @@ function generateProRataSchedule(
   let totalAllocated = 0;
 
   return creditors.map((creditor, idx) => {
-    const creditorDebt = (creditor.capital || 0) + (capitalOnly ? 0 : (creditor.interest || 0));
+    const creditorDebt = getEffectiveDebt(creditor, capitalOnly);
     const ratio = totalDebt > 0 ? creditorDebt / totalDebt : 0;
 
     let monthly: number;

@@ -1070,6 +1070,15 @@ function generateCreditorList(data: DocumentData): string {
     const capital = cred.capital || 0;
     const interest = cred.interest || 0;
     const totalClaim = capital + interest;
+    const guarantorAmount = cred.guarantor_amount || 0;
+    const guarantorName = cred.guarantor_name || '';
+    // 대위변제 비고 표시
+    const isMainDebtor = !cred.bond_type || cred.bond_type === '주채무';
+    const subrogationNote = isMainDebtor && guarantorAmount > 0
+      ? (guarantorAmount >= capital
+        ? `(전액대위변제: ${esc(guarantorName)}, 원금 0, 이자만 잔존)`
+        : `(일부대위변제: ${esc(guarantorName)} ${formatAmountNoUnit(guarantorAmount)}원)`)
+      : '';
     const capitalCompute = cred.capital_compute || `부채증명서 참조(산정기준일：${formatDate(assessmentDate)})`;
     const interestCompute = cred.interest_compute || `부채증명서 참조(산정기준일：${formatDate(assessmentDate)})`;
     const attachments: number[] = cred.attachments || [];
@@ -1102,7 +1111,7 @@ function generateCreditorList(data: DocumentData): string {
       <tr>
         <td rowspan="4" style="width: 5%; text-align: center; vertical-align: middle;">${esc(String(bondNumber))}</td>
         <td rowspan="4" style="width: 10%; text-align: center; vertical-align: middle;">${esc(creditorName)}</td>
-        <td colspan="2" style="width: 30%;">${esc(causeDisplay)}</td>
+        <td colspan="2" style="width: 30%;">${esc(causeDisplay)}${subrogationNote ? `<br/><span style="color: #666; font-size: 9pt;">${subrogationNote}</span>` : ''}</td>
         <td rowspan="4" style="width: 20%; font-size: 9pt; vertical-align: top; padding: 6px;">${fullAddressHtml}</td>
         <td rowspan="4" style="width: 15%; text-align: center; vertical-align: middle; font-size: 9pt;">${attachmentCheck} 부속서류${attachmentNums}</td>
       </tr>
