@@ -147,33 +147,7 @@ export function RehabCreditorsTab({
     const list = initialCreditors.map((c) => initCreditor(c));
     const warnings: string[] = [];
 
-    // 1단계: guarantor_name이 있는 주채무자의 보증인이 목록에 있으면 자동 연결
-    for (const parent of list) {
-      if (!parent.guarantor_name || parent.bond_type !== '주채무') continue;
-      const gName = parent.guarantor_name.trim();
-
-      // 보증인 이름이 다른 채권자명에 포함되는지 찾기
-      const child = list.find((c) =>
-        c.id !== parent.id &&
-        c.bond_type === '주채무' &&
-        !c.parent_creditor_id &&
-        (c.creditor_name.includes(gName) || c.creditor_name.includes('대위변제'))
-      );
-
-      if (child) {
-        child.bond_type = '보증채무';
-        child.parent_creditor_id = parent.id;
-        child.sub_number = 1;
-        // 보증채무 + 미변제 → 미확정 자동 설정
-        if (child.guarantor_amount === 0 && !child.is_unsettled) {
-          child.is_unsettled = true;
-        }
-      } else if (gName) {
-        warnings.push(`${parent.creditor_name}(${parent.bond_number}번)의 보증인 '${gName}'에 대응하는 채권자가 목록에 없습니다. 보증채무 채권자를 추가하거나 보증인 정보를 확인해 주세요.`);
-      }
-    }
-
-    // 2단계: 채권자명에 "대위변제"가 포함된 미연결 채권자 감지
+    // 1단계: 채권자명에 "(XXX 대위변제)" 패턴이 있으면 XXX를 주채무자로 자동 연결
     for (const c of list) {
       if (c.parent_creditor_id || c.bond_type !== '주채무') continue;
       const match = c.creditor_name.match(/\((.+?)\s*대위변제\)/);
@@ -189,8 +163,42 @@ export function RehabCreditorsTab({
         c.parent_creditor_id = parent.id;
         const siblings = list.filter((s) => s.parent_creditor_id === parent.id && s.id !== c.id);
         c.sub_number = siblings.length + 1;
+        if (c.guarantor_amount === 0 && !c.is_unsettled) {
+          c.is_unsettled = true;
+        }
       } else {
         warnings.push(`${c.creditor_name}(${c.bond_number}번)의 주채무자 '${parentName}'을(를) 채권자 목록에서 찾을 수 없습니다. 주채무자를 직접 연결해 주세요.`);
+      }
+    }
+
+    // 2단계: guarantor_name이 있는데 대위변제 패턴으로 연결 안 된 경우 — 이름 정확 매칭
+    for (const parent of list) {
+      if (!parent.guarantor_name || parent.bond_type !== '주채무') continue;
+      const gName = parent.guarantor_name.trim();
+      if (!gName) continue;
+
+      // 이미 이 parent에 연결된 자식이 있으면 스킵
+      const alreadyLinked = list.some((c) => c.parent_creditor_id === parent.id);
+      if (alreadyLinked) continue;
+
+      // 보증인 이름으로 시작하는 채권자 찾기 (대위변제 패턴 제외 — 1단계에서 이미 처리)
+      const child = list.find((c) =>
+        c.id !== parent.id &&
+        c.bond_type === '주채무' &&
+        !c.parent_creditor_id &&
+        !c.creditor_name.includes('대위변제') &&
+        c.creditor_name.startsWith(gName)
+      );
+
+      if (child) {
+        child.bond_type = '보증채무';
+        child.parent_creditor_id = parent.id;
+        child.sub_number = 1;
+        if (child.guarantor_amount === 0 && !child.is_unsettled) {
+          child.is_unsettled = true;
+        }
+      } else {
+        warnings.push(`${parent.creditor_name}(${parent.bond_number}번)의 보증인 '${gName}'에 대응하는 채권자가 목록에 없습니다. 보증채무 채권자를 추가하거나 보증인 정보를 확인해 주세요.`);
       }
     }
 
