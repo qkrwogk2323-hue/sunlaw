@@ -142,77 +142,10 @@ export function RehabCreditorsTab({
   // 별제권 담보물건
   const [securedProperties] = useState(initialSecuredProperties);
 
-  // 채권자 목록 — 로드 시 보증 관계 자동 보정
-  const [creditors, setCreditors] = useState<CreditorForm[]>(() => {
-    const list = initialCreditors.map((c) => initCreditor(c));
-    const warnings: string[] = [];
-
-    // 1단계: 채권자명에 "(XXX 대위변제)" 패턴이 있으면 XXX를 주채무자로 자동 연결
-    for (const c of list) {
-      if (c.parent_creditor_id || c.bond_type !== '주채무') continue;
-      const match = c.creditor_name.match(/\((.+?)\s*대위변제\)/);
-      if (!match) continue;
-      const parentName = match[1].trim();
-      const parent = list.find((p) =>
-        p.id !== c.id &&
-        p.creditor_name.includes(parentName) &&
-        !p.creditor_name.includes('대위변제')
-      );
-      if (parent) {
-        c.bond_type = '보증채무';
-        c.parent_creditor_id = parent.id;
-        const siblings = list.filter((s) => s.parent_creditor_id === parent.id && s.id !== c.id);
-        c.sub_number = siblings.length + 1;
-        if (c.guarantor_amount === 0 && !c.is_unsettled) {
-          c.is_unsettled = true;
-        }
-      } else {
-        warnings.push(`${c.creditor_name}(${c.bond_number}번)의 주채무자 '${parentName}'을(를) 채권자 목록에서 찾을 수 없습니다. 주채무자를 직접 연결해 주세요.`);
-      }
-    }
-
-    // 2단계: guarantor_name이 있는데 대위변제 패턴으로 연결 안 된 경우 — 이름 정확 매칭
-    for (const parent of list) {
-      if (!parent.guarantor_name || parent.bond_type !== '주채무') continue;
-      const gName = parent.guarantor_name.trim();
-      if (!gName) continue;
-
-      // 이미 이 parent에 연결된 자식이 있으면 스킵
-      const alreadyLinked = list.some((c) => c.parent_creditor_id === parent.id);
-      if (alreadyLinked) continue;
-
-      // 보증인 이름으로 시작하는 채권자 찾기 (대위변제 패턴 제외 — 1단계에서 이미 처리)
-      const child = list.find((c) =>
-        c.id !== parent.id &&
-        c.bond_type === '주채무' &&
-        !c.parent_creditor_id &&
-        !c.creditor_name.includes('대위변제') &&
-        c.creditor_name.startsWith(gName)
-      );
-
-      if (child) {
-        child.bond_type = '보증채무';
-        child.parent_creditor_id = parent.id;
-        child.sub_number = 1;
-        if (child.guarantor_amount === 0 && !child.is_unsettled) {
-          child.is_unsettled = true;
-        }
-      } else {
-        warnings.push(`${parent.creditor_name}(${parent.bond_number}번)의 보증인 '${gName}'에 대응하는 채권자가 목록에 없습니다. 보증채무 채권자를 추가하거나 보증인 정보를 확인해 주세요.`);
-      }
-    }
-
-    // 경고는 setTimeout으로 렌더 후 표시 (useState 초기화 중에는 toast 불가)
-    if (warnings.length > 0) {
-      setTimeout(() => {
-        for (const w of warnings) {
-          error('보증 관계 확인 필요', { message: w });
-        }
-      }, 500);
-    }
-
-    return list;
-  });
+  // 채권자 목록
+  const [creditors, setCreditors] = useState<CreditorForm[]>(
+    initialCreditors.map((c) => initCreditor(c)),
+  );
 
   // 검색
   const searchResults = useMemo(() => {
