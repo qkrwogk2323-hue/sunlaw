@@ -390,6 +390,7 @@ export function RehabPlanTab({
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-slate-500"><span className="text-red-500">*</span> 필수 입력 항목입니다</p>
       {/* D5112 간이양식 / 정식양식 토글 */}
       <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
         <span className="text-sm font-medium text-slate-700">변제계획안 양식</span>

@@ -441,6 +441,33 @@ export async function softDeleteRehabFamilyMember(
   }
 }
 
+export async function restoreRehabFamilyMember(
+  memberId: string,
+  caseId: string,
+  organizationId: string,
+) {
+  try {
+    const auth = await requireAuthenticatedUser();
+    const membership = findMembership(auth, organizationId);
+    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+      .from('rehabilitation_family_members')
+      .update({ lifecycle_status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', memberId)
+      .eq('case_id', caseId);
+
+    if (error) return { ok: false, code: 'DB_ERROR', userMessage: '가족 정보 복구에 실패했습니다.' };
+
+    revalidatePath(`/cases/${caseId}/rehabilitation`);
+    return { ok: true };
+  } catch (e) {
+    console.error('[restoreRehabFamilyMember]', e);
+    return { ok: false, code: 'UNEXPECTED', userMessage: '가족 정보 복구 중 오류가 발생했습니다.' };
+  }
+}
+
 // ─── 소득 설정 ───
 
 /** 폼 → DB 필드 매핑 (소득 설정) */

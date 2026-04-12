@@ -574,6 +574,7 @@ export function RehabDocumentsTab({
                       value={prohibition.agent_fax}
                       onChange={(e) => updateProhibition('agent_fax', e.target.value)}
                       className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="02-000-0000"
                     />
                   </div>
                   <div className="space-y-1 md:col-span-2">

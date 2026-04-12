@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
-import { upsertRehabApplication, upsertRehabFamilyMember, softDeleteRehabFamilyMember } from '@/lib/actions/rehabilitation-actions';
+import { upsertRehabApplication, upsertRehabFamilyMember, softDeleteRehabFamilyMember, restoreRehabFamilyMember } from '@/lib/actions/rehabilitation-actions';
 import { validateResidentFront, validateResidentBack, formatPhoneNumber } from '@/lib/rehabilitation';
 import { Plus, Trash2, Save, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -98,7 +98,7 @@ export function RehabApplicantTab({
   application,
   familyMembers: initialFamilyMembers,
 }: RehabApplicantTabProps) {
-  const { success, error } = useToast();
+  const { success, error, undo: undoToast } = useToast();
   const [saving, setSaving] = useState(false);
   const [showAgent, setShowAgent] = useState(
     !!(application?.agent_name || application?.agent_type),
@@ -258,11 +258,22 @@ export function RehabApplicantTab({
           error('삭제 실패', { message: '가족 구성원 삭제 중 문제가 발생했습니다.' });
           return;
         }
+        const deletedMember = { ...member };
+        setFamilyMembers((prev) => prev.filter((_, i) => i !== index));
+        undoToast('가족 구성원이 삭제되었습니다', async () => {
+          const restoreResult = await restoreRehabFamilyMember(deletedMember.id, caseId, organizationId);
+          if (restoreResult.ok) {
+            setFamilyMembers((prev) => [...prev, deletedMember]);
+          } else {
+            error('복구 실패', { message: '가족 구성원 복구에 실패했습니다.' });
+          }
+        }, { message: '8초 내 취소 가능' });
+      } else {
+        setFamilyMembers((prev) => prev.filter((_, i) => i !== index));
       }
-      setFamilyMembers((prev) => prev.filter((_, i) => i !== index));
       setFamilyDeleteConfirm(null);
     },
-    [familyMembers, caseId, organizationId, error],
+    [familyMembers, caseId, organizationId, error, undoToast],
   );
 
   const requestDeleteFamily = useCallback((index: number) => {
@@ -383,6 +394,8 @@ export function RehabApplicantTab({
                 id="resident_back"
                 type="password"
                 maxLength={7}
+                required
+                aria-required="true"
                 value={form.resident_back}
                 onChange={(e) => updateField('resident_back', e.target.value.replace(/[^0-9]/g, ''))}
                 className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

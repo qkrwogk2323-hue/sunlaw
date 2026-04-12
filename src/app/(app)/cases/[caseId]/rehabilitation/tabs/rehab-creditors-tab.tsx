@@ -592,6 +592,7 @@ export function RehabCreditorsTab({
                           value={c.phone}
                           onChange={(e) => updateCreditor(idx, 'phone', e.target.value)}
                           className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                          placeholder="010-1234-5678"
                         />
                       </div>
                       <div className="space-y-1">
@@ -602,6 +603,7 @@ export function RehabCreditorsTab({
                           value={c.fax}
                           onChange={(e) => updateCreditor(idx, 'fax', e.target.value)}
                           className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                          placeholder="02-000-0000"
                         />
                       </div>
                       <div className="space-y-1">
@@ -612,6 +614,7 @@ export function RehabCreditorsTab({
                           value={c.mobile}
                           onChange={(e) => updateCreditor(idx, 'mobile', e.target.value)}
                           className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                          placeholder="010-1234-5678"
                         />
                       </div>
                       <div className="space-y-1">
@@ -977,11 +980,13 @@ export function RehabCreditorsTab({
 
       {/* D5106 채권자목록 출력 뷰 */}
       {creditors.length > 0 && (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="mb-3 flex items-center gap-2">
+        <details className="rounded-lg border border-slate-200 bg-white">
+          <summary className="cursor-pointer p-4 flex items-center gap-2 select-none list-none [&::-webkit-details-marker]:hidden">
             <FileText className="h-5 w-5 text-slate-500" />
             <h2 className="text-base font-semibold text-slate-800">D5106 채권자목록 출력 미리보기</h2>
-          </div>
+            <ChevronDown className="ml-auto h-4 w-4 text-slate-400 transition-transform [[open]>&]:rotate-180" />
+          </summary>
+          <div className="px-4 pb-4">
           <p className="mb-4 text-xs text-slate-500">
             법원 제출용 채권자목록(D5106) 서식에 맞춘 출력 미리보기입니다. 저장 후 문서 탭에서 다운로드할 수 있습니다.
           </p>
@@ -1114,7 +1119,8 @@ export function RehabCreditorsTab({
               </div>
             </div>
           )}
-        </section>
+          </div>
+        </details>
       )}
 
       {/* 저장 + CSV 다운로드 */}
