@@ -6,34 +6,34 @@ import {
 } from '@/lib/rehabilitation/median-income';
 
 describe('생계비 자동 조정 (P1-1)', () => {
-  it('2026 1인 가구 = 1,538,542원 (floor)', () => {
-    expect(minimumLivingCost(1, 2026)).toBe(1_538_542);
+  // rate=60이고 1~7인이면 보건복지부 공표 고정값 사용
+  it('2026 1인 가구 = 1,538,543원 (공표값)', () => {
+    expect(minimumLivingCost(1, 2026)).toBe(1_538_543);
   });
 
-  it('2026 3인 가구 = 3,215,421원 (floor)', () => {
-    expect(minimumLivingCost(3, 2026)).toBe(3_215_421);
+  it('2026 3인 가구 = 3,215,422원 (공표값)', () => {
+    expect(minimumLivingCost(3, 2026)).toBe(3_215_422);
   });
 
-  it('2025 3인 가구 = 3,015,211원', () => {
-    expect(minimumLivingCost(3, 2025)).toBe(3_015_211);
+  it('2025 3인 가구 = 3,015,212원 (공표값)', () => {
+    expect(minimumLivingCost(3, 2025)).toBe(3_015_212);
   });
 
   it('입력값이 권장선 이상이면 belowRecommendedFloor=false', () => {
     const result = adjustLivingCost(2_000_000, 1, 2026);
     expect(result.belowRecommendedFloor).toBe(false);
     expect(result.adjusted).toBe(2_000_000);
-    expect(result.floor).toBe(1_538_542);
+    expect(result.floor).toBe(1_538_543);
   });
 
   it('입력값이 권장선 미만이면 belowRecommendedFloor=true (UP-clamp 안 함)', () => {
     const result = adjustLivingCost(1_000_000, 1, 2026);
     expect(result.belowRecommendedFloor).toBe(true);
-    expect(result.adjusted).toBe(1_000_000); // 사용자 입력 보존
-    expect(result.floor).toBe(1_538_542);
+    expect(result.adjusted).toBe(1_000_000);
+    expect(result.floor).toBe(1_538_543);
   });
 
-  // minimumLivingCost(size, year, rate) — rate=median × N% (스탠드얼론 의미론)
-  // UI는 colaw computeLivingCost 사용 (별도 식). 본 함수는 직접 % 계산용.
+  // rate≠60이면 Math.floor 계산 사용
   it('rate=50 — 1인 가구 1,282,119원 (median × 50%)', () => {
     expect(minimumLivingCost(1, 2026, 50)).toBe(1_282_119);
   });
@@ -49,25 +49,25 @@ describe('생계비 자동 조정 (P1-1)', () => {
   });
 });
 
-describe('minimumLivingCost — 연도별 (2022~2026)', () => {
-  it('2022 3인 = 2,516,820원', () => {
-    expect(minimumLivingCost(3, 2022)).toBe(2_516_820);
+describe('minimumLivingCost — 연도별 공표값 (2022~2026)', () => {
+  it('2022 3인 = 2,516,821원', () => {
+    expect(minimumLivingCost(3, 2022)).toBe(2_516_821);
   });
 
-  it('2023 3인 = 2,660,889원', () => {
-    expect(minimumLivingCost(3, 2023)).toBe(2_660_889);
+  it('2023 3인 = 2,660,890원', () => {
+    expect(minimumLivingCost(3, 2023)).toBe(2_660_890);
   });
 
   it('2024 3인 = 2,828,794원', () => {
     expect(minimumLivingCost(3, 2024)).toBe(2_828_794);
   });
 
-  it('2025 3인 = 3,015,211원', () => {
-    expect(minimumLivingCost(3, 2025)).toBe(3_015_211);
+  it('2025 3인 = 3,015,212원', () => {
+    expect(minimumLivingCost(3, 2025)).toBe(3_015_212);
   });
 
-  it('2026 3인 = 3,215,421원', () => {
-    expect(minimumLivingCost(3, 2026)).toBe(3_215_421);
+  it('2026 3인 = 3,215,422원', () => {
+    expect(minimumLivingCost(3, 2026)).toBe(3_215_422);
   });
 });
 
@@ -85,7 +85,6 @@ describe('getMedianIncome — 8인 이상 증분 산출', () => {
   });
 
   it('미등록 연도는 2025 fallback', () => {
-    // 2099년 → 2025 테이블 사용
     expect(getMedianIncome(3, 2099)).toBe(5_025_353);
   });
 });

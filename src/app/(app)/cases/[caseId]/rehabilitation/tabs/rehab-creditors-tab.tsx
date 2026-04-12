@@ -548,8 +548,8 @@ export function RehabCreditorsTab({
                 {/* 상세 편집 */}
                 {c.expanded && (
                   <div className="border-t border-slate-100 p-3 space-y-4">
-                    {/* 기본 정보 */}
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                    {/* 기본 정보 — 채권자명·분류 */}
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                       <div className="space-y-1">
                         <label htmlFor={`cr-name-${idx}`} className="text-xs font-medium text-slate-600">채권자명 <span className="text-red-500" aria-hidden="true">*</span></label>
                         <input
@@ -584,61 +584,36 @@ export function RehabCreditorsTab({
                           <option value="지방자치단체">지방자치단체</option>
                         </select>
                       </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`cr-phone-${idx}`} className="text-xs font-medium text-slate-600">전화번호</label>
-                        <input
-                          id={`cr-phone-${idx}`}
-                          type="tel"
-                          value={c.phone}
-                          onChange={(e) => updateCreditor(idx, 'phone', e.target.value)}
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-                          placeholder="010-1234-5678"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`cr-fax-${idx}`} className="text-xs font-medium text-slate-600">팩스</label>
-                        <input
-                          id={`cr-fax-${idx}`}
-                          type="tel"
-                          value={c.fax}
-                          onChange={(e) => updateCreditor(idx, 'fax', e.target.value)}
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-                          placeholder="02-000-0000"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`cr-mobile-${idx}`} className="text-xs font-medium text-slate-600">휴대전화</label>
-                        <input
-                          id={`cr-mobile-${idx}`}
-                          type="tel"
-                          value={c.mobile}
-                          onChange={(e) => updateCreditor(idx, 'mobile', e.target.value)}
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-                          placeholder="010-1234-5678"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor={`cr-postal-${idx}`} className="text-xs font-medium text-slate-600">우편번호</label>
-                        <input
-                          id={`cr-postal-${idx}`}
-                          type="text"
-                          maxLength={5}
-                          value={c.postal_code}
-                          onChange={(e) => updateCreditor(idx, 'postal_code', e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <label htmlFor={`cr-addr-${idx}`} className="text-xs font-medium text-slate-600">주소</label>
-                        <input
-                          id={`cr-addr-${idx}`}
-                          type="text"
-                          value={c.address}
-                          onChange={(e) => updateCreditor(idx, 'address', e.target.value)}
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-                        />
-                      </div>
                     </div>
+
+                    {/* 연락처·주소 — 접기 가능 */}
+                    <details className="rounded-md border border-slate-100">
+                      <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50">
+                        연락처 / 주소 {(c.phone || c.address) ? '(입력됨)' : '(미입력)'}
+                      </summary>
+                      <div className="grid grid-cols-2 gap-3 px-3 pb-3 md:grid-cols-3 lg:grid-cols-4">
+                        <div className="space-y-1">
+                          <label htmlFor={`cr-phone-${idx}`} className="text-xs font-medium text-slate-600">전화번호</label>
+                          <input id={`cr-phone-${idx}`} type="tel" value={c.phone} onChange={(e) => updateCreditor(idx, 'phone', e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="010-1234-5678" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={`cr-fax-${idx}`} className="text-xs font-medium text-slate-600">팩스</label>
+                          <input id={`cr-fax-${idx}`} type="tel" value={c.fax} onChange={(e) => updateCreditor(idx, 'fax', e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="02-000-0000" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={`cr-mobile-${idx}`} className="text-xs font-medium text-slate-600">휴대전화</label>
+                          <input id={`cr-mobile-${idx}`} type="tel" value={c.mobile} onChange={(e) => updateCreditor(idx, 'mobile', e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" placeholder="010-1234-5678" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={`cr-postal-${idx}`} className="text-xs font-medium text-slate-600">우편번호</label>
+                          <input id={`cr-postal-${idx}`} type="text" maxLength={5} value={c.postal_code} onChange={(e) => updateCreditor(idx, 'postal_code', e.target.value.replace(/[^0-9]/g, ''))} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" />
+                        </div>
+                        <div className="space-y-1 md:col-span-2">
+                          <label htmlFor={`cr-addr-${idx}`} className="text-xs font-medium text-slate-600">주소</label>
+                          <input id={`cr-addr-${idx}`} type="text" value={c.address} onChange={(e) => updateCreditor(idx, 'address', e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" />
+                        </div>
+                      </div>
+                    </details>
 
                     {/* 채권 금액 */}
                     <div className="rounded-md bg-blue-50/50 p-3">
@@ -901,7 +876,7 @@ export function RehabCreditorsTab({
                             >
                               <option value="">선택</option>
                               {creditors
-                                .filter((p) => p.id !== c.id && p.bond_type === '주채무')
+                                .filter((p) => p.id !== c.id && p.bond_type === '주채무' && p.is_secured === c.is_secured)
                                 .map((p) => (
                                   <option key={p.id} value={p.id}>
                                     {p.bond_number}번 {p.creditor_name || '(미입력)'}
@@ -1129,7 +1104,7 @@ export function RehabCreditorsTab({
           type="button"
           onClick={() => {
             const rows = creditors.map((c) => ({
-              bondNumber: c.bond_number,
+              bondNumber: formatBondNumber(c, creditors),
               name: c.creditor_name,
               classify: c.classify,
               postalCode: c.postal_code,

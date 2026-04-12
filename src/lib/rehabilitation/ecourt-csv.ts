@@ -7,7 +7,7 @@
  */
 
 export interface EcourtCreditorRow {
-  bondNumber: number;
+  bondNumber: number | string;
   name: string;
   classify: string;       // '법인' | '자연인' 등
   postalCode: string;

@@ -21,10 +21,10 @@ describe('월가용소득 공식 확장 (P1-7)', () => {
       householdSize: 1,
       year: 2026,
     });
-    expect(r.livingCost.baseline60).toBe(1_538_542);
-    expect(r.livingCost.afterRate).toBe(1_538_542);
-    expect(r.livingCost.applied).toBe(1_538_542);
-    expect(r.monthlyAvailable).toBe(561_458);
+    expect(r.livingCost.baseline60).toBe(1_538_543);
+    expect(r.livingCost.afterRate).toBe(1_538_543);
+    expect(r.livingCost.applied).toBe(1_538_543);
+    expect(r.monthlyAvailable).toBe(561_457);
   });
 
   it('생계비율 100% (기본) — afterRate = baseline60', () => {
@@ -43,8 +43,8 @@ describe('월가용소득 공식 확장 (P1-7)', () => {
       year: 2026,
       livingCostRate: 150,
     });
-    // baseline60 = 1,538,542 × 1.5 = 2,307,813
-    expect(r.livingCost.afterRate).toBe(2_307_813);
+    // baseline60 = 1,538,543 (공표값) × 1.5 = 2,307,814.5 → round = 2,307,815
+    expect(r.livingCost.afterRate).toBe(2_307_815);
   });
 
   it('추가생계비 (extraFamilyLowMoney) 포함', () => {
@@ -108,9 +108,9 @@ describe('월가용소득 공식 확장 (P1-7)', () => {
 describe('computeLivingCost (단독)', () => {
   it('기본 rate=100', () => {
     const r = computeLivingCost({ householdSize: 1, year: 2026 });
-    expect(r.baseline60).toBe(1_538_542);
-    expect(r.afterRate).toBe(1_538_542);
-    expect(r.applied).toBe(1_538_542);
+    expect(r.baseline60).toBe(1_538_543);
+    expect(r.afterRate).toBe(1_538_543);
+    expect(r.applied).toBe(1_538_543);
     expect(r.rate).toBe(100);
   });
 
@@ -121,8 +121,8 @@ describe('computeLivingCost (단독)', () => {
       rate: 150,
       extraFamilyLowMoney: 100_000,
     });
-    expect(r.baseline60).toBe(1_538_542);
-    expect(r.afterRate).toBe(2_307_813);
-    expect(r.applied).toBe(2_407_813);
+    expect(r.baseline60).toBe(1_538_543);
+    expect(r.afterRate).toBe(2_307_815);
+    expect(r.applied).toBe(2_407_815);
   });
 });

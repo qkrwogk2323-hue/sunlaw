@@ -661,12 +661,30 @@ export function RehabIncomeTab({
                 </div>
               </div>
             ))}
-            <div className="mt-2 flex justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
-              <span className="font-medium text-blue-700">월 평균 수입</span>
-              <span className="font-semibold text-blue-800">
-                {formatMoney(Math.ceil(incomeBreakdown.reduce((s, r) => s + r.annual_amount, 0) / 12))}원
-              </span>
-            </div>
+            {(() => {
+              const d5103Monthly = Math.ceil(incomeBreakdown.reduce((s, r) => s + r.annual_amount, 0) / 12);
+              const differs = d5103Monthly > 0 && d5103Monthly !== form.monthly_income;
+              return (
+                <div className="mt-2 space-y-1">
+                  <div className="flex justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
+                    <span className="font-medium text-blue-700">월 평균 수입</span>
+                    <span className="font-semibold text-blue-800">{formatMoney(d5103Monthly)}원</span>
+                  </div>
+                  {differs && (
+                    <div className="flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                      <span>위 월 소득({formatMoney(form.monthly_income)}원)과 D5103 합계({formatMoney(d5103Monthly)}원)가 다릅니다</span>
+                      <button
+                        type="button"
+                        onClick={() => updateField('monthly_income', d5103Monthly)}
+                        className="ml-2 rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white hover:bg-amber-700"
+                      >
+                        D5103 합계로 반영
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </section>

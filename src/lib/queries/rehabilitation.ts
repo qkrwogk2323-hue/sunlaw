@@ -187,7 +187,7 @@ function mapIncomeDbToForm(row: Record<string, unknown>) {
   return {
     ...row,
     income_year: row.median_income_year || new Date().getFullYear(),
-    monthly_income: row.net_salary || 0,
+    monthly_income: row.net_salary || row.gross_salary || 0,
   };
 }
 
