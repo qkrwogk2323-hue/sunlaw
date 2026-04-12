@@ -181,26 +181,19 @@
 
 ---
 
-## 8. 소득 저장 실패 (서버 200이지만 DB 미반영)
+## 8. 소득 저장 실패 — ✅ 원인 확정, 수정 완료
 
-**심각도**: 🔴 기능 불능
+**심각도**: 🔴 → ✅ 해결됨 (앱 버그 아님, COLAW 데이터 이관 불일치)
 
-### 현상
-- 소득/생계비 탭에서 월 소득 2,500,000원 입력 후 저장 클릭
-- 서버 응답 200 OK, 토스트 피드백 없음
-- 페이지 새로고침 → 월 소득 **0원**으로 복귀
-- **데이터가 실제로 저장되지 않음**
+### 원인 (Supabase MCP 직접 조회로 확정)
+- DB 행은 존재했음: `gross_salary = 2,500,000`, **`net_salary = 0`**
+- COLAW 마이그레이션 스크립트(`migrate-colaw-to-vs.ts`)가 월소득을 `gross_salary`에만 매핑하고 `net_salary`는 기본값 0으로 남김
+- 앱 코드는 `net_salary`에 쓰고 `net_salary`에서 읽음 — **앱 로직 자체는 정상**
+- RLS도 정상 (ALL 허용)
 
-### 코드 분석
-- 매핑은 정상: `form.monthly_income` → DB `net_salary` (rehabilitation_income_settings 테이블)
-- 로드도 정상: DB `net_salary` → `form.monthly_income`
-- **추정 원인**: RLS 정책이 write를 차단하거나, upsert 시 silent failure 발생
-- 서버 액션이 에러를 삼키고 200을 반환하는 것으로 보임
-
-### 확인 필요
-1. `rehabilitation_income_settings` 테이블의 RLS 정책 확인
-2. `upsertRehabIncomeSettings` 서버 액션의 에러 핸들링 확인
-3. Supabase 대시보드에서 실제 row 존재 여부 확인
+### 수정 완료
+- DB 데이터 보정: `UPDATE rehabilitation_income_settings SET net_salary = gross_salary WHERE net_salary = 0 AND gross_salary > 0`
+- `gross_salary` 컬럼은 COLAW 잔재 → 5단계(COLAW 잔재 제거)에서 스키마에서 drop 예정
 
 ---
 
