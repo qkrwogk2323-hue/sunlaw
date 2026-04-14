@@ -62,7 +62,10 @@ export async function persistGeneratedDocument(
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:.]/g, '-');
   const randomSuffix = Math.random().toString(36).slice(2, 10);
-  const storagePath = `${organizationId}/${caseId}/generated/${sourceKind}/${sourceDocumentType}/${timestamp}-${randomSuffix}.html`;
+  // 경로 규약: org/{orgId}/{caseId}/generated/{kind}/{type}/{file}.html
+  // 20260414000008 hotfix의 storage RLS 정책(첫 폴더 'org' 리터럴, 두 번째 orgId,
+  // 세 번째 caseId)과 정렬.
+  const storagePath = `org/${organizationId}/${caseId}/generated/${sourceKind}/${sourceDocumentType}/${timestamp}-${randomSuffix}.html`;
 
   const encoded = new TextEncoder().encode(html);
 

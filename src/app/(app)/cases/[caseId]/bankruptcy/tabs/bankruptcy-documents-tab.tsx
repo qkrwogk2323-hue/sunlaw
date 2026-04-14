@@ -66,8 +66,12 @@ export function BankruptcyDocumentsTab({
           return;
         }
 
+        if (result.persisted === false) {
+          setError(`${result.persistenceWarning} (사건 문서함에는 기록되지 않습니다)`);
+        }
+
         // 저장된 case_documents 아티팩트에 대한 서명 URL을 먼저 시도
-        if (result.documentId) {
+        if (result.persisted === true && result.documentId) {
           const signed = await getGeneratedDocumentDownloadUrl(result.documentId);
           if (signed.ok) {
             const a = document.createElement('a');

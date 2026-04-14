@@ -17,14 +17,26 @@ import { persistGeneratedDocument } from '@/lib/documents/persistence';
  * insolvency_creditors 테이블의 채권자 데이터를 조합하여
  * 파산·면책 절차 법원 제출 문서를 생성합니다.
  */
+// 파산 모듈은 전 문서가 법원 제출용이라 persistence 실패 시 전체 실패.
+const BANKRUPTCY_SUBMISSION_DOC_TYPES: ReadonlySet<BankruptcyDocumentType> = new Set([
+  'petition',
+  'delegation',
+  'creditor_list',
+  'property_list',
+  'income_statement',
+  'affidavit',
+]);
+
+export type GenerateBankruptcyDocumentResult =
+  | { ok: true; persisted: true; html: string; documentId: string; storagePath: string }
+  | { ok: true; persisted: false; html: string; persistenceWarning: string }
+  | { ok: false; code: string; userMessage: string };
+
 export async function generateBankruptcyDoc(
   caseId: string,
   organizationId: string,
   documentType: BankruptcyDocumentType,
-): Promise<
-  | { ok: true; html: string; documentId: string; storagePath: string }
-  | { ok: false; code: string; userMessage: string }
-> {
+): Promise<GenerateBankruptcyDocumentResult> {
   try {
     const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'bankruptcy' });
     if (!access.ok) return access;
@@ -137,11 +149,34 @@ export async function generateBankruptcyDoc(
     });
 
     if (!persisted.ok) {
-      console.warn('[generateBankruptcyDoc] persistence failed, returning html only:', persisted.code);
-      return { ok: true, html, documentId: '', storagePath: '' };
+      const isSubmission = BANKRUPTCY_SUBMISSION_DOC_TYPES.has(documentType);
+      console.warn('[generateBankruptcyDoc] persistence failed:', {
+        documentType,
+        isSubmission,
+        code: persisted.code,
+      });
+      if (isSubmission) {
+        return {
+          ok: false,
+          code: 'PERSIST_REQUIRED',
+          userMessage: `제출용 문서(${documentType})는 사건 문서함 기록이 필수입니다. 저장에 실패하여 생성을 취소했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.`,
+        };
+      }
+      return {
+        ok: true,
+        persisted: false,
+        html,
+        persistenceWarning: persisted.userMessage,
+      };
     }
 
-    return { ok: true, html, documentId: persisted.documentId, storagePath: persisted.storagePath };
+    return {
+      ok: true,
+      persisted: true,
+      html,
+      documentId: persisted.documentId,
+      storagePath: persisted.storagePath,
+    };
   } catch (e) {
     console.error('[generateBankruptcyDoc]', e);
     return { ok: false, code: 'UNEXPECTED', userMessage: '문서 생성 중 오류가 발생했습니다.' };

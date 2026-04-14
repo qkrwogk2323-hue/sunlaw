@@ -149,8 +149,13 @@ export function RehabDocumentsTab({
           return;
         }
 
+        if (result.persisted === false) {
+          // 내부 참조용 문서 — 영속화 실패 경고만 표시하고 즉시 Blob 다운로드로 계속
+          setError(`${result.persistenceWarning} (사건 문서함에는 기록되지 않습니다)`);
+        }
+
         // 저장된 case_documents 아티팩트에 대한 서명 URL을 먼저 시도
-        if (result.documentId) {
+        if (result.persisted === true && result.documentId) {
           const signed = await getGeneratedDocumentDownloadUrl(result.documentId);
           if (signed.ok) {
             const a = document.createElement('a');

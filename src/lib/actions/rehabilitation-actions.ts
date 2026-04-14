@@ -626,14 +626,35 @@ export async function upsertRehabPropertyDeduction(
 
 // ─── 문서 생성 ───
 
+// 법원 제출용(영속화 실패 시 전체 실패) 문서 타입.
+// 반대로 cover_page / creditor_summary / document_checklist는 내부 참조용이라
+// persistence 실패 시에도 즉시 다운로드를 허용한다.
+const REHAB_SUBMISSION_DOC_TYPES: ReadonlySet<DocumentType> = new Set([
+  'application',
+  'delegation',
+  'delegation_with_attorney',
+  'attorney_designation',
+  'prohibition_order',
+  'stay_order',
+  'creditor_list',
+  'property_list',
+  'income_statement',
+  'affidavit',
+  'repayment_plan',
+  'excluded_property_list',
+  'exempt_property_application',
+]);
+
+export type GenerateDocumentResult =
+  | { ok: true; persisted: true; html: string; documentId: string; storagePath: string }
+  | { ok: true; persisted: false; html: string; persistenceWarning: string }
+  | { ok: false; code: string; userMessage: string };
+
 export async function generateRehabDocument(
   caseId: string,
   organizationId: string,
   documentType: DocumentType,
-): Promise<
-  | { ok: true; html: string; documentId: string; storagePath: string }
-  | { ok: false; code: string; userMessage: string }
-> {
+): Promise<GenerateDocumentResult> {
   try {
     const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
     if (!access.ok) return access;
@@ -686,12 +707,36 @@ export async function generateRehabDocument(
     });
 
     if (!persisted.ok) {
-      // 스토리지/DB 저장 실패해도 HTML은 반환 — 사용자가 즉시 다운로드·미리보기는 가능
-      console.warn('[generateRehabDocument] persistence failed, returning html only:', persisted.code);
-      return { ok: true, html, documentId: '', storagePath: '' };
+      const isSubmission = REHAB_SUBMISSION_DOC_TYPES.has(documentType);
+      console.warn('[generateRehabDocument] persistence failed:', {
+        documentType,
+        isSubmission,
+        code: persisted.code,
+      });
+      if (isSubmission) {
+        // 법원 제출용 문서는 영속 이력이 남아야 해서 전체 실패로 반환.
+        return {
+          ok: false,
+          code: 'PERSIST_REQUIRED',
+          userMessage: `제출용 문서(${documentType})는 사건 문서함 기록이 필수입니다. 저장에 실패하여 생성을 취소했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.`,
+        };
+      }
+      // 내부 참조용 문서는 다운로드는 허용하되 persisted=false 명시.
+      return {
+        ok: true,
+        persisted: false,
+        html,
+        persistenceWarning: persisted.userMessage,
+      };
     }
 
-    return { ok: true, html, documentId: persisted.documentId, storagePath: persisted.storagePath };
+    return {
+      ok: true,
+      persisted: true,
+      html,
+      documentId: persisted.documentId,
+      storagePath: persisted.storagePath,
+    };
   } catch (e) {
     console.error('[generateRehabDocument]', e);
     return { ok: false, code: 'UNEXPECTED', userMessage: '문서 생성 중 오류가 발생했습니다.' };
