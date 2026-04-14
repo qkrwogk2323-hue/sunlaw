@@ -278,9 +278,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_rehab_prop_deduction ON public.rehabilitati
 -- rehabilitation_secured_properties
 CREATE INDEX IF NOT EXISTS idx_rehab_secured_case ON public.rehabilitation_secured_properties USING btree (case_id);
 
--- rate_limit_buckets
-CREATE INDEX IF NOT EXISTS idx_rate_limit_buckets_expires_at ON public.rate_limit_buckets USING btree (expires_at);
-
 -- setting_change_logs
 CREATE INDEX IF NOT EXISTS idx_setting_change_logs_target ON public.setting_change_logs USING btree (target_type, target_key, created_at DESC);
 

@@ -589,15 +589,6 @@ create table if not exists public.organization_exit_requests (
   updated_at timestamptz not null default timezone('utc'::text, now())
 );
 
-create table if not exists public.rate_limit_buckets (
-  id text primary key,
-  attempts integer not null default 1 check (attempts >= 0),
-  window_start timestamptz not null default timezone('utc'::text, now()),
-  expires_at timestamptz not null,
-  created_at timestamptz not null default timezone('utc'::text, now())
-);
-comment on table public.rate_limit_buckets is 'Service-role-only distributed rate limit counters keyed by sha256 prefix of (endpoint:identifier). Accessed from src/lib/rate-limit.ts.';
-
 -- NOTE: indexes → 011
 
 -- Create update trigger functions

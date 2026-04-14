@@ -140,21 +140,19 @@ supabase/migrations/ 구조:
   004 platform_governance      010 rls_policies
   005 collaboration            011 indexes
   006 billing                  012 seed_data
+  (hotfix)                     20260414000001_hotfix_rate_limit_and_atomic_create
 ```
-- **새 migration 파일 추가 금지** — 기존 12개 파일 안에서 수정
-- 컬럼 추가/변경 → 해당 도메인의 기존 CREATE TABLE 문을 직접 수정
-- 함수 추가/변경 → `009_functions_and_triggers.sql` 수정
-- RLS 추가/변경 → `010_rls_policies.sql` 수정
-- 인덱스 추가 → `011_indexes.sql` 수정
-- 시드 데이터 → `012_seed_data.sql` 수정
-- 새 테이블이 필요하면 가장 가까운 도메인 파일(003~008)의 끝에 추가
-- **배치 규칙**: 테이블 파일(003~008)에는 `CREATE TABLE` + 제약조건(constraint) + 코멘트만 둔다
-  - `ENABLE ROW LEVEL SECURITY` + `CREATE POLICY` → `010_rls_policies.sql`에 집중
-  - `CREATE INDEX` → `011_indexes.sql`에 집중
-  - 테이블 파일에 인라인 RLS/인덱스를 넣지 말 것 — 대신 `-- NOTE: indexes → 011, RLS → 010` 코멘트 추가
-- **절대 하지 말 것**: `0098_xxx.sql` 같은 증분 migration 파일 생성
-- **이유**: 97개 → 12개로 squash한 구조. 다시 늘리면 안 됨
-- 새 도메인 파일(013 이상)이 정말 필요하면 **사용자 승인** 후에만 추가. 기존 12개로 안 되는 이유를 먼저 설명할 것
+- **Squash 적용 이후 새 변경은 전진형(forward-only) hotfix migration으로만 추가한다**
+  - squash 적용된 환경(production, staging, 기존 dev 로컬)은 001~012를 재실행하지 않음
+  - 따라서 001~012 파일을 사후 편집하면 fresh DB와 기존 환경의 스키마가 달라짐
+  - 스키마 변경, 새 테이블, 함수 갱신, RLS 추가 등은 새 timestamp migration으로 분리
+  - 멱등(idempotent) DDL을 기본으로 작성 (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP FUNCTION IF EXISTS`)
+- **001~012 squash 파일은 "이미 박제된 fresh-DB 초기 상태"로만 취급**
+  - 기존 파일 편집은 오타 수정, 코멘트 추가 등 DDL 효과가 없는 경우로 한정
+  - 과거에 가이드했던 "새 migration 금지" 규칙은 squash 직후의 한시 규칙이었음
+- 새 도메인 파일(013 이상) — 네이밍은 `YYYYMMDDHHMMSS_short_name.sql`
+  - hotfix 예시: `20260414000001_hotfix_rate_limit_and_atomic_create.sql`
+  - 같은 규칙으로 `scripts/check-migrations.mjs`가 14자리 timestamp + 엄격한 오름차순 검사
 
 ## 핵심 컴포넌트
 
