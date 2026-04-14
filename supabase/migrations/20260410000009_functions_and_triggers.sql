@@ -7,31 +7,43 @@
 -- PUBLIC SCHEMA FUNCTIONS
 -- =============================================================================
 
+-- NOTE: language plpgsql로 선언해 본문 검증을 호출 시점으로 지연.
+-- 이 public wrapper들은 app.* 함수(같은 파일 뒤쪽 line 188, 444)를 참조하므로
+-- language sql로 선언하면 fresh DB에서 CREATE 시점 body validation 실패.
 CREATE OR REPLACE FUNCTION public.approve_organization_signup_request_atomic(p_request_id uuid, p_reviewer_profile_id uuid, p_review_note text DEFAULT NULL::text)
  RETURNS TABLE(organization_id uuid, request_status text)
- LANGUAGE sql
+ LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-      select *
-      from app.approve_organization_signup_request_atomic(
-        p_request_id,
-        p_reviewer_profile_id,
-        p_review_note
-      );
-    $function$
+begin
+  return query
+    select *
+    from app.approve_organization_signup_request_atomic(
+      p_request_id,
+      p_reviewer_profile_id,
+      p_review_note
+    );
+end;
+$function$;
 
 
 
 CREATE OR REPLACE FUNCTION public.cancel_organization_signup_request_atomic(p_request_id uuid)
  RETURNS organization_signup_requests
- LANGUAGE sql
+ LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-      select *
-      from app.cancel_organization_signup_request_atomic(p_request_id);
-    $function$
+declare
+  v_row public.organization_signup_requests;
+begin
+  select *
+    into v_row
+    from app.cancel_organization_signup_request_atomic(p_request_id);
+  return v_row;
+end;
+$function$;
 
 
 
@@ -398,24 +410,27 @@ $function$
 
 CREATE OR REPLACE FUNCTION app.can_view_case(target_case uuid, target_org uuid)
  RETURNS boolean
- LANGUAGE sql
+ LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-  select app.is_platform_admin()
+begin
+  return app.is_platform_admin()
       or app.is_org_staff(target_org)
       or app.is_case_client(target_case);
+end;
 $function$
 
 
 
 CREATE OR REPLACE FUNCTION app.can_view_case_billing(target_case uuid)
  RETURNS boolean
- LANGUAGE sql
+ LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-  select (
+begin
+  return (
     app.is_platform_admin()
     or exists (
       select 1
@@ -437,6 +452,7 @@ AS $function$
         and cc.is_portal_enabled = true
     )
   );
+end;
 $function$
 
 

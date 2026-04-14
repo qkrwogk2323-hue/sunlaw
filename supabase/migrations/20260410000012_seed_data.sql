@@ -112,35 +112,42 @@ where not exists (
 -- 3. INSOLVENCY RULESET CONSTANTS SEED DATA
 --    6 records: 소액임차, 최저생계비, 최소변제율
 -- ============================================================
+-- NOTE: 007의 insolvency_ruleset_constants 실제 스키마 컬럼:
+--   ruleset_key, display_name, legal_basis, value_amount, value_pct,
+--   region_code, effective_from, effective_to, notes
+-- 이전 seed는 category/value_number/unit/maintenance_mode 등 존재하지 않는 컬럼 사용.
 insert into public.insolvency_ruleset_constants (
-  ruleset_key, category, value_number, unit, effective_from, effective_to, 
-  notes, maintenance_mode
+  ruleset_key, display_name, legal_basis, value_amount, value_pct,
+  effective_from, effective_to, notes
 )
 values
-  -- 소액임차 (소액보증금 기준액 및 임대차 관련 기준)
-  ('small_deposit_threshold', 'deposit_limit', 5000000, 'KRW', '2024-01-01', null, 
-   '소액임차보증금 인정 기준액 (변제기간 결정 예외조건)', false),
-  
-  -- 최저생계비 (생활보호기준액)
-  ('minimum_livelihood_1_person', 'livelihood_standard', 815000, 'KRW', '2024-01-01', null,
-   '최저생계비 1인 (자활 면제/생계비 제외 기준)', false),
-  ('minimum_livelihood_2_person', 'livelihood_standard', 1354000, 'KRW', '2024-01-01', null,
-   '최저생계비 2인 (자활 면제/생계비 제외 기준)', false),
-  
-  -- 최소변제율
-  ('minimum_repayment_rate_bankruptcy', 'repayment_rate', 25, 'percentage', '2024-01-01', null,
-   '파산: 최소 변제율 기준 (불인정채권 제외)', false),
-  ('minimum_repayment_rate_rehabilitation', 'repayment_rate', 30, 'percentage', '2024-01-01', null,
-   '개인회생: 최소 변제율 기준 (불인정채권 제외)', false)
+  ('small_deposit_threshold', '소액임차보증금 기준액', '주택임대차보호법 §8', 5000000, null,
+   '2024-01-01', null, '소액임차보증금 인정 기준액 (변제기간 결정 예외조건)'),
+  ('minimum_livelihood_1_person', '최저생계비 1인', '국민기초생활보장법 §6', 815000, null,
+   '2024-01-01', null, '최저생계비 1인 (자활 면제/생계비 제외 기준)'),
+  ('minimum_livelihood_2_person', '최저생계비 2인', '국민기초생활보장법 §6', 1354000, null,
+   '2024-01-01', null, '최저생계비 2인 (자활 면제/생계비 제외 기준)'),
+  ('minimum_repayment_rate_bankruptcy', '파산 최소 변제율', '채무자회생법 §624', null, 25,
+   '2024-01-01', null, '파산: 최소 변제율 기준 (불인정채권 제외)'),
+  ('minimum_repayment_rate_rehabilitation', '개인회생 최소 변제율', '채무자회생법 §611', null, 30,
+   '2024-01-01', null, '개인회생: 최소 변제율 기준 (불인정채권 제외)')
 on conflict (ruleset_key, effective_from) do nothing;
 
 -- ============================================================
 -- 4. PG_CRON SCHEDULED JOBS (from 0079, 0082)
 -- ============================================================
 
--- Enable pg_cron extension (idempotent)
-create extension if not exists pg_cron;
-create extension if not exists pg_net;
+-- Enable pg_cron extension (idempotent). Supabase free tier / branch DB는 미설치 가능 → graceful skip.
+do $$ begin
+  create extension if not exists pg_cron;
+exception when others then
+  raise notice 'pg_cron unavailable (likely branch/free-tier); cron jobs will not be scheduled';
+end $$;
+do $$ begin
+  create extension if not exists pg_net;
+exception when others then
+  raise notice 'pg_net unavailable; HTTP-based cron jobs will not work';
+end $$;
 
 -- 4.1 Storage cleanup job (from 0079)
 -- Deletes soft-deleted case_documents older than 30 days daily at 03:00 UTC

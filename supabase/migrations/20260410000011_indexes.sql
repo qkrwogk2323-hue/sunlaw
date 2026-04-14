@@ -44,7 +44,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS case_hubs_case_id_key ON public.case_hubs USIN
 CREATE INDEX IF NOT EXISTS idx_case_hubs_case_id ON public.case_hubs USING btree (case_id);
 CREATE INDEX IF NOT EXISTS idx_case_hubs_lifecycle ON public.case_hubs USING btree (lifecycle_status);
 CREATE INDEX IF NOT EXISTS idx_case_hubs_organization_id ON public.case_hubs USING btree (organization_id);
-CREATE INDEX IF NOT EXISTS idx_case_hubs_primary_case_client_id ON public.case_hubs USING btree (primary_case_client_id) WHERE (primary_case_client_id IS NOT NULL);
+-- NOTE: case_hubs.primary_case_client_id 컬럼은 현재 스키마에 존재하지 않음.
+-- 005에서 primary_client_id만 정의. 향후 컬럼 추가 시 이 인덱스도 복원.
+-- CREATE INDEX IF NOT EXISTS idx_case_hubs_primary_case_client_id ON public.case_hubs USING btree (primary_case_client_id) WHERE (primary_case_client_id IS NOT NULL);
 
 -- case_messages
 CREATE INDEX IF NOT EXISTS idx_case_messages_case_created ON public.case_messages USING btree (case_id, created_at DESC);

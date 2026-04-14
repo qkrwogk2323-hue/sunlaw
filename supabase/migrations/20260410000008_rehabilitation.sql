@@ -225,14 +225,19 @@ comment on column public.rehabilitation_creditors.classify is
   '인격구분: 자연인/법인/국가/지방자치단체';
 
 -- 0088 제약: 별제권부와 기타 미확정은 상호 배타
-alter table public.rehabilitation_creditors
-  add constraint if not exists creditors_secured_xor_unconfirmed
-  check (not (is_secured and is_other_unconfirmed));
+-- NOTE: ADD CONSTRAINT IF NOT EXISTS는 Postgres 미지원 문법. DO 블록으로 idempotent 처리.
+do $$ begin
+  alter table public.rehabilitation_creditors
+    add constraint creditors_secured_xor_unconfirmed
+    check (not (is_secured and is_other_unconfirmed));
+exception when duplicate_object then null; end $$;
 
 -- 0088 제약: 별제권부는 담보평가액 > 0 이어야 의미 있음
-alter table public.rehabilitation_creditors
-  add constraint if not exists creditors_secured_requires_collateral
-  check (not is_secured or secured_collateral_value > 0);
+do $$ begin
+  alter table public.rehabilitation_creditors
+    add constraint creditors_secured_requires_collateral
+    check (not is_secured or secured_collateral_value > 0);
+exception when duplicate_object then null; end $$;
 
 -- NOTE: indexes → 011_indexes.sql, RLS → 010_rls_policies.sql
 
