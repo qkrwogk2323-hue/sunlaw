@@ -134,11 +134,38 @@ export const test = base.extend<{ seed: Seed }>({
 });
 ```
 
-## 다음 단계
+## 구현 상태 (2026-04-14 최종)
 
-1. `supabase/seed/e2e-test-data.sql` 작성 (조직·멤버십 정적 시드)
-2. `scripts/seed-e2e-users.mjs` 작성 (auth.users + profiles + private profiles)
-3. `tests/e2e/fixtures/seed.ts` 작성 (Playwright 사건 fixture)
-4. `tests/e2e/security-boundary.spec.ts` 작성 (위 12개 시나리오)
-5. `playwright.config.ts`에 새 spec 등록
-6. CI workflow에 secret-gated `e2e-security-boundary` job 추가
+12 시나리오를 다음 두 레이어로 분할 구현:
+
+### Playwright E2E — `tests/e2e/security-boundary.spec.ts` (9 시나리오)
+- URL 진입 차단 + 컨트롤 케이스만 E2E가 가장 적합
+- #1, #2, #3 (비배정 URL 차단 3건)
+- #6, #7 (타조직 URL 차단 2건)
+- #8, #9 (wrong subtype URL 차단 2건)
+- #11, #12 (컨트롤 — 정상 진입 2건)
+- **주의**: #6에서 general 사건만 커버. 별도 rehab/bankruptcy 타조직 차단은 #1,2,3으로 URL 차단 자체가 검증되므로 중복 회피
+
+### Vitest 단위 — `tests/security-boundary-post.test.ts` (3 시나리오 + 컨트롤 1)
+서버 액션 POST를 E2E에서 raw HTTP로 때리기 복잡 → `checkCaseActionAccess`
+가드 자체를 단위 테스트로 커버:
+- #4 (비배정 + rehab action → NO_ACCESS)
+- #5 (비배정 + bankruptcy action → NO_ACCESS)
+- #10 (wrong subtype POST → WRONG_TYPE)
+- 컨트롤 (배정 + 올바른 subtype → ok:true)
+
+### 총 12 시나리오 완결
+- E2E 9 + 단위 3 = 12 (설계와 일치)
+- E2E는 env + seed 적용 후 가동
+- 단위 테스트는 모킹 기반이라 env 없이도 즉시 가동 (4/4 passed 확인)
+
+## 적용 체크리스트 (운영자)
+
+1. ✅ `supabase/seeds/0002_e2e_test_data.sql` — staging/dev에 적용
+2. ✅ `scripts/seed-e2e-users.mjs` — 실행, 출력 profile_id 기록
+3. ✅ `tests/e2e/fixtures/seed.ts` — Playwright fixture 작성 완료
+4. ✅ `tests/e2e/security-boundary.spec.ts` — 9 시나리오 spec 완료
+5. ✅ `tests/security-boundary-post.test.ts` — 3 POST 시나리오 완료
+6. ✅ CI workflow `e2e-security-boundary` job — secret-gated 추가 완료
+7. ⬜ GitHub Secrets 등록 (`docs/CI_SECRETS.md` 참조)
+8. ⬜ main 머지 또는 workflow_dispatch로 실제 가동 확인
