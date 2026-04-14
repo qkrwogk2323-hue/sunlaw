@@ -175,7 +175,7 @@ describe('server action integration', () => {
     mocks.getCurrentAuth.mockResolvedValue(authContext);
   });
 
-  it('creates a case through the shared organization guard', async () => {
+  it('creates a case atomically via create_case_atomic RPC', async () => {
     const writeClient = createCaseWriteClient();
     mocks.createSupabaseServerClient.mockResolvedValue(writeClient.client);
 
@@ -192,29 +192,34 @@ describe('server action integration', () => {
     formData.set('billingFollowUpDueOn', '');
 
     const { createCaseAction } = await import('@/lib/actions/case-actions');
+    const result = await createCaseAction(formData);
 
-    await expect(createCaseAction(formData)).rejects.toSatisfy((error: unknown) => {
-      expectRedirectError(error, `/cases/${writeClient.caseId}`);
-      return true;
-    });
+    // Current contract: returns { ok: true, caseId } rather than redirecting.
+    expect(result).toEqual({ ok: true, caseId: writeClient.caseId });
 
     expect(mocks.requireOrganizationActionAccess).toHaveBeenCalledWith('22222222-2222-4222-8222-222222222222', {
       permission: 'case_create',
       errorMessage: '사건 생성 권한이 없습니다.'
     });
-    // Atomic RPC must be called with the correct organization and title
+    // Atomic RPC must be called with the correct organization, title, and new
+    // hotfix parameters (insolvency_subtype / client_name / client_role).
     expect(writeClient.rpc).toHaveBeenCalledWith('create_case_atomic', expect.objectContaining({
       p_organization_id: '22222222-2222-4222-8222-222222222222',
       p_title: '신규 채권 회수',
       p_case_type: 'debt_collection',
       p_actor_id: authContext.user.id,
-      p_can_manage_collection: true
+      p_can_manage_collection: true,
+      p_insolvency_subtype: null,
+      p_client_name: null,
+      p_client_role: null
     }));
-    expect(mocks.revalidatePath).toHaveBeenCalledWith('/cases');
-    expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard');
+    // finalizeCreateCase uses the ('path', 'layout') form.
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/cases', 'layout');
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/cases/${writeClient.caseId}`, 'layout');
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard', 'layout');
   });
 
-  it('rejects case creation with GUARD_FEEDBACK when title is missing', async () => {
+  it('returns { ok: false, CASE_CREATE_VALIDATION_FAILED } when title is missing', async () => {
     const formData = new FormData();
     formData.set('organizationId', '22222222-2222-4222-8222-222222222222');
     // title is intentionally omitted to trigger validation failure
@@ -223,17 +228,20 @@ describe('server action integration', () => {
     formData.set('openedOn', '2026-03-15');
 
     const { createCaseAction } = await import('@/lib/actions/case-actions');
+    const result = await createCaseAction(formData);
 
-    await expect(createCaseAction(formData)).rejects.toSatisfy((error: unknown) => {
-      const msg = (error as Error)?.message ?? '';
-      // throwGuardFeedback encodes the error as __GUARD_FEEDBACK__:{...}
-      expect(msg).toContain('__GUARD_FEEDBACK__');
-      expect(msg).toContain('CASE_CREATE_VALIDATION_FAILED');
-      return true;
+    // Current contract: validation failures return a result object, not throw.
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'CASE_CREATE_VALIDATION_FAILED'
     });
+    if (result.ok === false) {
+      expect(result.message).toBeTruthy();
+      expect(result.resolution).toBeTruthy();
+    }
 
-    // Should not have called revalidatePath on validation failure
-    expect(mocks.revalidatePath).not.toHaveBeenCalledWith('/cases');
+    // Should not have revalidated or hit the RPC on validation failure.
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it('creates a staff invitation through the shared manager guard', async () => {

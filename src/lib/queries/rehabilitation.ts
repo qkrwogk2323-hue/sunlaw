@@ -235,7 +235,7 @@ export async function getRehabPlanSections(caseId: string) {
     .from('rehabilitation_plan_sections')
     .select('*')
     .eq('case_id', caseId)
-    .order('section_order')
+    .order('section_number')
     .limit(50);
   return data ?? [];
 }

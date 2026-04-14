@@ -129,7 +129,8 @@ describe('bulk-upload-actions', () => {
     const { bulkUploadCasesAction } = await import('@/lib/actions/bulk-upload-actions');
     const result = await bulkUploadCasesAction(
       '22222222-2222-4222-8222-222222222222',
-      '제목,사건유형,의뢰인이름,의뢰인이메일\n신규 사건,insolvency,홍길동,test@example.com'
+      // 개시일은 필수 컬럼 — YYYY-MM-DD 형식으로 입력해야 skipped 되지 않음.
+      '제목,사건유형,개시일,의뢰인이름,의뢰인이메일\n신규 사건,insolvency,2026-03-15,홍길동,test@example.com'
     );
 
     expect(result).toMatchObject({ ok: true, created: 1, skipped: 0 });

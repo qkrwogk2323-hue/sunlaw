@@ -108,15 +108,13 @@ describe('resident registration validation', () => {
   });
 
   it('accepts a valid general signup payload', () => {
+    // generalSignupSchema는 birthDate(6자리)만 받는다 — 기존 테스트는 구 스키마(residentNumber 13자리)에 맞춰져 있었음.
     const result = generalSignupSchema.safeParse({
       email: 'member@example.com',
       password: 'safePass123',
       legalName: '홍길동',
-      residentNumber: '9001011234568',
+      birthDate: '900101',
       phone: '01012345678',
-      addressLine1: '',
-      addressLine2: '',
-      postalCode: '',
       privacyConsent: true,
       serviceConsent: true
     });

@@ -49,6 +49,20 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: mocks.createSupabaseServerClient }));
 vi.mock('@/lib/supabase/admin', () => ({ createSupabaseAdminClient: mocks.createSupabaseAdminClient }));
 vi.mock('@/lib/notification-failure', () => ({ captureNotificationFailure: mocks.captureNotificationFailure }));
+// checkCaseActionAccess는 사건-조직 정합성과 scope 정책을 검증하는 가드.
+// 이 커버리지 테스트는 각 action의 기본 happy/error path만 확인하므로
+// case 접근은 기본 허용으로 모킹한다. 정합성 검증은 별도 테스트에서 수행.
+vi.mock('@/lib/case-access', () => ({
+  checkCaseActionAccess: vi.fn(async () => ({
+    ok: true,
+    auth: {
+      user: { id: 'user-test-222', email: 'test@example.com' },
+      profile: { id: 'user-test-222' },
+      memberships: []
+    },
+    caseRow: { id: 'case-1', organization_id: 'org-test-111' }
+  }))
+}));
 
 const ORG_ID = 'org-test-111';
 const ORG_UUID = '00000000-0000-0000-0000-000000000001'; // valid UUID for Zod schema
