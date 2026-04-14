@@ -38,7 +38,66 @@ jobs:
         run: pnpm audit --audit-level=high
 
       - name: Run enforced validation
-        run: pnpm check:migrations && pnpm check:audit-traceability && pnpm check:test-coverage && pnpm lint && pnpm typecheck && pnpm test && pnpm build
+        # 비-secret 게이트: schema/types/typecheck/vitest/build 전부.
+        # types:check / check:schema-drift 는 SUPABASE_ACCESS_TOKEN 등 secrets가
+        # 없으면 graceful skip(exit 0)하므로 PR 머지엔 안전.
+        run: |
+          pnpm check:migrations
+          pnpm check:audit-traceability
+          pnpm check:test-coverage
+          pnpm check:rehab-integrity
+          pnpm check:rule-meta
+          pnpm check:ai-guardrails
+          pnpm check:navigation-consistency
+          pnpm check:schema-drift
+          pnpm types:check
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm build
+
+  live-integration:
+    # Secret-gated: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_TEST_ORG_ID
+    # 미설정 시 integration 테스트는 vitest에서 graceful skip되므로 fork PR에서도 무해.
+    # 단, secret이 세팅된 환경(main 머지·workflow_dispatch)에서는 실제로 돌면서 검증.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_TEST_ORG_ID: ${{ secrets.SUPABASE_TEST_ORG_ID }}
+      SUPABASE_TEST_ACTOR_ID: ${{ secrets.SUPABASE_TEST_ACTOR_ID }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run remote schema drift detector
+        run: pnpm check:schema-drift
+
+      - name: Verify Supabase types match remote schema
+        run: pnpm types:check
+
+      - name: Run DB-backed integration tests
+        run: pnpm test
 
   e2e-smoke:
     runs-on: ubuntu-latest
