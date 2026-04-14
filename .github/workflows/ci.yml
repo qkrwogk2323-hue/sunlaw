@@ -99,6 +99,51 @@ jobs:
       - name: Run DB-backed integration tests
         run: pnpm test
 
+  e2e-security-boundary:
+    # 비배정/타조직/wrong-subtype 차단을 12 시나리오로 검증.
+    # 사전 조건: supabase/seeds/0002_e2e_test_data.sql + scripts/seed-e2e-users.mjs
+    # 가 dev/staging Supabase에 적용돼 있어야 함.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      E2E_SEED_USER_PASSWORD: ${{ secrets.E2E_SEED_USER_PASSWORD }}
+      E2E_SEED_USER_MANAGER_EMAIL: ${{ secrets.E2E_SEED_USER_MANAGER_EMAIL }}
+      E2E_SEED_USER_ASSIGNED_EMAIL: ${{ secrets.E2E_SEED_USER_ASSIGNED_EMAIL }}
+      E2E_SEED_USER_UNASSIGNED_EMAIL: ${{ secrets.E2E_SEED_USER_UNASSIGNED_EMAIL }}
+      E2E_SEED_USER_OTHERORG_EMAIL: ${{ secrets.E2E_SEED_USER_OTHERORG_EMAIL }}
+      E2E_SEED_USER_CLIENT_EMAIL: ${{ secrets.E2E_SEED_USER_CLIENT_EMAIL }}
+      E2E_SEED_USER_MANAGER_PROFILE_ID: ${{ secrets.E2E_SEED_USER_MANAGER_PROFILE_ID }}
+      E2E_SEED_USER_ASSIGNED_PROFILE_ID: ${{ secrets.E2E_SEED_USER_ASSIGNED_PROFILE_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run security boundary E2E
+        run: pnpm exec playwright test tests/e2e/security-boundary.spec.ts --config=playwright.config.ts
+
   e2e-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
