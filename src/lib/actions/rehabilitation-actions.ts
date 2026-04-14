@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { generateDocument, type DocumentType, type DocumentData } from '@/lib/rehabilitation/document-generator';
 import { getRehabModuleData } from '@/lib/queries/rehabilitation';
 import { d5114Schema } from '@/lib/rehabilitation/court-form-schemas';
+import { persistGeneratedDocument } from '@/lib/documents/persistence';
 
 // ─── 폼 → DB 필드 매핑 (신청서) ───
 
@@ -629,7 +630,10 @@ export async function generateRehabDocument(
   caseId: string,
   organizationId: string,
   documentType: DocumentType,
-): Promise<{ ok: true; html: string } | { ok: false; code: string; userMessage: string }> {
+): Promise<
+  | { ok: true; html: string; documentId: string; storagePath: string }
+  | { ok: false; code: string; userMessage: string }
+> {
   try {
     const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
     if (!access.ok) return access;
@@ -666,7 +670,28 @@ export async function generateRehabDocument(
     };
 
     const html = generateDocument(documentType, docData);
-    return { ok: true, html };
+
+    const title = `${caseInfo?.title ?? '개인회생'} — ${documentType}`;
+    const persisted = await persistGeneratedDocument({
+      supabase,
+      caseId,
+      organizationId,
+      actorId: access.auth.user.id,
+      actorName: access.auth.profile?.full_name ?? null,
+      sourceKind: 'rehabilitation',
+      sourceDocumentType: documentType,
+      title,
+      html,
+      sourceDataSnapshot: docData,
+    });
+
+    if (!persisted.ok) {
+      // 스토리지/DB 저장 실패해도 HTML은 반환 — 사용자가 즉시 다운로드·미리보기는 가능
+      console.warn('[generateRehabDocument] persistence failed, returning html only:', persisted.code);
+      return { ok: true, html, documentId: '', storagePath: '' };
+    }
+
+    return { ok: true, html, documentId: persisted.documentId, storagePath: persisted.storagePath };
   } catch (e) {
     console.error('[generateRehabDocument]', e);
     return { ok: false, code: 'UNEXPECTED', userMessage: '문서 생성 중 오류가 발생했습니다.' };

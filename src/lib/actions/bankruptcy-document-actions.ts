@@ -8,6 +8,7 @@ import {
   type BankruptcyDocumentType,
   type BankruptcyDocumentData,
 } from '@/lib/bankruptcy/document-generator';
+import { persistGeneratedDocument } from '@/lib/documents/persistence';
 
 /**
  * 개인파산 문서 생성 서버 액션
@@ -20,7 +21,10 @@ export async function generateBankruptcyDoc(
   caseId: string,
   organizationId: string,
   documentType: BankruptcyDocumentType,
-): Promise<{ ok: true; html: string } | { ok: false; code: string; userMessage: string }> {
+): Promise<
+  | { ok: true; html: string; documentId: string; storagePath: string }
+  | { ok: false; code: string; userMessage: string }
+> {
   try {
     const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'bankruptcy' });
     if (!access.ok) return access;
@@ -117,7 +121,27 @@ export async function generateBankruptcyDoc(
     };
 
     const html = generateBankruptcyDocument(documentType, docData);
-    return { ok: true, html };
+
+    const title = `${caseInfo?.title ?? '개인파산'} — ${documentType}`;
+    const persisted = await persistGeneratedDocument({
+      supabase,
+      caseId,
+      organizationId,
+      actorId: access.auth.user.id,
+      actorName: access.auth.profile?.full_name ?? null,
+      sourceKind: 'bankruptcy',
+      sourceDocumentType: documentType,
+      title,
+      html,
+      sourceDataSnapshot: docData,
+    });
+
+    if (!persisted.ok) {
+      console.warn('[generateBankruptcyDoc] persistence failed, returning html only:', persisted.code);
+      return { ok: true, html, documentId: '', storagePath: '' };
+    }
+
+    return { ok: true, html, documentId: persisted.documentId, storagePath: persisted.storagePath };
   } catch (e) {
     console.error('[generateBankruptcyDoc]', e);
     return { ok: false, code: 'UNEXPECTED', userMessage: '문서 생성 중 오류가 발생했습니다.' };

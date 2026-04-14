@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { FileText, Download, Printer, Loader2, X } from 'lucide-react';
 import { generateBankruptcyDoc } from '@/lib/actions/bankruptcy-document-actions';
+import { getGeneratedDocumentDownloadUrl } from '@/lib/actions/document-download-actions';
 import type { BankruptcyDocumentType } from '@/lib/bankruptcy/document-generator';
 
 interface BankruptcyDocumentsTabProps {
@@ -60,22 +61,39 @@ export function BankruptcyDocumentsTab({
       setError(null);
       try {
         const result = await generateBankruptcyDoc(caseId, organizationId, docType);
-        if (result.ok) {
-          const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${label}.html`;
-          a.style.display = 'none';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            a.remove();
-            URL.revokeObjectURL(url);
-          }, 100);
-        } else {
+        if (!result.ok) {
           setError(result.userMessage);
+          return;
         }
+
+        // 저장된 case_documents 아티팩트에 대한 서명 URL을 먼저 시도
+        if (result.documentId) {
+          const signed = await getGeneratedDocumentDownloadUrl(result.documentId);
+          if (signed.ok) {
+            const a = document.createElement('a');
+            a.href = signed.url;
+            a.download = `${label}.html`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => a.remove(), 100);
+            return;
+          }
+        }
+
+        // 저장 실패 / URL 발급 실패 시 Blob 폴백
+        const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${label}.html`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 100);
       } catch {
         setError('문서 다운로드 중 오류가 발생했습니다.');
       } finally {
