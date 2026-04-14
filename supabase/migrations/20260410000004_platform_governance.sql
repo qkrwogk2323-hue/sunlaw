@@ -538,23 +538,26 @@ begin
   end if;
 
   if v_platform_org_id is null then
-    raise exception 'platform governance canonicalization failed: no active platform_management organization found';
+    -- Fresh DB 경로: platform_management 조직이 아직 없는 상태(빈 DB). 이후 런타임에서
+    -- 첫 조직이 승인될 때 canonicalize 로직이 다시 돌며 초기화된다. 여기서 exception을
+    -- 던지면 fresh DB replay / branch 생성이 실패하므로 조용히 skip.
+    raise notice 'platform_runtime_settings init skipped: fresh DB (no platform_management organization yet)';
+  else
+    insert into public.platform_runtime_settings (singleton, platform_organization_id)
+    values (true, v_platform_org_id)
+    on conflict (singleton) do update
+      set platform_organization_id = excluded.platform_organization_id,
+          updated_at = now();
+
+    update public.organizations
+    set is_platform_root = (id = v_platform_org_id)
+    where is_platform_root is distinct from (id = v_platform_org_id);
+
+    update public.organizations
+    set kind = 'platform_management'
+    where id = v_platform_org_id
+      and kind <> 'platform_management';
   end if;
-
-  insert into public.platform_runtime_settings (singleton, platform_organization_id)
-  values (true, v_platform_org_id)
-  on conflict (singleton) do update
-    set platform_organization_id = excluded.platform_organization_id,
-        updated_at = now();
-
-  update public.organizations
-  set is_platform_root = (id = v_platform_org_id)
-  where is_platform_root is distinct from (id = v_platform_org_id);
-
-  update public.organizations
-  set kind = 'platform_management'
-  where id = v_platform_org_id
-    and kind <> 'platform_management';
 end
 $$;
 

@@ -491,7 +491,7 @@ create table if not exists public.billing_entries (
   updated_at timestamptz not null default now(),
   fee_agreement_id uuid,
   billing_owner_case_organization_id uuid,
-  bill_to_party_kind public.case_billing_party_kind,
+  bill_to_party_kind public.billing_party_kind,
   bill_to_case_client_id uuid,
   bill_to_case_organization_id uuid,
   description text,
