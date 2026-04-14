@@ -93,6 +93,7 @@ async function createCase(
 
 export const test = base.extend<SeedFixtures>({
   admin: async ({}, use) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(makeAdmin());
   },
   seed: async ({ admin }, use) => {
@@ -129,6 +130,7 @@ export const test = base.extend<SeedFixtures>({
         clientName: 'E2E 의뢰인',
       }),
     };
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(seed);
     // teardown — cases CASCADE
     await admin

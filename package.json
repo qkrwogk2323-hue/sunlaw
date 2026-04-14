@@ -18,6 +18,7 @@
     "test:e2e:public-smoke": "playwright test --config=playwright.config.ts",
     "test:e2e:prod-smoke": "pnpm build && playwright test --config=playwright.prod-smoke.config.ts",
     "test:e2e:auth-prod-smoke": "pnpm build && playwright test --config=playwright.authenticated-prod-smoke.config.ts",
+    "test:e2e:security-boundary": "pnpm build && playwright test --config=playwright.security-boundary.config.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "ops:preflight": "node ./scripts/preflight-env.mjs",
     "git:main:sync": "./scripts/main-sync.sh",

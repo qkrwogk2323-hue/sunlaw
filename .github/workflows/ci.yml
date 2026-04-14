@@ -250,3 +250,46 @@ jobs:
 
       - name: Run authenticated production smoke E2E
         run: pnpm test:e2e:auth-prod-smoke
+
+  e2e-security-boundary:
+    # Secret-gated: 요구 env가 모두 있을 때만 실제 실행. fork PR에서는 spec이 skip.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_SEED_USER_MANAGER_EMAIL: ${{ secrets.E2E_SEED_USER_MANAGER_EMAIL }}
+      E2E_SEED_USER_ASSIGNED_EMAIL: ${{ secrets.E2E_SEED_USER_ASSIGNED_EMAIL }}
+      E2E_SEED_USER_UNASSIGNED_EMAIL: ${{ secrets.E2E_SEED_USER_UNASSIGNED_EMAIL }}
+      E2E_SEED_USER_OTHERORG_EMAIL: ${{ secrets.E2E_SEED_USER_OTHERORG_EMAIL }}
+      E2E_SEED_USER_CLIENT_EMAIL: ${{ secrets.E2E_SEED_USER_CLIENT_EMAIL }}
+      E2E_SEED_USER_PASSWORD: ${{ secrets.E2E_SEED_USER_PASSWORD }}
+      E2E_SEED_USER_MANAGER_PROFILE_ID: ${{ secrets.E2E_SEED_USER_MANAGER_PROFILE_ID }}
+      E2E_SEED_USER_ASSIGNED_PROFILE_ID: ${{ secrets.E2E_SEED_USER_ASSIGNED_PROFILE_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run security boundary E2E (9 scenarios)
+        run: pnpm test:e2e:security-boundary

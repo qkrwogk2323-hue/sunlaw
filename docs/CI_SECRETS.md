@@ -28,19 +28,21 @@ GitHub Repo → Settings → Secrets and variables → Actions → New repositor
 | `E2E_AUTH_SMOKE_EMAIL` | 인증 스모크용 사전 등록 사용자 이메일 |
 | `E2E_AUTH_SMOKE_PASSWORD` | 위 사용자 비밀번호 |
 
-### 3. `e2e-security-boundary` job (예정 — 보안 경계 E2E)
+### 3. `e2e-security-boundary` job (도입 완료 — 보안 경계 E2E, 9 시나리오)
 | Secret 이름 | 용도 |
 |---|---|
+| `SUPABASE_URL` | (공유) |
 | `NEXT_PUBLIC_SUPABASE_URL` | (공유) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (공유) |
-| `SUPABASE_SERVICE_ROLE_KEY` | seed 적용 + 정리 |
-| `E2E_SEED_ORG_A_ID` | seed에서 발급된 조직 A UUID |
-| `E2E_SEED_ORG_B_ID` | seed에서 발급된 조직 B UUID |
+| `SUPABASE_SERVICE_ROLE_KEY` | seed 사건 3건 생성 + teardown |
 | `E2E_SEED_USER_MANAGER_EMAIL` | u_org_a_manager 이메일 |
 | `E2E_SEED_USER_ASSIGNED_EMAIL` | u_org_a_assigned 이메일 |
 | `E2E_SEED_USER_UNASSIGNED_EMAIL` | u_org_a_unassigned 이메일 |
 | `E2E_SEED_USER_OTHERORG_EMAIL` | u_org_b_member 이메일 |
-| `E2E_SEED_USER_PASSWORD` | 위 4명 공통 패스워드 (테스트 전용) |
+| `E2E_SEED_USER_CLIENT_EMAIL` | 의뢰인 사용자 이메일 |
+| `E2E_SEED_USER_PASSWORD` | 위 5명 공통 패스워드 (테스트 전용) |
+| `E2E_SEED_USER_MANAGER_PROFILE_ID` | manager profile UUID (seed 스크립트로 발급) |
+| `E2E_SEED_USER_ASSIGNED_PROFILE_ID` | assigned profile UUID |
 
 ### 4. `live-auth-integration` job (예정 — rate_limit_buckets 실 DB 검증)
 | Secret 이름 | 용도 |

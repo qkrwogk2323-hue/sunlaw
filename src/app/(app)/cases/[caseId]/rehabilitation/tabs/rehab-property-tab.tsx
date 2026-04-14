@@ -515,7 +515,7 @@ function ExemptPropertySection({
       {exemptItems.length === 0 && totalDeduction === 0 && (
         <div className="mt-3 py-4 text-center text-emerald-400">
           <p className="text-sm">면제 신청 대상이 없습니다</p>
-          <p className="mt-1 text-xs">재산 항목에서 '보호' 체크 또는 공제액을 입력하면 면제 대상으로 포함됩니다</p>
+          <p className="mt-1 text-xs">재산 항목에서 &apos;보호&apos; 체크 또는 공제액을 입력하면 면제 대상으로 포함됩니다</p>
         </div>
       )}
     </section>
