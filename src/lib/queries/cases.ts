@@ -289,6 +289,7 @@ export async function getCaseDetailSections(
   const needsCollection = tab === 'collection' || (tab === 'overview' && collectionFocused);
 
   const [
+    { data: handlers },
     { data: clients },
     { data: parties },
     { data: caseOrganizations },
@@ -304,6 +305,11 @@ export async function getCaseDetailSections(
     { data: payments },
     { data: orgSettlements }
   ] = await Promise.all([
+    supabase
+      .from('case_handlers')
+      .select('id, profile_id, handler_name, role, created_at, profile:profiles(id, full_name, email)')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: true }),
     supabase
       .from('case_clients')
       .select('id, client_name, client_email_snapshot, relation_label, is_portal_enabled, profile_id, created_at')
@@ -416,7 +422,7 @@ export async function getCaseDetailSections(
   ]);
 
   return {
-    handlers: [],
+    handlers: handlers ?? [],
     clients: clients ?? [],
     parties: parties ?? [],
     documents: documents ?? [],
