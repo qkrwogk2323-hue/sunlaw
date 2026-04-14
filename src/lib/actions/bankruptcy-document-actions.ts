@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireAuthenticatedUser, findMembership } from '@/lib/auth';
+import { checkCaseActionAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
   generateBankruptcyDocument,
@@ -22,9 +22,8 @@ export async function generateBankruptcyDoc(
   documentType: BankruptcyDocumentType,
 ): Promise<{ ok: true; html: string } | { ok: false; code: string; userMessage: string }> {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'bankruptcy' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -135,9 +134,9 @@ export async function upsertBankruptcyApplication(
   data: Record<string, unknown>,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'bankruptcy' });
+    if (!access.ok) return access;
+    const auth = access.auth;
 
     const supabase = await createSupabaseServerClient();
 

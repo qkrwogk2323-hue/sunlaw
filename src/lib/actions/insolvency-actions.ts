@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireOrganizationActionAccess } from '@/lib/auth';
+import { checkCaseActionAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // ─── 채권자 저장 (AI 추출 결과 → DB) ───────────────────────────────────────────
@@ -31,6 +32,9 @@ export async function saveCreditorsFromExtraction(input: SaveCreditorsInput) {
   const { auth } = await requireOrganizationActionAccess(input.organizationId, {
     permission: 'case_edit'
   });
+
+  const caseAccess = await checkCaseActionAccess(input.caseId, { organizationId: input.organizationId });
+  if (!caseAccess.ok) return caseAccess;
 
   const supabase = await createSupabaseServerClient();
 
@@ -83,6 +87,9 @@ export async function updateCreditor(
   }
 ) {
   const { auth } = await requireOrganizationActionAccess(organizationId, { permission: 'case_edit' });
+  const caseAccess = await checkCaseActionAccess(caseId, { organizationId });
+  if (!caseAccess.ok) return caseAccess;
+
   const supabase = await createSupabaseServerClient();
 
   const updateData: Record<string, unknown> = { ...data, updated_by: auth.user.id };
@@ -118,6 +125,9 @@ export async function updateCreditor(
 // 채권자를 소프트 삭제 상태로 전환한다.
 export async function softDeleteCreditor(creditorId: string, organizationId: string, caseId: string) {
   const { auth } = await requireOrganizationActionAccess(organizationId, { permission: 'case_edit' });
+  const caseAccess = await checkCaseActionAccess(caseId, { organizationId });
+  if (!caseAccess.ok) return caseAccess;
+
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -165,6 +175,9 @@ export async function saveRepaymentPlanFull(input: {
   }>;
 }) {
   const { auth } = await requireOrganizationActionAccess(input.organizationId, { permission: 'case_edit' });
+  const caseAccess = await checkCaseActionAccess(input.caseId, { organizationId: input.organizationId });
+  if (!caseAccess.ok) return caseAccess;
+
   const supabase = await createSupabaseServerClient();
 
   const { count } = await supabase
@@ -246,6 +259,9 @@ export async function createClientActionPacket(input: {
   }>;
 }) {
   const { auth } = await requireOrganizationActionAccess(input.organizationId, { permission: 'case_edit' });
+  const caseAccess = await checkCaseActionAccess(input.caseId, { organizationId: input.organizationId });
+  if (!caseAccess.ok) return caseAccess;
+
   const supabase = await createSupabaseServerClient();
 
   const { data: packet, error: packetError } = await supabase
@@ -301,6 +317,9 @@ export async function checkClientActionItem(
   clientNote?: string
 ) {
   const { auth } = await requireOrganizationActionAccess(organizationId, {});
+  const caseAccess = await checkCaseActionAccess(caseId, { organizationId });
+  if (!caseAccess.ok) return caseAccess;
+
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -347,6 +366,9 @@ export async function saveRepaymentPlan(input: {
   generalRepaymentRatePct: number;
 }) {
   const { auth } = await requireOrganizationActionAccess(input.organizationId, { permission: 'case_edit' });
+  const caseAccess = await checkCaseActionAccess(input.caseId, { organizationId: input.organizationId });
+  if (!caseAccess.ok) return caseAccess;
+
   const supabase = await createSupabaseServerClient();
 
   // 버전 번호 계산

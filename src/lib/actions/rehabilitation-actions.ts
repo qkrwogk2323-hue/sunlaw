@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireAuthenticatedUser, findMembership } from '@/lib/auth';
+import { checkCaseActionAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { generateDocument, type DocumentType, type DocumentData } from '@/lib/rehabilitation/document-generator';
 import { getRehabModuleData } from '@/lib/queries/rehabilitation';
@@ -89,9 +89,8 @@ export async function upsertRehabApplication(
   data: Record<string, unknown>,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const dbData = mapApplicationFormToDb(data);
@@ -152,9 +151,8 @@ export async function upsertRehabCreditorSettings(
   data: Record<string, unknown>,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const dbData = mapCreditorSettingsFormToDb(data);
@@ -195,9 +193,8 @@ export async function upsertRehabCreditor(
   creditorId?: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -255,9 +252,8 @@ export async function softDeleteRehabCreditor(
   organizationId: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
@@ -285,9 +281,8 @@ export async function upsertRehabSecuredProperty(
   propertyId?: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -322,9 +317,8 @@ export async function upsertRehabProperty(
   propertyId?: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -356,9 +350,8 @@ export async function softDeleteRehabProperty(
   organizationId: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
@@ -386,9 +379,8 @@ export async function upsertRehabFamilyMember(
   memberId?: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -420,9 +412,8 @@ export async function softDeleteRehabFamilyMember(
   organizationId: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
@@ -447,9 +438,8 @@ export async function restoreRehabFamilyMember(
   organizationId: string,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
@@ -506,9 +496,8 @@ export async function upsertRehabIncomeSettings(
   data: Record<string, unknown>,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const dbData = mapIncomeFormToDb(data);
@@ -559,9 +548,8 @@ export async function upsertRehabAffidavit(
   data: Record<string, unknown>,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const dbData = mapAffidavitFormToDb(data);
@@ -602,9 +590,8 @@ export async function upsertRehabPropertyDeduction(
   deductionAmount: number,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -644,9 +631,8 @@ export async function generateRehabDocument(
   documentType: DocumentType,
 ): Promise<{ ok: true; html: string } | { ok: false; code: string; userMessage: string }> {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
     const [moduleData, caseResult] = await Promise.all([
@@ -695,9 +681,8 @@ export async function upsertProhibitionOrder(
   data: Record<string, unknown>,
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
@@ -764,9 +749,8 @@ export async function upsertRehabPlanSections(
   sections: { section_number: number; content: string }[],
 ) {
   try {
-    const auth = await requireAuthenticatedUser();
-    const membership = findMembership(auth, organizationId);
-    if (!membership) return { ok: false, code: 'NO_ACCESS', userMessage: '접근 권한이 없습니다.' };
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
 
     const supabase = await createSupabaseServerClient();
 
