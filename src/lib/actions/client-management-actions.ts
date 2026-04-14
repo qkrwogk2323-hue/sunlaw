@@ -280,7 +280,6 @@ export async function linkRelatedClientAction(formData: FormData) {
   }
 }
 
-/**   .DS_Store .cursorrules .env.example .env.local .git .github .gitignore .next .pnpm-store .tmp .vercel CLAUDE.md IMPLEMENTATION_STATUS.md README.md docs eslint.config.mjs instrumentation-client.ts instrumentation.ts middleware.ts next-env.d.ts next.config.mjs node_modules package-lock.json package.json playwright playwright-report playwright.authenticated-prod-smoke.config.ts playwright.config.ts playwright.prod-smoke.config.ts pnpm-lock.yaml postcss.config.mjs proxy.ts public scripts sentry.client.config.ts sentry.edge.config.ts sentry.server.config.ts src supabase test-results tests tsconfig.json tsconfig.tsbuildinfo vitest.config.ts            (soft unlink) */
 export async function removeClientFromRosterAction(formData: FormData) {
   const organizationId = `${formData.get('organizationId') ?? ''}`.trim();
   const clientId = `${formData.get('clientId') ?? ''}`.trim();

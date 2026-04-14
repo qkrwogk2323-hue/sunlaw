@@ -1,18 +1,46 @@
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { requireCaseAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 async function getCaseCoverData(caseId: string) {
-  await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
-
-  const { data: c } = await supabase
-    .from('cases')
-    .select(`
+  const { caseRow } = await requireCaseAccess<{
+    id: string;
+    title: string | null;
+    case_number: string | null;
+    court_name: string | null;
+    opened_on: string | null;
+    summary: string | null;
+    court_division: string | null;
+    presiding_judge: string | null;
+    assigned_judge: string | null;
+    court_room: string | null;
+    appeal_court_name: string | null;
+    appeal_division: string | null;
+    appeal_case_number: string | null;
+    appeal_presiding_judge: string | null;
+    appeal_assigned_judge: string | null;
+    appeal_court_room: string | null;
+    supreme_case_number: string | null;
+    supreme_division: string | null;
+    supreme_presiding_judge: string | null;
+    supreme_assigned_judge: string | null;
+    opponent_counsel_name: string | null;
+    opponent_counsel_phone: string | null;
+    opponent_counsel_fax: string | null;
+    client_contact_address: string | null;
+    client_contact_phone: string | null;
+    client_contact_fax: string | null;
+    deadline_filing: string | null;
+    deadline_appeal: string | null;
+    deadline_final_appeal: string | null;
+    cover_notes: string | null;
+    organization_id: string;
+    lifecycle_status?: string | null;
+  }>(caseId, {
+    select: `
       id, title, case_number, court_name, opened_on, summary,
       court_division, presiding_judge, assigned_judge, court_room,
       appeal_court_name, appeal_division, appeal_case_number,
@@ -20,12 +48,12 @@ async function getCaseCoverData(caseId: string) {
       supreme_case_number, supreme_division, supreme_presiding_judge, supreme_assigned_judge,
       opponent_counsel_name, opponent_counsel_phone, opponent_counsel_fax,
       client_contact_address, client_contact_phone, client_contact_fax,
-      deadline_filing, deadline_appeal, deadline_final_appeal, cover_notes
-    `)
-    .eq('id', caseId)
-    .maybeSingle();
-
-  if (!c) return null;
+      deadline_filing, deadline_appeal, deadline_final_appeal, cover_notes,
+      organization_id, lifecycle_status
+    `,
+  });
+  const c = caseRow;
+  const supabase = await createSupabaseServerClient();
 
   const { data: clients } = await supabase
     .from('case_clients')
@@ -60,10 +88,7 @@ function Cell({ label, value, w = 'auto' }: { label?: string; value?: string | n
 
 export default async function CaseCoverPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = await params;
-  const result = await getCaseCoverData(caseId);
-  if (!result) notFound();
-
-  const { c, clients, parties, schedules } = result;
+  const { c, clients, parties, schedules } = await getCaseCoverData(caseId);
 
   const plaintiff = clients[0]?.client_name ?? parties.find(p => ['plaintiff', 'petitioner', 'creditor'].includes(p.party_role))?.display_name ?? '';
   const defendant = parties.find(p => ['defendant', 'respondent', 'debtor'].includes(p.party_role))?.display_name ?? '';

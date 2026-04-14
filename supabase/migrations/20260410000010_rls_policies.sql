@@ -79,6 +79,7 @@ ALTER TABLE public.permission_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_runtime_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rate_limit_buckets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_affidavits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rehabilitation_creditor_settings ENABLE ROW LEVEL SECURITY;
@@ -2425,4 +2426,11 @@ CREATE POLICY rehab_prohibition_org_member ON public.rehabilitation_prohibition_
       WHERE om.profile_id = auth.uid()
     )
   );
+
+-- ────────────────────────────────────────────────────────────────────────────────
+-- Table: rate_limit_buckets
+-- Service-role only. No authenticated policies — RLS denies all; service_role bypasses.
+-- ────────────────────────────────────────────────────────────────────────────────
+
+-- (intentionally no authenticated policies — src/lib/rate-limit.ts uses admin client)
 

@@ -1,4 +1,10 @@
 node_modules
+.pnpm-store/
+
+# build / test output
+coverage/
+dist/
+.turbo/
 
 # macOS
 .DS_Store

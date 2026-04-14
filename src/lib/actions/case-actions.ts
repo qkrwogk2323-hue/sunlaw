@@ -371,7 +371,9 @@ async function createCaseCoreWrite({
   actorId,
   actorName,
   organizationSlug,
-  insolvencySubtype
+  insolvencySubtype,
+  clientName,
+  clientRole,
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   organizationId: string;
@@ -386,6 +388,8 @@ async function createCaseCoreWrite({
   actorName?: string | null;
   organizationSlug?: string | null;
   insolvencySubtype?: string | null;
+  clientName?: string | null;
+  clientRole?: string | null;
 }): Promise<CreateCaseCoreWriteResult> {
   const referenceNo = buildCaseReference(organizationSlug ?? 'CASE');
   const stageTemplateKey = caseType === 'debt_collection'
@@ -394,100 +398,49 @@ async function createCaseCoreWrite({
       ? 'civil-default'
       : caseType === 'criminal'
         ? 'criminal-default'
-        : caseType === 'insolvency'
-          ? 'general-default'
-          : 'general-default';
+        : 'general-default';
   const moduleFlags: Record<string, boolean> = caseType === 'debt_collection'
     ? { billing: true, collection: true }
     : caseType === 'insolvency'
       ? { billing: true, insolvency: true }
       : { billing: true };
 
-  // Step 1: Insert case
-  const insertPayload: Record<string, unknown> = {
-    organization_id: organizationId,
-    reference_no: referenceNo,
-    title,
-    case_type: caseType,
-    case_status: 'intake',
-    lifecycle_status: 'active',
-    stage_template_key: stageTemplateKey,
-    stage_key: 'intake',
-    module_flags: moduleFlags,
-    principal_amount: principalAmount,
-    opened_on: openedOn || null,
-    court_name: courtName || null,
-    case_number: caseNumber || null,
-    summary: summary || null,
-    created_by: actorId,
-    updated_by: actorId,
-  };
-  if (insolvencySubtype) {
-    insertPayload.insolvency_subtype = insolvencySubtype;
-  }
+  const { data: rpcCaseId, error: rpcError } = await supabase.rpc('create_case_atomic', {
+    p_organization_id: organizationId,
+    p_reference_no: referenceNo,
+    p_title: title,
+    p_case_type: caseType,
+    p_stage_template_key: stageTemplateKey,
+    p_stage_key: 'intake',
+    p_module_flags: moduleFlags,
+    p_principal_amount: principalAmount,
+    p_opened_on: openedOn || null,
+    p_court_name: courtName || null,
+    p_case_number: caseNumber || null,
+    p_summary: summary || null,
+    p_actor_id: actorId,
+    p_actor_name: actorName ?? null,
+    p_can_manage_collection: caseType === 'debt_collection',
+    p_insolvency_subtype: insolvencySubtype ?? null,
+    p_client_name: clientName ?? null,
+    p_client_role: clientRole ?? null,
+  });
 
-  const { data: caseRow, error: caseError } = await supabase
-    .from('cases')
-    .insert(insertPayload)
-    .select('id')
-    .single();
-
-  if (caseError || !caseRow?.id) {
-    console.error('[createCaseCoreWrite] cases insert error:', caseError);
+  if (rpcError || !rpcCaseId) {
+    console.error('[createCaseCoreWrite] create_case_atomic RPC error:', rpcError);
     return {
       ok: false,
       code: 'CASE_CREATE_DB_FAILED',
-      message: caseError?.code === '23505'
+      message: rpcError?.code === '23505'
         ? '동일한 사건 번호가 이미 존재합니다. 잠시 후 다시 시도해 주세요.'
-        : `사건 저장 중 오류가 발생했습니다. (코드: ${caseError?.code ?? 'unknown'})`,
+        : `사건 저장 중 오류가 발생했습니다. (코드: ${rpcError?.code ?? 'unknown'})`,
       resolution: '입력 내용을 확인하고 다시 시도해 주세요. 문제가 반복되면 관리자에게 문의하세요.'
     };
   }
 
-  const caseId = caseRow.id as string;
-
-  // Step 2: Insert case_handler (non-fatal if fails)
-  const { error: handlerError } = await supabase
-    .from('case_handlers')
-    .insert({
-      organization_id: organizationId,
-      case_id: caseId,
-      profile_id: actorId,
-      handler_name: actorName ?? '담당자',
-      role: '담당',
-      created_by: actorId,
-      updated_by: actorId,
-    });
-  if (handlerError) {
-    console.error('[createCaseCoreWrite] case_handlers insert error:', handlerError);
-  }
-
-  // Step 3: Insert case_organization (non-fatal if fails)
-  const { error: orgError } = await supabase
-    .from('case_organizations')
-    .insert({
-      organization_id: organizationId,
-      case_id: caseId,
-      role: 'managing_org',
-      status: 'active',
-      access_scope: 'full',
-      billing_scope: 'direct_client_billing',
-      communication_scope: 'client_visible',
-      is_lead: true,
-      can_submit_legal_requests: true,
-      can_receive_legal_requests: true,
-      can_manage_collection: caseType === 'debt_collection',
-      can_view_client_messages: true,
-      created_by: actorId,
-      updated_by: actorId,
-    });
-  if (orgError) {
-    console.error('[createCaseCoreWrite] case_organizations insert error:', orgError);
-  }
-
   return {
     ok: true as const,
-    caseId,
+    caseId: rpcCaseId as string,
     moduleFlags: moduleFlags as Record<string, boolean>
   };
 }
@@ -562,6 +515,9 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
     const insolvencySubtype = parsed.data.caseType === 'insolvency'
       ? `${formData.get('insolvencySubtype') ?? ''}`.trim() || null
       : null;
+    const clientName = `${formData.get('clientName') ?? ''}`.trim() || null;
+    const clientRole = `${formData.get('clientRole') ?? ''}`.trim() || null;
+
     const writeResult = await createCaseCoreWrite({
       supabase,
       organizationId: parsed.data.organizationId,
@@ -575,30 +531,13 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
       actorId: auth.user.id,
       actorName: auth.profile.full_name,
       organizationSlug: organization?.slug ?? null,
-      insolvencySubtype
+      insolvencySubtype,
+      clientName,
+      clientRole,
     });
 
     if (!writeResult.ok) {
       return { ok: false, code: writeResult.code, message: writeResult.message, resolution: writeResult.resolution };
-    }
-
-    // Step: case_clients 자동 연결 — clientName이 있으면 provisional 의뢰인 레코드 생성
-    const clientName = `${formData.get('clientName') ?? ''}`.trim();
-    if (clientName) {
-      try {
-        await supabase.from('case_clients').insert({
-          organization_id: parsed.data.organizationId,
-          case_id: writeResult.caseId,
-          client_name: clientName,
-          relation_label: `${formData.get('clientRole') ?? ''}`.trim() || '의뢰인',
-          is_portal_enabled: false,
-          link_status: 'linked',
-          created_by: auth.user.id,
-          updated_by: auth.user.id,
-        });
-      } catch (clientLinkError) {
-        console.error('[createCaseAction] case_clients insert error (non-fatal):', clientLinkError);
-      }
     }
 
     try {
@@ -613,11 +552,10 @@ export async function createCaseAction(formData: FormData): Promise<CaseActionRe
         billingFollowUpDueOn: parsed.data.billingFollowUpDueOn
       });
     } catch (postError) {
-      console.error('Case creation post-processing failed:', postError);
+      console.warn('[createCaseAction] billing follow-up post-processing failed (non-fatal):', postError);
     }
 
     finalizeCreateCase(writeResult.caseId);
-    console.error('[createCaseAction] SUCCESS caseId:', writeResult.caseId, 'orgId:', parsed.data.organizationId);
     return { ok: true as const, caseId: writeResult.caseId };
   } catch (error) {
     if (isRedirectError(error)) throw error;

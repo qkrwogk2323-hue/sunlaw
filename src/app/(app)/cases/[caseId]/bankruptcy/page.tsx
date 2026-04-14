@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { requireAuthenticatedUser } from '@/lib/auth';
+import { findMembership } from '@/lib/auth';
+import { requireCaseAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { BankruptcyModuleClient } from './bankruptcy-module-client';
 import type { CorrectionChecklistItemRaw, CorrectionNoticeSummaryRaw } from '@/lib/insolvency-types';
@@ -10,28 +11,24 @@ interface Props {
 
 export default async function BankruptcyPage({ params }: Props) {
   const { caseId } = await params;
-  const auth = await requireAuthenticatedUser();
-  const supabase = await createSupabaseServerClient();
 
-  // 사건 기본 정보
-  const { data: caseRow } = await supabase
-    .from('cases')
-    .select('id, title, case_type, insolvency_subtype, organization_id, module_flags')
-    .eq('id', caseId)
-    .single();
+  const { auth, caseRow } = await requireCaseAccess<{
+    id: string;
+    title: string;
+    case_type: string | null;
+    insolvency_subtype: string | null;
+    organization_id: string;
+    module_flags: Record<string, unknown> | null;
+    lifecycle_status?: string | null;
+  }>(caseId, {
+    select: 'id, title, case_type, insolvency_subtype, organization_id, module_flags, lifecycle_status',
+    insolvencySubtypePrefix: 'bankruptcy',
+  });
 
-  if (!caseRow) notFound();
-
-  // 조직 멤버 확인
-  const { data: membership } = await supabase
-    .from('organization_memberships')
-    .select('role')
-    .eq('organization_id', caseRow.organization_id)
-    .eq('profile_id', auth.user.id)
-    .eq('status', 'active')
-    .single();
-
+  const membership = findMembership(auth, caseRow.organization_id);
   if (!membership) notFound();
+
+  const supabase = await createSupabaseServerClient();
 
   // 채권자 목록 (soft delete 제외)
   const { data: creditors } = await supabase

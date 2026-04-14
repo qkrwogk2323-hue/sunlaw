@@ -1,5 +1,4 @@
-import { notFound } from 'next/navigation';
-import { requireAuthenticatedUser, findMembership } from '@/lib/auth';
+import { requireCaseAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getRehabModuleData } from '@/lib/queries/rehabilitation';
 import { RehabModuleClient } from './rehab-module-client';
@@ -13,21 +12,20 @@ export default async function RehabilitationPage({ params, searchParams }: Props
   const { caseId } = await params;
   const sp = await searchParams;
   const creditorPage = Math.max(1, parseInt(sp.creditorPage || '1', 10) || 1);
-  const auth = await requireAuthenticatedUser();
+
+  const { caseRow } = await requireCaseAccess<{
+    id: string;
+    title: string;
+    case_type: string | null;
+    insolvency_subtype: string | null;
+    organization_id: string;
+    lifecycle_status?: string | null;
+  }>(caseId, {
+    select: 'id, title, case_type, insolvency_subtype, organization_id, lifecycle_status',
+    insolvencySubtypePrefix: 'rehabilitation',
+  });
+
   const supabase = await createSupabaseServerClient();
-
-  // 사건 기본 정보
-  const { data: caseRow } = await supabase
-    .from('cases')
-    .select('id, title, case_type, insolvency_subtype, organization_id')
-    .eq('id', caseId)
-    .single();
-
-  if (!caseRow) notFound();
-
-  // 조직 멤버 확인
-  const membership = findMembership(auth, caseRow.organization_id);
-  if (!membership) notFound();
 
   // 의뢰인 정보 (신청인 탭에 프리필용)
   const { data: caseClients } = await supabase

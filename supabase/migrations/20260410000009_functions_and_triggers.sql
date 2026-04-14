@@ -35,7 +35,28 @@ AS $function$
 
 
 
-CREATE OR REPLACE FUNCTION public.create_case_atomic(p_organization_id uuid, p_reference_no text, p_title text, p_case_type text, p_stage_template_key text, p_stage_key text, p_module_flags jsonb, p_principal_amount numeric, p_opened_on date, p_court_name text, p_case_number text, p_summary text, p_actor_id uuid, p_actor_name text, p_can_manage_collection boolean)
+DROP FUNCTION IF EXISTS public.create_case_atomic(uuid, text, text, text, text, text, jsonb, numeric, date, text, text, text, uuid, text, boolean);
+
+CREATE OR REPLACE FUNCTION public.create_case_atomic(
+  p_organization_id uuid,
+  p_reference_no text,
+  p_title text,
+  p_case_type text,
+  p_stage_template_key text,
+  p_stage_key text,
+  p_module_flags jsonb,
+  p_principal_amount numeric,
+  p_opened_on date,
+  p_court_name text,
+  p_case_number text,
+  p_summary text,
+  p_actor_id uuid,
+  p_actor_name text,
+  p_can_manage_collection boolean,
+  p_insolvency_subtype text DEFAULT NULL,
+  p_client_name text DEFAULT NULL,
+  p_client_role text DEFAULT NULL
+)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -47,18 +68,24 @@ begin
   insert into public.cases (
     organization_id, reference_no, title, case_type, case_status,
     stage_template_key, stage_key, module_flags, principal_amount,
-    opened_on, court_name, case_number, summary, created_by, updated_by
+    opened_on, court_name, case_number, summary,
+    insolvency_subtype,
+    created_by, updated_by
   ) values (
-    p_organization_id, p_reference_no, p_title, p_case_type, 'intake',
+    p_organization_id, p_reference_no, p_title, p_case_type::public.case_type, 'intake',
     p_stage_template_key, p_stage_key, p_module_flags, p_principal_amount,
-    p_opened_on, p_court_name, p_case_number, p_summary, p_actor_id, p_actor_id
+    p_opened_on, p_court_name, p_case_number, p_summary,
+    nullif(p_insolvency_subtype, '')::public.insolvency_subtype,
+    p_actor_id, p_actor_id
   )
   returning id into v_case_id;
 
   insert into public.case_handlers (
-    organization_id, case_id, profile_id, handler_name, role
+    organization_id, case_id, profile_id, handler_name, role,
+    created_by, updated_by
   ) values (
-    p_organization_id, v_case_id, p_actor_id, p_actor_name, 'case_manager'
+    p_organization_id, v_case_id, p_actor_id, coalesce(p_actor_name, '담당자'), 'case_manager',
+    p_actor_id, p_actor_id
   );
 
   insert into public.case_organizations (
@@ -71,6 +98,19 @@ begin
     'direct_client_billing', 'client_visible', true, true, true,
     p_can_manage_collection, true, p_actor_id, p_actor_id
   );
+
+  if p_client_name is not null and length(btrim(p_client_name)) > 0 then
+    insert into public.case_clients (
+      organization_id, case_id, client_name, relation_label,
+      is_portal_enabled, link_status,
+      created_by, updated_by
+    ) values (
+      p_organization_id, v_case_id, btrim(p_client_name),
+      coalesce(nullif(btrim(p_client_role), ''), '의뢰인'),
+      false, 'linked',
+      p_actor_id, p_actor_id
+    );
+  end if;
 
   return v_case_id;
 end;
