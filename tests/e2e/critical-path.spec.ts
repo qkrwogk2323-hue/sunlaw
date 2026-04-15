@@ -53,6 +53,11 @@ test.describe('로그인 폼 UX', () => {
   });
 
   test('잘못된 자격증명 제출 시 영문 원문 대신 사용자 메시지를 보여준다', async ({ page }) => {
+    // 실제 Supabase 인증 응답을 받아야 검증 가능. fork PR / secret 미설정 환경에서는
+    // NEXT_PUBLIC_SUPABASE_ANON_KEY가 placeholder라 auth call 자체가 다른 에러로 빠진다.
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    test.skip(!anon.startsWith('eyJ'), 'valid anon JWT 없이 실제 auth 에러 흐름 검증 skip');
+
     await page.goto('/login');
 
     await page.locator('input[name="email"]').fill('unknown-user@example.com');

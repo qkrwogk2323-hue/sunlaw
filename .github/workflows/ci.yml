@@ -188,7 +188,9 @@ jobs:
         run: pnpm test:e2e:prod-smoke
 
   e2e-authenticated-production-smoke:
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    # 실제 prod 테스트 계정이 필요한 20-test 세트. main push마다 돌리면
+    # 계정 상태 drift로 항상 실패 — 수동 트리거 전용으로 운영.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
