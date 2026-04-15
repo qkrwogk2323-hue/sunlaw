@@ -16,9 +16,20 @@ import { execSync } from 'node:child_process';
 
 const PATH_LITERAL_RE = /['"`](\/[a-zA-Z0-9\-_/[\]?=&%.#:]*)['"`]/g;
 function getSourceFiles() {
-  const out = execSync("rg --files src -g '*.ts' -g '*.tsx'", { encoding: 'utf8', stdio: 'pipe' }).trim();
-  if (!out) return [];
-  return out.split('\n').filter(Boolean);
+  // Prefer ripgrep (fast); fall back to POSIX find when rg is unavailable (e.g. fresh CI runners).
+  const cmds = [
+    "rg --files src -g '*.ts' -g '*.tsx'",
+    "find src -type f \\( -name '*.ts' -o -name '*.tsx' \\)"
+  ];
+  for (const cmd of cmds) {
+    try {
+      const out = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      if (out) return out.split('\n').filter(Boolean);
+    } catch {
+      // try next fallback
+    }
+  }
+  return [];
 }
 
 function normalizePathLiteral(raw) {
