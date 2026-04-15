@@ -53,11 +53,13 @@ describe('bankruptcy-document-actions 모듈 smoke', () => {
 
   it('error: checkCaseActionAccess가 NO_ACCESS 반환 시 성공 경로 진입 안 함', async () => {
     const mod = await import('@/lib/actions/bankruptcy-document-actions');
-    // 호출 자체가 reject되지 않고 계약 형태로 실패(오류) 반환되는지 확인
-    const result = await mod.generateBankruptcyDoc({
-      caseId: '00000000-0000-0000-0000-000000000000',
-      documentType: 'application' as never,
-    }).catch((err: unknown) => ({ ok: false as const, err }));
+    const result = await mod
+      .generateBankruptcyDoc(
+        '00000000-0000-0000-0000-000000000000',
+        '00000000-0000-0000-0000-000000000000',
+        'application' as never
+      )
+      .catch((err: unknown) => ({ ok: false as const, err }));
     expect(result).toBeDefined();
   });
 });
@@ -101,7 +103,11 @@ describe('rehabilitation-actions 모듈 smoke', () => {
   it('error: checkCaseActionAccess 차단 시 성공하지 않음', async () => {
     const mod = await import('@/lib/actions/rehabilitation-actions');
     const result = await mod
-      .upsertRehabApplication({ caseId: '00000000-0000-0000-0000-000000000000' } as never)
+      .upsertRehabApplication(
+        '00000000-0000-0000-0000-000000000000',
+        '00000000-0000-0000-0000-000000000000',
+        {} as never
+      )
       .catch((err: unknown) => ({ ok: false as const, err }));
     expect(result).toBeDefined();
   });
