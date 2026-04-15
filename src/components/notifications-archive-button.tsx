@@ -2,13 +2,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { ROUTES } from '@/lib/routes/registry';
+import {
+  INTERACTION_KEYS,
+  resolveInteractionHref
+} from '@/lib/interactions/registry';
 
 export function NotificationsArchiveButton({ archivedCount }: { archivedCount: number }) {
   const [open, setOpen] = useState(false);
-  const archivedParams = new URLSearchParams();
-  archivedParams.set('state', 'archived');
-  const archivedHref = `${ROUTES.NOTIFICATIONS}?${archivedParams.toString()}` as Route;
+  const archivedHref = resolveInteractionHref(INTERACTION_KEYS.NOTIFICATIONS_ARCHIVE_LIST) as Route;
   return (
     <div className="relative">
       <button
@@ -16,6 +17,7 @@ export function NotificationsArchiveButton({ archivedCount }: { archivedCount: n
         onClick={() => setOpen(o => !o)}
         className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
         aria-label="보관함 열기"
+        data-interaction-key={INTERACTION_KEYS.NOTIFICATIONS_ARCHIVE_LIST}
       >
         📥 보관함 {archivedCount > 0 && <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] tabular-nums">{archivedCount}</span>}
       </button>
@@ -30,6 +32,7 @@ export function NotificationsArchiveButton({ archivedCount }: { archivedCount: n
             <p className="mt-1 text-xs text-slate-500">보관된 알림 {archivedCount}건</p>
             <Link
               href={archivedHref}
+              data-interaction-key={INTERACTION_KEYS.NOTIFICATIONS_ARCHIVE_LIST}
               className="mt-3 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-700 hover:bg-slate-100"
               onClick={() => setOpen(false)}
             >

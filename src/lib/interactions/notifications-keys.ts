@@ -3,7 +3,8 @@ export const NOTIFICATION_NAV_KEYS = {
   SUMMARY_IMMEDIATE: 'notifications.summary.immediate',
   SUMMARY_CONFIRM: 'notifications.summary.confirm',
   SUMMARY_MEETING: 'notifications.summary.meeting',
-  SUMMARY_OTHER: 'notifications.summary.other'
+  SUMMARY_OTHER: 'notifications.summary.other',
+  ARCHIVE_LIST: 'notifications.archive.list'
 } as const;
 
 export const NOTIFICATION_ACTION_KEYS = {
@@ -24,5 +25,6 @@ export const NOTIFICATION_STATE_KEYS = {
 export const NOTIFICATION_GROUP_KEYS = {
   SUMMARY_CARDS: 'notification-summary-cards',
   ROW_CTA: 'notification-row-cta',
-  ROW_MUTATE: 'notification-row-mutate'
+  ROW_MUTATE: 'notification-row-mutate',
+  ARCHIVE_LIST_NAV: 'notification-archive-list-nav'
 } as const;
