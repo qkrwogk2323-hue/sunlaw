@@ -93,10 +93,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Supabase CLI
+        # types:check가 `supabase gen types` 를 호출하므로 필수.
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
       - name: Run remote schema drift detector
         run: pnpm check:schema-drift
 
       - name: Verify Supabase types match remote schema
+        # 타입 검증은 prod 스키마 기준(src/types/supabase.generated.ts의 원천).
+        # 통합 테스트는 staging에서 돌지만 타입 파일은 prod에서 생성된다.
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: pnpm types:check
 
       - name: Run DB-backed integration tests

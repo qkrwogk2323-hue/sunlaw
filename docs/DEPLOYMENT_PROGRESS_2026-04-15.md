@@ -63,3 +63,35 @@
   - state 불일치 → registry `state.state='archived'` 정의로 통일
   - mixed인데 navigate로만 정의 → registry에 이미 `INTERACTION_TYPES.MIXED`로 정의됨을 확인
 - 로컬 검증: typecheck pass, vitest 263 passed / 5 skipped 유지
+
+---
+
+## 후속 조치 (운영 승인 경로)
+
+검증관 판정(2026-04-15): 상태 `내부 테스트용 가능`. 운영 승인까지 3단계.
+
+### Step ①-tail: 보안 incident 마감 ✅
+- `/tmp/env.local.backup.*`, `/tmp/rotate-*.sh`, `/tmp/sync-*.sh` 삭제
+- Supabase publishable/secret/PAT 구키 전부 폐기 확인 (API 조회)
+- Gemini 구키 삭제 확인 (http=400)
+- 상세: `docs/SECURITY_INCIDENT_2026-04-15_SECRET_EXPOSURE.md` Closure 섹션
+
+### Step ②: Staging 프로젝트 분리 ✅ (커밋 `a56733e`)
+- 신규 프로젝트 `veinspiral-staging` (ref `siljimybhmmtbligzbms`, ap-northeast-2, PG17)
+- Migration 20개 적용 (20260410000001~12 + 20260414000001~8 hotfix)
+  - 적용 방식: Supabase Management API `/v1/projects/:ref/database/query` + 자체 preprocessor
+  - preprocessor 2종: `AS $tag$` closing 뒤 세미콜론 보완, CREATE TRIGGER 앞 DROP IF EXISTS 삽입
+  - 특수 케이스: seed_data의 nested `$$` → `$cron_body$` 태그로 치환, hotfix_008의 `COMMENT ON TABLE storage.buckets` 권한 없음 → 스킵
+- Schema parity: prod와 일치 (tables 90, functions 46, triggers 149, policies public 187 / storage 4)
+  - staging +1 unique index on `case_hub_organizations(hub_id,organization_id)`: prod drift(migrations 기준이 맞음)
+- Supabase grants 복원: `anon`/`authenticated`/`service_role`에 public/app/audit schema + all tables/functions
+- E2E seed: 5 테스트 유저 + 2 조직 생성 (`scripts/seed-e2e-users.mjs`, role enum 버그 수정)
+- GitHub Actions secrets: `STAGING_SUPABASE_*` 7종 + `E2E_SEED_USER_*` 11종 + `STAGING_SUPABASE_TEST_ORG_ID/ACTOR_ID`
+- CI workflow: `live-integration`, `e2e-security-boundary` job env → STAGING_* secret 참조로 전환
+
+### Step ③: Live 검증 이전 ✅ (Step ②와 동시)
+- 로컬 검증: `tests/rate-limit-live.integration.test.ts` 3/3 pass (staging 대상)
+- CI: 커밋 `a56733e` 푸시 이후 run `24463148263` 결과 대기
+
+### Step ④: 최종 승인 문서 🔜
+- CI green 확인 후 별도 `docs/RELEASE_APPROVAL_*.md` 작성 예정

@@ -41,7 +41,7 @@ async function createCase(
   admin: SupabaseClient,
   args: {
     title: string;
-    caseType: 'general' | 'insolvency';
+    caseType: 'civil' | 'insolvency';
     insolvencySubtype: string | null;
     actorId: string;
     assignedId: string;
@@ -107,7 +107,7 @@ export const test = base.extend<SeedFixtures>({
     const seed: SeedCases = {
       caseGeneralId: await createCase(admin, {
         title: '[E2E] 일반사건',
-        caseType: 'general',
+        caseType: 'civil',
         insolvencySubtype: null,
         actorId,
         assignedId,

@@ -116,14 +116,31 @@
 - [x] **SUPPORT_IMPERSONATION_COOKIE_SECRET 회전** — `openssl rand -hex 32`로 신규 값 생성 + .env.local 반영 (Claude 컨텍스트에 전체 값 미노출)
 
 ### 사용자 dashboard 작업 필수 (API 미공개)
-- [ ] SUPABASE_ACCESS_TOKEN rotation — https://supabase.com/dashboard/account/tokens 에서 기존 revoke + 재발급 + .env.local + CI secrets 갱신
-- [ ] SUPABASE_DB_PASSWORD rotation — Dashboard → Settings → Database → Reset password. .env.local + CI + Vercel 갱신
-- [ ] Supabase JWT Secret regenerate — 전체 사용자 재로그인 유발. 구 `anon` / `service_role` legacy 키 자동 무효화. Dashboard → Settings → API → JWT Settings
-- [ ] NEXT_PUBLIC_SUPABASE_ANON_KEY 갱신 (JWT rotation 후 새 anon 키로 교체)
-- [ ] PII_ENCRYPTION_KEY_BASE64 dual-key 마이그레이션 계획 + 실행 (기암호화 PII 재암호화 필요)
-- [ ] GEMINI_API_KEY 재발급 (Google AI Studio)
-- [ ] KAKAO_CLIENT_SECRET 재발급 (Kakao Developers)
-- [ ] Vercel OIDC 자동 갱신 동작 확인
-- [ ] CI secrets(GitHub Actions) 전량 재등록
-- [ ] Vercel environment variables 재등록
-- [ ] 본 인시던트 보고를 내부 보안 채널에 공유
+- [x] SUPABASE_ACCESS_TOKEN rotation — 신규 `sbp_5e9529...` 발급, 구 `sbp_489aa6...` / `sbp_1747d4...` 전부 폐기
+- [x] SUPABASE_DB_PASSWORD rotation — 신규 password 적용 (.env.local + Vercel 3환경)
+- [x] Supabase JWT Secret: legacy JWT key(`anon`, `service_role`) dashboard에서 disabled 상태. 신규 API key 시스템으로 전환됨
+- [x] NEXT_PUBLIC_SUPABASE_ANON_KEY → `sb_publishable_S5N27...`로 교체 (새 API key 시스템)
+- [x] SUPABASE_SERVICE_ROLE_KEY → `sb_secret_QjUmT...`로 교체 (새 API key 시스템)
+- [ ] PII_ENCRYPTION_KEY_BASE64 dual-key 마이그레이션 — **별도 프로젝트로 분리**. 재암호화 비용 크고 service_role 회전으로 즉각적 위협은 차단됨
+- [x] GEMINI_API_KEY 재발급 — `AIzaSyAVgs8H...`. 구 `AIzaSyBLI...` http=400 확인
+- [x] KAKAO_CLIENT_SECRET 재발급 — `QKkoUIS...`. Supabase Auth `external_kakao_secret` PATCH 반영 (http=200)
+- [x] Vercel OIDC 자동 갱신 — `auto_refresh_via_vercel_cli` 플래그 유지
+- [x] CI secrets(GitHub Actions) 재등록 — PAT / anon / service_role + STAGING_* 세트
+- [x] Vercel environment variables 재등록 — production / preview / development 3환경
+
+## Closure
+
+**상태**: CLOSED (2026-04-15)
+
+**핵심 회전 종료**:
+- P0/P1 대상 7종 전부 회전 완료 (PAT, DB PW, service_role, anon, Gemini, Kakao, impersonation cookie)
+- 로그 노출이 있었던 구 값 전부 폐기 확인 (Supabase API 조회 + Gemini http=400)
+
+**미종결 항목**:
+- `PII_ENCRYPTION_KEY_BASE64` — 재암호화 마이그레이션 필수라 별도 프로젝트로 분리. 현재 값(`eB5dq2HS...`)은 보존되나 다음 번 PII 재암호화 배포에서 신규 키로 교체 예정. service_role 회전 완료로 단일 키 탈취 위협은 낮음.
+
+**후속 재발 방지**:
+- 회전 프로세스를 `/tmp/rotate-secrets-v2.sh` + `/tmp/sync-from-envlocal.sh` 패턴으로 원샷화 (대화 로그에 평문 미노출, 터미널 `read -s` 기반)
+- 회전 스크립트는 사용 후 즉시 삭제 (`rm /tmp/rotate-*`, `rm /tmp/env.local.backup.*`)
+- 회전된 비밀값은 절대 `.env.local` 에디터로 직접 붙여넣지 않음 (에디터 "newer content" 경고 회피)
+- Staging 프로젝트 분리로 production DB를 테스트 베드로 쓰지 않음 (2026-04-15 커밋 `a56733e`)
