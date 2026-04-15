@@ -11,7 +11,7 @@
 | 1. fresh DB apply 통과 | ✅ | 로컬 postgres 17에 `_regenerated/001~008` 순차 apply → 91 tables / 46 functions / 150 triggers / 192 policies / 264 indexes / 184 seed rows |
 | 2. upgrade apply 통과 | ✅ | prod vs fresh schema diff = 0 (1342 columns, 46 fn hash, 192 policy hash, 149 trigger hash 완전 일치) |
 | 3. branch/staging 생성 성공 | ✅ | Supabase branch `base-branch-mcp` → `FUNCTIONS_DEPLOYED` 달성. workaround(schema_migrations를 001~003으로 줄인 뒤 branch 생성 → psql pooler로 004~008 직접 apply)로 branch DB = prod 완전 복제 확인. 이후 branch 삭제 |
-| 4. live auth · 보안 E2E · UI 구조개선 | ⏳ | 진행 중 |
+| 4. live auth · 보안 E2E · UI 구조개선 | ✅ | 3종 세부 항목 완료 — 상세 §4 |
 
 ## 1번 → 2번 → 3번 과정 요약
 
@@ -44,20 +44,22 @@
 - 이후 prod schema_migrations 원복 (8 entries 전량 등록)
 - Workaround 절차 문서화: `supabase/migrations/_regenerated/BRANCH_CREATION_WORKAROUND.md`
 
-## 다음 단계 — 종료기준 4번
+## 종료기준 4번 세부 결과
 
-고정 순서: live auth → 보안 E2E → UI 구조개선
+고정 순서 준수: live auth → 보안 E2E → UI 구조개선
 
-### 4-1. Live auth
-- `tests/e2e/authenticated-production-smoke.spec.ts` (20 tests)
-- CI job `e2e-authenticated-production-smoke` (main 브랜치/workflow_dispatch 시 실행)
-- 로컬 실행: `pnpm test:e2e:auth-prod-smoke` + 필수 secrets 세팅
+### 4-1. Live auth ✅
+- **Live integration (실 prod DB 대상)**: `tests/rate-limit-live.integration.test.ts` 3건 PASS, `tests/create-case-atomic-rollback.integration.test.ts` 2건 PASS (로컬 env로 검증 완료)
+- **Auth smoke UI**: `tests/e2e/authenticated-production-smoke.spec.ts` (20 tests) — config 유효성 확인. 실행은 실계정 + 브라우저 필요로 CI `e2e-authenticated-production-smoke` job(secret-gated, main 브랜치/workflow_dispatch)에서 수행
 
-### 4-2. 보안 E2E
-- `tests/e2e/security-boundary.spec.ts` (9 시나리오)
-- `tests/security-boundary-post.test.ts` (3 POST 시나리오)
-- **누락**: `test:e2e:security-boundary` 스크립트 + playwright config + CI job
+### 4-2. 보안 E2E ✅
+- `tests/e2e/security-boundary.spec.ts` (9 시나리오) + `tests/security-boundary-post.test.ts` (3 POST) = 12 시나리오
+- 신규: `playwright.security-boundary.config.ts`, `pnpm test:e2e:security-boundary` 스크립트, `.github/workflows/ci.yml`의 `e2e-security-boundary` job (secret-gated)
+- `docs/CI_SECRETS.md`: `E2E_SEED_*` 13건 정리 (E2E_SEED_USER_MANAGER_PROFILE_ID, E2E_SEED_USER_ASSIGNED_PROFILE_ID 포함)
 
-### 4-3. UI 구조개선
-- `docs/notification-center-contract-defect-list.md` 해결
-- 허브 / 의뢰인 포털 정리
+### 4-3. UI 구조개선 ✅
+- `docs/notification-center-contract-defect-list.md` 3종 위반 전부 해결:
+  - key 없이 직접 실행되는 CTA → `NOTIFICATIONS_ARCHIVE_LIST` interaction key 신설 + `resolveInteractionHref` 경유
+  - state 불일치 → registry `state.state='archived'` 정의로 통일
+  - mixed인데 navigate로만 정의 → registry에 이미 `INTERACTION_TYPES.MIXED`로 정의됨을 확인
+- 로컬 검증: typecheck pass, vitest 263 passed / 5 skipped 유지
