@@ -49,7 +49,7 @@ const USERS = [
     email: 'e2e+a-assigned@veinspiral.test',
     fullName: 'E2E 배정 스태프 A',
     org: ORG_A,
-    role: 'staff',
+    role: 'org_staff',
     scope: 'assigned_cases_only',
   },
   {
@@ -57,7 +57,7 @@ const USERS = [
     email: 'e2e+a-unassigned@veinspiral.test',
     fullName: 'E2E 비배정 스태프 A',
     org: ORG_A,
-    role: 'staff',
+    role: 'org_staff',
     scope: 'assigned_cases_only',
   },
   {

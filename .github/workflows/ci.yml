@@ -60,20 +60,20 @@ jobs:
           pnpm build
 
   live-integration:
-    # Secret-gated: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_TEST_ORG_ID
-    # 미설정 시 integration 테스트는 vitest에서 graceful skip되므로 fork PR에서도 무해.
-    # 단, secret이 세팅된 환경(main 머지·workflow_dispatch)에서는 실제로 돌면서 검증.
+    # Staging 전용 (Step ②, 2026-04-15): production DB를 검증 대상에서 제외.
+    # Secret-gated: STAGING_* secrets 미설정 시 integration 테스트는 vitest에서 graceful skip.
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SUPABASE_TEST_ORG_ID: ${{ secrets.SUPABASE_TEST_ORG_ID }}
-      SUPABASE_TEST_ACTOR_ID: ${{ secrets.SUPABASE_TEST_ACTOR_ID }}
+      SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_TEST_ORG_ID: ${{ secrets.STAGING_SUPABASE_TEST_ORG_ID }}
+      SUPABASE_TEST_ACTOR_ID: ${{ secrets.STAGING_SUPABASE_TEST_ACTOR_ID }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
 
     steps:
       - name: Checkout repository
@@ -241,15 +241,16 @@ jobs:
         run: pnpm test:e2e:auth-prod-smoke
 
   e2e-security-boundary:
-    # Secret-gated: 요구 env가 모두 있을 때만 실제 실행. fork PR에서는 spec이 skip.
+    # Staging 전용 (Step ②, 2026-04-15): production 대상 실행 금지.
+    # Secret-gated: STAGING_* + E2E_SEED_USER_* 모두 있을 때만 실행, 아니면 spec이 skip.
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
       E2E_SEED_USER_MANAGER_EMAIL: ${{ secrets.E2E_SEED_USER_MANAGER_EMAIL }}
       E2E_SEED_USER_ASSIGNED_EMAIL: ${{ secrets.E2E_SEED_USER_ASSIGNED_EMAIL }}
       E2E_SEED_USER_UNASSIGNED_EMAIL: ${{ secrets.E2E_SEED_USER_UNASSIGNED_EMAIL }}
