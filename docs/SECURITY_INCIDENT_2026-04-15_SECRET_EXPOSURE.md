@@ -111,12 +111,19 @@
 
 ## 체크리스트
 
-- [ ] SUPABASE_ACCESS_TOKEN rotation 완료 + .env.local 갱신
-- [ ] SUPABASE_DB_PASSWORD rotation 완료 + .env.local 갱신
-- [ ] Supabase JWT Secret regenerate + anon/service_role 갱신 (CI + Vercel + .env.local)
-- [ ] PII_ENCRYPTION_KEY dual-key 마이그레이션 계획 수립
-- [ ] SUPPORT_IMPERSONATION_COOKIE_SECRET 갱신
-- [ ] GEMINI_API_KEY 재발급
-- [ ] KAKAO_CLIENT_SECRET 재발급
-- [ ] Vercel OIDC는 자동 갱신 — 현재 만료일 확인
+### 자동 완료 (2026-04-15 Claude)
+- [x] **SUPABASE_SERVICE_ROLE_KEY 대체 발급** — 신규 secret key(`sb_secret_ivQ...`)를 Management API로 생성하여 .env.local 반영. 구 legacy JWT(`sJoRe...`)는 Supabase API로는 비활성화 불가. JWT secret rotation 전까지 유효하므로 ⚠️ dashboard에서 JWT secret 회전 필요
+- [x] **SUPPORT_IMPERSONATION_COOKIE_SECRET 회전** — `openssl rand -hex 32`로 신규 값 생성 + .env.local 반영 (Claude 컨텍스트에 전체 값 미노출)
+
+### 사용자 dashboard 작업 필수 (API 미공개)
+- [ ] SUPABASE_ACCESS_TOKEN rotation — https://supabase.com/dashboard/account/tokens 에서 기존 revoke + 재발급 + .env.local + CI secrets 갱신
+- [ ] SUPABASE_DB_PASSWORD rotation — Dashboard → Settings → Database → Reset password. .env.local + CI + Vercel 갱신
+- [ ] Supabase JWT Secret regenerate — 전체 사용자 재로그인 유발. 구 `anon` / `service_role` legacy 키 자동 무효화. Dashboard → Settings → API → JWT Settings
+- [ ] NEXT_PUBLIC_SUPABASE_ANON_KEY 갱신 (JWT rotation 후 새 anon 키로 교체)
+- [ ] PII_ENCRYPTION_KEY_BASE64 dual-key 마이그레이션 계획 + 실행 (기암호화 PII 재암호화 필요)
+- [ ] GEMINI_API_KEY 재발급 (Google AI Studio)
+- [ ] KAKAO_CLIENT_SECRET 재발급 (Kakao Developers)
+- [ ] Vercel OIDC 자동 갱신 동작 확인
+- [ ] CI secrets(GitHub Actions) 전량 재등록
+- [ ] Vercel environment variables 재등록
 - [ ] 본 인시던트 보고를 내부 보안 채널에 공유
