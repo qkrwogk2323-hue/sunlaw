@@ -1,7 +1,7 @@
 # 릴리즈 승인 보고서 — 2026-04-15
 
 > 작성: 2026-04-15
-> 판정: **승인 가능** (검증관 Step ① ~ ④ 종결)
+> 판정: **실서비스 투입 가능** — 2026-04-15 카카오 로그인 수동 smoke 통과로 효력 발생
 > 이전 판정: `내부 테스트용 가능` (2026-04-15 검증관 1차·2차)
 
 이 문서는 `docs/DEPLOYMENT_PROGRESS_2026-04-15.md`의 기술 진척 보고서와
@@ -64,9 +64,7 @@ Run `24464310120` 5 job 결과:
 - 모든 staging 작업에서 prod DB write 0건 확인
 
 ### 2.5 수동 확인 (결재 전 1건)
-- [ ] **카카오 로그인 수동 smoke** — `external_kakao_secret` rotation 반영 후 첫 실전 로그인 시도. 성공하면 이 박스를 `[x]`로 체크 후 승인 효력 발생.
-  - 테스트 계정: 네가 쓰는 카카오 계정 1개로 `https://www.veinspiral.com/login` → 카카오로 시작하기 → 조직 또는 의뢰인 경로 진입 확인.
-  - 실패 시: Supabase Dashboard → Auth → Providers → Kakao의 secret이 최신(`QKkoUIS...`)인지 재확인, 필요시 PATCH 재실행.
+- [x] **카카오 로그인 수동 smoke** — 2026-04-15 운영자 확인. `external_kakao_secret` rotation 반영 후 실 로그인 성공 (화면 정상 진입).
 
 ---
 
@@ -118,7 +116,7 @@ Run `24464310120` 5 job 결과:
 - [x] Prod `schema_migrations` 수동 편집 금지 원칙 수립
 - [x] STAGING_* secrets 등록
 - [x] Seed 데이터 재현 가능 (SQL + node 스크립트 멱등)
-- [ ] 카카오 로그인 수동 smoke 1회 성공
+- [x] 카카오 로그인 수동 smoke 1회 성공 (2026-04-15)
 
 ### 보안
 - [x] P0/P1 secret 7종 회전 완료
@@ -140,11 +138,17 @@ Run `24464310120` 5 job 결과:
 
 ## 6. 판정
 
-**상태**: 카카오 로그인 수동 smoke 1건만 남음. 성공 확인 시 공식 판정을
-`내부 테스트용 가능` → **`실서비스 투입 가능`**으로 전환.
+**상태**: **실서비스 투입 가능** (2026-04-15 효력 발생)
 
-그 전까지의 공식 상태는 여전히 `내부 테스트용 가능`이며, 이 문서는 승인 선언
-직전 상태를 고정한 결재 기준이다.
+승인 근거:
+- 기술: CI run `24464310120` 전 job green (staging 기준 첫 실전 all green)
+- 운영: staging 프로젝트 분리 + production 비검증 원칙 수립 + seed 재현 가능
+- 보안: P0/P1 secret 7종 회전 완료 + 구키 폐기 확인 + legacy JWT disabled
+- 수동: 카카오 로그인 smoke 2026-04-15 운영자 확인
+
+유예 1건 (비차단):
+- `PII_ENCRYPTION_KEY_BASE64` — service_role 회전으로 즉시 위협 차단됨.
+  다음 PII 재암호화 배포에서 신규 키로 교체.
 
 ---
 
