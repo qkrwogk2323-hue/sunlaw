@@ -58,8 +58,10 @@ export function registerPublicRouteSmokeTests() {
   test('login page exposes the signup guide entry', async ({ page }) => {
     await page.goto('/login');
 
-    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '회원가입하기' })).toHaveAttribute('href', '/start/signup');
+    // 로그인 페이지의 메인 heading은 "로그인" (CardTitle). 이전 디자인의 "로그인 방법 선택"은 제거됨.
+    await expect(page.getByRole('heading', { name: '로그인', exact: true })).toBeVisible();
+    // 회원가입 진입점은 "일반 회원가입" 링크로 렌더됨 (NAVIGATION_MAP.loginSignup).
+    await expect(page.getByRole('link', { name: '일반 회원가입' })).toBeVisible();
   });
 
   test('organization request page asks anonymous users to sign in', async ({ page }) => {
@@ -81,14 +83,16 @@ export function registerPublicRouteSmokeTests() {
     await page.goto('/dashboard');
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
+    // 로그인 페이지의 메인 heading은 "로그인" (CardTitle). 이전 디자인의 "로그인 방법 선택"은 제거됨.
+    await expect(page.getByRole('heading', { name: '로그인', exact: true })).toBeVisible();
   });
 
   test('anonymous users are redirected to login before invitation acceptance', async ({ page }) => {
     await page.goto('/invite/test-token');
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
+    // 로그인 페이지의 메인 heading은 "로그인" (CardTitle). 이전 디자인의 "로그인 방법 선택"은 제거됨.
+    await expect(page.getByRole('heading', { name: '로그인', exact: true })).toBeVisible();
   });
 
   test('auth callback preserves the requested next path without a code', async ({ page }) => {
@@ -102,7 +106,8 @@ export function registerPublicRouteSmokeTests() {
     await page.goto('/?code=test-oauth-code');
 
     await expect(page).toHaveURL(/\/login\?error=/);
-    await expect(page.getByRole('heading', { name: '로그인 방법 선택' })).toBeVisible();
+    // 로그인 페이지의 메인 heading은 "로그인" (CardTitle). 이전 디자인의 "로그인 방법 선택"은 제거됨.
+    await expect(page.getByRole('heading', { name: '로그인', exact: true })).toBeVisible();
   });
 
   test('unknown routes show the not found experience', async ({ page }) => {
@@ -113,6 +118,12 @@ export function registerPublicRouteSmokeTests() {
   });
 
   test('health endpoint reports service status', async ({ request }) => {
+    // /api/health는 SUPABASE_SERVICE_ROLE_KEY로 admin client를 만들어 DB 1-row 조회로
+    // 상태를 확인한다. service_role이 없으면(예: fork PR, secret 미설정 CI) 503을
+    // 돌려주므로 해당 환경에서는 테스트 skip.
+    const hasServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    test.skip(!hasServiceRole, 'SUPABASE_SERVICE_ROLE_KEY 미설정 — health endpoint 검증 skip');
+
     const response = await request.get('/api/health');
 
     expect(response.ok()).toBe(true);

@@ -108,6 +108,12 @@ test.describe('알림 페이지 구조', () => {
 
 test.describe('Rate Limiting', () => {
   test('auth signup 엔드포인트는 과도한 요청 시 429를 반환한다', async ({ request }) => {
+    // rate_limit_buckets 테이블을 쓰는 checkDbRateLimit이 service_role로 접근해야
+    // 실제 bucket 증가가 이뤄진다. service_role이 없는 환경에서는 rate limiter가
+    // 동작하지 않고 앞단 validation이 400으로만 떨어지므로 skip.
+    const hasServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    test.skip(!hasServiceRole, 'SUPABASE_SERVICE_ROLE_KEY 미설정 — rate limit 검증 skip');
+
     // 6번 연속 POST → 5회 초과 시 429
     const responses: number[] = [];
     for (let i = 0; i < 7; i++) {
