@@ -31,7 +31,8 @@
 3. ~~의뢰인 포털(`portal/cases/[caseId]`)에 동일 타임라인 컴포넌트 연결 — 3-역할 한 화면 데모 완성~~ ✅ 2026-04-17 (portal-scope 머지 + `<CaseHubDocumentTimeline>` 재사용)
 4. ~~문서 생성 시 알림 자동 발생 — 직원(`/cases/:caseId?tab=documents`) + 의뢰인(`/portal/cases/:caseId`, 공개 문서만)~~ ✅ 2026-04-17 (`DOCUMENT_CREATED` + `DOCUMENT_SHARED_WITH_CLIENT` 정책 + `notifyDocumentStakeholders`). **staging 15/15 검증 완료** (`docs/VERIFICATION_RESULT_document_notifications_2026-04-17.md`)
 5. ~~검증관용 임시 페르소나 시드·teardown 스크립트 + 검증 체크리스트~~ ✅ 2026-04-17 (`scripts/seed-verification-personas.mjs`, `scripts/teardown-verification-personas.mjs`, `docs/VERIFICATION_CHECKLIST_document_notifications.md`)
-6. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
+6. ~~비용 메뉴 재정의 (완전개편) — /billing을 읽기 전용 리포트로 축소, 쓰기는 허브 탭으로 수렴, BillingComingSoonCards/쓰기 패널 삭제, 메뉴 레이블 "비용 리포트"로 변경~~ ✅ 2026-04-17 (사용자 주관 승인 후 실행, `BACKLOG §2.1` 참조)
+7. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
 
 ## 6. 손대면 안 되는 것
 - `src/app/(app)/cases/[caseId]/rehabilitation/tabs/rehab-creditors-tab.tsx` (사용자 작업 중)

@@ -187,14 +187,14 @@ function getOrganizationSections({
       { href: ROUTES.COLLECTIONS, label: '회수 활동', icon: FileText },
       { href: ROUTES.CASES, label: '채권 사건', icon: FileText },
       { href: ROUTES.CLIENTS, label: '채무자 관리', icon: Users },
-      { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt },
+      { href: ROUTES.BILLING, label: '비용 리포트', icon: Receipt },
       { href: ROUTES.CALENDAR, label: '일정', icon: FileText }
     );
   } else if (mode === 'other_admin') {
     // 일반 협업 조직 — 법률 내부 운영 메뉴 제외. 협업은 collaborationItems에 별도 표시
     organizationItems.push(
       { href: ROUTES.DOCUMENTS, label: '문서 수신', icon: FileText },
-      { href: ROUTES.BILLING, label: '비용 확인', icon: Receipt }
+      { href: ROUTES.BILLING, label: '비용 리포트', icon: Receipt }
     );
   } else {
     // law_admin 또는 organization_staff (모든 법률/법무 조직 구성원) — 법률 기본 제품
@@ -205,21 +205,21 @@ function getOrganizationSections({
         { href: ROUTES.COLLECTIONS, label: '회수 활동', icon: FileText },
         { href: ROUTES.CASES, label: '채권 사건', icon: FileText, interactionKey: INTERACTION_KEYS.CASES_LIST },
         { href: ROUTES.CLIENTS, label: '채무자 관리', icon: Users },
-        { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt },
+        { href: ROUTES.BILLING, label: '비용 리포트', icon: Receipt },
         { href: ROUTES.CALENDAR, label: '일정', icon: FileText, interactionKey: INTERACTION_KEYS.CALENDAR_OPEN }
       );
     } else if (staffOrgKind === 'other') {
       // 일반 협업 조직 직원 — 협업은 collaborationItems에 표시
       organizationItems.push(
         { href: ROUTES.DOCUMENTS, label: '문서 수신', icon: FileText },
-        { href: ROUTES.BILLING, label: '비용 확인', icon: Receipt }
+        { href: ROUTES.BILLING, label: '비용 리포트', icon: Receipt }
       );
     } else {
       organizationItems.push(
         { href: ROUTES.CASES, label: '사건 목록', icon: FileText, interactionKey: INTERACTION_KEYS.CASES_LIST },
         { href: ROUTES.CLIENTS, label: '의뢰인 관리', icon: Users },
         { href: ROUTES.DOCUMENTS, label: '업로드 문서', icon: FileText },
-        { href: ROUTES.BILLING, label: '비용 관리', icon: Receipt }
+        { href: ROUTES.BILLING, label: '비용 리포트', icon: Receipt }
       );
     }
   }
