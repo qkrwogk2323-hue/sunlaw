@@ -293,6 +293,32 @@ node scripts/check-audit-traceability.mjs
 
 ---
 
+## 🧹 세션 위생 (개발자 / AI 에이전트 공통)
+
+2026-04-15 secret 노출 incident의 재발 방지 조치. 비밀값을 다루는 작업 세션이 끝날 때 반드시 수행한다.
+
+### 세션 종료 시 삭제해야 하는 임시 파일
+- [ ] `/tmp/env.*.backup.*` — `.env.local` / `.env.staging` 백업본
+- [ ] `/tmp/rotate-*.sh`, `/tmp/sync-*.sh` — 일회용 회전 스크립트
+- [ ] `/tmp/*_fixed.sql`, `/tmp/reconcile.sql` — migration preprocessor 출력
+- [ ] shell history에서 비밀값이 평문으로 남은 명령 제거 (`history -d <N>` 또는 `history -c` + 새 세션)
+
+실행 예시:
+```bash
+rm -f /tmp/env.*.backup.* /tmp/rotate-*.sh /tmp/sync-*.sh
+rm -f /tmp/*_fixed.sql /tmp/reconcile.sql
+```
+
+### 비밀값 다룰 때 원칙
+- [ ] `cat .env.local` 전체 출력 금지. 필요한 키만 `grep "^KEY_NAME=" .env.local`
+- [ ] CLI 인자로 비밀값 전달 금지 (`PGPASSWORD=xxx psql` 대신 `.pgpass` 600 권장)
+- [ ] 회전 시 터미널 `read -s` 기반 스크립트 사용 — 대화 로그에 평문 안 남김
+- [ ] 회전 과정의 임시 파일은 작업 직후 삭제
+
+상세 incident 기록: `docs/SECURITY_INCIDENT_2026-04-15_SECRET_EXPOSURE.md`
+
+---
+
 ## 📞 연락처 및 에스컬레이션
 
 | 역할 | 담당자 | 연락처 |
@@ -305,5 +331,5 @@ node scripts/check-audit-traceability.mjs
 
 ---
 
-_최종 업데이트: 2026-03-21_  
+_최종 업데이트: 2026-04-15_  
 _문서 위치: `docs/OPERATIONS_CHECKLIST.md`_
