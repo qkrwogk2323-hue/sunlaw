@@ -312,7 +312,7 @@ export default async function CaseDetailPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/clients"
+            href={ROUTES.CLIENTS}
             className={`inline-flex h-12 items-center rounded-2xl border px-5 text-base font-semibold transition ${
               isClientLinked
                 ? 'border-cyan-200 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'

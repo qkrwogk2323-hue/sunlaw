@@ -20,18 +20,18 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   const auth = await requireAuthenticatedUser();
 
   if (auth.profile.must_change_password) {
-    redirect('/start/password-reset' as Route);
+    redirect(ROUTES.START_PASSWORD_RESET);
   }
   if (auth.profile.must_complete_profile) {
-    redirect('/start/member-profile' as Route);
+    redirect(ROUTES.START_MEMBER_PROFILE);
   }
 
   if (!hasCompletedLegalName(auth.profile)) {
-    redirect('/start/profile-name' as Route);
+    redirect(ROUTES.START_PROFILE_NAME);
   }
 
   if (isClientAccountPending(auth.profile)) {
-    redirect('/start/pending' as Route);
+    redirect(ROUTES.START_PENDING);
   }
 
   if (!isClientAccountActive(auth.profile)) {
@@ -49,7 +49,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
         client_account_status_reason: '활성 포털 링크 없음으로 재승인 대기 전환'
       })
       .eq('id', auth.user.id);
-    redirect('/start/pending' as Route);
+    redirect(ROUTES.START_PENDING);
   }
 
   return (

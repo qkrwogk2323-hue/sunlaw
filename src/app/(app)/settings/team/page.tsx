@@ -23,6 +23,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { cookies } from 'next/headers';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { formatDateTime } from '@/lib/format';
+import { ROUTES } from '@/lib/routes/registry';
 
 function toneByStatus(value: string) {
   if (value.includes('완료') || value.includes('활성')) return 'green' as const;
@@ -332,7 +333,7 @@ export default async function TeamSettingsPage({
                   {row.invitationId ? <ResendInvitationForm invitationId={row.invitationId} compact /> : null}
                   {canManage && !row.isInviteOnly && row.raw.role !== 'org_owner' ? (
                     <a
-                      href={`/settings/team?member=${row.raw.id}#member-edit-${row.raw.id}`}
+                      href={`${ROUTES.SETTINGS_TEAM}?member=${row.raw.id}#member-edit-${row.raw.id}` as Route}
                       className="inline-flex h-8 items-center rounded-md border border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
                     >
                       수정하기

@@ -29,7 +29,7 @@ export default async function ClientPendingPage({
   const auth = await requireAuthenticatedUser();
 
   if (!auth.profile.is_client_account) {
-    redirect('/start/signup?flow=client');
+    redirect(`${ROUTES.START_SIGNUP}?flow=client` as Route);
   }
 
   if (isClientAccountActive(auth.profile)) {

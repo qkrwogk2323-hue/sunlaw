@@ -7,6 +7,7 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { ROUTES } from '@/lib/routes/registry';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { InlineErrorMessage } from '@/components/ui/inline-error';
@@ -124,7 +125,7 @@ export function CredentialLoginForm() {
         }
 
         // Auth cookies are already set by the server — redirect to home.
-        window.location.href = '/dashboard';
+        window.location.href = ROUTES.DASHBOARD;
         return;
       }
 
@@ -138,7 +139,7 @@ export function CredentialLoginForm() {
         throw signInError;
       }
 
-      window.location.href = '/dashboard';
+      window.location.href = ROUTES.DASHBOARD;
     } catch (submitError) {
       setError(toLoginErrorFeedback(submitError, mode));
     } finally {

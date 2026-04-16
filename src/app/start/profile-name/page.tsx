@@ -8,6 +8,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { getCurrentAuth } from '@/lib/auth';
 import { getAuthenticatedHomePath, hasCompletedLegalName } from '@/lib/client-account';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export default async function ProfileNamePage() {
   const auth = await getCurrentAuth();
 
   if (!auth) {
-    redirect('/login');
+    redirect(ROUTES.LOGIN);
   }
 
   if (hasCompletedLegalName(auth.profile)) {

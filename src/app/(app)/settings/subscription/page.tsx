@@ -12,6 +12,7 @@ import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { redirect } from 'next/navigation';
 import type { Route } from 'next';
+import { ROUTES } from '@/lib/routes/registry';
 
 type SearchParams = Promise<{ locked?: string; org?: string }>;
 
@@ -43,7 +44,7 @@ export default async function SubscriptionSettingsPage({
 
   // 플랫폼 관리자 전용 페이지 — 일반 조직 사용자는 조직설정 개요로 이동
   if (!canViewPlatformControls) {
-    redirect('/settings' as Route);
+    redirect(ROUTES.SETTINGS);
   }
 
   const resolved = searchParams ? await searchParams : undefined;

@@ -44,7 +44,7 @@ export default async function CollaborationHubPage({
   ]);
 
   if (!organizationId || isClientAccountActive(auth.profile)) {
-    redirect('/portal' as Route);
+    redirect(ROUTES.PORTAL);
   }
 
   if (!hub) {

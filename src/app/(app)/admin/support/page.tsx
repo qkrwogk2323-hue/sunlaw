@@ -13,6 +13,8 @@ import { formatDateTime } from '@/lib/format';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import Link from 'next/link';
+import { ROUTES } from '@/lib/routes/registry';
+import type { Route } from 'next';
 
 export default async function SupportPage() {
   const auth = await requireAuthenticatedUser();
@@ -52,7 +54,7 @@ export default async function SupportPage() {
                 <p className="mt-1 text-sm text-slate-600">사용자조직과 의뢰인이 플랫폼 운영팀에 보낸 문의, 요청, 의견, 오류 신고를 이 화면에서 처리합니다.</p>
               </div>
               <Link
-                href="/admin/audit?tab=general&table=platform_support_tickets"
+                href={`${ROUTES.ADMIN_AUDIT}?tab=general&table=platform_support_tickets` as Route}
                 className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 고객센터 기록 보기
@@ -115,7 +117,7 @@ export default async function SupportPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>지원 접속 요청 목록</CardTitle>
             <Link
-              href="/admin/audit?tab=general&table=support_requests"
+              href={`${ROUTES.ADMIN_AUDIT}?tab=general&table=support_requests` as Route}
               className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
             >
               지원 요청 기록 보기

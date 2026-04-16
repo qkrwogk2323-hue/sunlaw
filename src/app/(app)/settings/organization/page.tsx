@@ -21,6 +21,7 @@ import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
 import { ROUTES } from '@/lib/routes/registry';
+import type { Route } from 'next';
 
 const kindLabel: Record<string, string> = {
   platform_management: '플랫폼 관리조직',
@@ -100,13 +101,13 @@ export default async function OrganizationSettingsPage({
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
-          <Link href="/settings/organization?section=intro" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'intro' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
+          <Link href={`${ROUTES.SETTINGS_ORGANIZATION}?section=intro` as Route} className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'intro' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             회사소개
           </Link>
-          <Link href="/settings/organization?section=info" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'info' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
+          <Link href={`${ROUTES.SETTINGS_ORGANIZATION}?section=info` as Route} className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'info' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             회사정보
           </Link>
-          <Link href="/settings/organization?section=env" className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'env' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
+          <Link href={`${ROUTES.SETTINGS_ORGANIZATION}?section=env` as Route} className={`block rounded-lg border px-3 py-2 text-sm font-medium transition ${activeSection === 'env' ? 'border-sky-700 bg-sky-700 text-white' : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:border-slate-200'}`}>
             환경설정
           </Link>
         </div>

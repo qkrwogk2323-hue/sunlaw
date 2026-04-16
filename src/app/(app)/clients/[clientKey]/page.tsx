@@ -12,6 +12,7 @@ import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAu
 import { formatDateTime } from '@/lib/format';
 import { hasPermission } from '@/lib/permissions';
 import { getClientDetailSummary, listClientRelationCandidates } from '@/lib/queries/clients';
+import { ROUTES } from '@/lib/routes/registry';
 
 export default async function ClientDetailPage({
   params,
@@ -50,7 +51,7 @@ export default async function ClientDetailPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{detail.name}</h1>
           <p className="mt-2 text-sm text-slate-600">의뢰인 기본정보와 누적 이력을 한 화면에서 관리합니다.</p>
         </div>
-        <Link href="/clients" className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+        <Link href={ROUTES.CLIENTS} className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">
           의뢰인목록으로
         </Link>
       </div>

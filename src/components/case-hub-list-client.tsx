@@ -49,7 +49,7 @@ function HubCard({ hub }: { hub: CaseHubSummary }) {
           {hub.accessPinEnabled ? 'PIN 잠금 사용 중' : '잠금 해제'}
         </span>
         <Link
-          href={`/case-hubs/${hub.id}/pin` as Route}
+          href={`${ROUTES.CASE_HUBS}/${hub.id}/pin` as Route as Route}
           className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
           PIN 관리
@@ -108,7 +108,7 @@ export function CaseHubListClient({ hubs, query = '' }: Props) {
           <p className="mt-4 text-base font-semibold text-slate-700">아직 사건허브가 없습니다.</p>
           <p className="mt-1 text-sm text-slate-500">사건목록에서 허브 연동을 시작하면 협업 로비가 생성됩니다.</p>
           <Link
-            href="/cases"
+            href={ROUTES.CASES}
             className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-5 text-sm font-semibold text-sky-800"
           >
             사건목록으로 이동

@@ -8,6 +8,7 @@ import { getCurrentAuth } from '@/lib/auth';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel } from '@/lib/case-stage';
 import { getPortalCaseDetail } from '@/lib/queries/portal';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ function signatureStatusLabel(status?: string | null) {
 
 export default async function PortalCaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const auth = await getCurrentAuth();
-  if (!auth) redirect('/login');
+  if (!auth) redirect(ROUTES.LOGIN);
   const { caseId } = await params;
   const detail = await getPortalCaseDetail(caseId);
   if (!detail) notFound();

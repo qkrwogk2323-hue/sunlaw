@@ -200,9 +200,10 @@ if (conflicts.length) {
 // 베이스라인: 2026-04-16 기준 기존 하드코딩 수. 이보다 많아지면 실패(회귀 차단).
 // 시간을 두고 ROUTES 경유로 점진 교체. 완료되면 BASELINE을 0으로 낮추고
 // hardcoded.length > 0으로 조건 변경.
-// 2026-04-16 저녁 측정 (3차): /settings, /admin, /case-hubs, /dashboard 등 일괄
-// 정리 후 24개 잔존. 베이스라인 30으로 하향. 장기 목표: 0.
-const HARDCODED_BASELINE = 30;
+// 2026-04-16 저녁 (4차 완료): 하드코딩 82 → 0. 베이스라인 0 고정 — 이제부터는
+// 신규 하드코딩 추가 시 즉시 CI fail. 모든 UI href/router.push/redirect는
+// ROUTES.* 또는 resolveInteractionHref / NAVIGATION_MAP 경유.
+const HARDCODED_BASELINE = 0;
 
 if (hardcoded.length > HARDCODED_BASELINE) {
   hasError = true;

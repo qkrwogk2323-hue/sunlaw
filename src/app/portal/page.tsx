@@ -22,7 +22,7 @@ function progressSentence(text?: string | null) {
 
 export default async function PortalHomePage() {
   const auth = await getCurrentAuth();
-  if (!auth) redirect('/login');
+  if (!auth) redirect(ROUTES.LOGIN);
   const { cases, actionQueue } = await getPortalHomeSnapshot();
   const requiredNow = actionQueue.filter((item: any) => item.kind === 'request' && item.status === 'waiting_client');
   const needCheck = actionQueue.filter((item: any) => item.kind === 'request' && item.status !== 'waiting_client');
