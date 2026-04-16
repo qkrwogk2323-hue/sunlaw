@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { PortalContractSignatureForm } from '@/components/forms/portal-contract-signature-form';
+import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline';
 import { getCurrentAuth } from '@/lib/auth';
 import { CASE_STAGE_OPTIONS, getCaseStageLabel } from '@/lib/case-stage';
 import { getPortalCaseDetail } from '@/lib/queries/portal';
@@ -344,13 +345,12 @@ export default async function PortalCaseDetailPage({ params }: { params: Promise
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>공유 문서</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {detail.documents.length ? detail.documents.map((item: any) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 p-4">
-                <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="mt-1 text-sm text-slate-500">{item.document_kind} · {item.approval_status}</p>
-              </div>
-            )) : <p className="text-sm text-slate-500">공유된 문서가 없습니다.</p>}
+          <CardContent>
+            <CaseHubDocumentTimeline
+              documents={detail.documentTimeline}
+              emptyDescription="담당 조직이 공유한 문서가 아직 없습니다."
+              maxItems={10}
+            />
           </CardContent>
         </Card>
 

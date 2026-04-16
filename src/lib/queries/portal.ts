@@ -431,7 +431,7 @@ export async function getPortalCaseDetail(caseId: string) {
     { data: latestRepaymentPlan },
     { data: latestCorrectionJob }
   ] = await Promise.all([
-    supabase.from('case_documents').select('id, title, document_kind, approval_status, updated_at').eq('case_id', caseId).eq('client_visibility', 'client_visible').is('deleted_at', null).order('updated_at', { ascending: false }),
+    supabase.from('case_documents').select('id, title, document_kind, approval_status, created_at, updated_at, created_by_name').eq('case_id', caseId).eq('client_visibility', 'client_visible').is('deleted_at', null).order('updated_at', { ascending: false }),
     supabase.from('case_schedules').select('id, title, schedule_kind, scheduled_start, location').eq('case_id', caseId).eq('client_visibility', 'client_visible').order('scheduled_start', { ascending: true }),
     supabase.from('case_messages').select('id, body, created_at, sender_role, sender:profiles(full_name)').eq('case_id', caseId).eq('is_internal', false).order('created_at', { ascending: false }).limit(20),
     supabase.from('case_requests').select('id, fee_agreement_id, request_kind, title, body, status, due_at, created_at').eq('case_id', caseId).eq('client_visible', true).order('created_at', { ascending: false }).limit(20),
@@ -439,7 +439,7 @@ export async function getPortalCaseDetail(caseId: string) {
     supabase.from('case_handlers').select('id, role, handler_name, created_at').eq('case_id', caseId).order('created_at', { ascending: true }),
     supabase
       .from('fee_agreements')
-      .select('id, title, agreement_type, effective_from, effective_to, terms_json')
+      .select('id, title, agreement_type, effective_from, effective_to, terms_json, created_at, created_by_name, is_active')
       .eq('case_id', caseId)
       .eq('bill_to_case_client_id', clientRow.id)
       .is('deleted_at', null)
@@ -474,9 +474,43 @@ export async function getPortalCaseDetail(caseId: string) {
       : Promise.resolve({ data: null as any })
   ]);
 
+  // case-hub-projection.documents와 동일한 모양의 통합 타임라인을 portal-scope로 구성.
+  // 의뢰인은 client_visibility='client_visible' 문서와 자기에게 청구된 fee_agreement만 본다.
+  // 같은 컴포넌트(<CaseHubDocumentTimeline>)로 직원·의뢰인 화면을 통일한다.
+  const portalCaseDocuments = ((documents ?? []) as any[]).map((d) => ({
+    id: d.id as string,
+    source: 'case_document' as const,
+    title: (d.title ?? null) as string | null,
+    documentKind: (d.document_kind ?? null) as string | null,
+    approvalStatus: (d.approval_status ?? null) as string | null,
+    createdAt: (d.created_at ?? d.updated_at ?? null) as string | null,
+    createdByName: (d.created_by_name ?? null) as string | null,
+  }));
+  const portalContractDocuments = ((contractAgreements ?? []) as any[]).map((a) => ({
+    id: a.id as string,
+    source: 'contract' as const,
+    title: (a.title ?? (a.agreement_type ? `계약서 (${a.agreement_type})` : '계약서')) as string | null,
+    documentKind: (a.agreement_type ?? 'contract') as string | null,
+    approvalStatus: (a.is_active ? 'active' : 'inactive') as string | null,
+    createdAt: (a.created_at ?? null) as string | null,
+    createdByName: (a.created_by_name ?? null) as string | null,
+  }));
+  const mergedTimeline = [...portalCaseDocuments, ...portalContractDocuments].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  });
+  const documentTimeline = {
+    count: mergedTimeline.length,
+    generatedCount: portalCaseDocuments.length,
+    contractCount: portalContractDocuments.length,
+    recent: mergedTimeline.slice(0, 15),
+  };
+
   return {
     ...caseRow,
     documents: documents ?? [],
+    documentTimeline,
     schedules: schedules ?? [],
     messages: messages ?? [],
     requests: requests ?? [],

@@ -27,7 +27,8 @@
 ## 5. 지금 해야 할 일 (우선순위 순)
 1. ~~`dashboard-hub-overview.tsx`의 `overdueMap` 실데이터 주입~~ ✅ 2026-04-17
 2. ~~허브 projection 문서 타임라인을 실제 UI(`case-hubs/[hubId]`, `rehab-documents-tab`, `bankruptcy-documents-tab`)에 연결~~ ✅ 2026-04-17 (`<CaseHubDocumentTimeline>` 컴포넌트 + 3개 소비처 주입)
-3. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
+3. ~~의뢰인 포털(`portal/cases/[caseId]`)에 동일 타임라인 컴포넌트 연결 — 3-역할 한 화면 데모 완성~~ ✅ 2026-04-17 (portal-scope 머지 + `<CaseHubDocumentTimeline>` 재사용)
+4. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
 
 ## 6. 손대면 안 되는 것
 - `src/app/(app)/cases/[caseId]/rehabilitation/tabs/rehab-creditors-tab.tsx` (사용자 작업 중)
