@@ -1,3 +1,24 @@
+/**
+ * notifications.ts — **프로젝트 전역 단일 알림 feed** 쿼리 계층.
+ *
+ * 규약 (2026-04-16, 리뷰어 지시 "같은 feed만 쓴다"):
+ *   - 알림 관련 조회는 전부 이 파일의 함수만 사용. 다른 파일에서 직접
+ *     `supabase.from('notifications')` 호출 금지.
+ *   - 허용 호출처: 어디서든(직원 앱, 포털) — 단, 의뢰인 포털은
+ *     `getPortalNotifications`만 쓰고, 직원 앱은 `getNavUnreadCounts` /
+ *     `getNotificationCenter` / `getNotificationQueueView` /
+ *     `getDashboardRecentNotifications` 등을 쓴다.
+ *   - unread 정의 (모든 화면 공통):
+ *       `unreadCount` = recipient_profile_id = 현재 사용자 AND trashed_at is null
+ *                        AND status = 'active' AND read_at is null
+ *       `actionRequiredCount` = 위 + requires_action=true AND resolved_at is null
+ *     위 정의는 `getNavUnreadCounts`에서 유일하게 계산. 대시보드·알림센터·nav
+ *     모두 이 함수 결과만 사용.
+ *   - legacy 스키마(trashed_at/requires_action 컬럼 없는 DB)는 graceful fallback.
+ *     `isMissingColumnError`로 감지.
+ *
+ * 참조: `docs/page-specs/notifications.md`, `docs/interaction-matrix.notifications.md`
+ */
 import { getCurrentAuth, getEffectiveOrganizationId } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getPortalCases } from '@/lib/queries/portal';
@@ -167,41 +188,53 @@ async function ensureKakaoSignupNotice(userId: string, organizationId: string | 
   });
 }
 
-export async function getUnreadNotificationCount() {
+// unread 계산 단일 helper — nav 뱃지 / 대시보드 카드 / 알림센터 등 전부 이 함수 경유.
+// organizationId 옵션으로 현재 조직 범위로 한정 가능.
+export async function countUnreadNotifications(
+  opts: { organizationId?: string | null; includeActionRequired?: boolean } = {}
+): Promise<number> {
   const auth = await getCurrentAuth();
-
   if (!auth) return 0;
 
   const supabase = await createSupabaseServerClient();
-
-  const upgraded = await supabase
+  let query = supabase
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('recipient_profile_id', auth.user.id)
     .is('trashed_at', null)
-    .or('read_at.is.null,and(requires_action.eq.true,resolved_at.is.null)');
+    .eq('status', 'active');
 
-  if (!upgraded.error) {
-    return upgraded.count ?? 0;
+  if (opts.includeActionRequired) {
+    query = query.or('read_at.is.null,and(requires_action.eq.true,resolved_at.is.null)');
+  } else {
+    query = query.is('read_at', null);
   }
 
-  if (!isMissingColumnError(upgraded.error)) {
-    console.error('[getUnreadNotificationCount] upgraded query error:', upgraded.error.message);
+  if (opts.organizationId) {
+    query = query.eq('organization_id', opts.organizationId);
+  }
+
+  const { count, error } = await query;
+  if (!error) return count ?? 0;
+
+  // legacy fallback (trashed_at / status / requires_action 컬럼 없는 스키마)
+  if (!isMissingColumnError(error)) {
+    console.error('[countUnreadNotifications] query error:', error.message);
     return 0;
   }
 
-  const legacy = await supabase
+  let legacy = supabase
     .from('notifications')
     .select('*', { count: 'exact', head: true })
     .eq('recipient_profile_id', auth.user.id)
     .is('read_at', null);
-
-  if (legacy.error) {
-    console.error('[getUnreadNotificationCount] legacy query error:', legacy.error.message);
+  if (opts.organizationId) legacy = legacy.eq('organization_id', opts.organizationId);
+  const legacyResult = await legacy;
+  if (legacyResult.error) {
+    console.error('[countUnreadNotifications] legacy error:', legacyResult.error.message);
     return 0;
   }
-
-  return legacy.count ?? 0;
+  return legacyResult.count ?? 0;
 }
 
 export async function getNavUnreadCounts(): Promise<NavUnreadCounts> {

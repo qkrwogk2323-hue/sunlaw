@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
 import { getCaseScopeAccess } from '@/lib/case-scope';
-import { classifyNotificationCategory, getDashboardRecentNotifications } from '@/lib/queries/notifications';
+import { classifyNotificationCategory, countUnreadNotifications, getDashboardRecentNotifications } from '@/lib/queries/notifications';
 
 export type DashboardSummary = {
   activeCases: number;
@@ -372,13 +372,9 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
     .order('due_on', { ascending: true, nullsFirst: false })
     .limit(4);
 
-  let unreadNotificationsQuery = supabase
-    .from('notifications')
-    .select('id', { count: 'exact', head: true })
-    .eq('recipient_profile_id', auth.user.id)
-    .is('trashed_at', null)
-    .eq('status', 'active')
-    .is('read_at', null);
+  // 대시보드 unread count — 단일 feed helper 경유 (notifications.ts의 countUnreadNotifications).
+  // nav 뱃지·대시보드 카드·알림센터가 전부 같은 계산 기준을 사용해 카운트 일치 보장.
+  const unreadNotificationsPromise = countUnreadNotifications({ organizationId });
 
   const unreadNotificationItemsPromise = getDashboardRecentNotifications(organizationId, 4);
 
@@ -403,7 +399,6 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
     teamMembersQuery = teamMembersQuery.eq('organization_id', organizationId);
     pendingBillingCountQuery = pendingBillingCountQuery.eq('organization_id', organizationId);
     upcomingBillingQuery = upcomingBillingQuery.eq('organization_id', organizationId);
-    unreadNotificationsQuery = unreadNotificationsQuery.eq('organization_id', organizationId);
     clientAccessQueueQuery = clientAccessQueueQuery.eq('target_organization_id', organizationId);
   }
   if (hasRestrictedScope) {
@@ -434,7 +429,7 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
     { data: monthlyHighlights },
     { count: pendingBillingCount },
     { data: upcomingBilling },
-    { count: unreadNotifications },
+    unreadNotifications,
     unreadNotificationItems,
     { data: clientAccessQueue }
   ] = await Promise.all([
@@ -450,7 +445,7 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
     monthlyHighlightsQuery,
     pendingBillingCountQuery,
     upcomingBillingQuery,
-    unreadNotificationsQuery,
+    unreadNotificationsPromise,
     unreadNotificationItemsPromise,
     clientAccessQueueQuery
   ]);
