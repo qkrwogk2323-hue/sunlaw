@@ -14,6 +14,7 @@
 - 빈 `0059~0070` migration 파일 논의 금지 (이미 삭제됨)
 - `REHAB_AUDIT_CLI_CHECKLIST.md` 재개 금지
 - COLAW 잔재 제거 지시서 재개 금지
+- 문서 생성 알림(`notifyDocumentStakeholders`) 챕터 — 2026-04-17 staging 15/15 검증. `docs/VERIFICATION_RESULT_document_notifications_2026-04-17.md` 참조. 이 경로 건드릴 때만 재검증.
 
 ## 3. 현재 챕터
 - `docs/BACKLOG_2026-04-15.md` 기준 허브 체감 개선
@@ -28,7 +29,7 @@
 1. ~~`dashboard-hub-overview.tsx`의 `overdueMap` 실데이터 주입~~ ✅ 2026-04-17
 2. ~~허브 projection 문서 타임라인을 실제 UI(`case-hubs/[hubId]`, `rehab-documents-tab`, `bankruptcy-documents-tab`)에 연결~~ ✅ 2026-04-17 (`<CaseHubDocumentTimeline>` 컴포넌트 + 3개 소비처 주입)
 3. ~~의뢰인 포털(`portal/cases/[caseId]`)에 동일 타임라인 컴포넌트 연결 — 3-역할 한 화면 데모 완성~~ ✅ 2026-04-17 (portal-scope 머지 + `<CaseHubDocumentTimeline>` 재사용)
-4. ~~문서 생성 시 알림 자동 발생 — 직원(`/cases/:caseId?tab=documents`) + 의뢰인(`/portal/cases/:caseId`, 공개 문서만)~~ ✅ 2026-04-17 (`DOCUMENT_CREATED` + `DOCUMENT_SHARED_WITH_CLIENT` 정책 + `notifyDocumentStakeholders`)
+4. ~~문서 생성 시 알림 자동 발생 — 직원(`/cases/:caseId?tab=documents`) + 의뢰인(`/portal/cases/:caseId`, 공개 문서만)~~ ✅ 2026-04-17 (`DOCUMENT_CREATED` + `DOCUMENT_SHARED_WITH_CLIENT` 정책 + `notifyDocumentStakeholders`). **staging 15/15 검증 완료** (`docs/VERIFICATION_RESULT_document_notifications_2026-04-17.md`)
 5. ~~검증관용 임시 페르소나 시드·teardown 스크립트 + 검증 체크리스트~~ ✅ 2026-04-17 (`scripts/seed-verification-personas.mjs`, `scripts/teardown-verification-personas.mjs`, `docs/VERIFICATION_CHECKLIST_document_notifications.md`)
 6. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
 

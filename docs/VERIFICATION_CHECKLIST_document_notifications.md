@@ -91,7 +91,9 @@ node scripts/seed-verification-personas.mjs > verification-personas.json
 
 ## 3. 시나리오 C — 협업 조직 확장 시 (선택, 조직간 협업 확인)
 
-현재 Org2는 Org1 사건에 연결되지 않은 상태(isolation). 만약 협업 알림을 검증하려면 검증관이 UI에서 Org2를 협업 조직으로 추가한 뒤 시나리오 A를 재실행. 이 경우 Staff F도 `DOCUMENT_CREATED`를 받아야 함.
+현재 Org2는 Org1 사건에 연결되지 않은 상태(isolation). 협업 알림 동작을 확인하려면 `case_organizations`에 Org2 row를 추가한 뒤 시나리오 A를 재실행.
+
+추가 role enum 값 (`supabase/migrations/20260410000002_enums.sql:66`): `managing_org | principal_client_org | collection_org | legal_counsel_org | co_counsel_org | partner_org`. Org1이 이미 `managing_org`이므로 Org2는 `partner_org` 또는 `co_counsel_org` 등이 자연스러움.
 
 > 주의: 현재 `notifyDocumentStakeholders`는 `organization_memberships` + `case_handlers` + `case_clients`만 조회한다. **협업 조직 매니저는 `case_organizations` → `organization_memberships` 연쇄가 아니라, 본인 조직의 `organization_memberships` row만 매칭된다.** 즉 Org2를 단순 `case_organizations`로 붙이는 것만으로는 Staff F에게 알림이 가지 **않음**. 이는 현재 정책의 의도된 동작이며, 필요 시 별도 후속 스프린트.
 
