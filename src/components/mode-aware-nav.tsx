@@ -14,7 +14,6 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquareText,
-  Network,
   Receipt,
   Settings,
   ShieldAlert,
@@ -225,11 +224,17 @@ function getOrganizationSections({
     }
   }
 
-  // 사건허브 + 조직 협업: 법률/추심/일반 조직 모두 — 협업이 이 제품의 핵심 아이덴티티
+  // 조직 협업: 법률/추심/일반 조직 모두 — 협업이 이 제품의 핵심 아이덴티티
   // 의뢰인(client_communication)과 플랫폼 운영 콘솔만 제외
+  //
+  // NOTE (2026-04-16): 사건허브는 전역 메뉴에서 제거. 진입 경로는 3곳으로 고정:
+  //   (1) 대시보드의 허브 모음 줄 클릭
+  //   (2) 사건 목록 카드의 "허브 입장" 버튼 (hub-policy.deriveHubState 기반)
+  //   (3) 알림·문서·요청의 사건 연동 CTA
+  // 리뷰어 판정: 허브는 메뉴 이름이 아니라 사건 상세의 작업 모드.
+  // "대시보드 vs 허브" 개념 중복 방지 + "사건 → 허브" 흐름 유도.
   if (!isPlatformManagementOrganizationView && mode !== 'client_communication') {
     collaborationItems.push(
-      { href: ROUTES.CASE_HUBS, label: '사건허브', icon: Network },
       { href: ROUTES.INBOX, label: '조직 협업', icon: MessageSquareText, badge: conversationBadge, pulse: pulseConversation, emphasize: unreadConversationCount > 0 }
     );
   }
