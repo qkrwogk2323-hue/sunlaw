@@ -3,6 +3,8 @@ import { ArrowRight, FolderOpen, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getPortalCases } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
+import type { Route } from 'next';
+import { ROUTES } from '@/lib/routes/registry';
 
 function progressSentence(text?: string | null) {
   const raw = `${text ?? ''}`.trim();
@@ -33,7 +35,7 @@ export default async function PortalCasesPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {cases.length ? cases.map((item: any) => (
-            <Link key={item.id} href={`/portal/cases/${item.case_id}`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
+            <Link key={item.id} href={`${ROUTES.PORTAL_CASES}/${item.case_id}` as Route} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-900">{item.cases?.title ?? item.client_name}</p>

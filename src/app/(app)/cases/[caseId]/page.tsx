@@ -323,7 +323,7 @@ export default async function CaseDetailPage({
           </Link>
           {isHubLinked ? (
             <Link
-              href={`/inbox/${caseHubRegistration.sharedHubId}?caseId=${caseId}`}
+              href={`${ROUTES.INBOX}/${caseHubRegistration.sharedHubId}?caseId=${caseId}` as Route}
               className="inline-flex h-12 items-center rounded-2xl border border-sky-200 bg-sky-50 px-5 text-base font-semibold text-sky-800 transition hover:bg-sky-100"
             >
               허브 연동

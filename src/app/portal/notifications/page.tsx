@@ -3,6 +3,8 @@ import { Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getPortalActionQueue } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
+import type { Route } from 'next';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +25,7 @@ export default async function PortalNotificationsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {queue.length ? queue.map((item: any) => (
-            <Link key={item.id} href={`/portal/cases/${item.caseId}`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
+            <Link key={item.id} href={`${ROUTES.PORTAL_CASES}/${item.caseId}` as Route} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-900">{item.caseTitle}</p>

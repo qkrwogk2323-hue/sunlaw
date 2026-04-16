@@ -9,6 +9,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCollaborationHubDetail } from '@/lib/queries/collaboration-hubs';
 import { generateCollaborationHubPinAction, updateCollaborationHubPinAction } from '@/lib/actions/organization-actions';
+import { ROUTES } from '@/lib/routes/registry';
 
 /**
  * @rule-meta-start
@@ -46,7 +47,7 @@ export default async function CollaborationHubPinPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">조직허브 PIN 관리</h1>
           <p className="mt-2 text-sm text-slate-600">{hub.title}에 들어갈 4자리 PIN을 관리합니다.</p>
         </div>
-        <Link href={`/inbox/${hub.id}` as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4' })}>
+        <Link href={`${ROUTES.INBOX}/${hub.id}` as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4' })}>
           <ArrowLeft className="size-4" /> 조직허브로 돌아가기
         </Link>
       </div>

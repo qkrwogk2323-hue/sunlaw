@@ -249,7 +249,7 @@ export function BillingEntrySectionPanel({
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href={`${ROUTES.CASES}/${item.case_id}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
             {item.hub?.id ? (
-              <Link href={`/inbox/${item.hub.id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>허브에서 보기</Link>
+              <Link href={`${ROUTES.INBOX}/${item.hub.id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>허브에서 보기</Link>
             ) : null}
             {item.bill_to_case_client_id ? (
               <Link href={'/portal/billing' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>의뢰인 화면 보기</Link>

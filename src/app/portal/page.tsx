@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentAuth } from '@/lib/auth';
 import { getPortalHomeSnapshot } from '@/lib/queries/portal';
 import { formatDateTime } from '@/lib/format';
+import type { Route } from 'next';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +65,7 @@ export default async function PortalHomePage() {
         <CardHeader><CardTitle>내 사건 흐름</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {cases.length ? cases.map((item: any) => (
-            <Link key={item.id} href={`/portal/cases/${item.case_id}`} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
+            <Link key={item.id} href={`${ROUTES.PORTAL_CASES}/${item.case_id}` as Route} className="vs-interactive block rounded-xl border border-slate-200 bg-white/85 p-4 transition hover:border-sky-300">
               <p className="font-medium text-slate-900">{item.cases?.title ?? item.client_name}</p>
               <p className="mt-1 text-sm text-slate-500">{item.cases?.reference_no ?? '-'} · {item.cases?.case_status ?? '-'}</p>
               <div className="mt-2 grid gap-1 text-sm text-slate-600">

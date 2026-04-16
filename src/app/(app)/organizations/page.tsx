@@ -8,6 +8,7 @@ import { listAccessibleOrganizations, listOrganizationMemberships } from '@/lib/
 import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
 import { membershipRoleLabel } from '@/lib/membership-labels';
+import { ROUTES } from '@/lib/routes/registry';
 
 function requestStatusTone(status: string) {
   if (status === 'approved') return 'green';
@@ -174,7 +175,7 @@ export default async function OrganizationsPage({
             <CardContent className="space-y-3">
               {collaboration.activeHubs.length ? (
                 collaboration.activeHubs.map((hub) => (
-                  <Link key={hub.id} href={`/inbox/${hub.id}` as Route} className="block rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 transition hover:border-emerald-300 hover:bg-emerald-50">
+                  <Link key={hub.id} href={`${ROUTES.INBOX}/${hub.id}` as Route} className="block rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 transition hover:border-emerald-300 hover:bg-emerald-50">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{hub.partnerOrganization?.name ?? '협업 조직'} 허브</p>
                       <Badge tone="green">활성</Badge>

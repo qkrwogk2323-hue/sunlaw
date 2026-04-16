@@ -11,6 +11,7 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getCollaborationOverview } from '@/lib/queries/collaboration-hubs';
 import { getOrganizationWorkspaceSummary } from '@/lib/queries/organizations';
 import { membershipRoleLabel } from '@/lib/membership-labels';
+import { ROUTES } from '@/lib/routes/registry';
 
 function requestStatusTone(status: string) {
   if (status === 'approved') return 'green';
@@ -69,7 +70,7 @@ export default async function OrganizationDetailPage({
           </div>
         </div>
         {linkedHub ? (
-          <Link href={`/inbox/${linkedHub.id}` as Route} className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
+          <Link href={`${ROUTES.INBOX}/${linkedHub.id}` as Route} className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
             업무 허브 열기
           </Link>
         ) : null}
@@ -131,7 +132,7 @@ export default async function OrganizationDetailPage({
                   <Badge tone="green">활성</Badge>
                 </div>
                 <p className="mt-2 text-sm text-slate-600">{linkedHub.summary ?? '이제 허브에서 담당자 초대, 의뢰인 초대, 사건 연결, 대화를 이어갈 수 있습니다.'}</p>
-                <Link href={`/inbox/${linkedHub.id}` as Route} className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
+                <Link href={`${ROUTES.INBOX}/${linkedHub.id}` as Route} className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
                   허브로 이동
                 </Link>
               </div>

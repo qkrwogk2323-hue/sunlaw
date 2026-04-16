@@ -260,7 +260,7 @@ export default async function ContractsPage({
                     >
                       체결 기록 다운받기
                     </Link>
-                    <Link href={`/portal/cases/${agreement.case_id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                    <Link href={`${ROUTES.PORTAL_CASES}/${agreement.case_id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
                       의뢰인 화면 보기
                     </Link>
                   </div>

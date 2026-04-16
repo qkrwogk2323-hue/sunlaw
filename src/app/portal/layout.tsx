@@ -12,6 +12,7 @@ import { PageBackButton } from '@/components/page-back-button';
 import { buttonStyles } from '@/components/ui/button';
 import { countActivePortalLinks } from '@/lib/queries/portal';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +58,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
         <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
           <div className="vs-brand-panel rounded-[1.6rem] p-5 text-white">
             <div className="flex items-center justify-between gap-2">
-              <Link href="/portal" className="text-xl font-semibold tracking-tight">Vein Spiral 의뢰인 포털</Link>
+              <Link href={ROUTES.PORTAL} className="text-xl font-semibold tracking-tight">Vein Spiral 의뢰인 포털</Link>
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-100"><Sparkles className="size-3" /> 열린 상태</span>
             </div>
             <p className="mt-2 text-sm text-slate-300">{auth.profile.full_name}</p>
@@ -67,7 +68,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="px-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">공통 메뉴</p>
-                <Link href={"/portal" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
+                <Link href={ROUTES.PORTAL} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
                   <FolderOpen className="size-4 text-sky-700" /> 포털 홈
                 </Link>
                 <Link href={"/portal/notifications" as Route} className="vs-interactive flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900">
