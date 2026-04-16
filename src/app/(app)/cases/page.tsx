@@ -13,6 +13,7 @@ import { getCaseStageLabel, isCaseStageStale } from '@/lib/case-stage';
 import { getCaseHubRegistrations } from '@/lib/queries/collaboration-hubs';
 import { getCaseHubLinkMap, getCaseHubList } from '@/lib/queries/case-hubs';
 import { CaseHubConnectButton } from '@/components/case-hub-connect-button';
+import { deriveHubStateMap, classifyBulkConnectCases, type HubStateSources } from '@/lib/hub-policy';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { CollapsibleList } from '@/components/ui/collapsible-list';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
@@ -116,15 +117,16 @@ export default async function CasesPage({
     getCaseHubList(currentOrganizationId)
   ]);
 
+  const hubSources: HubStateSources = { caseHubLinkMap, hubRegistrations, caseClientLinkedMap };
+  const hubStateMap = deriveHubStateMap(selectedCaseIds, hubSources);
+
   const organizations = auth.memberships.map((membership) => ({
     id: membership.organization_id,
     name: membership.organization?.name ?? membership.organization_id
   }));
 
   function renderCaseCard(item: any) {
-    const hubId = caseHubLinkMap[item.id]?.id ?? hubRegistrations[item.id]?.sharedHubId ?? null;
-    const hasHub = Boolean(hubId);
-    const hasClient = Boolean(caseClientLinkedMap[item.id]);
+    const hs = hubStateMap[item.id];
     const isStale = isCaseStageStale(item.updated_at, 7);
     const isHighlighted = item.id === highlightCaseId;
     const caseTypeLabel = getCaseTypeLabel(item.case_type);
@@ -153,8 +155,8 @@ export default async function CasesPage({
               <Badge tone="blue">{getCaseStageLabel(item.stage_key)}</Badge>
               <Badge tone="slate">{getCaseStatusLabel(item.case_status)}</Badge>
               {isStale && <Badge tone="amber">갱신필요</Badge>}
-              {hasClient ? <Badge tone="green">의뢰인 연결</Badge> : <Badge tone="amber">의뢰인 미연결</Badge>}
-              {hasHub ? <Badge tone="green">허브 연결</Badge> : <Badge tone="amber">허브 미연결</Badge>}
+              {hs.hasClient ? <Badge tone="green">의뢰인 연결</Badge> : <Badge tone="amber">의뢰인 미연결</Badge>}
+              <Badge tone={hs.badge.tone}>{hs.badge.label}</Badge>
             </div>
           </Link>
           {/* 액션 버튼 영역 */}
@@ -164,8 +166,7 @@ export default async function CasesPage({
                 caseId={item.id}
                 caseTitle={item.title}
                 organizationId={item.organization_id ?? currentOrganizationId}
-                hasClients={hasClient}
-                hubId={hubId}
+                hubState={hs}
               />
             )}
             {bucket !== 'deleted' ? (
@@ -306,13 +307,16 @@ export default async function CasesPage({
         </div>
       </div>
 
-      {bucket === 'active' ? (
-        <CasesBulkConnectPanel
-          organizationId={currentOrganizationId}
-          unlinkedClientCaseIds={selectedCases.filter((c: { id: string }) => !caseClientLinkedMap[c.id]).map((c: { id: string }) => c.id)}
-          unlinkedHubCaseIds={selectedCases.filter((c: { id: string }) => !hubRegistrations[c.id]?.sharedHubId).map((c: { id: string }) => c.id)}
-        />
-      ) : null}
+      {bucket === 'active' ? (() => {
+        const bulk = classifyBulkConnectCases(selectedCaseIds, hubSources);
+        return !bulk.allLinked ? (
+          <CasesBulkConnectPanel
+            organizationId={currentOrganizationId}
+            unlinkedClientCaseIds={bulk.unlinkedClient}
+            unlinkedHubCaseIds={bulk.unlinkedHub}
+          />
+        ) : null;
+      })() : null}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_200px]">
         <Card>
