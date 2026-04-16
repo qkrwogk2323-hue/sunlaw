@@ -35,6 +35,11 @@ supabase/.temp
 push-bankruptcy-docs.sh
 COPILOT_TASK.md
 
+# QA 리포트 (개인 검증 기록 — 레포 박제 불필요, 로컬 유지)
+qa-report-*.md
+qa-reports/
+개인회생파산*.zip
+
 # Claude Code 로컬 설정
 .claude/
 
