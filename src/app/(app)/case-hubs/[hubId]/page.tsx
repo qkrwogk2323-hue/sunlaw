@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { requireAuthenticatedUser, getEffectiveOrganizationId } from '@/lib/auth';
 import { hasVerifiedHubPin } from '@/lib/hub-access';
 import { getCaseHubDetail } from '@/lib/queries/case-hubs';
+import { getCaseHubProjection } from '@/lib/queries/case-hub-projection';
 import { CaseHubLobbyClient } from '@/components/case-hub-lobby-client';
 import { HubPinGateForm } from '@/components/forms/hub-pin-gate-form';
 import { verifyCaseHubPinAction } from '@/lib/actions/case-hub-actions';
@@ -38,11 +39,16 @@ export default async function CaseHubLobbyPage({ params }: Props) {
     );
   }
 
+  // 문서 타임라인용 projection — 허브 상세와 독립적이라 병렬로 조회.
+  // 접근 권한은 projection 내부에서 auth + membership으로 재검증된다.
+  const projection = hub.caseId ? await getCaseHubProjection(hub.caseId) : null;
+
   return (
     <CaseHubLobbyClient
       hub={hub}
       organizationId={organizationId}
       currentProfileId={auth.profile.id}
+      documents={projection?.documents ?? null}
     />
   );
 }

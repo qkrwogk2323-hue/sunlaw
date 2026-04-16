@@ -15,9 +15,11 @@ import { HubReadinessRing } from '@/components/hub-readiness-ring';
 import { ParticipantSlotRing } from '@/components/participant-slot-ring';
 import { PremiumInfoPanel } from '@/components/premium-info-panel';
 import { PremiumPageHeader } from '@/components/premium-page-header';
+import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline';
 import { activateCaseHubAction, archiveCaseHubAction, updateCaseHubPinAction } from '@/lib/actions/case-hub-actions';
 import { formatHubRelativeActivity, getHubReadinessStateLabel } from '@/lib/case-hub-metrics';
 import type { CaseHubDetail, CaseHubStatus } from '@/lib/queries/case-hubs';
+import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
 import { Input } from '@/components/ui/input';
 
 const STATUS_LABEL: Record<CaseHubStatus, string> = {
@@ -67,9 +69,11 @@ interface Props {
   hub: CaseHubDetail;
   organizationId: string | null;
   currentProfileId: string;
+  /** case-hub-projection.documents 단일 원천. null이면 projection 미조회 상태. */
+  documents: CaseHubDocuments | null;
 }
 
-export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Props) {
+export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, documents }: Props) {
   const canActivate = ['setup_required', 'ready', 'draft'].includes(hub.status);
   const canManageHub = Boolean(organizationId);
   const currentMember = hub.members.find((member) => member.profileId === currentProfileId) ?? null;
@@ -266,6 +270,19 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
               </div>
             </div>
           </PremiumInfoPanel>
+
+          {documents ? (
+            <PremiumInfoPanel
+              title="문서 타임라인"
+              description="이 사건의 생성 문서와 계약서를 한 타임라인으로 모아 최근 순으로 보여줍니다."
+            >
+              <CaseHubDocumentTimeline
+                documents={documents}
+                emptyDescription="문서를 생성하거나 계약서를 작성하면 여기에 등록됩니다."
+                maxItems={10}
+              />
+            </PremiumInfoPanel>
+          ) : null}
         </main>
 
         <aside className="space-y-4">
