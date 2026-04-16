@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 /**
- * PII 재암호화 마이그레이션 스크립트 (backlog #1 Phase 2).
+ * PII 재암호화 마이그레이션 스크립트 (backlog #1 Phase 2) — 2026-04-16 실행 완료.
  *
+ * ⚠️ 현재는 더 이상 실행 불필요. prod 전 row가 v2로 재암호화됨(커밋 ad240d9 직후).
+ *    Phase 3에서 src/lib/pii.ts가 v2-only로 정리됨.
+ *
+ * 이 스크립트는 미래 키 회전(v2 → v3 등) 시 템플릿으로 사용하기 위해 보존.
+ * 재실행 시 `v1` 대신 현재 prefix를 소스로, 새 버전을 타겟으로 조정해야 함.
+ *
+ * 원 용도:
  * v1 payload → decrypt(구키) → encrypt(신키, v2 prefix) → UPDATE.
  * 멱등: 이미 v2인 row는 skip. 실패 시 재실행 안전.
  *
@@ -71,31 +78,40 @@ function payloadVersion(p) {
 
 const admin = createClient(URL, SVC, { auth: { persistSession: false } });
 
-// table → ciphertext columns
+// table → { pk, columns }
 const TARGETS = {
-  case_party_private_profiles: [
-    'address_detail_ciphertext',
-    'registration_number_ciphertext',
-    'resident_number_ciphertext',
-  ],
-  client_private_profiles: [
-    'address_line1_ciphertext',
-    'address_line2_ciphertext',
-    'mobile_phone_ciphertext',
-    'postal_code_ciphertext',
-    'resident_number_ciphertext',
-  ],
-  member_private_profiles: [
-    'address_line1_ciphertext',
-    'address_line2_ciphertext',
-    'resident_number_ciphertext',
-  ],
+  case_party_private_profiles: {
+    pk: 'id',
+    columns: [
+      'address_detail_ciphertext',
+      'registration_number_ciphertext',
+      'resident_number_ciphertext',
+    ],
+  },
+  client_private_profiles: {
+    pk: 'profile_id',
+    columns: [
+      'address_line1_ciphertext',
+      'address_line2_ciphertext',
+      'mobile_phone_ciphertext',
+      'postal_code_ciphertext',
+      'resident_number_ciphertext',
+    ],
+  },
+  member_private_profiles: {
+    pk: 'profile_id',
+    columns: [
+      'address_line1_ciphertext',
+      'address_line2_ciphertext',
+      'resident_number_ciphertext',
+    ],
+  },
 };
 
 let total = 0, reencrypted = 0, skipped = 0, failed = 0;
 
-for (const [table, columns] of Object.entries(TARGETS)) {
-  const select = ['id', ...columns].join(',');
+for (const [table, { pk, columns }] of Object.entries(TARGETS)) {
+  const select = [pk, ...columns].join(',');
   const { data: rows, error } = await admin.from(table).select(select);
   if (error) {
     console.error(`[reencrypt-pii] ${table} select 실패: ${error.message}`);
@@ -126,7 +142,7 @@ for (const [table, columns] of Object.entries(TARGETS)) {
         updates[col] = encryptV2(plain);
         need = true;
       } catch (e) {
-        console.error(`[reencrypt-pii] ${table}.${row.id}.${col}: decrypt 실패 ${e.message}`);
+        console.error(`[reencrypt-pii] ${table}.${row[pk]}.${col}: decrypt 실패 ${e.message}`);
         failed++;
       }
     }
@@ -134,17 +150,17 @@ for (const [table, columns] of Object.entries(TARGETS)) {
     if (!need) { skipped++; continue; }
 
     if (DRY) {
-      console.log(`[reencrypt-pii][DRY] ${table}.${row.id}: ${Object.keys(updates).length} cols → v2`);
+      console.log(`[reencrypt-pii][DRY] ${table}.${row[pk]}: ${Object.keys(updates).length} cols → v2`);
       reencrypted++;
       continue;
     }
 
-    const { error: upErr } = await admin.from(table).update(updates).eq('id', row.id);
+    const { error: upErr } = await admin.from(table).update(updates).eq(pk, row[pk]);
     if (upErr) {
-      console.error(`[reencrypt-pii] ${table}.${row.id}: update 실패 ${upErr.message}`);
+      console.error(`[reencrypt-pii] ${table}.${row[pk]}: update 실패 ${upErr.message}`);
       failed++;
     } else {
-      console.log(`[reencrypt-pii] ✓ ${table}.${row.id}: ${Object.keys(updates).length} cols → v2`);
+      console.log(`[reencrypt-pii] ✓ ${table}.${row[pk]}: ${Object.keys(updates).length} cols → v2`);
       reencrypted++;
     }
   }
