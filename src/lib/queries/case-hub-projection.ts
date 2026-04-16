@@ -82,10 +82,15 @@ export type CaseHubAudit = {
   }>;
 };
 
+export type CaseHubDocumentSource = 'case_document' | 'contract';
+
 export type CaseHubDocuments = {
   count: number;
+  generatedCount: number; // case_documents (생성·업로드 문서)
+  contractCount: number;  // fee_agreements (계약서)
   recent: Array<{
     id: string;
+    source: CaseHubDocumentSource;
     title: string | null;
     documentKind: string | null;
     approvalStatus: string | null;
@@ -173,9 +178,9 @@ export async function getCaseHubProjection(caseId: string): Promise<CaseHubProje
       .eq('case_id', caseId),
     admin
       .from('fee_agreements')
-      .select('id, is_active')
+      .select('id, is_active, title, agreement_type, created_at, created_by_name, effective_from, effective_to')
       .eq('case_id', caseId)
-      .eq('is_active', true),
+      .is('deleted_at', null),
     admin
       .from('payments')
       .select('id, amount, payment_status, received_at')
@@ -246,13 +251,14 @@ export async function getCaseHubProjection(caseId: string): Promise<CaseHubProje
     (e) => !e.paid_at && e.due_on && e.due_on < today
   ).length;
 
+  const allAgreements = (agreementsResult.data ?? []) as any[];
   const billing: CaseHubBilling = {
     entryCount: entries.length,
     totalInvoiced,
     totalPaid,
     totalPending: Math.max(0, totalInvoiced - totalPaid),
     overdueCount,
-    activeAgreements: ((agreementsResult.data ?? []) as any[]).length,
+    activeAgreements: allAgreements.filter((a) => a.is_active).length,
   };
 
   const activities = (recoveryResult.data ?? []) as any[];
@@ -280,16 +286,37 @@ export async function getCaseHubProjection(caseId: string): Promise<CaseHubProje
     })),
   };
 
+  // case_documents (생성·업로드) + fee_agreements (계약서)를 **단일 타임라인**으로 통합.
+  // 리뷰어 지시 "계약서든 생성문서든 case_documents 단일 타임라인으로 수렴".
+  // 물리 테이블은 분리돼 있지만 projection에서 소비 관점으로 통합해 중복 쿼리 방지.
+  const caseDocs = ((documentsResult.data ?? []) as any[]).map((d) => ({
+    id: d.id,
+    source: 'case_document' as const,
+    title: d.title ?? null,
+    documentKind: d.document_kind ?? null,
+    approvalStatus: d.approval_status ?? null,
+    createdAt: d.created_at ?? null,
+    createdByName: d.created_by_name ?? null,
+  }));
+  const contractDocs = allAgreements.map((a) => ({
+    id: a.id,
+    source: 'contract' as const,
+    title: a.title ?? (a.agreement_type ? `계약서 (${a.agreement_type})` : '계약서'),
+    documentKind: a.agreement_type ?? 'contract',
+    approvalStatus: a.is_active ? 'active' : 'inactive',
+    createdAt: a.created_at ?? null,
+    createdByName: a.created_by_name ?? null,
+  }));
+  const mergedDocs = [...caseDocs, ...contractDocs].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  });
   const documents: CaseHubDocuments = {
-    count: ((documentsResult.data ?? []) as any[]).length,
-    recent: ((documentsResult.data ?? []) as any[]).map((d) => ({
-      id: d.id,
-      title: d.title ?? null,
-      documentKind: d.document_kind ?? null,
-      approvalStatus: d.approval_status ?? null,
-      createdAt: d.created_at ?? null,
-      createdByName: d.created_by_name ?? null,
-    })),
+    count: mergedDocs.length,
+    generatedCount: caseDocs.length,
+    contractCount: contractDocs.length,
+    recent: mergedDocs.slice(0, 15),
   };
 
   const clients: CaseHubClients = {

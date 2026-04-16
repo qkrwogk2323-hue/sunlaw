@@ -175,7 +175,7 @@
 4. 허브 상태 계산은 `hub-policy.deriveHubState()`만 사용 — UI에서 중복 계산 금지
 5. 같은 사건의 projection은 `getCaseHubProjection(caseId)` 한 곳에서만 읽는다
 6. 의뢰인 포털은 `queries/portal.ts` (최소권한), 직원 roster는 `queries/clients.ts` — 쿼리 계층 교차 금지 (`check:query-boundaries`로 자동 차단)
-7. 문서는 `case_documents` 단일 타임라인으로 수렴 (계약서 포함)
+7. 문서 타임라인은 `case-hub-projection.documents`가 단일 원천. `case_documents` (생성·업로드) + `fee_agreements` (계약서)를 소비 관점으로 통합. 물리 테이블은 분리돼 있으나 UI는 하나의 타임라인으로 표시.
 8. 대시보드 = 참여 허브 모음 뷰 (사용자용 지도). 별도 "지도" 페이지 신설 금지
 9. **허브는 전역 메뉴가 아니다.** 사건 1건의 작업 모드로만 진입. 진입 경로는 3곳:
    (1) 대시보드 허브 모음 줄 클릭, (2) 사건 목록 카드의 "허브 입장" 버튼,

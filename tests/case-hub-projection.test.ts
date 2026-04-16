@@ -45,7 +45,7 @@ describe('case-hub-projection shape', () => {
         recentActivities: [],
       },
       audit: { recentChanges: [] },
-      documents: { count: 0, recent: [] },
+      documents: { count: 0, generatedCount: 0, contractCount: 0, recent: [] },
       clients: { count: 0, list: [] },
       fetchedAt: new Date().toISOString(),
     };
@@ -59,5 +59,8 @@ describe('case-hub-projection shape', () => {
     expect(mockProjection.progress).toHaveProperty('handlers');
     expect(mockProjection.billing).toHaveProperty('overdueCount');
     expect(mockProjection.recovery).toHaveProperty('totalRecoveredAmount');
+    // documents는 생성문서(case_documents) + 계약서(fee_agreements) 통합 타임라인
+    expect(mockProjection.documents).toHaveProperty('generatedCount');
+    expect(mockProjection.documents).toHaveProperty('contractCount');
   });
 });

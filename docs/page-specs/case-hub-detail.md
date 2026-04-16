@@ -39,7 +39,7 @@
 5. 사건 진행 섹션 (progress projection)
 6. 비용·청구 섹션 (billing projection)
 7. 회수·감사 섹션 (recovery projection)
-8. 문서 타임라인 섹션 (documents projection)
+8. 문서 타임라인 섹션 (documents projection — case_documents + fee_agreements 통합)
 9. 의뢰인·참여자 섹션 (clients projection)
 10. 감사 로그 섹션 (audit projection)
 11. 역할별 활동 피드 (`ActivityFeedPanel`)
