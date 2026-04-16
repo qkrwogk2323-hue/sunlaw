@@ -9,6 +9,25 @@
 - **보안 incident**: `docs/SECURITY_INCIDENT_2026-04-15_SECRET_EXPOSURE.md` (Closure 포함)
 - **남은 백로그**: `docs/BACKLOG_2026-04-15.md`
 
+## 페이지·인터랙션 계약 규약 (2026-04-16)
+
+**모든 페이지는 page-spec + interaction-matrix를 문서화한 뒤 코드를 고친다.**
+
+- **Page Spec 포맷**: `docs/page-specs/notifications.md` 샘플 따른다 (12개 섹션 고정)
+- **Interaction Matrix 포맷**: `docs/interaction-matrix.notifications.md` 13컬럼 확장형 따른다
+- **새 CTA 추가 시 순서**: (1) registry에 route key 등록 → (2) interaction-matrix에 행 추가 → (3) 그 다음 UI 구현
+- **문서 수정 없이 코드만 바꾸는 PR 금지**
+
+### Global UX Rules
+1. 검증 오류는 토스트가 아니라 필드 바로 아래 인라인으로 표시한다.
+2. 런타임 에러, 원시 JSON, 라이브러리 원문 메시지는 사용자에게 직접 노출하지 않는다.
+3. 제출 실패 시 입력값은 유지한다.
+4. 제출 실패 시 첫 번째 오류 필드로 focus를 이동한다.
+5. 저장 성공 toast는 상태를 실제로 바꾸는 액션에만 허용한다.
+6. 조회 성공, 자동 새로고침, 단순 탭 전환에는 success toast를 쓰지 않는다.
+7. destructive action은 confirm modal을 먼저 띄운다.
+8. 모든 링크와 CTA는 `ROUTES`, `NAVIGATION_MAP`, `INTERACTION_REGISTRY` 중 하나를 반드시 경유한다 (직접 href / 직접 router.push / 직접 query string 조립 금지).
+
 ## 작업 방식
 - 연속 작업 시 중간 확인 없이 끝까지 진행. 커밋 단위로 끊되 지시 요청하지 말 것
 - typecheck 통과하면 바로 다음 작업으로 넘어갈 것
