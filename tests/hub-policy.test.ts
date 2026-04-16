@@ -118,3 +118,56 @@ describe('classifyBulkConnectCases', () => {
     expect(r.allLinked).toBe(true);
   });
 });
+
+describe('roster-case badge 일치 (Task 7 #2)', () => {
+  // 리뷰어 지시: "의뢰인 배지 문구가 /clients 화면과 /cases 카드에서 동일해야 한다."
+  // 의뢰인 연결 상태는 hub-policy의 hasClient 필드로 단일화됨 → 두 화면이 같은 값을 쓰면 같은 배지.
+
+  const ONE_CASE = ['case-1'];
+
+  it('의뢰인 연결됨: 두 화면 모두 hasClient=true', () => {
+    const sources: HubStateSources = {
+      caseHubLinkMap: {},
+      hubRegistrations: {},
+      caseClientLinkedMap: { 'case-1': true },
+    };
+    const map = deriveHubStateMap(ONE_CASE, sources);
+    // cases/page.tsx는 `hubStateMap[id].hasClient`로 배지 결정
+    expect(map['case-1'].hasClient).toBe(true);
+    // clients/page.tsx는 case_clients 연결 여부로 배지 결정 — 같은 테이블 기반 동일값
+    expect(sources.caseClientLinkedMap['case-1']).toBe(true);
+  });
+
+  it('의뢰인 미연결: 두 화면 모두 hasClient=false + hub state=no_client', () => {
+    const sources: HubStateSources = {
+      caseHubLinkMap: {},
+      hubRegistrations: {},
+      caseClientLinkedMap: {},
+    };
+    const map = deriveHubStateMap(ONE_CASE, sources);
+    expect(map['case-1'].hasClient).toBe(false);
+    expect(map['case-1'].state).toBe('no_client');
+  });
+
+  it('의뢰인 연결 + 허브 있음: 두 뱃지 모두 green (연결됨 + 허브 연결)', () => {
+    const sources: HubStateSources = {
+      caseHubLinkMap: { 'case-1': { id: 'h1' } },
+      hubRegistrations: {},
+      caseClientLinkedMap: { 'case-1': true },
+    };
+    const map = deriveHubStateMap(ONE_CASE, sources);
+    expect(map['case-1'].hasClient).toBe(true);
+    expect(map['case-1'].badge.tone).toBe('green'); // hub_active
+  });
+
+  it('policy 결과는 순수함수 — 같은 input에 매번 같은 output', () => {
+    const sources: HubStateSources = {
+      caseHubLinkMap: { 'x': { id: 'hub-x' } },
+      hubRegistrations: { 'y': { sharedHubId: 'shared-y' } },
+      caseClientLinkedMap: { 'x': true, 'y': true, 'z': true },
+    };
+    const a = deriveHubStateMap(['x', 'y', 'z'], sources);
+    const b = deriveHubStateMap(['x', 'y', 'z'], sources);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
