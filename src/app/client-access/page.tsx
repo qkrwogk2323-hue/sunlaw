@@ -10,6 +10,7 @@ import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entr
 import { searchPublicOrganizations, listMyClientAccessRequests } from '@/lib/queries/client-access';
 import { Badge } from '@/components/ui/badge';
 import { UnifiedListSearch } from '@/components/ui/unified-list-search';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -182,7 +183,7 @@ export default async function ClientAccessPage({ searchParams }: { searchParams?
                       disabledLabel={!auth.profile.is_client_account ? '먼저 의뢰인 가입을 완료해 주세요.' : '이미 이 조직에 보낸 요청이 검토 중입니다.'}
                     />
                   ) : (
-                    <Link href="/login" className={buttonStyles({ variant: 'secondary', className: 'min-h-12 w-full justify-between rounded-[1.2rem] px-4' })}>
+                    <Link href={ROUTES.LOGIN} className={buttonStyles({ variant: 'secondary', className: 'min-h-12 w-full justify-between rounded-[1.2rem] px-4' })}>
                       로그인 후 연결 요청 준비
                       <ArrowRight className="size-4" />
                     </Link>

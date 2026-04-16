@@ -78,7 +78,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
         ].map((t) => (
           <Link
             key={t.key}
-            href={`/collections?tab=${t.key}&period=${period}`}
+            href={`${ROUTES.COLLECTIONS}?tab=${t.key}&period=${period}` as Route}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${tab === t.key ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
             {t.label}
@@ -90,7 +90,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
         {periodOptions.map((item) => (
           <Link
             key={item.key}
-            href={`/collections?period=${item.key}&tab=${tab}`}
+            href={`${ROUTES.COLLECTIONS}?period=${item.key}&tab=${tab}` as Route}
             className={`rounded-full px-4 py-2 text-sm font-medium ${period === item.key ? 'bg-[linear-gradient(135deg,#0f766e,#0ea5e9)] text-white shadow-[0_10px_24px_rgba(14,165,164,0.20)]' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
           >
             {item.label}

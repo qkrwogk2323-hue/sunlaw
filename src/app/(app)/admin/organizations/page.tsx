@@ -13,6 +13,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { deactivateOrganizationAction, deleteOrganizationAction } from '@/lib/actions/settings-actions';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
+import { ROUTES } from '@/lib/routes/registry';
 
 function getLifecycleTone(status: string | null | undefined) {
   if (status === 'active') return 'green';
@@ -39,7 +40,7 @@ function OrganizationListItem({ organization }: { organization: any }) {
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Link
-          href={`/admin/audit?tab=general&table=organizations&resource=${organization.id}` as Route}
+          href={`${ROUTES.ADMIN_AUDIT}?tab=general&table=organizations&resource=${organization.id}` as Route}
           className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs' })}
         >
           감사로그 보기

@@ -5,6 +5,8 @@ import { formatDateTime } from '@/lib/format';
 import { getPlatformOrganizationContextId, hasActivePlatformAdminView, requireAuthenticatedUser } from '@/lib/auth';
 import { listAuditChangeLog } from '@/lib/queries/audit';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
+import { ROUTES } from '@/lib/routes/registry';
+import type { Route } from 'next';
 
 type AuditTab = 'general' | 'delete';
 
@@ -76,7 +78,7 @@ export default async function AdminAuditPage({
             {tabs.map((item) => (
               <a
                 key={item.key}
-                href={`/admin/audit?tab=${item.key}`}
+                href={`${ROUTES.ADMIN_AUDIT}?tab=${item.key}` as Route}
                 className={buttonStyles({ variant: item.key === tab ? 'primary' : 'secondary', size: 'sm' })}
               >
                 {item.label}

@@ -6,6 +6,7 @@ import { getSettingsAdminData } from '@/lib/queries/settings-admin';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import Link from 'next/link';
 import { LifeBuoyIcon } from 'lucide-react';
+import { ROUTES } from '@/lib/routes/registry';
 
 export default async function SettingsIndexPage() {
   const auth = await requireAuthenticatedUser();
@@ -32,7 +33,7 @@ export default async function SettingsIndexPage() {
           <p className="mt-2 text-sm text-slate-600">조직 운영 설정, 문구, 구독 상태, 플랫폼 제어 항목을 권한에 맞게 관리합니다.</p>
         </div>
         <Link 
-          href="/support" // TODO: 실제 고객센터 경로 확인 필요, 현재는 /support로 가정
+          href={ROUTES.SUPPORT} // TODO: 실제 고객센터 경로 확인 필요, 현재는 /support로 가정
           className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
         >
           <LifeBuoyIcon className="size-4" />

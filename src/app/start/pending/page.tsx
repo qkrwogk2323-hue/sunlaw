@@ -11,6 +11,7 @@ import { InvitationCodeEntryForm } from '@/components/forms/invitation-code-entr
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,11 +33,11 @@ export default async function ClientPendingPage({
   }
 
   if (isClientAccountActive(auth.profile)) {
-    redirect('/portal');
+    redirect(ROUTES.PORTAL);
   }
 
   if (!isClientAccountPending(auth.profile)) {
-    redirect('/dashboard');
+    redirect(ROUTES.DASHBOARD);
   }
 
   const resolved = searchParams ? await searchParams : undefined;

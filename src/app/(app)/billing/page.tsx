@@ -7,6 +7,7 @@ import { InstallmentAgreementSectionPanel } from '@/components/forms/installment
 import { findMembership, getEffectiveOrganizationId, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { getBillingCaseOptions, getBillingPageSnapshot } from '@/lib/queries/billing';
 import { LogButton } from '@/components/ui/log-button';
+import { ROUTES } from '@/lib/routes/registry';
 
 export default async function BillingPage() {
   const auth = await requireAuthenticatedUser();
@@ -83,7 +84,7 @@ export default async function BillingPage() {
           <Link href={'/billing/history' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             비용 기록 보기
           </Link>
-          <Link href="/contracts" className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
+          <Link href={ROUTES.CONTRACTS} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-xl px-4' })}>
             계약 관리
           </Link>
         </div>

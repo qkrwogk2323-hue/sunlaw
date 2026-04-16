@@ -4,6 +4,7 @@ import { Network } from 'lucide-react';
 import { HubMetricBadge } from '@/components/hub-metric-badge';
 import type { CaseHubSummary } from '@/lib/queries/case-hubs';
 import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
+import { ROUTES } from '@/lib/routes/registry';
 
 export function HubContextStrip({
   hubs,
@@ -45,7 +46,7 @@ export function HubContextStrip({
         <div className="flex flex-wrap items-center gap-2">
           {primary ? (
             <Link
-              href={`/case-hubs/${primary.id}` as Route}
+              href={`${ROUTES.CASE_HUBS}/${primary.id}` as Route}
               className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white"
             >
               허브 입장

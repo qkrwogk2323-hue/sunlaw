@@ -11,6 +11,7 @@ import { cancelOrganizationSignupRequestAction } from '@/lib/actions/organizatio
 import { getCurrentAuth } from '@/lib/auth';
 import { formatBusinessNumber } from '@/lib/format';
 import { listMySignupRequests } from '@/lib/queries/organizations';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -168,7 +169,7 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                     <p className="text-slate-500">제출 문서: {activePendingRequest.business_registration_document_name ?? '-'}</p>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <a href={`/organization-request?edit=${activePendingRequest.id}`} className={buttonStyles({ className: 'min-h-11 rounded-[1rem] px-4' })}>수정하기</a>
+                    <a href={`${ROUTES.ORGANIZATION_REQUEST}?edit=${activePendingRequest.id}` as Route} className={buttonStyles({ className: 'min-h-11 rounded-[1rem] px-4' })}>수정하기</a>
                     <ClientActionForm action={cancelOrganizationSignupRequestAction} successTitle="조직 신청이 취소되었습니다.">
                       <input type="hidden" name="requestId" value={activePendingRequest.id} />
                       <SubmitButton variant="secondary" pendingLabel="취소 중..." className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-[1rem] px-4' })}>취소하기</SubmitButton>
@@ -234,12 +235,12 @@ export default async function OrganizationRequestPage({ searchParams }: { search
                   <p className="text-slate-500">메모: {request.reviewed_note ?? request.note ?? '-'}</p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     {request.status === 'pending' ? (
-                      <Link href={`/organization-request?edit=${request.id}` as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-[1rem] px-4' })}>
+                      <Link href={`${ROUTES.ORGANIZATION_REQUEST}?edit=${request.id}` as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-10 rounded-[1rem] px-4' })}>
                         신청 내용 수정
                       </Link>
                     ) : null}
                     {request.status === 'approved' && request.approved_organization_id ? (
-                      <Link href={`/organizations/${request.approved_organization_id}` as Route} className={buttonStyles({ className: 'min-h-10 rounded-[1rem] px-4' })}>
+                      <Link href={`${ROUTES.ORGANIZATIONS}/${request.approved_organization_id}` as Route} className={buttonStyles({ className: 'min-h-10 rounded-[1rem] px-4' })}>
                         승인된 조직으로 이동
                       </Link>
                     ) : null}

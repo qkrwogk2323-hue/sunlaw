@@ -4,6 +4,7 @@ import { ArrowRight, BriefcaseBusiness, CalendarDays, CreditCard, FileText, Fold
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes/registry';
 
 /**
  * @rule-meta-start
@@ -108,7 +109,7 @@ export default async function LegalAdminDemoPage() {
       </div>
 
       <div className="flex justify-end">
-        <Link href={'/dashboard' as Route} className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4' })}>
+        <Link href={ROUTES.DASHBOARD} className={buttonStyles({ variant: 'secondary', className: 'min-h-11 rounded-xl px-4' })}>
           일반 대시보드로 돌아가기
         </Link>
       </div>

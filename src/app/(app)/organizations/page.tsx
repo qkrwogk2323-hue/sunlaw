@@ -97,7 +97,7 @@ export default async function OrganizationsPage({
                 const role = rawRole ? membershipRoleLabel(rawRole) : '열람 가능';
                 const isCurrentOrganization = organization.id === currentOrganizationId;
                 return (
-                  <Link key={organization.id} href={`/organizations/${organization.id}` as Route} className="block rounded-xl border border-slate-200 p-4 transition hover:border-slate-400 hover:bg-slate-50/70">
+                  <Link key={organization.id} href={`${ROUTES.ORGANIZATIONS}/${organization.id}` as Route} className="block rounded-xl border border-slate-200 p-4 transition hover:border-slate-400 hover:bg-slate-50/70">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -134,7 +134,7 @@ export default async function OrganizationsPage({
                     {request.proposalNote ? <p className="mt-2 text-sm text-slate-600 line-clamp-3">{request.proposalNote}</p> : null}
                     <p className="mt-2 text-xs text-slate-400">{new Date(request.createdAt).toLocaleString('ko-KR')}</p>
                     {request.sourceOrganizationId ? (
-                      <Link href={`/organizations/${request.sourceOrganizationId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'mt-3 h-8 rounded-lg px-3 text-xs' })}>
+                      <Link href={`${ROUTES.ORGANIZATIONS}/${request.sourceOrganizationId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'mt-3 h-8 rounded-lg px-3 text-xs' })}>
                         상세 확인
                       </Link>
                     ) : null}

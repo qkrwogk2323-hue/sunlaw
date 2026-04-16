@@ -132,7 +132,7 @@ export function GlobalCommandPalette() {
             <div className="mt-3 space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">의뢰인</p>
               {results.clients.map((item) => (
-                <Link key={item.id} href={`/clients?clientId=${item.id}` as Route} className="block rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50" onClick={() => setOpen(false)}>
+                <Link key={item.id} href={`${ROUTES.CLIENTS}?clientId=${item.id}` as Route} className="block rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50" onClick={() => setOpen(false)}>
                   {item.full_name}
                   {item.email ? <span className="ml-2 text-xs text-slate-500">{item.email}</span> : null}
                 </Link>

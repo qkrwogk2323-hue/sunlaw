@@ -253,7 +253,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                   <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     비용 관리 열기
                   </Link>
-                  <Link href={`/contracts?caseId=${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
+                  <Link href={`${ROUTES.CONTRACTS}?caseId=${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     계약 관리 열기
                   </Link>
                   <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=schedule` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>

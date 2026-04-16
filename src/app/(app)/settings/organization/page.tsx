@@ -20,6 +20,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { AccessDeniedBlock } from '@/components/ui/access-denied-block';
 import { CollapsibleSettingsSection } from '@/components/ui/collapsible-settings-section';
+import { ROUTES } from '@/lib/routes/registry';
 
 const kindLabel: Record<string, string> = {
   platform_management: '플랫폼 관리조직',
@@ -196,7 +197,7 @@ export default async function OrganizationSettingsPage({
                     <div className="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-950">
                       <p className="font-semibold">플랫폼 관리조직 전용 기능</p>
                       <p className="mt-1 text-sky-800">직접 조직 생성은 플랫폼 관리조직의 관리자만 사용할 수 있습니다.</p>
-                      <Link href="/admin/organizations" className="mt-3 inline-flex rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100">
+                      <Link href={ROUTES.ADMIN_ORGANIZATIONS} className="mt-3 inline-flex rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100">
                         직접 조직 생성 열기
                       </Link>
                     </div>
@@ -215,7 +216,7 @@ export default async function OrganizationSettingsPage({
               <CardContent>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
                   <span className="text-slate-700">권한 설정은 구성원 관리 화면에서 수정합니다.</span>
-                  <Link href="/settings/team" className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50">
+                  <Link href={ROUTES.SETTINGS_TEAM} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50">
                     구성원/권한 설정 이동
                   </Link>
                 </div>

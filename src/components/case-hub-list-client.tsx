@@ -7,6 +7,7 @@ import { PremiumCaseCard } from '@/components/premium-case-card';
 import { PremiumInfoPanel } from '@/components/premium-info-panel';
 import { formatHubRelativeActivity } from '@/lib/case-hub-metrics';
 import type { CaseHubSummary, CaseHubStatus } from '@/lib/queries/case-hubs';
+import { ROUTES } from '@/lib/routes/registry';
 
 const STATUS_LABEL: Record<CaseHubStatus, string> = {
   draft: '준비 중',
@@ -20,7 +21,7 @@ const STATUS_LABEL: Record<CaseHubStatus, string> = {
 function HubCard({ hub }: { hub: CaseHubSummary }) {
   return (
     <PremiumCaseCard
-      href={`/case-hubs/${hub.id}` as Route}
+      href={`${ROUTES.CASE_HUBS}/${hub.id}` as Route}
       title={hub.title ?? hub.caseTitle ?? '사건 미지정'}
       subtitle={[
         hub.caseReferenceNo ?? null,

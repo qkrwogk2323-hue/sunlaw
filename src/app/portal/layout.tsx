@@ -35,7 +35,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   }
 
   if (!isClientAccountActive(auth.profile)) {
-    redirect('/dashboard' as Route);
+    redirect(ROUTES.DASHBOARD);
   }
 
   const activeLinksCount = await countActivePortalLinks();
