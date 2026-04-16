@@ -17,6 +17,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
+import { ROUTES } from '@/lib/routes/registry';
 
 type ScheduleItem = {
   id: string;
@@ -822,7 +823,7 @@ export function CalendarBoardClient({
                         {entry.source === 'schedule' ? <ScheduleCancellationButton entry={entry} /> : null}
                         {entry.caseId ? (
                           <Link
-                            href={`/cases/${entry.caseId}` as Route}
+                            href={`${ROUTES.CASES}/${entry.caseId}` as Route}
                             className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-3 text-xs' })}
                           >
                             사건 보기

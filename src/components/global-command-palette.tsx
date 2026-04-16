@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Search, X } from 'lucide-react';
+import { ROUTES } from '@/lib/routes/registry';
 
 type SearchPayload = {
   cases: Array<{ id: string; title: string; stage_key: string | null }>;
@@ -120,7 +121,7 @@ export function GlobalCommandPalette() {
             <div className="space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">사건</p>
               {results.cases.map((item) => (
-                <Link key={item.id} href={`/cases/${item.id}` as Route} className="block rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50" onClick={() => setOpen(false)}>
+                <Link key={item.id} href={`${ROUTES.CASES}/${item.id}` as Route} className="block rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50" onClick={() => setOpen(false)}>
                   {item.title}
                 </Link>
               ))}
@@ -143,7 +144,7 @@ export function GlobalCommandPalette() {
             <div className="mt-3 space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">문서</p>
               {results.documents.map((item) => (
-                <Link key={item.id} href={`/cases/${item.case_id}` as Route} className="block rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50" onClick={() => setOpen(false)}>
+                <Link key={item.id} href={`${ROUTES.CASES}/${item.case_id}` as Route} className="block rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50" onClick={() => setOpen(false)}>
                   {item.title}
                 </Link>
               ))}

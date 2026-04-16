@@ -1,7 +1,9 @@
+import type { Route } from 'next';
 import Link from 'next/link';
 import { requireCaseAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/format';
+import { ROUTES } from '@/lib/routes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,7 +111,7 @@ export default async function CaseCoverPage({ params }: { params: Promise<{ case
         >
           🖨 인쇄
         </button>
-        <Link href={`/cases/${caseId}`} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+        <Link href={`${ROUTES.CASES}/${caseId}` as Route} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
           ← 돌아가기
         </Link>
       </div>

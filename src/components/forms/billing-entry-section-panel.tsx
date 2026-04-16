@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { ROUTES } from '@/lib/routes/registry';
 
 type PartyOption = { id: string; name: string };
 type CaseOption = {
@@ -246,7 +247,7 @@ export function BillingEntrySectionPanel({
             <p>합계 {formatCurrency(item.totalAmount)} · 기한 {formatDate(item.due_on)}</p>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link href={`/cases/${item.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
+            <Link href={`${ROUTES.CASES}/${item.case_id}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>사건에서 보기</Link>
             {item.hub?.id ? (
               <Link href={`/inbox/${item.hub.id}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>허브에서 보기</Link>
             ) : null}

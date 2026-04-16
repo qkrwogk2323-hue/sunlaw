@@ -22,6 +22,7 @@ import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { HubPinGateForm } from '@/components/forms/hub-pin-gate-form';
 import { updateCollaborationHubPinAction, verifyCollaborationHubPinAction } from '@/lib/actions/organization-actions';
+import { ROUTES } from '@/lib/routes/registry';
 
 export default async function CollaborationHubPage({
   params,
@@ -183,7 +184,7 @@ export default async function CollaborationHubPage({
                           </div>
                         ) : null}
                         {message.caseId ? (
-                          <Link href={`/cases/${message.caseId}` as Route} className={`mt-3 inline-flex text-xs font-medium ${mine ? 'text-sky-200' : 'text-sky-700'}`}>
+                          <Link href={`${ROUTES.CASES}/${message.caseId}` as Route} className={`mt-3 inline-flex text-xs font-medium ${mine ? 'text-sky-200' : 'text-sky-700'}`}>
                             사건 상세 열기
                           </Link>
                         ) : null}
@@ -237,7 +238,7 @@ export default async function CollaborationHubPage({
             </CardHeader>
             <CardContent className="space-y-3">
               {hub.relatedCases.length ? hub.relatedCases.map((caseItem) => (
-                <Link key={caseItem.id} href={`/cases/${caseItem.id}` as Route} className="block rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-900 hover:bg-slate-50/70">
+                <Link key={caseItem.id} href={`${ROUTES.CASES}/${caseItem.id}` as Route} className="block rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-900 hover:bg-slate-50/70">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{caseItem.title}</p>
                     <div className="flex flex-wrap items-center gap-2">

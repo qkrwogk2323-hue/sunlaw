@@ -200,10 +200,10 @@ if (conflicts.length) {
 // 베이스라인: 2026-04-16 기준 기존 하드코딩 수. 이보다 많아지면 실패(회귀 차단).
 // 시간을 두고 ROUTES 경유로 점진 교체. 완료되면 BASELINE을 0으로 낮추고
 // hardcoded.length > 0으로 조건 변경.
-// 2026-04-16 오전 측정: cases/clients 정리 후 82개. 5개 여유로 100 설정.
-// 신규 PR에서 이 수치를 늘리려면 반드시 baseline도 같이 낮춰야 한다.
+// 2026-04-16 저녁 측정: /cases 하드코딩 대량 교체 후 64개. 베이스라인 70으로 하향
+// (여유 6). 신규 PR에서 이 수치를 늘리려면 반드시 baseline도 같이 낮춰야 한다.
 // 장기 목표: 0.
-const HARDCODED_BASELINE = 100;
+const HARDCODED_BASELINE = 70;
 
 if (hardcoded.length > HARDCODED_BASELINE) {
   hasError = true;

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import type { Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ROUTES } from '@/lib/routes/registry';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BillingEntryForm } from '@/components/forms/billing-entry-form';
@@ -50,7 +52,7 @@ function TabLink({ caseId, tab, current, children }: { caseId: string; tab: TabK
   const active = current === tab;
   return (
     <Link
-      href={`/cases/${caseId}?tab=${tab}`}
+      href={`${ROUTES.CASES}/${caseId}?tab=${tab}` as Route}
       className={`rounded-full px-4 py-2 text-sm font-medium ${active ? 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white shadow-[0_10px_20px_rgba(8,47,73,0.22)]' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
     >
       {children}
@@ -409,14 +411,14 @@ export default async function CaseDetailPage({
         {(caseDetail.case_type === 'insolvency' || caseDetail.module_flags?.insolvency) ? (
           <>
             <Link
-              href={`/cases/${caseId}/bankruptcy` as never}
+              href={`${ROUTES.CASES}/${caseId}/bankruptcy` as Route}
               className="rounded-full px-4 py-2 text-sm font-medium bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
             >
               🏛 도산 모듈
             </Link>
             {caseDetail.insolvency_subtype === 'individual_rehabilitation' && (
               <Link
-                href={`/cases/${caseId}/rehabilitation` as never}
+                href={`${ROUTES.CASES}/${caseId}/rehabilitation` as Route}
                 className="rounded-full px-4 py-2 text-sm font-medium bg-white text-blue-600 ring-1 ring-blue-200 hover:bg-blue-50"
               >
                 📋 개인회생 자동작성
@@ -736,7 +738,7 @@ export default async function CaseDetailPage({
               <div className="flex items-center justify-between">
                 <CardTitle>소송기록 표지 정보</CardTitle>
                 <Link
-                  href={`/cases/${caseId}/cover` as import('next').Route}
+                  href={`${ROUTES.CASES}/${caseId}/cover` as Route}
                   target="_blank"
                   className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                 >

@@ -5,6 +5,7 @@ import { getCalendarWorklogSnapshot } from '@/lib/queries/calendar';
 import { formatDateTime } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes/registry';
 
 function relatedTitle(value?: { title?: string | null } | Array<{ title?: string | null }> | null) {
   if (Array.isArray(value)) return value[0]?.title ?? null;
@@ -47,7 +48,7 @@ export default async function CalendarWorklogPage() {
               {log.case_id ? (
                 <div className="mt-3">
                   <Link
-                    href={`/cases/${log.case_id}?tab=schedule` as Route}
+                    href={`${ROUTES.CASES}/${log.case_id}?tab=schedule` as Route}
                     className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
                   >
                     사건 일정으로 열기

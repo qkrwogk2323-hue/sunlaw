@@ -17,6 +17,7 @@ import { getEffectiveOrganizationId, requireAuthenticatedUser } from '@/lib/auth
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getBillingCaseOptions, getContractWorkspace } from '@/lib/queries/billing';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { ROUTES } from '@/lib/routes/registry';
 
 export default async function ContractsPage({
   searchParams
@@ -178,7 +179,7 @@ export default async function ContractsPage({
                     <Badge tone="blue">{agreementLabel(agreement.agreement_type)}</Badge>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Link href={`/cases/${agreement.case_id}?tab=billing`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+                    <Link href={`${ROUTES.CASES}/${agreement.case_id}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
                       사건 비용 탭
                     </Link>
                     {linkedDocument ? (

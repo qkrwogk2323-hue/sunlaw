@@ -3,6 +3,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { ChevronLeft, Globe, Network, Shield, Users, Zap } from 'lucide-react';
+import { ROUTES } from '@/lib/routes/registry';
 import { buttonStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -246,19 +247,19 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId }: Pr
                       </SubmitButton>
                     </ClientActionForm>
                   ) : null}
-                  <Link href={'/cases' as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
+                  <Link href={ROUTES.CASES} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     사건목록으로 이동
                   </Link>
-                  <Link href={`/cases/${hub.caseId}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
+                  <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     비용 관리 열기
                   </Link>
                   <Link href={`/contracts?caseId=${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     계약 관리 열기
                   </Link>
-                  <Link href={`/cases/${hub.caseId}?tab=schedule` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
+                  <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=schedule` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     일정 확인
                   </Link>
-                  <Link href={`/cases/${hub.caseId}?tab=documents` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
+                  <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=documents` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
                     문서 보기
                   </Link>
                 </div>

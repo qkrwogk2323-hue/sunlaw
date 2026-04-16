@@ -1,3 +1,4 @@
+import type { Route } from 'next';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { CompensationPlanForm } from '@/components/forms/compensation-plan-form'
 import { OverdueDraftButton } from '@/components/overdue-draft-button';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { hasPermission } from '@/lib/permissions';
+import { ROUTES } from '@/lib/routes/registry';
 
 function formatDelta(value: number) {
   const rounded = Number.isFinite(value) ? value.toFixed(1) : '0.0';
@@ -136,7 +138,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams?:
               {data.collectionCases.length ? data.collectionCases.map((item: any) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-white/85 p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <Link href={`/cases/${item.id}?tab=collection`} className="min-w-0 truncate font-medium text-slate-900 hover:underline">{item.title}</Link>
+                    <Link href={`${ROUTES.CASES}/${item.id}?tab=collection` as Route} className="min-w-0 truncate font-medium text-slate-900 hover:underline">{item.title}</Link>
                     <Badge tone="amber">{item.stage_key ?? '-'}</Badge>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{item.reference_no ?? '-'} · {formatCurrency(item.principal_amount)}</p>
