@@ -1,0 +1,73 @@
+name: Staging Deploy
+
+# main push 시 supabase/migrations/ 변경분이 있으면 staging에 자동 적용.
+# workflow_dispatch로 수동 실행 시에도 전 파일 idempotent 적용(tracking 기준 skip).
+#
+# 필수 secrets:
+#   SUPABASE_ACCESS_TOKEN           — Management API 호출용 PAT
+#   STAGING_SUPABASE_PROJECT_ID     — staging 프로젝트 ref (siljimybhmmtbligzbms)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**.sql'
+      - 'scripts/preprocess-migration.mjs'
+      - 'scripts/apply-staging-migrations.mjs'
+      - 'scripts/check-staging-parity.mjs'
+      - '.github/workflows/staging-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  # staging 동시 배포 방지 — 순차 적용 보장.
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  apply-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      STAGING_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+      PROD_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate secrets present
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || (echo "::error::SUPABASE_ACCESS_TOKEN missing" && exit 1)
+          test -n "$STAGING_PROJECT_ID" || (echo "::error::STAGING_SUPABASE_PROJECT_ID missing" && exit 1)
+          echo "PROD=$PROD_PROJECT_ID  STAGING=$STAGING_PROJECT_ID"
+
+      - name: Apply migrations to staging
+        run: node scripts/apply-staging-migrations.mjs
+
+      - name: Verify schema parity (staging ≥ prod)
+        run: node scripts/check-staging-parity.mjs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Staging Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **target**: $STAGING_PROJECT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "- **trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
