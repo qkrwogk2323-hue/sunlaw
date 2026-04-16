@@ -137,7 +137,7 @@
 - 로그 노출이 있었던 구 값 전부 폐기 확인 (Supabase API 조회 + Gemini http=400)
 
 **미종결 항목**:
-- `PII_ENCRYPTION_KEY_BASE64` — 재암호화 마이그레이션 필수라 별도 프로젝트로 분리. 현재 값(`eB5dq2HS...`)은 보존되나 다음 번 PII 재암호화 배포에서 신규 키로 교체 예정. service_role 회전 완료로 단일 키 탈취 위협은 낮음.
+- ~~`PII_ENCRYPTION_KEY_BASE64`~~ — 2026-04-16 재암호화 완료. 커밋 `ad240d9` (Phase 1 dual-key) → prod 1 row 재암호화 실행 → `c2493ff` (Phase 3 v1 경로 제거). 구 키(`eB5dq2HS...`)는 코드·환경변수에서 완전 폐기. 신규 32-byte 키로 대체.
 
 **후속 재발 방지**:
 - 회전 프로세스를 `/tmp/rotate-secrets-v2.sh` + `/tmp/sync-from-envlocal.sh` 패턴으로 원샷화 (대화 로그에 평문 미노출, 터미널 `read -s` 기반)

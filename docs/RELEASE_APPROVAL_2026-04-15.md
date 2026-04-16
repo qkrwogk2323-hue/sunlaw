@@ -86,10 +86,8 @@ Run `24464310120` 5 job 결과:
 ### Legacy JWT
 - `anon` / `service_role` legacy JWT: Supabase dashboard에서 disabled 상태. 공개적으로 유출된 값이 있어도 인증 거부됨.
 
-### 유예 (1건)
-- `PII_ENCRYPTION_KEY_BASE64` — 기암호화 데이터 재마이그레이션이 필요하므로 회전 보류. 별도 프로젝트로 분리.
-  - 현재 값은 service_role과 결합하지 않으면 DB 접근 불가. service_role이 회전됐으므로 **즉시 위협은 차단**.
-  - 다음 PII 재암호화 배포에서 신규 키로 교체 예정.
+### 유예 (0건) — 2026-04-16 전체 종결
+- ~~`PII_ENCRYPTION_KEY_BASE64`~~ — 2026-04-16 재암호화 완료. Phase 1(dual-key, `ad240d9`) → Phase 2(1 row 재암호화) → Phase 3(v1 경로 제거, `c2493ff`)로 유예 종결. 구 키 완전 폐기.
 
 ### 임시 파일 정리
 ```
@@ -124,7 +122,7 @@ Run `24464310120` 5 job 결과:
 - [x] Legacy JWT disabled
 - [x] 회전 과정 임시 파일 삭제
 - [x] `.env.local` / `.env.staging` 모두 `.gitignore` 보호
-- [ ] (유예) PII 재암호화 마이그레이션 → 별도 프로젝트
+- [x] PII 재암호화 마이그레이션 — 2026-04-16 완료 (dual-key Phase 1 → 재암호화 Phase 2 → v1 제거 Phase 3)
 
 ---
 
