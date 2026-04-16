@@ -3,6 +3,12 @@
 > Claude Code가 자동으로 읽는 프로젝트 규칙입니다.  
 > 전체 규칙 원본: `docs/UX_RULES.md`
 
+## 기준 문서 (2026-04-15 챕터 종료 이후)
+
+- **배포 가능성 판단**: `docs/RELEASE_APPROVAL_2026-04-15.md` **만** 본다. 과거 블로커 문서(`DEPLOYMENT_BLOCKER_*`)는 인과관계 기록일 뿐 현행 판정 아님.
+- **보안 incident**: `docs/SECURITY_INCIDENT_2026-04-15_SECRET_EXPOSURE.md` (Closure 포함)
+- **남은 백로그**: `docs/BACKLOG_2026-04-15.md`
+
 ## 작업 방식
 - 연속 작업 시 중간 확인 없이 끝까지 진행. 커밋 단위로 끊되 지시 요청하지 말 것
 - typecheck 통과하면 바로 다음 작업으로 넘어갈 것

@@ -1,9 +1,11 @@
 # 배포 차단 보고서 — Fresh DB Replay 결함
 
-> ⚠️ **CLOSED 2026-04-15** — 이 차단 보고는 해소됐다.
+> ⚠️ **SUPERSEDED 2026-04-15** — 본 차단 보고는 인과관계 기록(history)으로만 유효하며, 현행 배포 판정 기준이 아니다.
+> 현행 배포 가능성 판단 문서: `docs/RELEASE_APPROVAL_2026-04-15.md` (판정: 실서비스 투입 가능, 근거 커밋 `8187712`).
 > 해소 경로: branch replay 포기 → `veinspiral-staging` 별도 프로젝트 신설 + preprocessor 기반 migration 적용 + schema parity 확인.
-> 최종 승인 문서: `docs/RELEASE_APPROVAL_2026-04-15.md` (판정: 실서비스 투입 가능, 근거 커밋 `8187712`).
-> 해소 커밋: `a56733e` (staging 분리), `01aa39e` (잔여 CI 수정), `96435e3` (승인 문서).
+> 해소 커밋: `a56733e` (staging 분리), `01aa39e` (잔여 CI 수정), `96435e3` (승인 문서), `8187712` (실서비스 투입 가능 효력 발생).
+>
+> **운영 규칙**: 배포 가능성 판단은 `RELEASE_APPROVAL_*.md`만 본다. 본 블로커 문서는 "왜 이런 경로를 밟게 됐는지"를 이해하기 위해서만 참조.
 >
 > ---
 >
