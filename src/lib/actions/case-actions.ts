@@ -152,12 +152,14 @@ async function notifyDocumentStakeholders({
     // 2) 의뢰인 알림 — 공개 문서만. 포털 연결된 case_clients.profile_id가 수신자.
     let clientRows: Record<string, unknown>[] = [];
     if (clientVisible) {
+      // case_clients는 lifecycle_status 컬럼이 없다. link_status enum
+      // (linked/pending_unlink/unlinked/orphan_review) 중 'linked'만 활성 링크로 본다.
       const { data: caseClients } = await admin
         .from('case_clients')
         .select('profile_id')
         .eq('case_id', caseId)
         .eq('is_portal_enabled', true)
-        .neq('lifecycle_status', 'soft_deleted');
+        .eq('link_status', 'linked');
       const clientIds = ((caseClients ?? []) as Array<{ profile_id: string | null }>)
         .map((c) => c.profile_id)
         .filter((id): id is string => Boolean(id));

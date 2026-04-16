@@ -1061,11 +1061,11 @@ describe('server action integration', () => {
     }));
     const handlersSelect = vi.fn(() => ({ eq: handlersEq }));
 
-    const clientsNeq = vi.fn(async () => ({
+    const clientsEqLinkStatus = vi.fn(async () => ({
       data: [{ profile_id: clientProfileId }],
       error: null,
     }));
-    const clientsEqPortal = vi.fn(() => ({ neq: clientsNeq }));
+    const clientsEqPortal = vi.fn(() => ({ eq: clientsEqLinkStatus }));
     const clientsEqCase = vi.fn(() => ({ eq: clientsEqPortal }));
     const clientsSelect = vi.fn(() => ({ eq: clientsEqCase }));
 
@@ -1152,8 +1152,8 @@ describe('server action integration', () => {
       data: [{ profile_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' }],
       error: null,
     }));
-    const clientsNeq = vi.fn(async () => ({ data: [], error: null }));
-    const clientsEqPortal = vi.fn(() => ({ neq: clientsNeq }));
+    const clientsEqLinkStatus = vi.fn(async () => ({ data: [], error: null }));
+    const clientsEqPortal = vi.fn(() => ({ eq: clientsEqLinkStatus }));
     const clientsEqCase = vi.fn(() => ({ eq: clientsEqPortal }));
 
     mocks.createSupabaseAdminClient.mockReturnValue({
