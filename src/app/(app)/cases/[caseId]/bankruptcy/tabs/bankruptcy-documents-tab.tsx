@@ -2,13 +2,17 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { FileText, Download, Printer, Loader2, X } from 'lucide-react';
+import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline';
 import { generateBankruptcyDoc } from '@/lib/actions/bankruptcy-document-actions';
 import { getGeneratedDocumentDownloadUrl } from '@/lib/actions/document-download-actions';
 import type { BankruptcyDocumentType } from '@/lib/bankruptcy/document-generator';
+import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
 
 interface BankruptcyDocumentsTabProps {
   caseId: string;
   organizationId: string;
+  /** case-hub-projection.documents — 이미 등록된 문서 타임라인. */
+  hubDocuments?: CaseHubDocuments | null;
 }
 
 const DOCUMENT_TYPES: {
@@ -27,6 +31,7 @@ const DOCUMENT_TYPES: {
 export function BankruptcyDocumentsTab({
   caseId,
   organizationId,
+  hubDocuments,
 }: BankruptcyDocumentsTabProps) {
   const [loadingDoc, setLoadingDoc] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -128,6 +133,18 @@ export function BankruptcyDocumentsTab({
           신청인 정보, 채권자 목록이 입력된 후 문서를 출력해주세요.
         </p>
       </div>
+
+      {/* 이미 등록된 문서 타임라인 (case-hub-projection 단일 원천). */}
+      {hubDocuments ? (
+        <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">기존 문서</h2>
+          <CaseHubDocumentTimeline
+            documents={hubDocuments}
+            emptyDescription="아직 생성·등록된 문서가 없습니다. 아래에서 문서를 생성하면 여기에 누적됩니다."
+            maxItems={8}
+          />
+        </section>
+      ) : null}
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3">

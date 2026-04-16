@@ -9,6 +9,7 @@ import { RepaymentPlanCalculator } from './repayment-plan-calculator';
 import { ClientActionPacketPanel } from './client-action-packet-panel';
 import { BankruptcyDocumentsTab } from './tabs/bankruptcy-documents-tab';
 import type { CorrectionNoticeSummaryRaw, ExtractionResult } from '@/lib/insolvency-types';
+import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
 
 type Creditor = {
   id: string;
@@ -103,6 +104,8 @@ interface Props {
     sourcePageReference?: string | null;
   }>;
   correctionNoticeSummaryFromAI: CorrectionNoticeSummaryRaw | null;
+  /** case-hub-projection.documents — 문서 출력 탭 상단 타임라인용. null이면 미조회. */
+  hubDocuments: CaseHubDocuments | null;
 }
 
 const CLAIM_CLASS_LABEL: Record<string, string> = {
@@ -141,7 +144,7 @@ const RESPONSIBILITY_LABEL: Record<'client_self' | 'client_visit' | 'office_prep
   office_prepare: '사무소 확인'
 };
 
-export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, insolvencySubtype, creditors: initialCreditors, latestPlan, memberRole, collaterals, rulesetConstants, packets, correctionItemsFromAI, correctionNoticeSummaryFromAI }: Props) {
+export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, insolvencySubtype, creditors: initialCreditors, latestPlan, memberRole, collaterals, rulesetConstants, packets, correctionItemsFromAI, correctionNoticeSummaryFromAI, hubDocuments }: Props) {
   const { success, error: toastError, undo } = useToast();
   const [creditors, setCreditors] = useState<Creditor[]>(initialCreditors);
   const [uploading, setUploading] = useState(false);
@@ -622,6 +625,7 @@ export function BankruptcyModuleClient({ caseId, organizationId, caseTitle, inso
         <BankruptcyDocumentsTab
           caseId={caseId}
           organizationId={organizationId}
+          hubDocuments={hubDocuments}
         />
       )}
     </div>

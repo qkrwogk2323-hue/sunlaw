@@ -25,8 +25,8 @@
 - `19e755e` refactor(navigation): 하드코딩 0 달성 — baseline 고정
 
 ## 5. 지금 해야 할 일 (우선순위 순)
-1. ~~`dashboard-hub-overview.tsx`의 `overdueMap` 실데이터 주입~~ ✅ 2026-04-17 (`getOverdueCountsByCaseIds` + dashboard/page.tsx 병렬 주입)
-2. 허브 projection 문서 타임라인을 실제 UI(`case-hubs/[hubId]`, `rehab-documents-tab`, `bankruptcy-documents-tab`)에 연결
+1. ~~`dashboard-hub-overview.tsx`의 `overdueMap` 실데이터 주입~~ ✅ 2026-04-17
+2. ~~허브 projection 문서 타임라인을 실제 UI(`case-hubs/[hubId]`, `rehab-documents-tab`, `bankruptcy-documents-tab`)에 연결~~ ✅ 2026-04-17 (`<CaseHubDocumentTimeline>` 컴포넌트 + 3개 소비처 주입)
 3. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
 
 ## 6. 손대면 안 되는 것

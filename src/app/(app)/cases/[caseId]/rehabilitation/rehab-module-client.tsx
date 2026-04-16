@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/cn';
+import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
 
 // 탭별 dynamic import — 활성 탭만 로드 (번들 ~120K → 탭당 ~20K)
 const RehabApplicantTab = dynamic(() => import('./tabs/rehab-applicant-tab').then(m => ({ default: m.RehabApplicantTab })));
@@ -42,6 +43,8 @@ interface RehabModuleClientProps {
   incomeSettings: Record<string, unknown> | null;
   affidavit: Record<string, unknown> | null;
   planSections: Record<string, unknown>[];
+  /** case-hub-projection.documents — 출력/문서 탭 상단 타임라인용. null이면 미조회 상태. */
+  hubDocuments: CaseHubDocuments | null;
 }
 
 export function RehabModuleClient({
@@ -61,6 +64,7 @@ export function RehabModuleClient({
   incomeSettings,
   affidavit,
   planSections,
+  hubDocuments,
 }: RehabModuleClientProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('applicant');
 
@@ -163,6 +167,7 @@ export function RehabModuleClient({
           <RehabDocumentsTab
             caseId={caseId}
             organizationId={organizationId}
+            hubDocuments={hubDocuments}
           />
         )}
       </div>

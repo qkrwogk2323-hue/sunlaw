@@ -1,6 +1,7 @@
 import { requireCaseAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getRehabModuleData } from '@/lib/queries/rehabilitation';
+import { getCaseHubProjection } from '@/lib/queries/case-hub-projection';
 import { RehabModuleClient } from './rehab-module-client';
 
 interface Props {
@@ -51,8 +52,11 @@ export default async function RehabilitationPage({ params, searchParams }: Props
       ? { full_name: firstCaseClient.client_name }
       : null;
 
-  // 개인회생 모듈 전체 데이터 병렬 조회
-  const moduleData = await getRehabModuleData(caseId, creditorPage);
+  // 개인회생 모듈 전체 데이터 + 허브 projection (문서 타임라인용) 병렬 조회
+  const [moduleData, projection] = await Promise.all([
+    getRehabModuleData(caseId, creditorPage),
+    getCaseHubProjection(caseId),
+  ]);
 
   return (
     <RehabModuleClient
@@ -72,6 +76,7 @@ export default async function RehabilitationPage({ params, searchParams }: Props
       incomeSettings={moduleData.incomeSettings}
       affidavit={moduleData.affidavit}
       planSections={moduleData.planSections}
+      hubDocuments={projection?.documents ?? null}
     />
   );
 }

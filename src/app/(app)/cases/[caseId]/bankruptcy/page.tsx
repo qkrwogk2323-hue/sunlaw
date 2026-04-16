@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { findMembership } from '@/lib/auth';
 import { requireCaseAccess } from '@/lib/case-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCaseHubProjection } from '@/lib/queries/case-hub-projection';
 import { BankruptcyModuleClient } from './bankruptcy-module-client';
 import type { CorrectionChecklistItemRaw, CorrectionNoticeSummaryRaw } from '@/lib/insolvency-types';
 
@@ -86,6 +87,9 @@ export default async function BankruptcyPage({ params }: Props) {
   const correctionItemsFromAI = extractedJson?.correctionItems ?? [];
   const correctionNoticeSummaryFromAI = extractedJson?.correctionNoticeSummary ?? null;
 
+  // 문서 출력 탭 상단 타임라인용 — case-hub-projection 단일 원천.
+  const projection = await getCaseHubProjection(caseId);
+
   return (
     <BankruptcyModuleClient
       caseId={caseId}
@@ -100,6 +104,7 @@ export default async function BankruptcyPage({ params }: Props) {
       packets={(packets ?? []).map((p) => ({ ...p, items: p.insolvency_client_action_items ?? [] }))}
       correctionItemsFromAI={correctionItemsFromAI}
       correctionNoticeSummaryFromAI={correctionNoticeSummaryFromAI}
+      hubDocuments={projection?.documents ?? null}
     />
   );
 }

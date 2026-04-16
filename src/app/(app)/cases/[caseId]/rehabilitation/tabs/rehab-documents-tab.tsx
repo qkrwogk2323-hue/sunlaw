@@ -4,9 +4,11 @@ import { useState, useCallback, useRef } from 'react';
 import { FileText, Download, Printer, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/toast-provider';
 import { PrintFrame } from '@/components/ui/print-frame';
+import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline';
 import { generateRehabDocument, upsertProhibitionOrder } from '@/lib/actions/rehabilitation-actions';
 import { getGeneratedDocumentDownloadUrl } from '@/lib/actions/document-download-actions';
 import type { DocumentType } from '@/lib/rehabilitation/document-generator';
+import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
 
 interface ProhibitionOrderForm {
   court_name: string;
@@ -59,6 +61,8 @@ interface RehabDocumentsTabProps {
   caseId: string;
   organizationId: string;
   prohibitionOrder?: Record<string, unknown> | null;
+  /** case-hub-projection.documents — 이미 등록된 문서 타임라인 (생성·계약서 통합). */
+  hubDocuments?: CaseHubDocuments | null;
 }
 
 const DOCUMENT_TYPES: {
@@ -98,6 +102,7 @@ export function RehabDocumentsTab({
   caseId,
   organizationId,
   prohibitionOrder,
+  hubDocuments,
 }: RehabDocumentsTabProps) {
   const { success: toastSuccess, error: toastError } = useToast();
   const [loadingDoc, setLoadingDoc] = useState<string | null>(null);
@@ -248,6 +253,18 @@ export function RehabDocumentsTab({
           모든 탭의 입력이 완료된 후 문서를 출력해주세요.
         </p>
       </div>
+
+      {/* 이미 등록된 문서 타임라인 (case-hub-projection 단일 원천). */}
+      {hubDocuments ? (
+        <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">기존 문서</h2>
+          <CaseHubDocumentTimeline
+            documents={hubDocuments}
+            emptyDescription="아직 생성·등록된 문서가 없습니다. 아래에서 문서를 생성하면 여기에 누적됩니다."
+            maxItems={8}
+          />
+        </section>
+      ) : null}
 
       {/* 부속서류 포함 옵션 */}
       <section className="rounded-lg border border-slate-200 bg-white p-4">
