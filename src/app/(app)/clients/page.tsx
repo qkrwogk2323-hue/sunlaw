@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { cookies } from 'next/headers';
+import { ROUTES } from '@/lib/routes/registry';
 import { Badge } from '@/components/ui/badge';
 import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,7 +83,7 @@ export default async function ClientsPage({
     return (
       <div key={item.id} className="relative rounded-xl border border-slate-200 bg-white p-3.5 hover:border-sky-300 transition-colors">
         <Link
-          href={`/clients/${item.clientKey ?? item.id}` as Route}
+          href={`${ROUTES.CLIENTS}/${item.clientKey ?? item.id}` as Route}
           className="absolute inset-0 rounded-xl"
           aria-label={`${item.name} 상세보기`}
         />
@@ -143,10 +144,10 @@ export default async function ClientsPage({
               />
             </>
           )}
-          <Link href={'/clients/history?tab=profiles' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+          <Link href={`${ROUTES.CLIENTS}/history?tab=profiles` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 정보 변경 기록 보기
           </Link>
-          <Link href={'/clients/history?tab=requests' as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
+          <Link href={`${ROUTES.CLIENTS}/history?tab=requests` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}>
             의뢰인 연결 요청 기록 보기
           </Link>
         </div>
@@ -194,10 +195,10 @@ export default async function ClientsPage({
                   <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
                     <p className="text-xs text-emerald-700">바로가기</p>
                     <div className="mt-1 flex flex-wrap gap-2">
-                      <Link href={`/cases/${clientInviteSummary.caseId}`} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-2 text-[11px]' })}>
+                      <Link href={`${ROUTES.CASES}/${clientInviteSummary.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-2 text-[11px]' })}>
                         사건
                       </Link>
-                      <Link href={`/case-hubs?caseId=${clientInviteSummary.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-2 text-[11px]' })}>
+                      <Link href={`${ROUTES.CASE_HUBS}?caseId=${clientInviteSummary.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-8 rounded-lg px-2 text-[11px]' })}>
                         허브
                       </Link>
                     </div>

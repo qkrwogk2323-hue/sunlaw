@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { ROUTES } from '@/lib/routes/registry';
 import { BriefcaseBusiness, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -138,7 +139,7 @@ export default async function CasesPage({
         className={`vs-interactive rounded-xl border transition hover:border-slate-400 ${isHighlighted ? 'border-blue-400 bg-blue-50/60 ring-2 ring-blue-200' : 'border-slate-200 bg-white/85'}`}
       >
         <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-          <Link href={`/cases/${item.id}`} className="min-w-0 flex-1">
+          <Link href={`${ROUTES.CASES}/${item.id}` as Route} className="min-w-0 flex-1">
             {/* 행 1: 법원명 · 사건번호 */}
             {(item.court_name || item.case_number) && (
               <p className="text-xs font-medium text-slate-500 truncate">
@@ -332,7 +333,7 @@ export default async function CasesPage({
                 <span>{BUCKET_META[bucket].helper}</span>
                 {bucket !== 'deleted' && <CaseDeleteToggle>{null}</CaseDeleteToggle>}
                 <Link
-                  href={'/cases/history' as Route}
+                  href={`${ROUTES.CASES}/history` as Route}
                   className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'h-9 rounded-xl px-3 text-xs' })}
                 >
                   사건 변경 이력 보기
@@ -371,7 +372,7 @@ export default async function CasesPage({
           {(['active', 'completed', 'deleted'] as BucketKey[]).map((key) => {
             const count = counts[key];
             const isActive = key === bucket;
-            const href = `/cases?bucket=${key}${queryFilter ? `&q=${encodeURIComponent(queryFilter)}` : ''}` as Route;
+            const href = `${ROUTES.CASES}?bucket=${key}${queryFilter ? `&q=${encodeURIComponent(queryFilter)}` : ''}` as Route;
             return (
               <Link
                 key={key}
