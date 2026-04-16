@@ -5,7 +5,7 @@ import { buttonStyles } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PLATFORM_TERMS_SUMMARY, PLATFORM_TERMS_VERSION } from '@/lib/legal-documents';
 
-export const dynamic = 'force-dynamic';
+// 정적 콘텐츠 — force-dynamic 제거로 빌드 타임 렌더 가능 (2026-04-16 감사).
 
 const sections = [
   {

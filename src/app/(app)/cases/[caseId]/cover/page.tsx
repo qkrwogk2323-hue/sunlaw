@@ -57,26 +57,32 @@ async function getCaseCoverData(caseId: string) {
   const c = caseRow;
   const supabase = await createSupabaseServerClient();
 
-  const { data: clients } = await supabase
-    .from('case_clients')
-    .select('client_name, relation_label')
-    .eq('case_id', caseId)
-    .limit(3);
+  // 3개 쿼리 병렬 실행 (이전: 순차 await로 3 round-trip). TTFB 개선.
+  const [clientsResult, partiesResult, schedulesResult] = await Promise.all([
+    supabase
+      .from('case_clients')
+      .select('client_name, relation_label')
+      .eq('case_id', caseId)
+      .limit(3),
+    supabase
+      .from('case_parties')
+      .select('display_name, party_role, phone')
+      .eq('case_id', caseId)
+      .limit(5),
+    supabase
+      .from('case_schedules')
+      .select('title, schedule_kind, scheduled_start, location, notes')
+      .eq('case_id', caseId)
+      .order('scheduled_start', { ascending: true })
+      .limit(30),
+  ]);
 
-  const { data: parties } = await supabase
-    .from('case_parties')
-    .select('display_name, party_role, phone')
-    .eq('case_id', caseId)
-    .limit(5);
-
-  const { data: schedules } = await supabase
-    .from('case_schedules')
-    .select('title, schedule_kind, scheduled_start, location, notes')
-    .eq('case_id', caseId)
-    .order('scheduled_start', { ascending: true })
-    .limit(30);
-
-  return { c, clients: clients ?? [], parties: parties ?? [], schedules: schedules ?? [] };
+  return {
+    c,
+    clients: clientsResult.data ?? [],
+    parties: partiesResult.data ?? [],
+    schedules: schedulesResult.data ?? [],
+  };
 }
 
 function Cell({ label, value, w = 'auto' }: { label?: string; value?: string | null; w?: string }) {

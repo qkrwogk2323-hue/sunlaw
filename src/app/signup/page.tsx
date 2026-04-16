@@ -5,7 +5,7 @@ import { GeneralSignupForm } from '@/components/forms/general-signup-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonStyles } from '@/components/ui/button';
 
-export const dynamic = 'force-dynamic';
+// 정적 셸 (폼은 GeneralSignupForm 클라이언트 컴포넌트) — force-dynamic 불필요.
 
 export default function SimpleSignupPage() {
   return (

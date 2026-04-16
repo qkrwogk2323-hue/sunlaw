@@ -9,7 +9,7 @@ import {
   PLATFORM_PRIVACY_SUMMARY
 } from '@/lib/legal-documents';
 
-export const dynamic = 'force-dynamic';
+// 정적 콘텐츠 (버전 상수만 참조) — force-dynamic 제거로 빌드 타임 렌더 가능.
 
 const sections = [
   {

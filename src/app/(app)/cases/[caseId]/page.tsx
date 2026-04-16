@@ -271,7 +271,11 @@ export default async function CaseDetailPage({
 
   const showCollectionModule = Boolean(caseBase.module_flags?.collection || caseBase.case_type === 'debt_collection');
   const collectionFocused = showCollectionModule || caseBase.case_type === 'debt_collection';
-  const caseSections = await getCaseDetailSections(caseId, currentTab, collectionFocused);
+  // sections + hub 등록 정보를 병렬 조회 (이전: 순차 await 3 round-trip → 2 round-trip).
+  const [caseSections, caseHubRegistrationMap] = await Promise.all([
+    getCaseDetailSections(caseId, currentTab, collectionFocused),
+    getCaseHubRegistrations(caseBase.organization_id, [caseId]),
+  ]);
   const caseDetail = { ...caseBase, ...caseSections };
 
   const membership = findMembership(auth, caseDetail.organization_id);
@@ -290,7 +294,7 @@ export default async function CaseDetailPage({
     .reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
   const activeAgreement = caseDetail.feeAgreements.find((item: any) => item.is_active) ?? caseDetail.feeAgreements[0] ?? null;
   const legalRequests = caseDetail.requests.filter((item: any) => ['document_request', 'signature_request', 'schedule_request'].includes(item.request_kind));
-  const caseHubRegistration = (await getCaseHubRegistrations(caseDetail.organization_id, [caseId]))[caseId] ?? {
+  const caseHubRegistration = caseHubRegistrationMap[caseId] ?? {
     firstHubId: null,
     sharedHubId: null
   };
