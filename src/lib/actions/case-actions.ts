@@ -8,7 +8,7 @@ import { getCaseStageLabel } from '@/lib/case-stage';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
 import { hasPermission } from '@/lib/permissions';
-import { NOTIFICATION_TYPES, buildNotificationDestinationUrl } from '@/lib/notification-policy';
+import { NOTIFICATION_TYPES, buildNotificationDestinationUrl, type NotificationType } from '@/lib/notification-policy';
 import { throwGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -280,7 +280,8 @@ async function notifyBillingStakeholders({
   if (!recipientProfileIds.length) return;
 
   const admin = createSupabaseAdminClient();
-  const targetHref = `/cases/${caseId}?tab=billing`;
+  // destination_url은 notification_type별 정책 테이블에서 빌드 (단일 원본, BACKLOG §2).
+  const targetHref = buildNotificationDestinationUrl(notificationType as NotificationType, { caseId });
   const { error: notificationError } = await admin.from('notifications').insert(
     recipientProfileIds.map((recipientProfileId) => ({
       organization_id: organizationId,
@@ -1213,6 +1214,10 @@ export async function requestDocumentReviewAction(documentId: string) {
     .neq('profile_id', auth.user.id)
     .eq('status', 'active');
 
+  const reviewHref = buildNotificationDestinationUrl(
+    NOTIFICATION_TYPES.DOCUMENT_REVIEW_REQUESTED,
+    { caseId: document.case_id }
+  );
   await notifyProfiles(
     supabase,
     (reviewers ?? []).map((reviewer) => ({
@@ -1220,11 +1225,14 @@ export async function requestDocumentReviewAction(documentId: string) {
       case_id: document.case_id,
       recipient_profile_id: reviewer.profile_id,
       kind: 'approval_requested',
+      notification_type: NOTIFICATION_TYPES.DOCUMENT_REVIEW_REQUESTED,
       title: `결재 요청: ${document.title}`,
       body: `${auth.profile.full_name} 사용자가 문서 결재를 요청했습니다.`,
       requires_action: true,
       action_label: '문서 검토하기',
-      action_href: `/cases/${document.case_id}?tab=documents`,
+      action_href: reviewHref,
+      destination_type: 'internal_route',
+      destination_url: reviewHref,
       action_entity_type: 'case_document',
       action_target_id: document.id
     }))
@@ -1324,18 +1332,23 @@ export async function reviewDocumentAction(documentId: string, formData: FormDat
     .is('resolved_at', null);
 
   if (document.approval_requested_by && document.approval_requested_by !== auth.user.id) {
+    const reviewedHref = buildNotificationDestinationUrl(
+      NOTIFICATION_TYPES.DOCUMENT_REVIEWED,
+      { caseId: document.case_id }
+    );
     await notifyProfiles(supabase, [
       {
         organization_id: document.organization_id,
         case_id: document.case_id,
         recipient_profile_id: document.approval_requested_by,
         kind: 'approval_completed',
+        notification_type: NOTIFICATION_TYPES.DOCUMENT_REVIEWED,
         title: `결재 ${parsed.decision === 'approved' ? '승인' : '반려'}: ${document.title}`,
         body: `${auth.profile.full_name} 사용자가 결재를 ${parsed.decision === 'approved' ? '승인' : '반려'}했습니다.`,
         action_label: '문서 확인하기',
-        action_href: `/cases/${document.case_id}?tab=documents`,
+        action_href: reviewedHref,
         destination_type: 'internal_route',
-        destination_url: `/cases/${document.case_id}?tab=documents`
+        destination_url: reviewedHref
       }
     ]);
   }

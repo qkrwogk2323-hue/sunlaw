@@ -35,6 +35,8 @@ export const NOTIFICATION_TYPES = {
   // 문서
   DOCUMENT_CREATED: 'document_created',
   DOCUMENT_SHARED_WITH_CLIENT: 'document_shared_with_client',
+  DOCUMENT_REVIEW_REQUESTED: 'document_review_requested',
+  DOCUMENT_REVIEWED: 'document_reviewed',
 
   // 온보딩
   STAFF_PROFILE_INCOMPLETE: 'staff_profile_incomplete',
@@ -76,20 +78,22 @@ export type NotificationPolicy = {
 
 // ─── 타입별 정책 표 (단일 원본) ───────────────────────────────────────────
 export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> = {
+  // 비용·청구 관련 알림은 사건별 비용 탭으로 착륙시킨다 (조직 전체 /billing 허브
+  // 로 보내면 해당 사건을 다시 찾아야 하는 손실 동작이라 불친절).
   [NOTIFICATION_TYPES.BILLING_ENTRY_CREATED]: {
     recipientScope: 'org_managers_and_assigned',
     destinationScope: 'internal',
-    internalHrefTemplate: '/billing',
+    internalHrefTemplate: '/cases/:caseId?tab=billing',
   },
   [NOTIFICATION_TYPES.BILLING_NOTICE]: {
     recipientScope: 'org_managers_and_assigned',
     destinationScope: 'internal',
-    internalHrefTemplate: '/billing',
+    internalHrefTemplate: '/cases/:caseId?tab=billing',
   },
   [NOTIFICATION_TYPES.FEE_AGREEMENT_CREATED]: {
     recipientScope: 'org_managers_and_assigned',
     destinationScope: 'internal',
-    internalHrefTemplate: '/billing',
+    internalHrefTemplate: '/cases/:caseId?tab=billing',
   },
   [NOTIFICATION_TYPES.INSTALLMENT_ROUNDS_EXTENDED]: {
     recipientScope: 'client_self_and_linked_managers',
@@ -104,7 +108,7 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
   [NOTIFICATION_TYPES.PAYMENT_RECORDED]: {
     recipientScope: 'org_managers_and_assigned',
     destinationScope: 'internal',
-    internalHrefTemplate: '/billing',
+    internalHrefTemplate: '/cases/:caseId?tab=billing',
   },
   [NOTIFICATION_TYPES.CASE_CREATED]: {
     recipientScope: 'org_managers',
@@ -150,6 +154,16 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
     recipientScope: 'client_self_and_linked_managers',
     destinationScope: 'portal',
     portalHrefTemplate: '/portal/cases/:caseId',
+  },
+  [NOTIFICATION_TYPES.DOCUMENT_REVIEW_REQUESTED]: {
+    recipientScope: 'org_managers',
+    destinationScope: 'internal',
+    internalHrefTemplate: '/cases/:caseId?tab=documents',
+  },
+  [NOTIFICATION_TYPES.DOCUMENT_REVIEWED]: {
+    recipientScope: 'org_managers_and_assigned',
+    destinationScope: 'internal',
+    internalHrefTemplate: '/cases/:caseId?tab=documents',
   },
   [NOTIFICATION_TYPES.STAFF_PROFILE_INCOMPLETE]: {
     recipientScope: 'org_managers',

@@ -91,4 +91,47 @@ describe('buildNotificationDestinationUrl', () => {
     expect(isClientPortalNotification(NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT)).toBe(true);
     expect(isPlatformOnlyNotification(NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT)).toBe(false);
   });
+
+  // BACKLOG §2 수렴: billing 정책 템플릿을 사건 비용 탭으로 고정.
+  it('routes BILLING_ENTRY_CREATED to the case billing tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.BILLING_ENTRY_CREATED, {
+      caseId: 'case-b1'
+    });
+    expect(url).toBe('/cases/case-b1?tab=billing');
+  });
+
+  it('routes BILLING_NOTICE to the case billing tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.BILLING_NOTICE, {
+      caseId: 'case-b2'
+    });
+    expect(url).toBe('/cases/case-b2?tab=billing');
+  });
+
+  it('routes FEE_AGREEMENT_CREATED to the case billing tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.FEE_AGREEMENT_CREATED, {
+      caseId: 'case-b3'
+    });
+    expect(url).toBe('/cases/case-b3?tab=billing');
+  });
+
+  it('routes PAYMENT_RECORDED to the case billing tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.PAYMENT_RECORDED, {
+      caseId: 'case-b4'
+    });
+    expect(url).toBe('/cases/case-b4?tab=billing');
+  });
+
+  it('routes DOCUMENT_REVIEW_REQUESTED to the case documents tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.DOCUMENT_REVIEW_REQUESTED, {
+      caseId: 'case-d1'
+    });
+    expect(url).toBe('/cases/case-d1?tab=documents');
+  });
+
+  it('routes DOCUMENT_REVIEWED to the case documents tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.DOCUMENT_REVIEWED, {
+      caseId: 'case-d2'
+    });
+    expect(url).toBe('/cases/case-d2?tab=documents');
+  });
 });
