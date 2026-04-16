@@ -14,8 +14,9 @@
 1. Route SSoT: `src/lib/routes/registry.ts` (`ROUTES.CLIENTS`)
 2. Navigation SSoT: `src/lib/routes/navigation-map.ts`
 3. Interaction SSoT: `docs/interaction-matrix.clients.md` (예정)
-4. Roster 쿼리 (**내부 전용**): `src/lib/queries/clients-roster.ts` (예정, 현재 `clients.ts#listClientPageRoster`에서 분리)
-5. Portal 쿼리 (**의뢰인 전용, 최소권한**): `src/lib/queries/client-portal.ts` (예정)
+4. Roster 쿼리 (**내부 전용**): `src/lib/queries/clients.ts` (파일 상단 규약 주석 참조)
+5. Portal 쿼리 (**의뢰인 전용, 최소권한**): `src/lib/queries/portal.ts` (session client + profile_id 필터)
+5a. 교차 import 차단: `scripts/check-query-boundaries.mjs` (CI 자동 검사)
 6. Case-client 링크 맵: `src/lib/queries/clients.ts#getCaseClientLinkedMap`
 7. 의뢰인 상세: `src/lib/queries/clients.ts#getClientDetailSummary`
 8. Consistency check: `scripts/check-navigation-consistency.mjs`
@@ -126,4 +127,4 @@
 4. 의뢰인 배지(연결/미연결)는 `cases/page.tsx`·`case-hub-connect-button.tsx`와 동일 표현
 5. `overdueCount` 계산은 `case-hub-projection.billing.overdueCount` 기준과 동일
 6. 신규 CTA 추가 시 `interaction-matrix.clients.md`에 행 추가 후 UI
-7. portal 데이터와 격리 — `clients-roster.ts`와 `client-portal.ts`의 테이블·필드가 섞이지 않음
+7. portal 데이터와 격리 — `queries/clients.ts`와 `queries/portal.ts`의 테이블·필드가 섞이지 않음 (check:query-boundaries가 강제)

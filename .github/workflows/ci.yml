@@ -52,6 +52,7 @@ jobs:
           pnpm check:rule-meta
           pnpm check:ai-guardrails
           pnpm check:navigation-consistency
+          pnpm check:query-boundaries
           pnpm check:schema-drift
           pnpm types:check
           pnpm lint

@@ -1,3 +1,19 @@
+/**
+ * portal.ts — **의뢰인 포털 전용** 쿼리 계층 (최소권한).
+ *
+ * 규약 (2026-04-16):
+ *   - 이 파일의 모든 함수는 반드시 session client(`createSupabaseServerClient`)를
+ *     사용하고, `auth.user.id`(또는 `is_portal_enabled=true` 필터)로 현재 사용자
+ *     소유 데이터만 조회한다. admin client 사용 금지.
+ *   - 허용 호출처: `src/app/portal/*` 전용.
+ *   - **금지**: `src/app/(app)/**` (직원 앱)에서 이 파일을 import하면 안 된다.
+ *     직원 쿼리는 `src/lib/queries/clients.ts` 또는 각 도메인 전용 파일 사용.
+ *   - 포털 화면이 이 파일 외의 admin 쿼리를 사용하는 것도 금지.
+ *     (리뷰어 hotfix 우려: case_clients/parties/handlers/organizations 과다조회 차단)
+ *   - 경계 회귀는 `scripts/check-query-boundaries.mjs`가 차단.
+ *
+ * 참조: `docs/page-specs/clients.md`, `docs/system-map.md` §6 (데이터 계층)
+ */
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { getCaseStageLabel, getNextCaseStageLabel } from '@/lib/case-stage';

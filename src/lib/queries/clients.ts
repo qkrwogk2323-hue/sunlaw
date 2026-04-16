@@ -1,3 +1,16 @@
+/**
+ * clients.ts — **직원(roster) 전용** 쿼리 계층.
+ *
+ * 규약 (2026-04-16):
+ *   - 이 파일은 조직 직원/관리자가 의뢰인 명단·상세를 내부 운영 관점으로 조회할 때만 사용.
+ *   - 허용 호출처: `src/app/(app)/clients/*`, `src/lib/actions/client-management-*` 등
+ *     **직원 앱(app group)** 전용.
+ *   - **금지**: `src/app/portal/**` 에서 이 파일을 import하면 안 된다.
+ *     포털은 `src/lib/queries/portal.ts` (session client + profile_id 필터)만 사용.
+ *   - 경계 회귀는 `scripts/check-query-boundaries.mjs`가 차단.
+ *
+ * 참조: `docs/page-specs/clients.md`, `docs/system-map.md` §6 (데이터 계층)
+ */
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { decryptString } from '@/lib/pii';
 import { decodeInvitationNote } from '@/lib/invitation-metadata';

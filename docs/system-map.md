@@ -52,7 +52,7 @@
 | 허브 PIN | `/case-hubs/[hubId]/pin` | PIN 재설정 | 허브 owner/admin | `case-hubs/[hubId]/pin/*` | — | 허브 상세 |
 | 협력 Inbox | `/inbox` | 협력 요청 + 활성 허브 | 직원/관리자 | `src/app/(app)/inbox/page.tsx` | `getCollaborationOverview` | 협력 허브 상세 |
 | 협력 허브 상세 | `/inbox/[hubId]` | organization_collaboration_hubs 뷰 | 조직 멤버 | `inbox/[hubId]/page.tsx` | — | 사건 상세 |
-| 의뢰인 roster | `/clients` | **내부 운영 뷰** (roster) | 직원/관리자 | `src/app/(app)/clients/page.tsx` | `listClientPageRoster` (roster 전용) | 의뢰인 상세 |
+| 의뢰인 roster | `/clients` | **내부 운영 뷰** (roster) | 직원/관리자 | `src/app/(app)/clients/page.tsx` | `clients.ts#listClientPageRoster` (roster 전용) | 의뢰인 상세 |
 | 의뢰인 상세 | `/clients/[clientKey]` | 개인 상세·활동 피드 | 직원/관리자 | `clients/[clientKey]/*` | `getClientDetailSummary` | 사건, 허브 |
 | 의뢰인 이력 | `/clients/history` | 초대·변경 이력 | 관리자 | `clients/history/*` | — | 의뢰인 상세 |
 | 문서함 | `/documents` | 문서 타임라인 (case_documents 단일 소스) | 직원/관리자 | `src/app/(app)/documents/*` | `listDocuments` | 문서 다운로드 |
@@ -69,8 +69,8 @@
 
 | 페이지명 | 경로 | 목적 | 접근권한 | 관련 컴포넌트 | Projection 사용 |
 |---|---|---|---|---|---|
-| 포털 홈 | `/portal` | 내 사건 요약 + 알림 | 의뢰인 | `src/app/portal/page.tsx` | **client-portal.ts (예정, 최소권한 쿼리)** |
-| 내 사건 | `/portal/cases` | 자기 사건 목록 | 의뢰인 | `src/app/portal/cases/*` | client-portal 전용 |
+| 포털 홈 | `/portal` | 내 사건 요약 + 알림 | 의뢰인 | `src/app/portal/page.tsx` | `portal.ts#getPortalHomeSnapshot` (최소권한) |
+| 내 사건 | `/portal/cases` | 자기 사건 목록 | 의뢰인 | `src/app/portal/cases/*` | `portal.ts` 전용 |
 | 내 메시지 | `/portal/messages` | 요청·응답 | 의뢰인 | `src/app/portal/messages/*` | — |
 | 내 알림 | `/portal/notifications` | 포털 전용 알림 | 의뢰인 | `src/app/portal/notifications/*` | — |
 | 내 계정 | `/portal/account` | 의뢰인 프로필 | 의뢰인 | `src/app/portal/account/*` | — |
@@ -126,8 +126,9 @@
 | `collaboration-hubs queries` | 협력 허브 / case-share | `src/lib/queries/collaboration-hubs.ts` | FE 공통 | `/inbox/*` |
 | `notifications queries` | 알림 feed | `src/lib/queries/notifications.ts` | FE 공통 | `/notifications`, `/dashboard` |
 | `dashboard queries` | 초기 snapshot | `src/lib/queries/dashboard.ts` | FE 공통 | `/dashboard` |
-| `clients-roster` (예정) | **내부 운영 뷰 전용** | `src/lib/queries/clients-roster.ts` (Task 3) | FE 공통 | `/clients` |
-| `client-portal` (예정) | **의뢰인 최소권한 뷰** | `src/lib/queries/client-portal.ts` (Task 3) | FE 공통 | `/portal/*` |
+| `clients` (roster) | **내부 운영 뷰 전용** | `src/lib/queries/clients.ts` (상단 주석 규약) | FE 공통 | `/clients` |
+| `portal` | **의뢰인 최소권한 뷰** | `src/lib/queries/portal.ts` (session client + profile_id 필터) | FE 공통 | `/portal/*` |
+| 쿼리 경계 체크 | 교차 import 차단 | `scripts/check-query-boundaries.mjs` | CI | `pnpm check:query-boundaries` |
 | `billing queries` | 청구 집계 | `src/lib/queries/billing.ts` | FE 공통 | `/billing`, 허브 projection |
 | `collections queries` | 회수 집계 | `src/lib/queries/collections.ts` | FE 공통 | `/collections`, 허브 projection |
 | `documents queries` | 문서 타임라인 | `src/lib/queries/documents.ts` | FE 공통 | `/documents`, 허브 projection |
@@ -173,7 +174,7 @@
 3. 상태 전이(로그인 전/후, 권한 없음, 빈 상태, 에러)는 page-spec + 정책 코드 양쪽에 반영
 4. 허브 상태 계산은 `hub-policy.deriveHubState()`만 사용 — UI에서 중복 계산 금지
 5. 같은 사건의 projection은 `getCaseHubProjection(caseId)` 한 곳에서만 읽는다
-6. 의뢰인 포털은 `client-portal.ts` (최소권한), 직원 roster는 `clients-roster.ts` — 쿼리 계층 교차 금지
+6. 의뢰인 포털은 `queries/portal.ts` (최소권한), 직원 roster는 `queries/clients.ts` — 쿼리 계층 교차 금지 (`check:query-boundaries`로 자동 차단)
 7. 문서는 `case_documents` 단일 타임라인으로 수렴 (계약서 포함)
 8. 대시보드 = 참여 허브 모음 뷰 (사용자용 지도). 별도 "지도" 페이지 신설 금지
 9. **허브는 전역 메뉴가 아니다.** 사건 1건의 작업 모드로만 진입. 진입 경로는 3곳:

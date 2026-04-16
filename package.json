@@ -28,6 +28,7 @@
     "check:rule-meta": "node ./scripts/check-rule-meta.mjs",
     "check:ai-guardrails": "node ./scripts/check-ai-guardrails.mjs",
     "check:navigation-consistency": "node ./scripts/check-navigation-consistency.mjs",
+    "check:query-boundaries": "node ./scripts/check-query-boundaries.mjs",
     "check:schema-drift": "node ./scripts/check-schema-drift.mjs",
     "types:check": "node ./scripts/check-supabase-types.mjs check",
     "types:gen": "node ./scripts/check-supabase-types.mjs gen"
