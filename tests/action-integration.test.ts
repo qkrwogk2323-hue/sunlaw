@@ -1003,4 +1003,183 @@ describe('server action integration', () => {
     const revertCall = (caseClientsUpdate.mock.calls as Array<any[]>)[1];
     expect(revertCall[0]).toMatchObject({ is_portal_enabled: false });
   });
+
+  // BACKLOG §2: 문서 등록 → 이해당사자 알림이 정책 테이블 destination으로 꽂혀야 한다.
+  // 변호사(직원)는 /cases/:caseId?tab=documents, 의뢰인(공개문서 한정)은 /portal/cases/:caseId.
+  it('emits DOCUMENT_CREATED + DOCUMENT_SHARED_WITH_CLIENT notifications with policy destinations when a client-visible document is added', async () => {
+    const caseId = '77777777-7777-4777-8777-777777777777';
+    const organizationId = '22222222-2222-4222-8222-222222222222';
+    const handlerProfileId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const managerProfileId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const clientProfileId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+    // server-side: cases.select, case_documents.insert, audit_logs.insert, storage
+    const casesSingle = vi.fn(async () => ({
+      data: {
+        id: caseId,
+        organization_id: organizationId,
+        title: '테스트 사건',
+        reference_no: 'R-001',
+        case_type: 'debt_collection',
+        module_flags: {},
+      },
+      error: null,
+    }));
+    const casesEq = vi.fn(() => ({ single: casesSingle }));
+    const casesSelect = vi.fn(() => ({ eq: casesEq }));
+    const caseDocumentsInsert = vi.fn(async () => ({ error: null }));
+    const auditLogsInsert = vi.fn(async () => ({ error: null }));
+    const storageUpload = vi.fn(async () => ({ error: null }));
+    const storageRemove = vi.fn(async () => ({ error: null }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'cases') return { select: casesSelect };
+        if (table === 'case_documents') return { insert: caseDocumentsInsert };
+        if (table === 'audit_logs') return { insert: auditLogsInsert };
+        throw new Error(`Unexpected server table: ${table}`);
+      }),
+      storage: {
+        from: vi.fn(() => ({ upload: storageUpload, remove: storageRemove })),
+      },
+    });
+
+    // admin-side: organization_memberships, case_handlers, case_clients, notifications
+    const membershipsEq = vi.fn(async () => ({
+      data: [
+        { profile_id: managerProfileId, role: 'org_manager' },
+        { profile_id: authContext.user.id, role: 'org_owner' }, // actor is also a manager — should be filtered out
+      ],
+      error: null,
+    }));
+    const membershipsEqStatus = vi.fn(() => ({ eq: membershipsEq }));
+    const membershipsSelect = vi.fn(() => ({ eq: membershipsEqStatus }));
+
+    const handlersEq = vi.fn(async () => ({
+      data: [{ profile_id: handlerProfileId }],
+      error: null,
+    }));
+    const handlersSelect = vi.fn(() => ({ eq: handlersEq }));
+
+    const clientsNeq = vi.fn(async () => ({
+      data: [{ profile_id: clientProfileId }],
+      error: null,
+    }));
+    const clientsEqPortal = vi.fn(() => ({ neq: clientsNeq }));
+    const clientsEqCase = vi.fn(() => ({ eq: clientsEqPortal }));
+    const clientsSelect = vi.fn(() => ({ eq: clientsEqCase }));
+
+    const notificationsInsert = vi.fn(async () => ({ error: null }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'organization_memberships') return { select: membershipsSelect };
+        if (table === 'case_handlers') return { select: handlersSelect };
+        if (table === 'case_clients') return { select: clientsSelect };
+        if (table === 'notifications') return { insert: notificationsInsert };
+        throw new Error(`Unexpected admin table: ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('title', '준비서면');
+    formData.set('documentKind', 'brief');
+    formData.set('clientVisibility', 'client_visible');
+    formData.set('summary', '요약');
+    formData.set('contentMarkdown', '');
+
+    const { addDocumentAction } = await import('@/lib/actions/case-actions');
+    await addDocumentAction(caseId, formData);
+
+    // 알림 insert가 정확히 1회 (staff + client을 한 번에 밀어넣음) 호출돼야 한다.
+    expect(notificationsInsert).toHaveBeenCalledTimes(1);
+    const rows = (notificationsInsert.mock.calls[0] as any[])[0] as Array<Record<string, any>>;
+
+    const staffRows = rows.filter((r) => r.notification_type === 'document_created');
+    const clientRows = rows.filter((r) => r.notification_type === 'document_shared_with_client');
+
+    // 직원: manager(본인 제외) + handler = 2명, destination_url은 /cases/:caseId?tab=documents.
+    expect(staffRows).toHaveLength(2);
+    const staffRecipientIds = staffRows.map((r) => r.recipient_profile_id).sort();
+    expect(staffRecipientIds).toEqual([handlerProfileId, managerProfileId].sort());
+    for (const row of staffRows) {
+      expect(row.destination_url).toBe(`/cases/${caseId}?tab=documents`);
+      expect(row.action_href).toBe(`/cases/${caseId}?tab=documents`);
+      expect(row.entity_type).toBe('case_document');
+    }
+
+    // 의뢰인: client_visible이므로 1명, destination_url은 /portal/cases/:caseId.
+    expect(clientRows).toHaveLength(1);
+    expect(clientRows[0].recipient_profile_id).toBe(clientProfileId);
+    expect(clientRows[0].destination_url).toBe(`/portal/cases/${caseId}`);
+    expect(clientRows[0].action_href).toBe(`/portal/cases/${caseId}`);
+  });
+
+  it('skips client notification when document is internal-only (staff-only)', async () => {
+    const caseId = '88888888-8888-4888-8888-888888888888';
+    const organizationId = '22222222-2222-4222-8222-222222222222';
+
+    const casesSingle = vi.fn(async () => ({
+      data: {
+        id: caseId,
+        organization_id: organizationId,
+        title: '테스트 사건',
+        reference_no: null,
+        case_type: 'debt_collection',
+        module_flags: {},
+      },
+      error: null,
+    }));
+    const casesEq = vi.fn(() => ({ single: casesSingle }));
+    const casesSelect = vi.fn(() => ({ eq: casesEq }));
+
+    mocks.createSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'cases') return { select: casesSelect };
+        if (table === 'case_documents') return { insert: vi.fn(async () => ({ error: null })) };
+        if (table === 'audit_logs') return { insert: vi.fn(async () => ({ error: null })) };
+        throw new Error(`Unexpected server table: ${table}`);
+      }),
+      storage: {
+        from: vi.fn(() => ({ upload: vi.fn(async () => ({ error: null })), remove: vi.fn() })),
+      },
+    });
+
+    const notificationsInsert = vi.fn(async () => ({ error: null }));
+    const membershipsEq = vi.fn(async () => ({ data: [], error: null }));
+    const membershipsEqStatus = vi.fn(() => ({ eq: membershipsEq }));
+    const handlersEq = vi.fn(async () => ({
+      data: [{ profile_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' }],
+      error: null,
+    }));
+    const clientsNeq = vi.fn(async () => ({ data: [], error: null }));
+    const clientsEqPortal = vi.fn(() => ({ neq: clientsNeq }));
+    const clientsEqCase = vi.fn(() => ({ eq: clientsEqPortal }));
+
+    mocks.createSupabaseAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'organization_memberships') return { select: vi.fn(() => ({ eq: membershipsEqStatus })) };
+        if (table === 'case_handlers') return { select: vi.fn(() => ({ eq: handlersEq })) };
+        if (table === 'case_clients') return { select: vi.fn(() => ({ eq: clientsEqCase })) };
+        if (table === 'notifications') return { insert: notificationsInsert };
+        throw new Error(`Unexpected admin table: ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('title', '내부 메모');
+    formData.set('documentKind', 'other');
+    formData.set('clientVisibility', 'internal_only');
+    formData.set('summary', '');
+    formData.set('contentMarkdown', '');
+
+    const { addDocumentAction } = await import('@/lib/actions/case-actions');
+    await addDocumentAction(caseId, formData);
+
+    expect(notificationsInsert).toHaveBeenCalledTimes(1);
+    const rows = (notificationsInsert.mock.calls[0] as any[])[0] as Array<Record<string, any>>;
+    // 의뢰인 알림이 섞여 있으면 안 된다.
+    expect(rows.every((r) => r.notification_type === 'document_created')).toBe(true);
+    expect(rows.find((r) => r.notification_type === 'document_shared_with_client')).toBeUndefined();
+  });
 });

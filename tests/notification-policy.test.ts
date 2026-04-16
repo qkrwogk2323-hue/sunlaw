@@ -67,4 +67,28 @@ describe('buildNotificationDestinationUrl', () => {
     const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.CASE_CREATED, {});
     expect(url).toBe('/cases/[caseId]');
   });
+
+  it('routes DOCUMENT_CREATED to the internal documents tab for the case', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.DOCUMENT_CREATED, {
+      caseId: 'case-123'
+    });
+    expect(url).toBe('/cases/case-123?tab=documents');
+  });
+
+  it('routes DOCUMENT_SHARED_WITH_CLIENT to the portal case page', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT, {
+      caseId: 'case-123'
+    });
+    expect(url).toBe('/portal/cases/case-123');
+  });
+
+  it('classifies DOCUMENT_CREATED as staff (internal) notification', () => {
+    expect(isClientPortalNotification(NOTIFICATION_TYPES.DOCUMENT_CREATED)).toBe(false);
+    expect(isPlatformOnlyNotification(NOTIFICATION_TYPES.DOCUMENT_CREATED)).toBe(false);
+  });
+
+  it('classifies DOCUMENT_SHARED_WITH_CLIENT as portal notification', () => {
+    expect(isClientPortalNotification(NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT)).toBe(true);
+    expect(isPlatformOnlyNotification(NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT)).toBe(false);
+  });
 });
