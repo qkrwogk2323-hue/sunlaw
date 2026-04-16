@@ -32,6 +32,10 @@ export const NOTIFICATION_TYPES = {
   HUB_MESSAGE_RECEIVED: 'hub_message_received',
   COLLABORATION_REQUEST: 'collaboration_request',
 
+  // 문서
+  DOCUMENT_CREATED: 'document_created',
+  DOCUMENT_SHARED_WITH_CLIENT: 'document_shared_with_client',
+
   // 온보딩
   STAFF_PROFILE_INCOMPLETE: 'staff_profile_incomplete',
   CLIENT_PROFILE_INCOMPLETE: 'client_profile_incomplete',
@@ -136,6 +140,16 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
     recipientScope: 'org_managers',
     destinationScope: 'internal',
     internalHrefTemplate: '/organizations',
+  },
+  [NOTIFICATION_TYPES.DOCUMENT_CREATED]: {
+    recipientScope: 'org_managers_and_assigned',
+    destinationScope: 'internal',
+    internalHrefTemplate: '/cases/:caseId?tab=documents',
+  },
+  [NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT]: {
+    recipientScope: 'client_self_and_linked_managers',
+    destinationScope: 'portal',
+    portalHrefTemplate: '/portal/cases/:caseId',
   },
   [NOTIFICATION_TYPES.STAFF_PROFILE_INCOMPLETE]: {
     recipientScope: 'org_managers',

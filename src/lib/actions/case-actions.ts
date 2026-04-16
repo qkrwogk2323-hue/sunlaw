@@ -8,7 +8,7 @@ import { getCaseStageLabel } from '@/lib/case-stage';
 import { createInvitationToken, hashInvitationToken } from '@/lib/invitations';
 import { encryptString } from '@/lib/pii';
 import { hasPermission } from '@/lib/permissions';
-import { NOTIFICATION_TYPES } from '@/lib/notification-policy';
+import { NOTIFICATION_TYPES, buildNotificationDestinationUrl } from '@/lib/notification-policy';
 import { throwGuardFeedback, parseGuardFeedback } from '@/lib/guard-feedback';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -69,6 +69,133 @@ async function notifyProfiles(supabase: Awaited<ReturnType<typeof createSupabase
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) {
     throw error;
+  }
+}
+
+/**
+ * 새 case_document가 만들어졌을 때 이해당사자에게 알림을 보낸다.
+ *
+ * - 직원(담당자·관리자): DOCUMENT_CREATED (internal `/cases/:caseId?tab=documents`)
+ * - 의뢰인(공개 문서 한정): DOCUMENT_SHARED_WITH_CLIENT (portal `/portal/cases/:caseId`)
+ *
+ * destination_url은 전부 `buildNotificationDestinationUrl`을 경유해 정책 표를
+ * 단일 원본으로 쓴다. 하드코딩 URL 금지. (BACKLOG §2, UX #6)
+ * 실패해도 문서 생성 자체는 이미 커밋된 상태이므로 에러를 삼켜 토스트에
+ * 남기지 않는다 — 대신 서버 로그에만 남긴다.
+ */
+async function notifyDocumentStakeholders({
+  organizationId,
+  caseId,
+  actorId,
+  actorName,
+  documentTitle,
+  documentKind,
+  clientVisible,
+}: {
+  organizationId: string;
+  caseId: string;
+  actorId: string;
+  actorName: string | null;
+  documentTitle: string;
+  documentKind: string;
+  clientVisible: boolean;
+}) {
+  try {
+    const admin = createSupabaseAdminClient();
+
+    // 1) 직원 알림 — 조직 관리자 + 이 사건 담당자 (본인 제외)
+    const [{ data: memberships }, { data: handlers }] = await Promise.all([
+      admin
+        .from('organization_memberships')
+        .select('profile_id, role')
+        .eq('organization_id', organizationId)
+        .eq('status', 'active'),
+      admin
+        .from('case_handlers')
+        .select('profile_id')
+        .eq('case_id', caseId),
+    ]);
+    const managerIds = ((memberships ?? []) as Array<{ profile_id: string | null; role: string }>)
+      .filter((m) => m.profile_id && (m.role === 'org_owner' || m.role === 'org_manager'))
+      .map((m) => m.profile_id as string);
+    const handlerIds = ((handlers ?? []) as Array<{ profile_id: string | null }>)
+      .map((h) => h.profile_id)
+      .filter((id): id is string => Boolean(id));
+    const staffRecipients = [...new Set([...managerIds, ...handlerIds])].filter((id) => id !== actorId);
+
+    const destinationStaff = buildNotificationDestinationUrl(
+      NOTIFICATION_TYPES.DOCUMENT_CREATED,
+      { caseId }
+    );
+    const staffTitle = `새 문서가 등록됐습니다 · ${documentTitle}`;
+    const staffBody = `${actorName ?? '담당자'}가 ${documentKind || '문서'}를 등록했습니다.`;
+    const staffRows = staffRecipients.map((recipientProfileId) => ({
+      organization_id: organizationId,
+      case_id: caseId,
+      recipient_profile_id: recipientProfileId,
+      kind: 'generic',
+      notification_type: NOTIFICATION_TYPES.DOCUMENT_CREATED,
+      entity_type: 'case_document',
+      entity_id: caseId,
+      priority: 'normal',
+      status: 'active',
+      requires_action: false,
+      title: staffTitle,
+      body: staffBody,
+      action_label: '문서 타임라인 열기',
+      action_href: destinationStaff,
+      destination_type: 'internal_route',
+      destination_url: destinationStaff,
+      payload: { document_title: documentTitle, document_kind: documentKind }
+    }));
+
+    // 2) 의뢰인 알림 — 공개 문서만. 포털 연결된 case_clients.profile_id가 수신자.
+    let clientRows: Record<string, unknown>[] = [];
+    if (clientVisible) {
+      const { data: caseClients } = await admin
+        .from('case_clients')
+        .select('profile_id')
+        .eq('case_id', caseId)
+        .eq('is_portal_enabled', true)
+        .neq('lifecycle_status', 'soft_deleted');
+      const clientIds = ((caseClients ?? []) as Array<{ profile_id: string | null }>)
+        .map((c) => c.profile_id)
+        .filter((id): id is string => Boolean(id));
+      const destinationClient = buildNotificationDestinationUrl(
+        NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT,
+        { caseId }
+      );
+      const clientTitle = `새 문서가 공유됐습니다 · ${documentTitle}`;
+      const clientBody = '담당 조직이 문서를 공유했습니다. 포털에서 바로 확인할 수 있습니다.';
+      clientRows = clientIds.map((recipientProfileId) => ({
+        organization_id: organizationId,
+        case_id: caseId,
+        recipient_profile_id: recipientProfileId,
+        kind: 'generic',
+        notification_type: NOTIFICATION_TYPES.DOCUMENT_SHARED_WITH_CLIENT,
+        entity_type: 'case_document',
+        entity_id: caseId,
+        priority: 'normal',
+        status: 'active',
+        requires_action: false,
+        title: clientTitle,
+        body: clientBody,
+        action_label: '포털에서 열기',
+        action_href: destinationClient,
+        destination_type: 'internal_route',
+        destination_url: destinationClient,
+        payload: { document_title: documentTitle, document_kind: documentKind }
+      }));
+    }
+
+    const rows = [...staffRows, ...clientRows];
+    if (!rows.length) return;
+    const { error } = await admin.from('notifications').insert(rows);
+    if (error) {
+      console.error('[notifyDocumentStakeholders] insert error:', error.message);
+    }
+  } catch (err) {
+    console.error('[notifyDocumentStakeholders] unexpected error:', err);
   }
 }
 
@@ -913,6 +1040,17 @@ export async function addDocumentAction(caseId: string, formData: FormData) {
       resourceId: `${caseRecord.id}:${parsed.title}`,
       action: 'document.created',
       meta: { case_id: caseRecord.id, title: parsed.title, document_kind: parsed.documentKind }
+    });
+
+    // 이해당사자 알림 — 직원 + (공개 문서라면) 의뢰인. 실패해도 문서 생성은 유지.
+    await notifyDocumentStakeholders({
+      organizationId: caseRecord.organization_id,
+      caseId: caseRecord.id,
+      actorId: auth.user.id,
+      actorName: auth.profile.full_name ?? null,
+      documentTitle: parsed.title,
+      documentKind: parsed.documentKind,
+      clientVisible: parsed.clientVisibility === 'client_visible',
     });
   } catch (error) {
     if (storagePath) {
