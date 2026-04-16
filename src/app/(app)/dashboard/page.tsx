@@ -6,6 +6,7 @@ import { DashboardHubClient } from '@/components/dashboard-hub-client';
 import { DashboardHubOverview } from '@/components/dashboard-hub-overview';
 import { getDashboardInitialSnapshotForAuth } from '@/lib/queries/dashboard';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
+import { getOverdueCountsByCaseIds } from '@/lib/queries/billing';
 
 export default async function DashboardPage() {
   const auth = await requireAuthenticatedUser();
@@ -19,6 +20,10 @@ export default async function DashboardPage() {
     organizationId ? getCaseHubList(organizationId, 8) : Promise.resolve([]),
     hasActivePlatformAdminView(auth, organizationId),
   ]);
+  // 허브 모음 뷰의 "미납 N" 수치 원천. hubList가 비면 쿼리 생략.
+  const overdueMap = hubList.length
+    ? await getOverdueCountsByCaseIds(hubList.map((h) => h.caseId).filter(Boolean))
+    : {};
   const currentMembership = auth.memberships.find((membership) => membership.organization_id === organizationId) ?? null;
   const roleLabel = isPlatformAdmin
     ? '플랫폼 관리자'
@@ -35,7 +40,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* 상단: 참여 허브 모음 뷰 (사건별 한 줄 요약) — 리뷰어 지시 대로 "현관" 역할. */}
-      <DashboardHubOverview hubs={hubList} />
+      <DashboardHubOverview hubs={hubList} overdueMap={overdueMap} />
       {/* 하단: 기존 대시보드 카드 조합 (알림·일정·메시지·팀 등 cross-cutting). */}
       <DashboardHubClient
         organizationId={organizationId}

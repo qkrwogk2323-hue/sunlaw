@@ -350,6 +350,33 @@ export async function getBillingHistorySnapshot(organizationId?: string | null) 
   };
 }
 
+// 사건별 연체 건수 집계 — 대시보드 허브 모음 뷰의 "미납 N" 표시에 사용.
+// paid_at is null AND due_on < today 인 billing_entries 수를 case_id 별로 카운트한다.
+export async function getOverdueCountsByCaseIds(
+  caseIds: string[]
+): Promise<Record<string, number>> {
+  if (!caseIds.length) return {};
+  const supabase = await createSupabaseServerClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('billing_entries')
+    .select('case_id')
+    .in('case_id', caseIds)
+    .is('paid_at', null)
+    .lt('due_on', today)
+    .is('deleted_at', null);
+  if (error) {
+    console.error('[getOverdueCountsByCaseIds] query error:', error.message);
+    return {};
+  }
+  const result: Record<string, number> = {};
+  for (const row of (data ?? []) as Array<{ case_id: string | null }>) {
+    if (!row.case_id) continue;
+    result[row.case_id] = (result[row.case_id] ?? 0) + 1;
+  }
+  return result;
+}
+
 export async function getBillingCaseOptions(organizationId?: string | null) {
   const supabase = await createSupabaseServerClient();
   const [{ data: caseRows }, { data: caseClientRows }, { data: caseOrganizationRows }] = await Promise.all([
