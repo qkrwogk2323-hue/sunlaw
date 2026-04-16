@@ -286,42 +286,66 @@ export function RehabCreditorsTab({
 
   // 채권자 번호 자동 재정렬 (재단→우선→별제→일반→미확정)
   // 채권자 번호 불변 규칙:
-  // - 기존 DB 채권자가 있으면 번호 재정렬 안 함 (결번 허용)
-  // - 최초 저장 (전원 isNew) 시에만 분류 순서로 재정렬
+  // - 기존 DB 채권자가 있으면 bond_number 재번호 금지 (결번 허용)
+  // - 최초 저장 (전원 isNew) 시에만 bond_number를 분류 순서로 재부여
   // - 신규 추가 시: max(기존 bond_number) + 1 부여 (addCreditor/addFromSearch에서 처리)
+  // 보증인 결속 규칙:
+  // - 배열 순서는 항상 "부모 직후에 자식" 으로 flatten (주채무가 몇 번이든 보증인은 바로 아래)
+  // - sub_number는 1..N 으로 연속 재부여 (형제 삭제 시 결번 방지)
+  // - 자식은 부모의 priority 버킷에 편입 (자식 단독 속성으로 분리되지 않음)
   const prepareForSave = useCallback((): CreditorForm[] => {
-    // 가지번호(sub_number) 자동 부여: 보증채무/연대보증이고 parent_creditor_id가 있는 경우
-    const withSubNumbers = creditors.map((c) => {
-      if ((c.bond_type === '보증채무' || c.bond_type === '연대보증') && c.parent_creditor_id) {
-        const siblings = creditors.filter(
-          (s) => s.parent_creditor_id === c.parent_creditor_id && s.id !== c.id
-        );
-        if (c.sub_number == null) {
-          const maxSub = siblings.reduce((max, s) => Math.max(max, s.sub_number ?? 0), 0);
-          return { ...c, sub_number: maxSub + 1 };
-        }
-      }
-      return c;
-    });
-
-    const hasExisting = withSubNumbers.some((c) => !c.isNew);
-    if (hasExisting) {
-      return withSubNumbers;
-    }
-    // 전원 신규 → 분류 순서로 재정렬
     const priorityOrder = (c: CreditorForm): number => {
       if (c.has_priority_repay) return 0;
       if (c.is_secured) return 1;
       if (c.is_unsettled) return 3;
       return 2;
     };
-    const sorted = [...withSubNumbers].sort((a, b) => {
-      const pa = priorityOrder(a);
-      const pb = priorityOrder(b);
-      if (pa !== pb) return pa - pb;
-      return a.bond_number - b.bond_number;
-    });
-    const renumbered = sorted.map((c, idx) => ({ ...c, bond_number: idx + 1 }));
+
+    // 1) parent → children 맵 구성
+    const byId = new Map(creditors.map((c) => [c.id, c]));
+    const isChild = (c: CreditorForm) =>
+      (c.bond_type === '보증채무' || c.bond_type === '연대보증') &&
+      !!c.parent_creditor_id &&
+      byId.has(c.parent_creditor_id);
+    const parents = creditors.filter((c) => !isChild(c));
+    const childrenOf = (pid: string) =>
+      creditors.filter((c) => isChild(c) && c.parent_creditor_id === pid);
+
+    // 2) flatten 순서 결정: 기존 채권자는 현재 bond_number 유지, 전원 신규면 priority 재정렬
+    const hasExisting = creditors.some((c) => !c.isNew);
+    const sortedParents = hasExisting
+      ? [...parents].sort((a, b) => a.bond_number - b.bond_number)
+      : [...parents].sort((a, b) => {
+          const pa = priorityOrder(a);
+          const pb = priorityOrder(b);
+          if (pa !== pb) return pa - pb;
+          return a.bond_number - b.bond_number;
+        });
+
+    // 3) 부모 직후에 자식 flatten + sub_number 1..N 재부여
+    const ordered: CreditorForm[] = [];
+    for (const parent of sortedParents) {
+      ordered.push(parent);
+      const kids = [...childrenOf(parent.id)].sort(
+        (a, b) => (a.sub_number ?? 9999) - (b.sub_number ?? 9999),
+      );
+      kids.forEach((k, i) => {
+        ordered.push({ ...k, sub_number: i + 1 });
+      });
+    }
+
+    // 4) bond_number 재부여: 전원 신규일 때만 "자식이 아닌" 항목에 1..N, 아니면 기존 번호 유지
+    //    (자식 bond_number는 무의미 — 표기는 parent.bond_number + '-' + sub_number)
+    let renumbered = ordered;
+    if (!hasExisting) {
+      let parentCounter = 0;
+      renumbered = ordered.map((c) => {
+        if (isChild(c)) return c; // 자식은 그대로
+        parentCounter += 1;
+        return { ...c, bond_number: parentCounter };
+      });
+    }
+
     setCreditors(renumbered);
     return renumbered;
   }, [creditors]);
