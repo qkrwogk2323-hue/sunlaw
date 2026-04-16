@@ -3,7 +3,9 @@ import type { Route } from 'next';
 import { getDefaultAppRoute, getEffectiveOrganizationId, hasActivePlatformAdminView, isManagementRole, requireAuthenticatedUser } from '@/lib/auth';
 import { buildDashboardAiOverview } from '@/lib/ai/dashboard-home';
 import { DashboardHubClient } from '@/components/dashboard-hub-client';
+import { DashboardHubOverview } from '@/components/dashboard-hub-overview';
 import { getDashboardInitialSnapshotForAuth } from '@/lib/queries/dashboard';
+import { getCaseHubList } from '@/lib/queries/case-hubs';
 
 export default async function DashboardPage() {
   const auth = await requireAuthenticatedUser();
@@ -11,8 +13,12 @@ export default async function DashboardPage() {
   if (getDefaultAppRoute(auth, organizationId) !== '/dashboard') {
     redirect(getDefaultAppRoute(auth, organizationId) as Route);
   }
-  const data = await getDashboardInitialSnapshotForAuth(auth, organizationId);
-  const isPlatformAdmin = await hasActivePlatformAdminView(auth, organizationId);
+  // 대시보드 초기 데이터 + 허브 모음 뷰용 참여 허브 목록을 병렬 조회.
+  const [data, hubList, isPlatformAdmin] = await Promise.all([
+    getDashboardInitialSnapshotForAuth(auth, organizationId),
+    organizationId ? getCaseHubList(organizationId, 8) : Promise.resolve([]),
+    hasActivePlatformAdminView(auth, organizationId),
+  ]);
   const currentMembership = auth.memberships.find((membership) => membership.organization_id === organizationId) ?? null;
   const roleLabel = isPlatformAdmin
     ? '플랫폼 관리자'
@@ -27,12 +33,17 @@ export default async function DashboardPage() {
   });
 
   return (
-    <DashboardHubClient
-      organizationId={organizationId}
-      currentUserId={auth.user.id}
-      data={data}
-      isPlatformAdmin={isPlatformAdmin}
-      initialAiOverview={initialAiOverview}
-    />
+    <div className="space-y-5">
+      {/* 상단: 참여 허브 모음 뷰 (사건별 한 줄 요약) — 리뷰어 지시 대로 "현관" 역할. */}
+      <DashboardHubOverview hubs={hubList} />
+      {/* 하단: 기존 대시보드 카드 조합 (알림·일정·메시지·팀 등 cross-cutting). */}
+      <DashboardHubClient
+        organizationId={organizationId}
+        currentUserId={auth.user.id}
+        data={data}
+        isPlatformAdmin={isPlatformAdmin}
+        initialAiOverview={initialAiOverview}
+      />
+    </div>
   );
 }
