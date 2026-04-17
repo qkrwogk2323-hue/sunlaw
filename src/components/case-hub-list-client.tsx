@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Lock, LockOpen, Network } from 'lucide-react';
+import { Network } from 'lucide-react';
 import { HubMetricBadge } from '@/components/hub-metric-badge';
 import { HubReadinessRing } from '@/components/hub-readiness-ring';
 import { PremiumCaseCard } from '@/components/premium-case-card';
@@ -39,22 +39,7 @@ function HubCard({ hub }: { hub: CaseHubSummary }) {
       meta="허브 입장"
       actionLabel="로비 열기"
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <span
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-            hub.accessPinEnabled ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-200' : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200'
-          }`}
-        >
-          {hub.accessPinEnabled ? <Lock className="size-3.5" aria-hidden="true" /> : <LockOpen className="size-3.5" aria-hidden="true" />}
-          {hub.accessPinEnabled ? 'PIN 잠금 사용 중' : '잠금 해제'}
-        </span>
-        <Link
-          href={`${ROUTES.CASE_HUBS}/${hub.id}/pin` as Route as Route}
-          className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          PIN 관리
-        </Link>
-      </div>
+      {/* PIN 배지·관리 링크 제거 (2026-04-17). 접근 제어는 Auth+멤버십+RLS로 충분. */}
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">사건 식별</p>
