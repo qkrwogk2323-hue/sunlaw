@@ -1409,24 +1409,6 @@ export function DashboardHubClient({
     [data.unreadNotificationItems]
   );
 
-  const summaryRows = [
-    {
-      label: '알림',
-      detail: `즉시필요 ${immediateNotifications.length}건 · 검토필요 ${confirmNotifications.length}건 · 미팅 ${meetingNotifications.length}건`,
-      href: ROUTES.NOTIFICATIONS
-    },
-    {
-      label: '사건',
-      detail: `진행 중 사건 ${data.activeCases}건, 요청 대기 ${data.pendingRequests}건`,
-      href: ROUTES.CASES
-    },
-    {
-      label: '비용',
-      detail: `납부 확인 필요 ${data.pendingBillingCount}건`,
-      href: ROUTES.BILLING
-    }
-  ];
-
   const runAssistant = async () => {
     const question = assistantQuestion.trim();
     if (!question || !organizationId) return;
@@ -2458,34 +2440,6 @@ export function DashboardHubClient({
         </Card>
       </div>
       ) : null}
-      {false ? (
-      <Card className="border-slate-200 bg-white">
-        <CardHeader className="border-slate-100">
-          <CardTitle>보조 이동</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Link
-            href={ROUTES.NOTIFICATIONS}
-            className="inline-flex items-center rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-sky-300 hover:bg-sky-50"
-          >
-            확인할 알림 {data.unreadNotifications}개
-          </Link>
-          <Link
-            href={ROUTES.CASES}
-            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-slate-300 hover:bg-slate-50"
-          >
-            확인할 사건 {data.activeCases}개
-          </Link>
-          <Link
-            href={ROUTES.CALENDAR}
-            className="inline-flex items-center rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-amber-300 hover:bg-amber-50"
-          >
-            일정 확인
-          </Link>
-        </CardContent>
-      </Card>
-      ) : null}
-
     </div>
   );
 }
