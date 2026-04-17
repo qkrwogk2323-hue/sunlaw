@@ -5,6 +5,7 @@ import { buildDashboardAiOverview } from '@/lib/ai/dashboard-home';
 import { DashboardBillingSummary } from '@/components/dashboard-billing-summary';
 import { DashboardHubClient } from '@/components/dashboard-hub-client';
 import { DashboardHubOverview } from '@/components/dashboard-hub-overview';
+import { DashboardTodayTasks } from '@/components/dashboard-today-tasks';
 import { getDashboardInitialSnapshotForAuth } from '@/lib/queries/dashboard';
 import { getCaseHubList } from '@/lib/queries/case-hubs';
 import { getOverdueCountsByCaseIds } from '@/lib/queries/billing';
@@ -48,6 +49,11 @@ export default async function DashboardPage() {
       <DashboardBillingSummary
         pendingBillingCount={data.pendingBillingCount}
         overdueTotal={overdueTotal}
+      />
+      {/* 오늘 할 일: 일정(마감·재판) + 미납 청구를 시간순으로 합쳐 cross-case 타임라인. 없으면 숨김. */}
+      <DashboardTodayTasks
+        schedules={data.urgentSchedules}
+        billing={data.upcomingBilling}
       />
       {/* 하단: 기존 대시보드 카드 조합 (알림·일정·메시지·팀 등 cross-cutting). */}
       <DashboardHubClient
