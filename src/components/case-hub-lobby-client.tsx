@@ -2,7 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { ChevronLeft, Globe, Network, Shield, Users, Zap } from 'lucide-react';
+import { ChevronLeft, Globe, Shield, Zap } from 'lucide-react';
 import { ROUTES } from '@/lib/routes/registry';
 import { buttonStyles } from '@/components/ui/button';
 import { ClientActionForm } from '@/components/ui/client-action-form';
@@ -10,9 +10,6 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { DangerActionButton } from '@/components/ui/danger-action-button';
 import { Badge } from '@/components/ui/badge';
 import { ActivityFeedPanel } from '@/components/activity-feed-panel';
-import { HubMetricBadge } from '@/components/hub-metric-badge';
-import { HubReadinessRing } from '@/components/hub-readiness-ring';
-import { ParticipantSlotRing } from '@/components/participant-slot-ring';
 import { PremiumInfoPanel } from '@/components/premium-info-panel';
 import { PremiumPageHeader } from '@/components/premium-page-header';
 import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline';
@@ -20,7 +17,6 @@ import { activateCaseHubAction, archiveCaseHubAction } from '@/lib/actions/case-
 import { formatHubRelativeActivity, getHubReadinessStateLabel } from '@/lib/case-hub-metrics';
 import type { CaseHubDetail, CaseHubStatus } from '@/lib/queries/case-hubs';
 import type { CaseHubBilling, CaseHubDocuments } from '@/lib/queries/case-hub-projection';
-import { Input } from '@/components/ui/input';
 
 const STATUS_LABEL: Record<CaseHubStatus, string> = {
   draft: '준비 중',
@@ -69,9 +65,7 @@ interface Props {
   hub: CaseHubDetail;
   organizationId: string | null;
   currentProfileId: string;
-  /** case-hub-projection.documents 단일 원천. null이면 projection 미조회 상태. */
   documents: CaseHubDocuments | null;
-  /** case-hub-projection.billing 단일 원천. null이면 projection 미조회 상태. */
   billing: CaseHubBilling | null;
 }
 
@@ -79,11 +73,11 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, docu
   const canActivate = ['setup_required', 'ready', 'draft'].includes(hub.status);
   const canManageHub = Boolean(organizationId);
   const currentMember = hub.members.find((member) => member.profileId === currentProfileId) ?? null;
-  const viewerFillRate = hub.viewerLimit > 0 ? Math.min(100, Math.round((hub.viewerCount / hub.viewerLimit) * 100)) : 0;
   const readinessState = getHubReadinessStateLabel(hub.readinessPercent);
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-8">
+      {/* 상단 네비게이션 */}
       <div className="flex items-center justify-between gap-3">
         <Link
           href={'/case-hubs' as Route}
@@ -112,155 +106,104 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, docu
         ) : null}
       </div>
 
+      {/* 헤더 — 수치의 단일 원본. 중앙 카드·좌측 패널에서 중복 노출하지 않는다. */}
       <PremiumPageHeader
-        eyebrow="플래그십 로비"
+        eyebrow={STATUS_LABEL[hub.status]}
         title={hub.caseTitle ?? hub.title ?? '사건허브'}
-        description="사건허브는 사건 관련 업무의 기준축입니다. 협업 좌석, 열람 범위, 미읽음, 최근 활동을 이 로비를 기준으로 연결합니다."
+        description={`${hub.caseReferenceNo ?? ''} · ${visibilityLabel(hub.visibilityScope)}`}
         metrics={[
           { label: '준비도', value: `${hub.readinessPercent}%`, helper: `${readinessState} 상태` },
-          { label: '협업 슬롯', value: `${hub.collaboratorCount}/${hub.collaboratorLimit}`, helper: '현재 협업 좌석 점유' },
-          { label: '열람 슬롯', value: `${hub.viewerCount}/${hub.viewerLimit}`, helper: '현재 열람 좌석 점유' },
+          { label: '협업', value: `${hub.collaboratorCount}/${hub.collaboratorLimit}`, helper: '현재 협업 좌석 점유' },
+          { label: '열람', value: `${hub.viewerCount}/${hub.viewerLimit}`, helper: '현재 열람 좌석 점유' },
           { label: '미읽음', value: hub.unreadCount, helper: '최근 활동 중 아직 확인하지 않은 항목' },
           { label: '최근 활동', value: formatHubRelativeActivity(hub.lastActivityAt), helper: '가장 마지막 갱신 시점' }
         ]}
-        actions={(
-          <>
-            <HubMetricBadge label="협업" value={`${hub.collaboratorCount}/${hub.collaboratorLimit}`} tone="blue" />
-            <HubMetricBadge label="열람" value={`${hub.viewerCount}/${hub.viewerLimit}`} tone="violet" />
-            <HubMetricBadge label="미읽음" value={`${hub.unreadCount}`} tone="amber" />
-          </>
-        )}
       />
 
+      {/* 3:6:3 본문 */}
       <div className="grid gap-6 lg:grid-cols-[3fr_6fr_3fr]">
+
+        {/* ── 좌측: 내 상태 + 참여자 (병합) ── */}
         <aside className="space-y-4">
-          <PremiumInfoPanel title="허브 지침" description="허브 입장 전에 현재 공개 범위와 내 좌석 상태를 확인합니다.">
+          <PremiumInfoPanel title="내 상태" description="현재 내 좌석, 공개 범위, 참여자를 한 눈에 봅니다.">
             <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Shield className="size-4 text-sky-600" aria-hidden="true" />
-                  현재 내 상태
-                </div>
-                <p className="mt-2 text-sm text-slate-600">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm">
+                <Shield className="size-4 shrink-0 text-sky-600" aria-hidden="true" />
+                <span className="text-slate-700">
                   {currentMember
-                    ? `${currentMember.seatKind === 'collaborator' ? '협업 좌석' : '열람 좌석'} · ${currentMember.membershipRole}`
-                    : '아직 허브 좌석이 배정되지 않았습니다.'}
-                </p>
+                    ? `${currentMember.seatKind === 'collaborator' ? '협업' : '열람'} · ${currentMember.membershipRole}`
+                    : '좌석 미배정'}
+                </span>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Globe className="size-4 text-sky-600" aria-hidden="true" />
-                  공개 범위
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm">
+                <Globe className="size-4 shrink-0 text-sky-600" aria-hidden="true" />
+                <span className="text-slate-700">{visibilityLabel(hub.visibilityScope)}</span>
+              </div>
+            </div>
+
+            {/* 참여자 인라인 */}
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">참여자</p>
+              {hub.members.length ? (
+                <div className="space-y-2">
+                  {hub.members.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{member.profileName ?? '이름 없음'}</p>
+                        <p className="text-xs text-slate-500">{member.seatKind === 'collaborator' ? '협업' : '열람'} · {member.membershipRole}</p>
+                      </div>
+                      <span className="text-xs font-medium text-slate-500">{member.isReady ? '준비 완료' : '대기 중'}</span>
+                    </div>
+                  ))}
                 </div>
-                <p className="mt-2 text-sm text-slate-600">{visibilityLabel(hub.visibilityScope)}</p>
-              </div>
-              <HubReadinessRing percent={hub.readinessPercent} label="허브 준비도" size="lg" />
+              ) : (
+                <p className="text-sm text-slate-500">아직 참여자가 없습니다.</p>
+              )}
             </div>
           </PremiumInfoPanel>
-
-          <PremiumInfoPanel title="참여자" description="허브에 이미 들어온 사람과 준비 완료 상태를 빠르게 확인합니다.">
-            {hub.members.length ? (
-              <div className="space-y-2">
-                {hub.members.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{member.profileName ?? '이름 없음'}</p>
-                      <p className="text-xs text-slate-500">{member.seatKind === 'collaborator' ? '협업' : '열람'} · {member.membershipRole}</p>
-                    </div>
-                    <span className="text-xs font-medium text-slate-500">{member.isReady ? '준비 완료' : '대기 중'}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center">
-                <p className="text-sm font-medium text-slate-700">아직 참여자가 없습니다.</p>
-                <p className="mt-1 text-sm text-slate-500">사건목록이나 허브 설정에서 참여자를 초대해 주세요.</p>
-              </div>
-            )}
-          </PremiumInfoPanel>
-
-          {/* PIN 비밀번호 패널 제거 (2026-04-17). Auth+멤버십+RLS 3층으로 충분. */}
         </aside>
 
+        {/* ── 중앙: CTA 최상단 → 문서 타임라인 ── */}
         <main className="space-y-6">
-          <PremiumInfoPanel title="허브 중앙 로비" description="사건허브의 준비도, 슬롯 점유, 실행 액션을 중앙에서 집중 관리합니다.">
-            <div className="grid min-h-[220px] gap-6 md:min-h-[280px] lg:min-h-[360px] lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
-              <div className="flex justify-center">
-                <HubReadinessRing percent={hub.readinessPercent} label="준비도" size="lg" />
-              </div>
-              <div className="space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#f8fbff,#eff6ff)] p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-14 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_12px_28px_rgba(15,23,42,0.22)]">
-                      <Network className="size-6" aria-hidden="true" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{hub.title ?? hub.caseTitle ?? '사건허브 로비'}</p>
-                      <p className="text-sm text-slate-500">{hub.caseReferenceNo ?? '참조번호 미지정'} · {visibilityLabel(hub.visibilityScope)}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <HubMetricBadge label="협업" value={`${hub.collaboratorCount}/${hub.collaboratorLimit}`} tone="blue" />
-                    <HubMetricBadge label="열람" value={`${hub.viewerCount}/${hub.viewerLimit}`} tone="violet" />
-                    <HubMetricBadge label="미읽음" value={`${hub.unreadCount}`} tone="amber" />
-                    <HubMetricBadge label="최근 활동" value={formatHubRelativeActivity(hub.lastActivityAt)} tone="slate" />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-                  <ParticipantSlotRing occupied={hub.collaboratorCount} limit={hub.collaboratorLimit} label="협업 슬롯" />
-                  <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">열람률</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950 tabular-nums">{hub.viewerCount}/{hub.viewerLimit}</p>
-                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-violet-500 transition-[width]"
-                        style={{ width: `${viewerFillRate}%` }}
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500">열람 좌석은 보조 집계 바로 표현합니다. 현재 {viewerFillRate}%가 배정되었습니다.</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {canActivate && canManageHub ? (
-                    <ClientActionForm
-                      action={activateCaseHubAction}
-                      successTitle="협업이 시작되었습니다."
-                      successMessage="허브가 활성 상태로 전환되었습니다."
-                      errorTitle="협업 시작에 실패했습니다."
-                      errorCause="허브 준비 조건을 아직 만족하지 못했거나 서버 응답이 실패했습니다."
-                      errorResolution="대표 의뢰인, 공개 범위, 참여 구성을 확인한 뒤 다시 시도해 주세요."
-                    >
-                      <input type="hidden" name="hubId" value={hub.id} />
-                      <input type="hidden" name="organizationId" value={organizationId ?? ''} />
-                      <SubmitButton className="h-11 bg-slate-950 px-5 text-sm font-semibold text-white" pendingLabel="시작 중...">
-                        <Zap className="mr-2 size-4" aria-hidden="true" />
-                        협업 시작
-                      </SubmitButton>
-                    </ClientActionForm>
-                  ) : null}
-                  <Link href={ROUTES.CASES} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
-                    사건목록으로 이동
-                  </Link>
-                  <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
-                    비용 관리 열기
-                  </Link>
-                  <Link href={`${ROUTES.CONTRACTS}?caseId=${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
-                    계약 관리 열기
-                  </Link>
-                  <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=schedule` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
-                    일정 확인
-                  </Link>
-                  <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=documents` as Route} className={buttonStyles({ variant: 'secondary', size: 'lg', className: 'rounded-xl px-5 text-sm' })}>
-                    문서 보기
-                  </Link>
-                </div>
-              </div>
+          {/* 액션 버튼 그룹 — 중앙 최상단, 가장 먼저 보임 */}
+          <div className="space-y-3">
+            {canActivate && canManageHub ? (
+              <ClientActionForm
+                action={activateCaseHubAction}
+                successTitle="협업이 시작되었습니다."
+                successMessage="허브가 활성 상태로 전환되었습니다."
+                errorTitle="협업 시작에 실패했습니다."
+                errorCause="허브 준비 조건을 아직 만족하지 못했거나 서버 응답이 실패했습니다."
+                errorResolution="대표 의뢰인, 공개 범위, 참여 구성을 확인한 뒤 다시 시도해 주세요."
+              >
+                <input type="hidden" name="hubId" value={hub.id} />
+                <input type="hidden" name="organizationId" value={organizationId ?? ''} />
+                <SubmitButton className="w-full h-12 bg-slate-950 text-sm font-semibold text-white rounded-xl" pendingLabel="시작 중...">
+                  <Zap className="mr-2 size-4" aria-hidden="true" />
+                  협업 시작
+                </SubmitButton>
+              </ClientActionForm>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              <Link href={`${ROUTES.CASES}/${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', className: 'justify-center rounded-xl px-3 py-2.5 text-xs font-semibold' })}>
+                사건 상세
+              </Link>
+              <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=billing` as Route} className={buttonStyles({ variant: 'secondary', className: 'justify-center rounded-xl px-3 py-2.5 text-xs font-semibold' })}>
+                비용 탭
+              </Link>
+              <Link href={`${ROUTES.CONTRACTS}?caseId=${hub.caseId}` as Route} className={buttonStyles({ variant: 'secondary', className: 'justify-center rounded-xl px-3 py-2.5 text-xs font-semibold' })}>
+                계약 관리
+              </Link>
+              <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=schedule` as Route} className={buttonStyles({ variant: 'secondary', className: 'justify-center rounded-xl px-3 py-2.5 text-xs font-semibold' })}>
+                일정
+              </Link>
+              <Link href={`${ROUTES.CASES}/${hub.caseId}?tab=documents` as Route} className={buttonStyles({ variant: 'secondary', className: 'justify-center rounded-xl px-3 py-2.5 text-xs font-semibold' })}>
+                문서
+              </Link>
             </div>
-          </PremiumInfoPanel>
+          </div>
 
+          {/* 문서 타임라인 — CTA 바로 아래, 스크롤 없이 보임 */}
           {documents ? (
             <PremiumInfoPanel
               title="문서 타임라인"
@@ -275,6 +218,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, docu
           ) : null}
         </main>
 
+        {/* ── 우측: 활동 + 허브 정보 + 비용 ── */}
         <aside className="space-y-4">
           <ActivityFeedPanel
             items={hub.recentActivity.map((item) => ({
@@ -285,7 +229,7 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, docu
             }))}
           />
 
-          <PremiumInfoPanel title="허브 정보" description="허브 상태를 다른 메뉴에서 다시 쓸 수 있는 핵심 값만 요약합니다.">
+          <PremiumInfoPanel title="허브 정보" description="이 허브의 핵심 값을 요약합니다.">
             <dl className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-slate-500">대표 의뢰인</dt>
@@ -312,18 +256,14 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, docu
                 <dd className="font-medium text-slate-900 tabular-nums">{hub.readyMemberCount}명</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-slate-500">허브 상태</dt>
-                <dd className="font-medium text-slate-900">{STATUS_LABEL[hub.status]}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-slate-500">최근 읽음 기준</dt>
+                <dt className="text-slate-500">최근 읽음</dt>
                 <dd className="font-medium text-slate-900">{currentMember?.lastReadAt ? formatHubRelativeActivity(currentMember.lastReadAt) : '기록 없음'}</dd>
               </div>
             </dl>
           </PremiumInfoPanel>
 
           {billing ? (
-            <PremiumInfoPanel title="비용 현황" description="이 사건의 청구·수금·미수금을 한 번에 봅니다. 상세 관리는 비용 탭에서.">
+            <PremiumInfoPanel title="비용 현황" description="이 사건의 청구·수금·미수금을 한 번에 봅니다.">
               <dl className="space-y-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-slate-500">총 청구</dt>
