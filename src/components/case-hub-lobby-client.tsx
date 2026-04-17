@@ -19,7 +19,7 @@ import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline
 import { activateCaseHubAction, archiveCaseHubAction, updateCaseHubPinAction } from '@/lib/actions/case-hub-actions';
 import { formatHubRelativeActivity, getHubReadinessStateLabel } from '@/lib/case-hub-metrics';
 import type { CaseHubDetail, CaseHubStatus } from '@/lib/queries/case-hubs';
-import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
+import type { CaseHubBilling, CaseHubDocuments } from '@/lib/queries/case-hub-projection';
 import { Input } from '@/components/ui/input';
 
 const STATUS_LABEL: Record<CaseHubStatus, string> = {
@@ -71,9 +71,11 @@ interface Props {
   currentProfileId: string;
   /** case-hub-projection.documents 단일 원천. null이면 projection 미조회 상태. */
   documents: CaseHubDocuments | null;
+  /** case-hub-projection.billing 단일 원천. null이면 projection 미조회 상태. */
+  billing: CaseHubBilling | null;
 }
 
-export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, documents }: Props) {
+export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, documents, billing }: Props) {
   const canActivate = ['setup_required', 'ready', 'draft'].includes(hub.status);
   const canManageHub = Boolean(organizationId);
   const currentMember = hub.members.find((member) => member.profileId === currentProfileId) ?? null;
@@ -331,6 +333,41 @@ export function CaseHubLobbyClient({ hub, organizationId, currentProfileId, docu
               </div>
             </dl>
           </PremiumInfoPanel>
+
+          {billing ? (
+            <PremiumInfoPanel title="비용 현황" description="이 사건의 청구·수금·미수금을 한 번에 봅니다. 상세 관리는 비용 탭에서.">
+              <dl className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">총 청구</dt>
+                  <dd className="font-medium text-slate-900 tabular-nums">{billing.totalInvoiced.toLocaleString('ko-KR')}원</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">수금 완료</dt>
+                  <dd className="font-medium text-emerald-700 tabular-nums">{billing.totalPaid.toLocaleString('ko-KR')}원</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">미수금</dt>
+                  <dd className="font-medium text-slate-900 tabular-nums">{billing.totalPending.toLocaleString('ko-KR')}원</dd>
+                </div>
+                {billing.overdueCount > 0 ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-rose-600">연체</dt>
+                    <dd className="font-semibold text-rose-600 tabular-nums">{billing.overdueCount}건</dd>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">활성 약정</dt>
+                  <dd className="font-medium text-slate-900 tabular-nums">{billing.activeAgreements}건</dd>
+                </div>
+              </dl>
+              <Link
+                href={`${ROUTES.CASES}/${hub.caseId}?tab=billing` as Route}
+                className="mt-3 block text-center text-xs font-semibold text-sky-700 hover:text-sky-900"
+              >
+                비용 탭 열기 →
+              </Link>
+            </PremiumInfoPanel>
+          ) : null}
         </aside>
       </div>
     </div>

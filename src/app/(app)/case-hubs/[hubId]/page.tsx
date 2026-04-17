@@ -49,6 +49,7 @@ export default async function CaseHubLobbyPage({ params }: Props) {
       organizationId={organizationId}
       currentProfileId={auth.profile.id}
       documents={projection?.documents ?? null}
+      billing={projection?.billing ?? null}
     />
   );
 }
