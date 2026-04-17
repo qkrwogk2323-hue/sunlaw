@@ -1,7 +1,7 @@
 # CURRENT CONTEXT
 
 > 새 세션은 이 파일만 먼저 읽고 현재 상태를 고정한다. 다른 문서를 근거로 상태를 되돌리지 않는다.
-> Last updated: 2026-04-17
+> Last updated: 2026-04-18
 
 ## 1. 공식 상태
 - 공식 상태: 실서비스 투입 가능
@@ -14,7 +14,10 @@
 - 빈 `0059~0070` migration 파일 논의 금지 (이미 삭제됨)
 - `REHAB_AUDIT_CLI_CHECKLIST.md` 재개 금지
 - COLAW 잔재 제거 지시서 재개 금지
-- 문서 생성 알림(`notifyDocumentStakeholders`) 챕터 — 2026-04-17 staging 15/15 검증. `docs/VERIFICATION_RESULT_document_notifications_2026-04-17.md` 참조. 이 경로 건드릴 때만 재검증.
+- 문서 생성 알림(`notifyDocumentStakeholders`) 챕터 — 2026-04-17 staging 15/15 검증 완료
+- 비용 메뉴 완전개편 종료 (`55f2756`, `e3bdb6b`) — /billing 읽기 전용 리포트화 + 쓰기 허브 수렴
+- 허브 로비 레이아웃 재설계 종료 (`e265c0a`) — 3중 중복 제거 + CTA 승격 + 좌측 병합 + PIN 제거
+- 대시보드 4층 완성 (허브 모음 + 비용 위젯 + 오늘 할 일 + 기존 카드)
 
 ## 3. 현재 챕터
 - `docs/BACKLOG_2026-04-15.md` 기준 허브 체감 개선
@@ -31,8 +34,13 @@
 3. ~~의뢰인 포털(`portal/cases/[caseId]`)에 동일 타임라인 컴포넌트 연결 — 3-역할 한 화면 데모 완성~~ ✅ 2026-04-17 (portal-scope 머지 + `<CaseHubDocumentTimeline>` 재사용)
 4. ~~문서 생성 시 알림 자동 발생 — 직원(`/cases/:caseId?tab=documents`) + 의뢰인(`/portal/cases/:caseId`, 공개 문서만)~~ ✅ 2026-04-17 (`DOCUMENT_CREATED` + `DOCUMENT_SHARED_WITH_CLIENT` 정책 + `notifyDocumentStakeholders`). **staging 15/15 검증 완료** (`docs/VERIFICATION_RESULT_document_notifications_2026-04-17.md`)
 5. ~~검증관용 임시 페르소나 시드·teardown 스크립트 + 검증 체크리스트~~ ✅ 2026-04-17 (`scripts/seed-verification-personas.mjs`, `scripts/teardown-verification-personas.mjs`, `docs/VERIFICATION_CHECKLIST_document_notifications.md`)
-6. ~~비용 메뉴 재정의 (완전개편) — /billing을 읽기 전용 리포트로 축소, 쓰기는 허브 탭으로 수렴, BillingComingSoonCards/쓰기 패널 삭제, 메뉴 레이블 "비용 리포트"로 변경~~ ✅ 2026-04-17 (사용자 주관 승인 후 실행, `BACKLOG §2.1` 참조)
-7. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
+6. ~~비용 메뉴 재정의 (완전개편) — /billing을 읽기 전용 리포트로 축소, 쓰기는 허브 탭으로 수렴~~ ✅ 2026-04-17
+7. ~~대시보드 "오늘 할 일" 위젯 — cross-case 일정·마감·청구 시간축~~ ✅ 2026-04-17 (`c4751a5`)
+8. ~~허브 로비 비용 현황 패널 — projection.billing 재사용~~ ✅ 2026-04-17 (`0d82354`)
+9. ~~허브 PIN 비밀번호 완전 제거 — Auth+멤버십+RLS 3층 충분~~ ✅ 2026-04-17 (`fe97a9c`)
+10. ~~허브 로비 레이아웃 재설계 — 3중 중복 제거 + CTA 승격 + 좌측 병합~~ ✅ 2026-04-17 (`e265c0a`)
+11. DashboardHubClient(2491줄) 내부 중복 카드 점진 제거 (별도 스프린트)
+12. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
 
 ## 6. 손대면 안 되는 것
 - `src/app/(app)/cases/[caseId]/rehabilitation/tabs/rehab-creditors-tab.tsx` (사용자 작업 중)
