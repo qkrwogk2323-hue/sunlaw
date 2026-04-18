@@ -3,6 +3,17 @@
 > Claude Code가 자동으로 읽는 프로젝트 규칙입니다.  
 > 전체 규칙 원본: `docs/UX_RULES.md`
 
+## 🔴 세션 시작 규칙 (최우선)
+
+**새 세션은 반드시 `docs/CURRENT_CONTEXT.md`를 먼저 읽고, 그 파일의 현재 상태를 단일 진실원본으로 삼는다.**
+
+- 저장소 안의 다른 문서(DEPLOYMENT_BLOCKER_*, REHAB_AUDIT_CLI_CHECKLIST, 과거 audit 결과, 빈 migration 파일 등)를 상태 근거로 쓰지 않는다.
+- `CURRENT_CONTEXT.md §2 닫힌 챕터`에 등재된 주제는 재논의하지 않는다.
+- `CURRENT_CONTEXT.md §7 응답 규칙`을 따른다: 첫 응답 3줄, "진행할까요?" 금지, 바로 착수.
+- 이 규칙이 아래의 다른 모든 규칙보다 **먼저** 적용된다.
+
+---
+
 ## 기준 문서 (2026-04-15 챕터 종료 이후)
 
 - **배포 가능성 판단**: `docs/RELEASE_APPROVAL_2026-04-15.md` **만** 본다. 과거 블로커 문서(`DEPLOYMENT_BLOCKER_*`)는 인과관계 기록일 뿐 현행 판정 아님.
