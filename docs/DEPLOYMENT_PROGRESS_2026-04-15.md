@@ -1,7 +1,10 @@
-# 배포 재현성 통과 보고서
+# 배포 재현성 통과 보고서 — CLOSED 2026-04-15
 
+> ⚠️ **CLOSED** — 배포 챕터 종료. 현행 기준: `docs/RELEASE_APPROVAL_2026-04-15.md` (실서비스 투입 가능).
+> 현재 상태는 `docs/CURRENT_CONTEXT.md`를 참조하세요.
+>
 > 작성: 2026-04-15
-> 상태: 종료기준 1~3 통과, 4번 착수
+> 상태: 종료기준 1~3 통과, 4번 착수 후 챕터 종료
 > 참고: `docs/DEPLOYMENT_BLOCKER_FRESH_DB_REPLAY.md` (원래 차단 보고서)
 
 ## 종료기준 진행

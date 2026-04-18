@@ -59,3 +59,9 @@ supabase/migrations_backup_97/
 .DS_Store
 **/.DS_Store
 scripts/colaw-migration/data/
+
+# 검증용 임시 스크립트
+verify-*.mjs
+
+# 법원서식 참고자료 (로컬 보관, 커밋 불필요)
+개인회생파산 작성 로직/

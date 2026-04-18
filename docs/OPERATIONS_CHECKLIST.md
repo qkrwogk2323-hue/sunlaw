@@ -331,5 +331,22 @@ rm -f /tmp/*_fixed.sql /tmp/reconcile.sql
 
 ---
 
-_최종 업데이트: 2026-04-15_  
+---
+
+## 🧹 섹션 7: 세션 종료 위생 (개발팀)
+
+### 7-1. 임시 파일 정리
+- [ ] `/tmp/env.*`, `/tmp/rotate-*`, `/tmp/*_fixed.sql` 삭제
+- [ ] 프로젝트 루트의 `verify-*.mjs` (검증용 임시 스크립트) 삭제
+- [ ] `git status -s`에 untracked 파일이 의도치 않게 남아 있지 않은지 확인
+
+### 7-2. 워킹트리 청결 확인
+- [ ] `git status` clean 상태인지 확인 (또는 의도적 unstaged만 남았는지)
+- [ ] 빈 파일, placeholder migration, 테스트용 seed 결과물이 루트에 남아 있지 않은지 확인
+
+> 2026-04-15 세션에서 임시 파일 미삭제로 인한 cleanup이 여러 번 발생. 세션 종료 시 위 항목을 확인하면 다음 세션이 깨끗한 상태에서 시작할 수 있음.
+
+---
+
+_최종 업데이트: 2026-04-18_  
 _문서 위치: `docs/OPERATIONS_CHECKLIST.md`_
