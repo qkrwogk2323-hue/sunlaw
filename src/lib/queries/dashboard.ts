@@ -717,12 +717,13 @@ export async function getDashboardStats(organizationId?: string | null): Promise
 }> {
   const supabase = await createSupabaseServerClient();
   const [casesResult, documentsResult, requestsResult, billingResult] = await Promise.all([
+    // 대시보드와 동일 기준: closed/archived 제외한 모든 상태 (intake, active, pending, review 등)
     supabase
       .from('cases')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
       .neq('lifecycle_status', 'soft_deleted')
-      .in('case_status', ['active', 'pending']),
+      .not('case_status', 'in', '(closed,archived)'),
     supabase
       .from('case_documents')
       .select('id', { count: 'exact', head: true })
@@ -734,12 +735,13 @@ export async function getDashboardStats(organizationId?: string | null): Promise
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
       .in('status', ['pending', 'open']),
+    // 대시보드와 동일 기준: 아직 완료 안 된 항목 (초안+발행+부분입금)
     supabase
       .from('billing_entries')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
       .is('deleted_at', null)
-      .in('status', ['pending', 'overdue']),
+      .in('status', ['draft', 'issued', 'partial']),
   ]);
   return {
     activeCases: casesResult.count ?? 0,
