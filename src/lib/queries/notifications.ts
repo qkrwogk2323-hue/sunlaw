@@ -747,6 +747,62 @@ export function classifyNotificationCategory(item: NotificationQueueItem): 'imme
   return 'other';
 }
 
+export type NotificationCategoryCounts = {
+  immediate: number;
+  confirm: number;
+  meeting: number;
+  other: number;
+  total: number;
+};
+
+// 전체 미읽음 알림의 카테고리별 정확한 카운트.
+// 대시보드가 4건 샘플로 카테고리를 추정하면 총 카운트와 불일치하므로,
+// 경량 쿼리(id + entity_type + priority + notification_type만)로 전체를 분류.
+export async function getUnreadNotificationCategoryCounts(
+  organizationId?: string | null
+): Promise<NotificationCategoryCounts> {
+  const auth = await getCurrentAuth();
+  if (!auth) return { immediate: 0, confirm: 0, meeting: 0, other: 0, total: 0 };
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from('notifications')
+    .select('id, entity_type, priority, notification_type')
+    .eq('recipient_profile_id', auth.user.id)
+    .is('read_at', null)
+    .is('trashed_at', null)
+    .eq('status', 'active')
+    .limit(500);
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.error('[getUnreadNotificationCategoryCounts] query error:', error.message);
+    return { immediate: 0, confirm: 0, meeting: 0, other: 0, total: 0 };
+  }
+  const rows = (data ?? []) as Array<{ id: string; entity_type: string | null; priority: string | null; notification_type: string | null }>;
+  const counts: NotificationCategoryCounts = { immediate: 0, confirm: 0, meeting: 0, other: 0, total: rows.length };
+  for (const row of rows) {
+    const cat = classifyNotificationCategory({
+      notificationId: row.id,
+      type: row.notification_type ?? 'generic',
+      entityType: (row.entity_type ?? 'case') as 'case' | 'schedule' | 'client' | 'collaboration',
+      entityId: null,
+      priority: (row.priority ?? 'normal') as 'urgent' | 'normal' | 'low',
+      status: 'active',
+      destinationType: 'internal_route',
+      destinationUrl: '',
+      createdAt: '',
+      title: '',
+      actionLabel: '',
+      organizationId: null,
+      organizationName: null,
+    });
+    counts[cat] += 1;
+  }
+  return counts;
+}
+
 export async function getDashboardRecentNotifications(organizationId?: string | null, limit = 5): Promise<NotificationQueueItem[]> {
   const auth = await getCurrentAuth();
   if (!auth) return [];

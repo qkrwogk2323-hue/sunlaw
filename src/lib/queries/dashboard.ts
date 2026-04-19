@@ -4,7 +4,8 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAuth, hasActivePlatformAdminView, isManagementRole } from '@/lib/auth';
 import { getCaseScopeAccess } from '@/lib/case-scope';
-import { classifyNotificationCategory, countUnreadNotifications, getDashboardRecentNotifications } from '@/lib/queries/notifications';
+import { classifyNotificationCategory, countUnreadNotifications, getDashboardRecentNotifications, getUnreadNotificationCategoryCounts } from '@/lib/queries/notifications';
+import type { NotificationCategoryCounts } from '@/lib/queries/notifications';
 
 export type DashboardSummary = {
   activeCases: number;
@@ -376,6 +377,9 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
   // nav 뱃지·대시보드 카드·알림센터가 전부 같은 계산 기준을 사용해 카운트 일치 보장.
   const unreadNotificationsPromise = countUnreadNotifications({ organizationId });
 
+  // 카테고리별 정확한 카운트 — 4건 샘플이 아닌 전체 미읽음 기반 분류.
+  const notificationCategoryCountsPromise = getUnreadNotificationCategoryCounts(organizationId);
+
   const unreadNotificationItemsPromise = getDashboardRecentNotifications(organizationId, 4);
 
   let clientAccessQueueQuery = supabase
@@ -430,6 +434,7 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
     { count: pendingBillingCount },
     { data: upcomingBilling },
     unreadNotifications,
+    notificationCategoryCounts,
     unreadNotificationItems,
     { data: clientAccessQueue }
   ] = await Promise.all([
@@ -446,6 +451,7 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
     pendingBillingCountQuery,
     upcomingBillingQuery,
     unreadNotificationsPromise,
+    notificationCategoryCountsPromise,
     unreadNotificationItemsPromise,
     clientAccessQueueQuery
   ]);
@@ -503,7 +509,8 @@ async function loadDashboardCoreSections(context: DashboardQueryContext | null) 
 
   return {
     summary,
-    queues
+    queues,
+    notificationCategoryCounts: notificationCategoryCounts as NotificationCategoryCounts
   };
 }
 
@@ -658,7 +665,8 @@ export async function getDashboardInitialSnapshotForAuth(auth: AuthContext, orga
   return {
     ...core.summary,
     ...core.queues,
-    ...EMPTY_SECONDARY
+    ...EMPTY_SECONDARY,
+    notificationCategoryCounts: core.notificationCategoryCounts as NotificationCategoryCounts
   };
 }
 

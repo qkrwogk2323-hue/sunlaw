@@ -219,6 +219,14 @@ export type WorkItem = {
   links: WorkItemLink[];
 };
 
+export type NotificationCategoryCounts = {
+  immediate: number;
+  confirm: number;
+  meeting: number;
+  other: number;
+  total: number;
+};
+
 export type DashboardSnapshot = {
   activeCases: number;
   pendingDocuments: number;
@@ -241,6 +249,7 @@ export type DashboardSnapshot = {
   partnerContacts: PartnerContact[];
   organizationConversations: OrganizationConversationRoom[];
   recentWorkItems: WorkItem[];
+  notificationCategoryCounts?: NotificationCategoryCounts;
 };
 
 export type DashboardSecondarySnapshot = Pick<
