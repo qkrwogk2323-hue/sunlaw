@@ -1982,6 +1982,47 @@ export async function addBillingEntryAction(caseId: string, formData: FormData) 
     }
   });
 
+  // P0-1: 의뢰인에게 청구 알림 — bill_to_case_client_id가 있고 포털 활성이면.
+  if (parsed.billToCaseClientId) {
+    try {
+      const admin = createSupabaseAdminClient();
+      const { data: clientRow } = await admin
+        .from('case_clients')
+        .select('profile_id')
+        .eq('id', parsed.billToCaseClientId)
+        .eq('is_portal_enabled', true)
+        .eq('link_status', 'linked')
+        .maybeSingle();
+      if (clientRow?.profile_id) {
+        const clientDest = buildNotificationDestinationUrl(
+          NOTIFICATION_TYPES.BILLING_SHARED_WITH_CLIENT,
+          { caseId: caseRecord.id }
+        );
+        await admin.from('notifications').insert({
+          organization_id: caseRecord.organization_id,
+          case_id: caseRecord.id,
+          recipient_profile_id: clientRow.profile_id,
+          kind: 'generic',
+          notification_type: NOTIFICATION_TYPES.BILLING_SHARED_WITH_CLIENT,
+          entity_type: 'billing_entry',
+          entity_id: caseRecord.id,
+          priority: 'normal',
+          status: 'active',
+          requires_action: true,
+          title: `새 청구가 등록됐습니다 · ${parsed.title}`,
+          body: '담당 조직이 청구 항목을 등록했습니다. 포털에서 확인해 주세요.',
+          action_label: '포털에서 확인',
+          action_href: clientDest,
+          destination_type: 'internal_route',
+          destination_url: clientDest,
+          payload: { entry_title: parsed.title, amount: parsed.amount }
+        });
+      }
+    } catch (err) {
+      console.error('[addBillingEntryAction] client billing notification failed:', err);
+    }
+  }
+
   revalidatePath(`/cases/${caseId}`);
   revalidatePath('/collections');
   revalidatePath('/dashboard');

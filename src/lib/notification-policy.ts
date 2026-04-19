@@ -32,6 +32,12 @@ export const NOTIFICATION_TYPES = {
   HUB_MESSAGE_RECEIVED: 'hub_message_received',
   COLLABORATION_REQUEST: 'collaboration_request',
 
+  // 비용 → 의뢰인
+  BILLING_SHARED_WITH_CLIENT: 'billing_shared_with_client',
+
+  // 계약 → 직원
+  CONTRACT_SIGNED_BY_CLIENT: 'contract_signed_by_client',
+
   // 문서
   DOCUMENT_CREATED: 'document_created',
   DOCUMENT_SHARED_WITH_CLIENT: 'document_shared_with_client',
@@ -144,6 +150,16 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
     recipientScope: 'org_managers',
     destinationScope: 'internal',
     internalHrefTemplate: '/organizations',
+  },
+  [NOTIFICATION_TYPES.BILLING_SHARED_WITH_CLIENT]: {
+    recipientScope: 'client_self',
+    destinationScope: 'portal',
+    portalHrefTemplate: '/portal/cases/:caseId',
+  },
+  [NOTIFICATION_TYPES.CONTRACT_SIGNED_BY_CLIENT]: {
+    recipientScope: 'org_managers_and_assigned',
+    destinationScope: 'internal',
+    internalHrefTemplate: '/cases/:caseId?tab=billing',
   },
   [NOTIFICATION_TYPES.DOCUMENT_CREATED]: {
     recipientScope: 'org_managers_and_assigned',

@@ -134,4 +134,27 @@ describe('buildNotificationDestinationUrl', () => {
     });
     expect(url).toBe('/cases/case-d2?tab=documents');
   });
+
+  it('routes BILLING_SHARED_WITH_CLIENT to the portal case page', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.BILLING_SHARED_WITH_CLIENT, {
+      caseId: 'case-bill-1'
+    });
+    expect(url).toBe('/portal/cases/case-bill-1');
+  });
+
+  it('classifies BILLING_SHARED_WITH_CLIENT as portal notification', () => {
+    expect(isClientPortalNotification(NOTIFICATION_TYPES.BILLING_SHARED_WITH_CLIENT)).toBe(true);
+  });
+
+  it('routes CONTRACT_SIGNED_BY_CLIENT to the case billing tab', () => {
+    const url = buildNotificationDestinationUrl(NOTIFICATION_TYPES.CONTRACT_SIGNED_BY_CLIENT, {
+      caseId: 'case-sign-1'
+    });
+    expect(url).toBe('/cases/case-sign-1?tab=billing');
+  });
+
+  it('classifies CONTRACT_SIGNED_BY_CLIENT as internal notification', () => {
+    expect(isClientPortalNotification(NOTIFICATION_TYPES.CONTRACT_SIGNED_BY_CLIENT)).toBe(false);
+    expect(isPlatformOnlyNotification(NOTIFICATION_TYPES.CONTRACT_SIGNED_BY_CLIENT)).toBe(false);
+  });
 });

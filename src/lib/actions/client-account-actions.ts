@@ -18,6 +18,7 @@ import {
 import { isPlatformManagementOrganization } from '@/lib/platform-governance';
 import { encryptString } from '@/lib/pii';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { NOTIFICATION_TYPES, buildNotificationDestinationUrl, type NotificationType } from '@/lib/notification-policy';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { clientServiceRequestSchema, clientSignupSchema, portalContractConsentSchema } from '@/lib/validators';
 
@@ -407,6 +408,59 @@ export async function confirmPortalContractSignatureAction(formData: FormData) {
       cause: completionError.message,
       resolution: '잠시 후 다시 시도해 주세요.'
     }));
+  }
+
+  // P0-2: 직원(담당자·관리자)에게 서명 완료 알림.
+  try {
+    const admin = createSupabaseAdminClient();
+    const [{ data: memberships }, { data: handlers }] = await Promise.all([
+      admin
+        .from('organization_memberships')
+        .select('profile_id, role')
+        .eq('organization_id', caseClient.organization_id)
+        .eq('status', 'active'),
+      admin
+        .from('case_handlers')
+        .select('profile_id')
+        .eq('case_id', parsed.caseId),
+    ]);
+    const managerIds = ((memberships ?? []) as Array<{ profile_id: string | null; role: string }>)
+      .filter((m) => m.profile_id && (m.role === 'org_owner' || m.role === 'org_manager'))
+      .map((m) => m.profile_id as string);
+    const handlerIds = ((handlers ?? []) as Array<{ profile_id: string | null }>)
+      .map((h) => h.profile_id)
+      .filter((id): id is string => Boolean(id));
+    const staffRecipients = [...new Set([...managerIds, ...handlerIds])];
+
+    if (staffRecipients.length) {
+      const staffDest = buildNotificationDestinationUrl(
+        NOTIFICATION_TYPES.CONTRACT_SIGNED_BY_CLIENT,
+        { caseId: parsed.caseId }
+      );
+      await admin.from('notifications').insert(
+        staffRecipients.map((recipientProfileId) => ({
+          organization_id: caseClient.organization_id,
+          case_id: parsed.caseId,
+          recipient_profile_id: recipientProfileId,
+          kind: 'generic',
+          notification_type: NOTIFICATION_TYPES.CONTRACT_SIGNED_BY_CLIENT,
+          entity_type: 'fee_agreement',
+          entity_id: agreement.id,
+          priority: 'normal',
+          status: 'active',
+          requires_action: false,
+          title: `계약 서명 완료 · ${agreement.title ?? '계약서'}`,
+          body: `${caseClient.client_name ?? '의뢰인'}이 계약에 동의했습니다. 계약 관리에서 확인하세요.`,
+          action_label: '비용 탭 열기',
+          action_href: staffDest,
+          destination_type: 'internal_route',
+          destination_url: staffDest,
+          payload: { agreement_id: agreement.id, agreement_title: agreement.title, client_name: caseClient.client_name }
+        }))
+      );
+    }
+  } catch (err) {
+    console.error('[confirmPortalContractSignatureAction] staff notification failed:', err);
   }
 
   revalidatePath('/portal');
