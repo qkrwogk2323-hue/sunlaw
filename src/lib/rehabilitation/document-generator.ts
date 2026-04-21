@@ -1,5 +1,6 @@
 import { adjustLivingCost } from './median-income';
 import { buildCreditorListOutput, type CreditorListOutput, type CreditorDisplayRow } from './creditor-list-engine';
+import { buildSection10Clauses } from './rules/plan-section10-rules';
 import { computeMonthlyAvailable } from './monthly-available';
 import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
 import { decidePeriodSetting, type PeriodSetting } from './period-setting';
@@ -2031,13 +2032,41 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     <h3>10. 기타사항</h3>
     ${(() => {
+      // §10 자동 생성: 사건 데이터에서 5종 조건을 판별해 법률 문구 자동 삽입.
+      // 사용자 수동 입력(planSections[10])도 병합.
+      const pvFor10 = (() => {
+        const lc: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
+        const c10 = lc[planDurationMonths];
+        return c10 ? Math.floor(availableIncome * c10) : Math.floor(availableIncome) * planDurationMonths;
+      })();
+      const formType10: 'D5110' | 'D5111' = pvFor10 <= liquidationValueComputed ? 'D5111' : 'D5110';
+      const disposePd10 = Number(incomeSettings.dispose_period) || 1;
+      const multiplier10 = disposePd10 <= 1 ? 1.3 : 1.5;
+
+      const autoClauses = buildSection10Clauses(
+        data.creditors || [],
+        formType10,
+        disposePd10,
+        multiplier10,
+      );
+
       const etcSection = (data.planSections || []).find((s: any) => s.section_key === 'etc' || s.section_number === 10);
-      if (etcSection && etcSection.content && etcSection.content.trim()) {
-        return `
-    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
-    <p style="margin-left: 20px;">${esc(etcSection.content)}</p>`;
+      const userContent = etcSection?.content?.trim() || '';
+
+      const hasContent = autoClauses.length > 0 || userContent;
+
+      if (!hasContent) {
+        return `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`;
       }
-      return `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`;
+
+      let html = `<p>[ 해당있음 ■ / 해당없음 □ ]</p>`;
+      for (const clause of autoClauses) {
+        html += `\n    <p style="margin-left: 20px; margin-top: 10px;">${esc(clause.text)}</p>`;
+      }
+      if (userContent) {
+        html += `\n    <p style="margin-left: 20px; margin-top: 10px;">${esc(userContent)}</p>`;
+      }
+      return html;
     })()}
   `;
 
