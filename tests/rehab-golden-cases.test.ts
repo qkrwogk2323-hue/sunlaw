@@ -236,6 +236,143 @@ describe('Golden Case 통합 테스트', () => {
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════════
+  // Golden Case 7: 영업소득자 (D5110, 대구)
+  // ═══════════════════════════════════════════════════════════════════
+  describe('Case 7: 영업소득자', () => {
+    const app = { applicant_name: '오영업', court_name: '대구지방법원', income_type: 'business' };
+    const creditors = [
+      { id: 'c1', bond_number: 1, creditor_name: '기업은행', capital: 30_000_000, interest: 3_000_000, is_secured: false },
+    ];
+    const output = buildCreditorListOutput(app, {}, creditors);
+
+    it('채권자목록: 무담보 1건', () => {
+      expect(output.rows).toHaveLength(1);
+      expect(output.summary.securedTotal).toBe(0);
+    });
+
+    it('법원: 대구', () => {
+      expect(normalizeCourtKey(app.court_name)).toBe('대구');
+      expect(getCourtAdditionalDocs(app.court_name).length).toBeGreaterThan(0);
+    });
+
+    it('월가용소득: 영업소득 3,000,000 - 2인 생계비', () => {
+      const income = computeMonthlyAvailable({
+        monthlyIncome: 3_000_000,
+        householdSize: 2,
+        year: 2026,
+        livingCostRate: 100,
+      });
+      expect(income.monthlyAvailable).toBeGreaterThan(0);
+      expect(income.monthlyAvailable).toBeLessThan(3_000_000);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Golden Case 8: D5111 (재산처분 필요, 서울)
+  //   현재가치(PV) < 청산가치 → D5111 분기
+  // ═══════════════════════════════════════════════════════════════════
+  describe('Case 8: D5111 (재산처분 필요)', () => {
+    it('PV < 청산가치 → D5111 판별', () => {
+      const monthlyAvailable = 300_000;
+      const pv = presentValue(monthlyAvailable, 36);
+      const liquidationValue = 20_000_000;
+      expect(pv).toBeLessThan(liquidationValue);
+    });
+
+    it('§10: D5111이면 재산처분 승수 문구 자동', () => {
+      const s10 = buildSection10Clauses([], 'D5111', 1, 1.3);
+      expect(s10.some(c => c.id === 'disposal_multiplier')).toBe(true);
+      expect(s10.find(c => c.id === 'disposal_multiplier')!.text).toContain('1년 이내');
+      expect(s10.find(c => c.id === 'disposal_multiplier')!.text).toContain('1.3');
+    });
+
+    it('§10: D5110이면 재산처분 문구 없음', () => {
+      const s10 = buildSection10Clauses([], 'D5110');
+      expect(s10.some(c => c.id === 'disposal_multiplier')).toBe(false);
+    });
+
+    it('60개월 라이프니쯔 계수 정확', () => {
+      expect(LEIBNIZ_REHAB[60]).toBe(53.6433);
+      const pv60 = presentValue(500_000, 60);
+      expect(pv60).toBe(Math.floor(500_000 * 53.6433));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Golden Case 9: 복합 사건 (보증+별제권+미확정+우선변제 동시, 서울)
+  // ═══════════════════════════════════════════════════════════════════
+  describe('Case 9: 복합 사건 (모든 특수 조건 동시)', () => {
+    const creditors = [
+      { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 50_000_000, interest: 5_000_000, is_secured: true, remaining_unsecured: 15_000_000 },
+      { id: 'c2', bond_number: 2, creditor_name: '국세청', capital: 2_000_000, interest: 0, is_secured: false, has_priority_repay: true },
+      { id: 'c3', bond_number: 3, creditor_name: '하나은행', capital: 10_000_000, interest: 1_000_000, is_secured: false, guarantor_amount: 3_000_000, guarantor_name: '박보증', bond_type: '주채무' },
+      { id: 'c4', bond_number: 3, creditor_name: '박보증', capital: 3_000_000, interest: 0, is_secured: false, parent_creditor_id: 'c3', sub_number: 1, bond_type: '보증채무' },
+      { id: 'c5', bond_number: 4, creditor_name: '소송상대', capital: 5_000_000, interest: 0, is_secured: false, is_unsettled: true, unsettled_reason: '채권액 다툼' },
+    ];
+    const output = buildCreditorListOutput({ court_name: '서울회생법원' }, {}, creditors);
+    const s10 = buildSection10Clauses(creditors, 'D5111', 2, 1.5);
+
+    it('채권자목록: 5건, 가지번호 포함', () => {
+      expect(output.rows).toHaveLength(5);
+      expect(output.rows.some(r => r.bondNumber === '3-1')).toBe(true);
+    });
+
+    it('담보부 합계 정확', () => {
+      expect(output.summary.securedTotal).toBe(55_000_000);
+    });
+
+    it('미확정: 별제권 부족 + 소송 중 = 2건', () => {
+      expect(output.unsettledRows).toHaveLength(2);
+    });
+
+    it('§10: 5종 문구 전부 생성', () => {
+      expect(s10.some(c => c.condition === '보증인·연대보증·대위변제')).toBe(true);
+      expect(s10.some(c => c.id === 'secured_deficiency')).toBe(true);
+      expect(s10.some(c => c.id === 'unsettled_claims')).toBe(true);
+      expect(s10.some(c => c.id === 'disposal_multiplier')).toBe(true);
+      expect(s10.some(c => c.id === 'priority_100pct')).toBe(true);
+    });
+
+    it('§10 재산처분: 2년, 1.5배', () => {
+      const disposal = s10.find(c => c.id === 'disposal_multiplier')!;
+      expect(disposal.text).toContain('2년');
+      expect(disposal.text).toContain('1.5');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Golden Case 10: 재산 14카테고리 + 생계비율 조정 (인천)
+  // ═══════════════════════════════════════════════════════════════════
+  describe('Case 10: 재산 다수 + 생계비율 조정', () => {
+    it('생계비율 150% → 기본 60%의 1.5배', () => {
+      const result = computeLivingCost({ householdSize: 3, year: 2026, rate: 150 });
+      const baseline = minimumLivingCost(3, 2026);
+      expect(result.baseline60).toBe(baseline);
+      expect(result.afterRate).toBe(Math.round(baseline * 1.5));
+      expect(result.applied).toBe(result.afterRate);
+    });
+
+    it('추가생계비 포함', () => {
+      const result = computeLivingCost({ householdSize: 2, year: 2026, rate: 100, extraFamilyLowMoney: 300_000 });
+      expect(result.extraFamilyLowMoney).toBe(300_000);
+      expect(result.applied).toBe(result.afterRate + 300_000);
+    });
+
+    it('환가비율: 자동차 50%, 예금 100%', () => {
+      expect(getDefaultValuationRate('자동차')).toBe(50);
+      expect(getDefaultValuationRate('예금')).toBe(100);
+      expect(getDefaultValuationRate('보험')).toBe(100);
+    });
+
+    it('8인 이상 가구 기준중위소득 산출', () => {
+      const income7 = getMedianIncome(7, 2026);
+      const income8 = getMedianIncome(8, 2026);
+      expect(income8).toBeGreaterThan(income7);
+      expect(income8 - income7).toBe(999_233); // 2026 INCREMENT_PER_EXTRA
+    });
+  });
+
   describe('문서 간 정합성', () => {
     it('채권자목록 합계 = 개별 원금+이자 합계 (Case 1)', () => {
       const output = buildCreditorListOutput(CASE_1.application, CASE_1.creditorSettings, CASE_1.creditors);
