@@ -25,7 +25,9 @@
 - 전수 조사 완료 (`FULL_SITE_AUDIT_REPORT.md`, `ONBOARDING_GAP_REPORT.md`) — 열린 이슈 0건
 
 ## 3. 현재 챕터
-- `docs/BACKLOG_2026-04-15.md` 기준 허브 체감 개선
+- **개인회생 자동작성 DSL 구축** (2026-04-21 시작)
+- 기준 문서: `docs/rehabilitation/rehab-form-matrix.md`
+- 이전 챕터(허브 체감 개선)는 §2 닫힌 챕터로 이동
 
 ## 4. 최근 핵심 커밋
 - `c4ac134` feat(hub-projection): case_documents + fee_agreements 문서 타임라인 통합
