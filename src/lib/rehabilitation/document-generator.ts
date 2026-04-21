@@ -1,6 +1,7 @@
 import { adjustLivingCost } from './median-income';
 import { buildCreditorListOutput, type CreditorListOutput, type CreditorDisplayRow } from './creditor-list-engine';
 import { buildSection10Clauses } from './rules/plan-section10-rules';
+import { getCourtAdditionalDocs } from './rules/court-required-docs';
 import { computeMonthlyAvailable } from './monthly-available';
 import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
 import { decidePeriodSetting, type PeriodSetting } from './period-setting';
@@ -2347,6 +2348,16 @@ function generateDocumentChecklist(data: DocumentData): string {
       ],
     },
   ];
+
+  // 법원별 추가 제출서류 (rules/court-required-docs.ts 단일 원본)
+  const courtName = app.court_name || app.court_detail || '';
+  const courtAdditionalDocs = getCourtAdditionalDocs(courtName);
+  for (const doc of courtAdditionalDocs) {
+    categories.push({
+      title: `${categories.length + 1}. ${doc.category}`,
+      items: doc.items,
+    });
+  }
 
   const rows = categories
     .map(
