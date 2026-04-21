@@ -1,48 +1,19 @@
 /**
- * 기준중위소득 데이터 (2022~2026 보건복지부 고시)
+ * 기준중위소득 계산 함수 (처리지침 §7②, 가이드 p.37)
  *
- * 출처:
- * - 2022: 고시 제2021-211호
- * - 2023: 고시 제2022-191호
- * - 2024: 고시 제2023-150호
- * - 2025: 2024 중앙생활보장위원회
- * - 2026: 2025 중앙생활보장위원회
- *
- * 8인 이상은 연도별 증분(`INCREMENT_PER_EXTRA`)을 이용해 산출.
- * 2022~2024 증분은 고시 원문 확인분, 2025/2026은 (7인−6인) 차분식.
+ * 데이터 테이블은 `rules/median-income-tables.ts`에 분리.
+ * 연도 추가 시 rules/ 파일만 수정하면 됨.
  */
+import {
+  MEDIAN_INCOME_100,
+  MEDIAN_INCOME_60,
+  INCREMENT_PER_EXTRA,
+  FALLBACK_YEAR,
+  SUPPORTED_YEARS,
+} from './rules/median-income-tables';
 
-/** 가구원 수별 월 기준중위소득 100% (원, 1~7인) */
-export const MEDIAN_INCOME_100: Record<number, Record<number, number>> = {
-  2022: { 1: 1_944_812, 2: 3_260_085, 3: 4_194_701, 4: 5_121_080, 5: 6_024_515, 6: 6_907_004, 7: 7_780_592 },
-  2023: { 1: 2_077_892, 2: 3_456_155, 3: 4_434_816, 4: 5_400_964, 5: 6_330_688, 6: 7_227_981, 7: 8_107_515 },
-  2024: { 1: 2_228_445, 2: 3_682_609, 3: 4_714_657, 4: 5_729_913, 5: 6_695_735, 6: 7_618_369, 7: 8_514_994 },
-  2025: { 1: 2_392_013, 2: 3_932_658, 3: 5_025_353, 4: 6_097_773, 5: 7_108_192, 6: 8_064_805, 7: 9_021_418 },
-  2026: { 1: 2_564_238, 2: 4_199_292, 3: 5_359_036, 4: 6_494_738, 5: 7_556_719, 6: 8_555_952, 7: 9_555_185 },
-};
-
-/** 가구원 수별 월 기준중위소득 60% — 보건복지부 공표 고정값 (원, 1~7인) */
-export const MEDIAN_INCOME_60: Record<number, Record<number, number>> = {
-  2022: { 1: 1_166_887, 2: 1_956_051, 3: 2_516_821, 4: 3_072_648, 5: 3_614_709, 6: 4_144_202, 7: 4_668_355 },
-  2023: { 1: 1_246_735, 2: 2_073_693, 3: 2_660_890, 4: 3_240_578, 5: 3_798_413, 6: 4_336_789, 7: 4_864_509 },
-  2024: { 1: 1_337_067, 2: 2_209_565, 3: 2_828_794, 4: 3_437_948, 5: 4_017_441, 6: 4_571_021, 7: 5_108_996 },
-  2025: { 1: 1_435_208, 2: 2_359_595, 3: 3_015_212, 4: 3_658_664, 5: 4_264_915, 6: 4_838_883, 7: 5_412_851 },
-  2026: { 1: 1_538_543, 2: 2_519_575, 3: 3_215_422, 4: 3_896_843, 5: 4_534_031, 6: 5_133_571, 7: 5_733_111 },
-};
-
-/** 8인 이상 추가 1인당 증분 (원, 연도별) */
-export const INCREMENT_PER_EXTRA: Record<number, number> = {
-  2022: 873_588,
-  2023: 879_534,
-  2024: 896_625,
-  2025: 956_613,
-  2026: 999_233,
-};
-
-/** 지원 연도 목록 (최신순) */
-export const SUPPORTED_YEARS = Object.keys(MEDIAN_INCOME_100)
-  .map(Number)
-  .sort((a, b) => b - a);
+// re-export for backward compatibility
+export { MEDIAN_INCOME_100, MEDIAN_INCOME_60, INCREMENT_PER_EXTRA, SUPPORTED_YEARS };
 
 /**
  * 가구원 수 기준 기준중위소득 100% 금액
@@ -52,10 +23,10 @@ export const SUPPORTED_YEARS = Object.keys(MEDIAN_INCOME_100)
  * - 미등록 연도: 가장 최근 확정연도(2025) fallback
  */
 export function getMedianIncome(householdSize: number, year: number): number {
-  const table = MEDIAN_INCOME_100[year] ?? MEDIAN_INCOME_100[2025];
+  const table = MEDIAN_INCOME_100[year] ?? MEDIAN_INCOME_100[FALLBACK_YEAR];
   const size = Math.max(1, Math.floor(householdSize));
   if (size <= 7) return table[size] ?? table[1];
-  const inc = INCREMENT_PER_EXTRA[year] ?? INCREMENT_PER_EXTRA[2025];
+  const inc = INCREMENT_PER_EXTRA[year] ?? INCREMENT_PER_EXTRA[FALLBACK_YEAR];
   return table[7] + inc * (size - 7);
 }
 
@@ -75,7 +46,7 @@ export function minimumLivingCost(householdSize: number, year: number, rate = 60
   const size = Math.max(1, Math.floor(householdSize));
   // rate=60이고 1~7인이면 보건복지부 공표 고정값 사용 (Math.floor 오차 방지)
   if (rate === 60 && size <= 7) {
-    const table60 = MEDIAN_INCOME_60[year] ?? MEDIAN_INCOME_60[2025];
+    const table60 = MEDIAN_INCOME_60[year] ?? MEDIAN_INCOME_60[FALLBACK_YEAR];
     if (table60[size] != null) return table60[size];
   }
   return Math.floor((getMedianIncome(householdSize, year) * rate) / 100);

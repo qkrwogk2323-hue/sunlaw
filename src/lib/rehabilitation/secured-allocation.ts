@@ -24,16 +24,8 @@ export function getLiquidationValue(property: RehabSecuredProperty): number {
 /**
  * 담보물건 종류에 따른 기본 환가비율을 반환합니다.
  */
-export function getDefaultValuationRate(propertyType: string): number {
-  switch (propertyType) {
-    case '부동산': return 70;
-    case '자동차': return 50;
-    case '임차보증금': return 100;
-    case '예금': return 100;
-    case '보험': return 100;
-    default: return 70;
-  }
-}
+// 환가비율 기본값은 rules/valuation-rates.ts에서 관리
+export { getDefaultValuationRate } from './rules/valuation-rates';
 
 /**
  * 전체 별제권 배분을 계산합니다.

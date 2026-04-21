@@ -15,11 +15,9 @@
  *   leib(57) = 50.64333655... → +3 = 53.6433
  */
 
-export const LEIBNIZ_REHAB: Record<number, number> = {
-  36: 33.7719,
-  48: 43.9555,
-  60: 53.6433,
-};
+// 계수 테이블은 rules/에서 관리
+import { LEIBNIZ_REHAB } from './rules/leibniz-coefficients';
+export { LEIBNIZ_REHAB };
 
 /**
  * 월변제금 × 현가계수 → 현재가치 (원 미만 버림, 가이드 p.13)
