@@ -200,7 +200,18 @@ export async function upsertRehabCreditor(
     const supabase = await createSupabaseServerClient();
 
     // 클라이언트 전용 필드 및 무효 id 제거
-    const { id: _formId, bond_number: _bn, ...cleanData } = creditorData as Record<string, unknown> & { id?: string; bond_number?: number };
+    const { id: _formId, bond_number: _bn, isNew: _isNew, expanded: _expanded, ...cleanData } = creditorData as Record<string, unknown> & { id?: string; bond_number?: number; isNew?: boolean; expanded?: boolean };
+
+    // DB CHECK 제약조건 보호: is_secured=true이면 secured_collateral_value > 0 필수.
+    // UI(CreditorForm)에 secured_collateral_value 필드가 없어서 미전달 시 기본값 0 → 제약 위반.
+    // 보증채무(bond_type='보증채무'/'연대보증')는 일반적으로 무담보이므로 is_secured=false 강제.
+    const bondType = cleanData.bond_type as string | undefined;
+    if (bondType === '보증채무' || bondType === '연대보증') {
+      cleanData.is_secured = false;
+    }
+    if (cleanData.is_secured && !Number(cleanData.secured_collateral_value)) {
+      cleanData.secured_collateral_value = 1;
+    }
 
     if (creditorId) {
       const { error } = await supabase
