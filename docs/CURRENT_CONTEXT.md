@@ -1,7 +1,7 @@
 # CURRENT CONTEXT
 
 > 새 세션은 이 파일만 먼저 읽고 현재 상태를 고정한다. 다른 문서를 근거로 상태를 되돌리지 않는다.
-> Last updated: 2026-04-18
+> Last updated: 2026-04-21
 
 ## 1. 공식 상태
 - 공식 상태: 실서비스 투입 가능
@@ -18,6 +18,11 @@
 - 비용 메뉴 완전개편 종료 (`55f2756`, `e3bdb6b`) — /billing 읽기 전용 리포트화 + 쓰기 허브 수렴
 - 허브 로비 레이아웃 재설계 종료 (`e265c0a`) — 3중 중복 제거 + CTA 승격 + 좌측 병합 + PIN 제거
 - 대시보드 4층 완성 (허브 모음 + 비용 위젯 + 오늘 할 일 + 기존 카드)
+- 알림 카테고리 카운트 불일치 수정 (`0194634`) — 4건 샘플 → 전체 서버 분류
+- 카운트 필터 불일치 2건 수정 (`0a2b312`) — pendingBillingCount + activeCases 통일
+- 온보딩 P0 2건 수정 (`1ae1bfe`) — 청구→의뢰인 + 서명→직원 알림
+- `deleted_at` schema drift 수정 (`c98ebec`) — 6개 테이블 컬럼 추가 + staging 8/8 검증
+- 전수 조사 완료 (`FULL_SITE_AUDIT_REPORT.md`, `ONBOARDING_GAP_REPORT.md`) — 열린 이슈 0건
 
 ## 3. 현재 챕터
 - `docs/BACKLOG_2026-04-15.md` 기준 허브 체감 개선
@@ -39,8 +44,12 @@
 8. ~~허브 로비 비용 현황 패널 — projection.billing 재사용~~ ✅ 2026-04-17 (`0d82354`)
 9. ~~허브 PIN 비밀번호 완전 제거 — Auth+멤버십+RLS 3층 충분~~ ✅ 2026-04-17 (`fe97a9c`)
 10. ~~허브 로비 레이아웃 재설계 — 3중 중복 제거 + CTA 승격 + 좌측 병합~~ ✅ 2026-04-17 (`e265c0a`)
-11. DashboardHubClient(2491줄) 내부 중복 카드 점진 제거 (별도 스프린트)
-12. 사용자 체감 화면 1개씩 끝내기 — 추상적 리팩터 금지
+11. ~~DashboardHubClient 3파일 분리 (2445→98줄)~~ ✅ 2026-04-18 (`d955e59`)
+12. ~~전수 조사 (카운트 불일치 + 알림 destination + revalidatePath + RLS + schema drift)~~ ✅ 2026-04-19~21
+13. ~~온보딩 7단계 E2E 감사 + P0 수정~~ ✅ 2026-04-19
+14. ~~3-역할 projection 정합성 검증 8/8~~ ✅ 2026-04-21
+15. production에 `20260419000001_hotfix_add_deleted_at_columns.sql` 적용 확인 (수동)
+16. 실사용자 피드백 기반 다음 챕터 결정
 
 ## 6. 손대면 안 되는 것
 - `src/app/(app)/cases/[caseId]/rehabilitation/tabs/rehab-creditors-tab.tsx` (사용자 작업 중)
