@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
-import { upsertRehabProperty, softDeleteRehabProperty, upsertRehabPropertyDeduction } from '@/lib/actions/rehabilitation-actions';
+import { upsertRehabProperty, softDeleteRehabProperty, restoreRehabProperty, upsertRehabPropertyDeduction } from '@/lib/actions/rehabilitation-actions';
 import { PROPERTY_CATEGORIES, calculateCategorySubtotal, calculateLiquidationValue, formatMoney, parseMoney, PROPERTY_DETAIL_SCHEMAS, validatePropertyDetail } from '@/lib/rehabilitation';
 import type { PropertyCategoryId, RehabPropertyItem } from '@/lib/rehabilitation';
 import type { PropertyCategoryKey } from '@/lib/rehabilitation/property-schemas';
@@ -130,7 +130,12 @@ export function RehabPropertyTab({
           error('삭제 실패', { message: '재산 항목 삭제에 실패했습니다.' });
           return;
         }
-        undo('재산 항목 삭제됨', () => {}, { message: '보관함에서 복구할 수 있습니다.' });
+        undo('재산 항목 삭제됨', async () => {
+          const restoreResult = await restoreRehabProperty(id, caseId, organizationId);
+          if (restoreResult.ok) {
+            setItems((prev) => [...prev, item]);
+          }
+        }, { message: '8초 내 취소하면 복구됩니다.' });
       }
       setItems((prev) => prev.filter((i) => i.id !== id));
       setDeleteConfirm(null);

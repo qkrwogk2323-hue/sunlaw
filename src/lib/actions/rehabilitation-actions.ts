@@ -470,6 +470,58 @@ export async function restoreRehabFamilyMember(
   }
 }
 
+export async function restoreRehabCreditor(
+  creditorId: string,
+  caseId: string,
+  organizationId: string,
+) {
+  try {
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+      .from('rehabilitation_creditors')
+      .update({ lifecycle_status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', creditorId)
+      .eq('case_id', caseId);
+
+    if (error) return { ok: false, code: 'DB_ERROR', userMessage: '채권자 복구에 실패했습니다.' };
+
+    revalidatePath(`/cases/${caseId}/rehabilitation`);
+    return { ok: true };
+  } catch (e) {
+    console.error('[restoreRehabCreditor]', e);
+    return { ok: false, code: 'UNEXPECTED', userMessage: '채권자 복구 중 오류가 발생했습니다.' };
+  }
+}
+
+export async function restoreRehabProperty(
+  propertyId: string,
+  caseId: string,
+  organizationId: string,
+) {
+  try {
+    const access = await checkCaseActionAccess(caseId, { organizationId, insolvencySubtypePrefix: 'rehabilitation' });
+    if (!access.ok) return access;
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+      .from('rehabilitation_properties')
+      .update({ lifecycle_status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', propertyId)
+      .eq('case_id', caseId);
+
+    if (error) return { ok: false, code: 'DB_ERROR', userMessage: '재산 복구에 실패했습니다.' };
+
+    revalidatePath(`/cases/${caseId}/rehabilitation`);
+    return { ok: true };
+  } catch (e) {
+    console.error('[restoreRehabProperty]', e);
+    return { ok: false, code: 'UNEXPECTED', userMessage: '재산 복구 중 오류가 발생했습니다.' };
+  }
+}
+
 // ─── 소득 설정 ───
 
 /** 폼 → DB 필드 매핑 (소득 설정) */

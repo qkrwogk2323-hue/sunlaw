@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import {
   upsertRehabCreditor,
   softDeleteRehabCreditor,
+  restoreRehabCreditor,
   upsertRehabCreditorSettings,
   upsertRehabSecuredProperty,
 } from '@/lib/actions/rehabilitation-actions';
@@ -248,8 +249,13 @@ export function RehabCreditorsTab({
           error('삭제 실패', { message: '채권자 삭제 중 문제가 발생했습니다.' });
           return;
         }
-        undo(`${creditor.creditor_name || '채권자'} 삭제됨`, () => {}, {
-          message: '보관함에서 복구할 수 있습니다.',
+        undo(`${creditor.creditor_name || '채권자'} 삭제됨`, async () => {
+          const restoreResult = await restoreRehabCreditor(creditor.id, caseId, organizationId);
+          if (restoreResult.ok) {
+            setCreditors((prev) => [...prev, creditor]);
+          }
+        }, {
+          message: '8초 내 취소하면 복구됩니다.',
         });
       }
       setCreditors((prev) => prev.filter((_, i) => i !== index));
