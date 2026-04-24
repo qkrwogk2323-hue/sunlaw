@@ -24,6 +24,8 @@ type PropertyRow = {
   seizure: string;
   repay_use: string;
   is_protection: boolean;
+  has_lien: boolean;
+  lien_amount: number;
   isNew: boolean;
 };
 
@@ -48,6 +50,8 @@ export function RehabPropertyTab({
       seizure: (p.seizure as string) || '',
       repay_use: (p.repay_use as string) || '',
       is_protection: (p.is_protection as boolean) || false,
+      has_lien: (p.has_lien as boolean) || false,
+      lien_amount: (p.lien_amount as number) || 0,
       isNew: false,
     })),
   );
@@ -103,6 +107,8 @@ export function RehabPropertyTab({
         seizure: '',
         repay_use: '',
         is_protection: false,
+        has_lien: false,
+        lien_amount: 0,
         isNew: true,
       },
     ]);
@@ -113,12 +119,23 @@ export function RehabPropertyTab({
   }, []);
 
   const updateStructuredField = useCallback((id: string, subField: string, value: unknown) => {
+    // structured_detail → top-level 컬럼 자동 동기화
+    const AMOUNT_SYNC_FIELDS = new Set([
+      'market_value', 'estimated_value', 'balance', 'surrender_value',
+      'refundable_amount', 'net_amount', 'valuation', 'current_amount',
+    ]);
+
     setItems((prev) => prev.map((i) => {
       if (i.id !== id) return i;
       const updated = { ...i, structured_detail: { ...i.structured_detail, [subField]: value } };
-      // structured_detail → top-level 컬럼 자동 동기화
-      if (subField === 'market_value' || subField === 'estimated_value') {
+      if (AMOUNT_SYNC_FIELDS.has(subField)) {
         updated.amount = (typeof value === 'number' ? value : 0);
+      }
+      if (subField === 'lien_type') {
+        updated.has_lien = !!value;
+      }
+      if (subField === 'lien_amount') {
+        updated.lien_amount = (typeof value === 'number' ? value : 0);
       }
       return updated;
     }));
@@ -180,6 +197,8 @@ export function RehabPropertyTab({
           seizure: item.seizure,
           repay_use: item.repay_use,
           is_protection: item.is_protection,
+          has_lien: item.has_lien,
+          lien_amount: item.lien_amount,
         };
         const result = await upsertRehabProperty(caseId, organizationId, data, item.isNew ? undefined : item.id);
         if (!result.ok) {
