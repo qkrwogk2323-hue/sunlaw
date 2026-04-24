@@ -134,24 +134,30 @@ export function decidePeriodSetting(input: PeriodSettingInput): PeriodSettingRes
   let months: RepaymentPeriod = input.forcedMonths ?? baseMonths;
 
   // 청산가치 보장 post-step (축 B)
+  // forcedMonths가 있으면 사용자가 명시적으로 기간을 선택한 것이므로
+  // 자동 연장하지 않고 경고만 반환한다.
   let pv = presentValue(input.monthlyAvailable, months);
   if (pv < input.liquidationValue) {
-    notes.push(`청산가치(${input.liquidationValue}) 미충족 — 기간 연장 시도`);
-    for (const m of [48, 60] as const) {
-      if (m <= months) continue;
-      const p = presentValue(input.monthlyAvailable, m);
-      if (p >= input.liquidationValue) {
-        months = m;
-        pv = p;
-        notes.push(`→ ${m}개월에서 충족`);
-        break;
+    if (input.forcedMonths) {
+      // 사용자 선택 기간 유지, 경고만 추가
+      notes.push(`청산가치(${input.liquidationValue}) 미충족 — 변제기간 연장 또는 재산처분(D5111) 필요`);
+    } else {
+      notes.push(`청산가치(${input.liquidationValue}) 미충족 — 기간 연장 시도`);
+      for (const m of [48, 60] as const) {
+        if (m <= months) continue;
+        const p = presentValue(input.monthlyAvailable, m);
+        if (p >= input.liquidationValue) {
+          months = m;
+          pv = p;
+          notes.push(`→ ${m}개월에서 충족`);
+          break;
+        }
       }
-    }
-    if (pv < input.liquidationValue) {
-      // 60개월 강제 시도
-      const p60 = presentValue(input.monthlyAvailable, 60);
-      months = 60;
-      pv = p60;
+      if (pv < input.liquidationValue) {
+        const p60 = presentValue(input.monthlyAvailable, 60);
+        months = 60;
+        pv = p60;
+      }
     }
   }
 

@@ -1479,7 +1479,8 @@ function generateRepaymentPlan(data: DocumentData): string {
 
   // P1-1 호환: livingCostAdjusted 변수 (안내 배너용)
   const livingCostInput = Number(incomeSettings.living_cost) || 0;
-  const livingCostAdjusted = adjustLivingCost(livingCostInput, householdSize, incomeYear);
+  const userLivingCostRate = Number(incomeSettings.living_cost_rate) || 100;
+  const livingCostAdjusted = adjustLivingCost(livingCostInput, householdSize, incomeYear, userLivingCostRate);
 
   // 잔여 변수 (하위 코드 호환)
   const extraLivingCost = monthlyResult.livingCost.extraFamilyLowMoney;
