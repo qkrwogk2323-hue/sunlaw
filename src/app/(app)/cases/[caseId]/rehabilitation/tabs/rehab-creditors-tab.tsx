@@ -45,6 +45,7 @@ type CreditorForm = {
   bond_content: string;
   is_secured: boolean;
   secured_property_id: string;
+  secured_collateral_value: number;
   lien_priority: number;
   lien_type: string;
   max_claim_amount: number;
@@ -96,6 +97,7 @@ function initCreditor(c: Record<string, unknown>): CreditorForm {
     bond_content: (c.bond_content as string) || '',
     is_secured: (c.is_secured as boolean) || false,
     secured_property_id: (c.secured_property_id as string) || '',
+    secured_collateral_value: (c.secured_collateral_value as number) || 0,
     lien_priority: (c.lien_priority as number) || 0,
     lien_type: (c.lien_type as string) || '',
     max_claim_amount: (c.max_claim_amount as number) || 0,
@@ -882,6 +884,23 @@ export function RehabCreditorsTab({
                               className="w-full rounded border border-amber-300 px-2 py-1.5 text-sm"
                             />
                           </div>
+                          <div className="space-y-1">
+                            <label htmlFor={`cr-collval-${idx}`} className="text-xs font-medium text-amber-700">
+                              담보평가액 (원) <span className="text-red-500" aria-hidden="true">*</span>
+                            </label>
+                            <input
+                              id={`cr-collval-${idx}`}
+                              type="text"
+                              value={c.secured_collateral_value ? formatMoney(c.secured_collateral_value) : ''}
+                              onChange={(e) => updateCreditor(idx, 'secured_collateral_value', parseMoney(e.target.value))}
+                              className="w-full rounded border border-amber-300 px-2 py-1.5 text-sm text-right"
+                              placeholder="담보 환가 예상액"
+                              required
+                              aria-required="true"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mt-3">
                           <div className="space-y-1">
                             <label htmlFor={`cr-secprop-${idx}`} className="text-xs font-medium text-amber-700">담보물건 연결</label>
                             <select

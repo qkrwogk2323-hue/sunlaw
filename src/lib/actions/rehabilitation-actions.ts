@@ -203,7 +203,7 @@ export async function upsertRehabCreditor(
     const { id: _formId, bond_number: _bn, isNew: _isNew, expanded: _expanded, ...cleanData } = creditorData as Record<string, unknown> & { id?: string; bond_number?: number; isNew?: boolean; expanded?: boolean };
 
     // DB CHECK 제약조건 보호: is_secured=true이면 secured_collateral_value > 0 필수.
-    // UI(CreditorForm)에 secured_collateral_value 필드가 없어서 미전달 시 기본값 0 → 제약 위반.
+    // 담보평가액 미입력 시 CHECK 위반 방지용 폴백(1). 정상 흐름에서는 폼에서 입력됨.
     // 보증채무(bond_type='보증채무'/'연대보증')는 일반적으로 무담보이므로 is_secured=false 강제.
     const bondType = cleanData.bond_type as string | undefined;
     if (bondType === '보증채무' || bondType === '연대보증') {
