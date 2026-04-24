@@ -537,6 +537,7 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
   const mapped: Record<string, unknown> = {
     median_income_year: form.income_year ?? new Date().getFullYear(),
     net_salary: form.monthly_income ?? 0,
+    gross_salary: form.monthly_income ?? 0,
     living_cost: form.living_cost ?? 0,
     living_cost_rate: form.living_cost_rate ?? 100,
     child_support: form.child_support ?? 0,
@@ -560,6 +561,8 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
   if (form.liquidation_value !== undefined) mapped.liquidation_value = form.liquidation_value;
   if (form.income_breakdown !== undefined) mapped.income_breakdown = form.income_breakdown;
   if (form.expense_breakdown !== undefined) mapped.expense_breakdown = form.expense_breakdown;
+  if (form.trustee_name !== undefined) mapped.trustee_name = form.trustee_name;
+  if (form.trustee_account !== undefined) mapped.trustee_account = form.trustee_account;
   return mapped;
 }
 
@@ -574,6 +577,36 @@ export async function upsertRehabIncomeSettings(
 
     const supabase = await createSupabaseServerClient();
     const dbData = mapIncomeFormToDb(data);
+
+    // ── 채권자 집계 필드 계산 ──
+    const { data: creditors } = await supabase
+      .from('rehabilitation_creditors')
+      .select('capital, interest, is_secured')
+      .eq('case_id', caseId)
+      .neq('lifecycle_status', 'soft_deleted');
+
+    if (creditors && creditors.length > 0) {
+      let totalCapital = 0;
+      let totalInterest = 0;
+      let securedDebt = 0;
+
+      for (const c of creditors) {
+        const cap = Number(c.capital) || 0;
+        const int = Number(c.interest) || 0;
+        totalCapital += cap;
+        totalInterest += int;
+        if (c.is_secured) {
+          securedDebt += cap + int;
+        }
+      }
+
+      const totalDebt = totalCapital + totalInterest;
+      dbData.total_capital = totalCapital;
+      dbData.total_interest = totalInterest;
+      dbData.total_debt = totalDebt;
+      dbData.secured_debt = securedDebt;
+      dbData.unsecured_debt = totalDebt - securedDebt;
+    }
 
     const { data: existing } = await supabase
       .from('rehabilitation_income_settings')

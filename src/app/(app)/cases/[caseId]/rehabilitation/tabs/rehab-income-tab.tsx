@@ -49,6 +49,8 @@ export function RehabIncomeTab({
     child_support: (incomeSettings?.child_support as number) || 0,
     trustee_comm_rate: (incomeSettings?.trustee_comm_rate as number) || 0,
     dispose_amount: (incomeSettings?.dispose_amount as number) || 0,
+    trustee_name: (incomeSettings?.trustee_name as string) || '',
+    trustee_account: (incomeSettings?.trustee_account as string) || '',
   });
 
   // 추가생계비 항목별 (§3-3a: 주거비, 교육비, 의료비, 기타)
@@ -169,6 +171,9 @@ export function RehabIncomeTab({
         // 계산 결과 — 변제계획 탭에서 참조
         monthly_available: monthlyAvailable,
         liquidation_value: liquidationValue,
+        // 위원 정보
+        trustee_name: form.trustee_name || null,
+        trustee_account: form.trustee_account || null,
       });
       if (!result.ok) {
         error('저장 실패', { message: result.userMessage || '소득 설정 저장에 실패했습니다.' });
@@ -760,6 +765,35 @@ export function RehabIncomeTab({
           </div>
         </section>
       )}
+
+      {/* 위원 / 납부 정보 */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-base font-semibold text-slate-800">회생위원 · 납부 정보</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <label htmlFor="trustee_name" className="text-sm font-medium text-slate-700">개인회생위원명</label>
+            <input
+              id="trustee_name"
+              type="text"
+              value={form.trustee_name}
+              onChange={(e) => updateField('trustee_name', e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="법원사무관 또는 외부 위원명"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="trustee_account" className="text-sm font-medium text-slate-700">변제금 납부계좌</label>
+            <input
+              id="trustee_account"
+              type="text"
+              value={form.trustee_account}
+              onChange={(e) => updateField('trustee_account', e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="은행명 + 계좌번호"
+            />
+          </div>
+        </div>
+      </section>
 
       {/* 저장 */}
       <div className="flex justify-end">
