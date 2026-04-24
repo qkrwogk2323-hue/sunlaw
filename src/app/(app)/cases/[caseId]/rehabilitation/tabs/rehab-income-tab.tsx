@@ -166,6 +166,9 @@ export function RehabIncomeTab({
         dependent_count: dependentCount,
         income_breakdown: incomeBreakdown,
         expense_breakdown: expenseBreakdown,
+        // 계산 결과 — 변제계획 탭에서 참조
+        monthly_available: monthlyAvailable,
+        liquidation_value: liquidationValue,
       });
       if (!result.ok) {
         error('저장 실패', { message: result.userMessage || '소득 설정 저장에 실패했습니다.' });
@@ -175,7 +178,7 @@ export function RehabIncomeTab({
     } finally {
       setSaving(false);
     }
-  }, [form, livingCost, dependentCount, caseId, organizationId, success, error]);
+  }, [form, livingCost, dependentCount, monthlyAvailable, liquidationValue, caseId, organizationId, success, error]);
 
   // 참고표는 기준중위소득 60% (baseline60) 고정 — rate 적용 전 표준값
   const householdTable = useMemo(
