@@ -583,48 +583,48 @@ export async function upsertRehabIncomeSettings(
     const supabase = await createSupabaseServerClient();
     const dbData = mapIncomeFormToDb(data);
 
-    // ── 채권자 집계 필드 계산 ──
-    const { data: creditors } = await supabase
-      .from('rehabilitation_creditors')
-      .select('capital, interest, is_secured')
-      .eq('case_id', caseId)
-      .neq('lifecycle_status', 'soft_deleted');
+    // 소득 탭 vs 변제계획 탭 구분: 소득 탭은 monthly_income/living_cost를 보냄
+    const isFromIncomeTab = data.monthly_income !== undefined || data.living_cost !== undefined;
 
-    if (creditors && creditors.length > 0) {
-      let totalCapital = 0;
-      let totalInterest = 0;
-      let securedDebt = 0;
+    // ── 채권자 집계 + monthly_available + liquidation_value (소득 탭 저장 시만) ──
+    if (isFromIncomeTab) {
+      // 채권자 집계
+      const { data: creditors } = await supabase
+        .from('rehabilitation_creditors')
+        .select('capital, interest, is_secured')
+        .eq('case_id', caseId)
+        .neq('lifecycle_status', 'soft_deleted');
 
-      for (const c of creditors) {
-        const cap = Number(c.capital) || 0;
-        const int = Number(c.interest) || 0;
-        totalCapital += cap;
-        totalInterest += int;
-        if (c.is_secured) {
-          securedDebt += cap + int;
+      if (creditors && creditors.length > 0) {
+        let totalCapital = 0;
+        let totalInterest = 0;
+        let securedDebt = 0;
+        for (const c of creditors) {
+          const cap = Number(c.capital) || 0;
+          const int = Number(c.interest) || 0;
+          totalCapital += cap;
+          totalInterest += int;
+          if (c.is_secured) securedDebt += cap + int;
         }
+        const totalDebt = totalCapital + totalInterest;
+        dbData.total_capital = totalCapital;
+        dbData.total_interest = totalInterest;
+        dbData.total_debt = totalDebt;
+        dbData.secured_debt = securedDebt;
+        dbData.unsecured_debt = totalDebt - securedDebt;
       }
 
-      const totalDebt = totalCapital + totalInterest;
-      dbData.total_capital = totalCapital;
-      dbData.total_interest = totalInterest;
-      dbData.total_debt = totalDebt;
-      dbData.secured_debt = securedDebt;
-      dbData.unsecured_debt = totalDebt - securedDebt;
-    }
+      // monthly_available 서버 계산
+      const netSalary = Number(dbData.net_salary) || 0;
+      const livingCost = Number(dbData.living_cost) || 0;
+      const extraLivingCost = Number(dbData.extra_living_cost) || 0;
+      const childSupport = Number(dbData.child_support) || 0;
+      const trusteeRate = Number(dbData.trustee_comm_rate) || 0;
+      const rawAvailable = netSalary - livingCost - extraLivingCost - childSupport;
+      const trusteeDeduction = trusteeRate > 0 ? Math.round(rawAvailable * trusteeRate / 100) : 0;
+      dbData.monthly_available = rawAvailable - trusteeDeduction;
 
-    // ── monthly_available 서버 사이드 계산 (항상 서버 계산값 사용) ──
-    const netSalary = Number(dbData.net_salary) || 0;
-    const livingCost = Number(dbData.living_cost) || 0;
-    const extraLivingCost = Number(dbData.extra_living_cost) || 0;
-    const childSupport = Number(dbData.child_support) || 0;
-    const trusteeRate = Number(dbData.trustee_comm_rate) || 0;
-    const rawAvailable = netSalary - livingCost - extraLivingCost - childSupport;
-    const trusteeDeduction = trusteeRate > 0 ? Math.round(rawAvailable * trusteeRate / 100) : 0;
-    dbData.monthly_available = rawAvailable - trusteeDeduction;
-
-    // ── liquidation_value: 재산 테이블에서 청산가치 집계 (항상 최신 계산) ──
-    {
+      // liquidation_value 재산 집계
       const { data: properties } = await supabase
         .from('rehabilitation_properties')
         .select('amount, category, is_protection')
