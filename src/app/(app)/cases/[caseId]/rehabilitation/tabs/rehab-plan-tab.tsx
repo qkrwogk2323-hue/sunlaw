@@ -36,6 +36,7 @@ interface RehabPlanTabProps {
   familyMembers: Record<string, unknown>[];
   planSections: Record<string, unknown>[];
   applicationDate?: string | null;
+  repaymentStartDate?: string | null;
 }
 
 const PLAN_SECTION_LABELS = [
@@ -62,6 +63,7 @@ export function RehabPlanTab({
   familyMembers,
   planSections: rawPlanSections,
   applicationDate,
+  repaymentStartDate,
 }: RehabPlanTabProps) {
   const { success, error } = useToast();
   const [isSaving, startSaveTransition] = useTransition();
@@ -197,7 +199,7 @@ export function RehabPlanTab({
   const disposePeriod: 1 | 2 = (Number(incomeSettings?.dispose_period) || 1) <= 1 ? 1 : 2;
 
   // 변제개시일 기본값 제안: 개시신청일 + 90일
-  const currentStartDate = incomeSettings?.repayment_start_date as string | undefined;
+  const currentStartDate = repaymentStartDate || undefined;
   const suggestedStartDate = useMemo(() => {
     if (currentStartDate) return null; // 이미 설정됨
     if (!applicationDate) return null;
@@ -236,6 +238,7 @@ export function RehabPlanTab({
   const handleSavePlan = useCallback(() => {
     if (!repaymentResult) return;
     startSaveTransition(async () => {
+      const isLiqGuaranteed = repaymentResult.presentValue != null && repaymentResult.presentValue > liquidationValue;
       const result = await upsertRehabIncomeSettings(caseId, organizationId, {
         repay_period_option: repayOption,
         repay_months: repaymentResult.repayMonths,
@@ -244,6 +247,11 @@ export function RehabPlanTab({
         total_repay_amount: repaymentResult.totalRepayAmount,
         repay_rate: repaymentResult.repayRate,
         repay_type: repayType,
+        liquidation_guaranteed: isLiqGuaranteed,
+        period_setting: (() => {
+          const map: Record<string, number> = { capital60: 1, both60: 2, capital100_5y: 3, capital100_3y: 4, both36: 5, capital36: 6 };
+          return map[repayOption] ?? 6;
+        })(),
       });
       if (result.ok) {
         success('변제계획 저장 완료', { message: '문서 출력에 반영됩니다.' });
@@ -258,7 +266,7 @@ export function RehabPlanTab({
     if (!repaymentResult) return;
     const totalDebt = repaymentResult.totalDebt;
     const rateStr = repaymentResult.repayRate.toFixed(2);
-    const startDate = (incomeSettings?.repayment_start_date as string) || '변제개시일';
+    const startDate = repaymentStartDate || '변제개시일';
     const months = repaymentResult.repayMonths;
     const incomeTypeLabel = (incomeSettings?.income_type as string) === 'business' ? '영업' : '급여';
 

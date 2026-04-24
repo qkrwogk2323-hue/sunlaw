@@ -568,6 +568,8 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
   if (form.trustee_name !== undefined) mapped.trustee_name = form.trustee_name;
   if (form.trustee_account !== undefined) mapped.trustee_account = form.trustee_account;
   if (form.repay_type !== undefined) mapped.repay_type = form.repay_type;
+  if (form.liquidation_guaranteed !== undefined) mapped.liquidation_guaranteed = form.liquidation_guaranteed;
+  if (form.period_setting !== undefined) mapped.period_setting = form.period_setting;
   return mapped;
 }
 
@@ -1001,7 +1003,7 @@ export async function upsertRehabPlanSections(
       } else {
         const { error } = await supabase
           .from('rehabilitation_plan_sections')
-          .insert({ case_id: caseId, section_number: s.section_number, content: s.content });
+          .insert({ case_id: caseId, organization_id: organizationId, section_number: s.section_number, content: s.content });
         if (error) return { ok: false, code: 'DB_ERROR', userMessage: `제${s.section_number}항 생성에 실패했습니다.` };
       }
     }

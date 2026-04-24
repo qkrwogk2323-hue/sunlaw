@@ -161,6 +161,7 @@ export function RehabModuleClient({
             familyMembers={familyMembers}
             planSections={planSections}
             applicationDate={(application?.application_date as string) ?? null}
+            repaymentStartDate={(application?.repayment_start_date as string) ?? null}
           />
         )}
         {activeTab === 'documents' && (

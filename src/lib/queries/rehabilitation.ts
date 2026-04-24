@@ -60,12 +60,12 @@ function mapApplicationDbToForm(row: Record<string, unknown>) {
 
     // 소득/직업
     occupation: row.position || '',
-    employer_phone: row.phone_home || '',
+    employer_phone: row.employer_phone || '',
     employment_start_date: row.work_period || '',
 
     // 신청
     filing_date: row.application_date || '',
-    filing_purpose: '원금균등변제',
+    filing_purpose: row.filing_purpose || '원금균등변제',
   };
 }
 
