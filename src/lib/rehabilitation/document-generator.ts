@@ -2080,7 +2080,15 @@ function generateRepaymentPlan(data: DocumentData): string {
 /**
  * 문서 타입에 따라 해당 HTML 문서를 생성합니다.
  */
+const DRAFT_WATERMARK = `<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef3c7;border-bottom:2px solid #f59e0b;padding:4px 12px;text-align:center;font-size:11px;color:#92400e;print-color-adjust:exact;-webkit-print-color-adjust:exact;">⚠ 검증용 초안 — 법원 제출 전 반드시 수치·분류·문구를 검증된 출력물과 대조하세요</div>`;
+
 export function generateDocument(type: DocumentType, data: DocumentData): string {
+  const raw = generateDocumentRaw(type, data);
+  // 모든 문서에 초안 워터마크 삽입
+  return raw.includes('<body') ? raw.replace('<body', `${DRAFT_WATERMARK}<body`) : `${DRAFT_WATERMARK}${raw}`;
+}
+
+function generateDocumentRaw(type: DocumentType, data: DocumentData): string {
   switch (type) {
     case 'application':
       return generateApplication(data);

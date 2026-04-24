@@ -245,12 +245,15 @@ export function RehabDocumentsTab({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <p className="text-sm text-blue-700">
-          각 탭의 데이터를 바탕으로 법원 제출용 문서를 생성합니다.
-        </p>
-        <p className="mt-1 text-xs text-blue-600">
-          모든 탭의 입력이 완료된 후 문서를 출력해주세요.
+      <div className="rounded-lg border border-amber-400 bg-amber-50 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-block rounded bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">검증용 초안</span>
+          <p className="text-sm font-semibold text-amber-800">이 문서는 법원 제출용이 아닙니다</p>
+        </div>
+        <p className="text-xs text-amber-700">
+          채권자 분류, 변제계획 계산, 재산목록 직렬화 엔진이 검증 중입니다.
+          출력물의 숫자·분류·문구가 실제 법원 기준과 다를 수 있습니다.
+          반드시 COLAW 등 검증된 출력물과 대조한 후 사용하세요.
         </p>
       </div>
 
