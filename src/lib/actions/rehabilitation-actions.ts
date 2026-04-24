@@ -608,6 +608,44 @@ export async function upsertRehabIncomeSettings(
       dbData.unsecured_debt = totalDebt - securedDebt;
     }
 
+    // ── monthly_available 서버 사이드 계산 (클라이언트 미전송 시 폴백) ──
+    const netSalary = Number(dbData.net_salary) || 0;
+    const livingCost = Number(dbData.living_cost) || 0;
+    const extraLivingCost = Number(dbData.extra_living_cost) || 0;
+    const childSupport = Number(dbData.child_support) || 0;
+    const trusteeRate = Number(dbData.trustee_comm_rate) || 0;
+    const rawAvailable = netSalary - livingCost - extraLivingCost - childSupport;
+    const trusteeDeduction = trusteeRate > 0 ? Math.round(rawAvailable * trusteeRate / 100) : 0;
+    const serverMonthlyAvailable = rawAvailable - trusteeDeduction;
+    // 클라이언트 값이 없거나 0이면 서버 계산값 사용
+    if (!dbData.monthly_available || Number(dbData.monthly_available) === 0) {
+      dbData.monthly_available = serverMonthlyAvailable;
+    }
+
+    // ── liquidation_value: 재산 테이블에서 청산가치 집계 ──
+    if (!dbData.liquidation_value || Number(dbData.liquidation_value) === 0) {
+      const { data: properties } = await supabase
+        .from('rehabilitation_properties')
+        .select('amount, category, is_protection')
+        .eq('case_id', caseId)
+        .neq('lifecycle_status', 'soft_deleted');
+
+      if (properties && properties.length > 0) {
+        let liqTotal = 0;
+        for (const p of properties) {
+          const amt = Number(p.amount) || 0;
+          if (p.is_protection) continue; // 면제재산 제외
+          if (p.category === 'exempt_housing' || p.category === 'exempt_living') continue;
+          if (p.category === 'expected_retirement') {
+            liqTotal += Math.round(amt / 2); // 퇴직금 1/2만 반영
+          } else {
+            liqTotal += amt;
+          }
+        }
+        dbData.liquidation_value = liqTotal;
+      }
+    }
+
     const { data: existing } = await supabase
       .from('rehabilitation_income_settings')
       .select('id')
