@@ -213,6 +213,14 @@ export async function upsertRehabCreditor(
       cleanData.secured_collateral_value = 1;
     }
 
+    // uuid 컬럼에 빈 문자열 전송 방지 → null 변환
+    const uuidFields = ['secured_property_id', 'parent_creditor_id'] as const;
+    for (const f of uuidFields) {
+      if (f in cleanData && !cleanData[f]) {
+        cleanData[f] = null;
+      }
+    }
+
     if (creditorId) {
       const { error } = await supabase
         .from('rehabilitation_creditors')
