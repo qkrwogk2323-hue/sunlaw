@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast-provider';
 import {
   upsertRehabCreditor,
@@ -127,6 +128,7 @@ export function RehabCreditorsTab({
   securedProperties: initialSecuredProperties,
 }: RehabCreditorsTabProps) {
   const { success, error, undo } = useToast();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
 
@@ -143,10 +145,17 @@ export function RehabCreditorsTab({
   // 별제권 담보물건
   const [securedProperties] = useState(initialSecuredProperties);
 
-  // 채권자 목록
+  // 채권자 목록 — props 변경 시(router.refresh 후) 서버 데이터로 리셋
   const [creditors, setCreditors] = useState<CreditorForm[]>(
     initialCreditors.map((c) => initCreditor(c)),
   );
+  const prevInitialRef = useRef(initialCreditors);
+  useEffect(() => {
+    if (prevInitialRef.current !== initialCreditors) {
+      prevInitialRef.current = initialCreditors;
+      setCreditors(initialCreditors.map((c) => initCreditor(c)));
+    }
+  }, [initialCreditors]);
 
   // 보증인 검증: guarantor_name이 있는데 가지번호 자식이 없는 채권자 경고
   const guarantorWarnings = useMemo(() => {
@@ -386,10 +395,12 @@ export function RehabCreditorsTab({
       }
 
       success('저장 완료', { message: '채권자 목록이 저장되었습니다.' });
+      // 서버 데이터로 리셋 — 중복 insert 방지 (isNew 플래그 제거)
+      router.refresh();
     } finally {
       setSaving(false);
     }
-  }, [settings, creditors, caseId, organizationId, success, error, prepareForSave]);
+  }, [settings, creditors, caseId, organizationId, success, error, prepareForSave, router]);
 
   return (
     <div className="space-y-6">
