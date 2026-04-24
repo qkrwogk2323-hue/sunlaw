@@ -545,12 +545,10 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
     extra_living_cost: Array.isArray(form.additional_living_costs)
       ? (form.additional_living_costs as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
       : (form.extra_living_cost ?? 0),
-    ...(form.additional_living_costs !== undefined ? { additional_living_costs: form.additional_living_costs } : {}),
     // 처분재산: jsonb가 있으면 합산, 없으면 단일 필드
     dispose_amount: Array.isArray(form.dispose_items)
       ? (form.dispose_items as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
       : (form.dispose_amount ?? 0),
-    ...(form.dispose_items !== undefined ? { dispose_items: form.dispose_items } : {}),
   };
   // 변제계획 탭에서 저장하는 필드 (있을 때만 포함)
   if (form.repay_period_option !== undefined) mapped.repay_period_option = form.repay_period_option;
@@ -589,8 +587,11 @@ export async function upsertRehabIncomeSettings(
     } else {
       const { error } = await supabase
         .from('rehabilitation_income_settings')
-        .insert({ case_id: caseId, ...dbData });
-      if (error) return { ok: false, code: 'DB_ERROR', userMessage: '소득 설정 생성에 실패했습니다.' };
+        .insert({ case_id: caseId, organization_id: organizationId, ...dbData });
+      if (error) {
+        console.error('[upsertRehabIncomeSettings] insert error', error);
+        return { ok: false, code: 'DB_ERROR', userMessage: '소득 설정 생성에 실패했습니다.' };
+      }
     }
 
     revalidatePath(`/cases/${caseId}/rehabilitation`);
