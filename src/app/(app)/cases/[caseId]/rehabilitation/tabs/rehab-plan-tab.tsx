@@ -187,7 +187,9 @@ export function RehabPlanTab({
     (incomeSettings?.net_salary as number) ||
     (incomeSettings?.monthly_income as number) ||
     0;
-  const livingCost = getLivingCost(incomeYear, dependentCount);
+  // DB에 저장된 living_cost 사용 (소득 탭에서 rate 적용 후 계산된 값)
+  // 폴백: DB 값 없으면 기본 기준중위소득 60%
+  const livingCost = (incomeSettings?.living_cost as number) || getLivingCost(incomeYear, dependentCount);
   const extraLivingCost = (incomeSettings?.extra_living_cost as number) || 0;
   const childSupport = (incomeSettings?.child_support as number) || 0;
   const trusteeCommRate = (incomeSettings?.trustee_comm_rate as number) || 0;
