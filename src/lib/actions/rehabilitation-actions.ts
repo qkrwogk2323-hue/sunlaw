@@ -536,26 +536,31 @@ export async function restoreRehabProperty(
 
 /** 폼 → DB 필드 매핑 (소득 설정) */
 function mapIncomeFormToDb(form: Record<string, unknown>) {
-  const mapped: Record<string, unknown> = {
-    median_income_year: form.income_year ?? new Date().getFullYear(),
-    net_salary: form.monthly_income ?? 0,
-    gross_salary: form.monthly_income ?? 0,
-    living_cost: form.living_cost ?? 0,
-    living_cost_rate: form.living_cost_rate ?? 100,
-    child_support: form.child_support ?? 0,
-    trustee_comm_rate: form.trustee_comm_rate ?? 0,
-    // 추가생계비: jsonb가 있으면 합산 + 항목별 저장, 없으면 단일 필드
-    extra_living_cost: Array.isArray(form.additional_living_costs)
+  const mapped: Record<string, unknown> = {};
+
+  // ── 소득 탭 전용 필드: monthly_income이 있을 때만 포함 ──
+  // 변제계획 탭은 이 필드들을 보내지 않음. 포함하면 0으로 덮어쓰는 버그 발생.
+  if (form.monthly_income !== undefined) {
+    mapped.median_income_year = form.income_year ?? new Date().getFullYear();
+    mapped.net_salary = form.monthly_income ?? 0;
+    mapped.gross_salary = form.monthly_income ?? 0;
+    mapped.living_cost = form.living_cost ?? 0;
+    mapped.living_cost_rate = form.living_cost_rate ?? 100;
+    mapped.child_support = form.child_support ?? 0;
+    mapped.trustee_comm_rate = form.trustee_comm_rate ?? 0;
+    // 추가생계비: jsonb가 있으면 합산 + 항목별 저장
+    mapped.extra_living_cost = Array.isArray(form.additional_living_costs)
       ? (form.additional_living_costs as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
-      : (form.extra_living_cost ?? 0),
-    ...(Array.isArray(form.additional_living_costs) ? { additional_living_costs: form.additional_living_costs } : {}),
-    // 처분재산: jsonb가 있으면 합산 + 항목별 저장, 없으면 단일 필드
-    dispose_amount: Array.isArray(form.dispose_items)
+      : (form.extra_living_cost ?? 0);
+    if (Array.isArray(form.additional_living_costs)) mapped.additional_living_costs = form.additional_living_costs;
+    // 처분재산: jsonb가 있으면 합산 + 항목별 저장
+    mapped.dispose_amount = Array.isArray(form.dispose_items)
       ? (form.dispose_items as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
-      : (form.dispose_amount ?? 0),
-    ...(Array.isArray(form.dispose_items) ? { dispose_items: form.dispose_items } : {}),
-  };
-  // 변제계획 탭에서 저장하는 필드 (있을 때만 포함)
+      : (form.dispose_amount ?? 0);
+    if (Array.isArray(form.dispose_items)) mapped.dispose_items = form.dispose_items;
+  }
+
+  // ── 변제계획 탭에서도 저장하는 필드 (있을 때만 포함) ──
   if (form.repay_period_option !== undefined) mapped.repay_period_option = form.repay_period_option;
   if (form.repay_months !== undefined) mapped.repay_months = form.repay_months;
   if (form.monthly_available !== undefined) mapped.monthly_available = form.monthly_available;
