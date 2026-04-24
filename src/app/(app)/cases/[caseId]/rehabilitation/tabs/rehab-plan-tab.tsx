@@ -710,6 +710,10 @@ export function RehabPlanTab({
                   const multiplierLabel = disposePeriod <= 1 ? '1년이내, 승수 1.3' : '2년이내, 승수 1.5';
                   return disposal > 0 ? ` 변제투입예정액: ${formatMoney(disposal)}원 (${multiplierLabel})` : '';
                 })()}
+                <p className="mt-2 text-xs text-red-600">
+                  해결 방안: ① 변제기간을 48개월·60개월로 연장 (현재가치 증가) ② 생계비 비율을 낮춰 가용소득 증가
+                  ③ 재산처분형 변제(D5111)로 부족분을 재산에서 충당
+                </p>
               </div>
             ) : (
               <div className="mb-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700" role="alert">

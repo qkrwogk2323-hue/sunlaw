@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast-provider';
 import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
 import { minimumLivingCost, computeLivingCost, SUPPORTED_YEARS, calculateMonthlyAvailable, calculateLiquidationValue, formatMoney, parseMoney, computeAnnualAmount } from '@/lib/rehabilitation';
@@ -25,6 +26,7 @@ export function RehabIncomeTab({
   propertyDeductions: rawDeductions = [],
 }: RehabIncomeTabProps) {
   const { success, error } = useToast();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
 
   const dependentCount = familyMembers.filter((m) => m.is_dependent).length + 1;
@@ -180,6 +182,7 @@ export function RehabIncomeTab({
         return;
       }
       success('저장 완료', { message: '소득/생계비 설정이 저장되었습니다.' });
+      router.refresh();
     } finally {
       setSaving(false);
     }

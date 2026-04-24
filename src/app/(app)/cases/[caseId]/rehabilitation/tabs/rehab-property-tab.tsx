@@ -116,8 +116,8 @@ export function RehabPropertyTab({
     setItems((prev) => prev.map((i) => {
       if (i.id !== id) return i;
       const updated = { ...i, structured_detail: { ...i.structured_detail, [subField]: value } };
-      // market_value 변경 시 amount 자동 동기화
-      if (subField === 'market_value') {
+      // structured_detail → top-level 컬럼 자동 동기화
+      if (subField === 'market_value' || subField === 'estimated_value') {
         updated.amount = (typeof value === 'number' ? value : 0);
       }
       return updated;
