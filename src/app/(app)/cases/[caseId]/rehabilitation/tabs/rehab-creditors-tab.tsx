@@ -221,6 +221,23 @@ export function RehabCreditorsTab({
     ]);
   }, [creditors, settings.delay_interest_rate]);
 
+  const addGuarantorCreditor = useCallback((parentId: string) => {
+    const nextBondNumber = creditors.length > 0 ? Math.max(...creditors.map((c) => c.bond_number)) + 1 : 1;
+    setCreditors((prev) => [
+      ...prev,
+      {
+        ...initCreditor({}),
+        id: `new-${++_creditorSeq}`,
+        bond_number: nextBondNumber,
+        bond_type: '보증채무' as const,
+        parent_creditor_id: parentId,
+        delay_rate: settings.delay_interest_rate,
+        isNew: true,
+        expanded: true,
+      },
+    ]);
+  }, [creditors, settings.delay_interest_rate]);
+
   const addFromSearch = useCallback(
     (fi: { name: string; phone: string; classify: string }) => {
       const nextBondNumber = creditors.length > 0 ? Math.max(...creditors.map((c) => c.bond_number)) + 1 : 1;
@@ -610,6 +627,16 @@ export function RehabCreditorsTab({
                   >
                     {c.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </button>
+                  {c.bond_type === '주채무' && !c.isNew && (
+                    <button
+                      type="button"
+                      onClick={() => addGuarantorCreditor(c.id)}
+                      className="rounded px-1.5 py-0.5 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                      aria-label={`${c.creditor_name || '채권자'}의 보증채무 추가`}
+                    >
+                      +보증
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => requestDelete(idx)}
