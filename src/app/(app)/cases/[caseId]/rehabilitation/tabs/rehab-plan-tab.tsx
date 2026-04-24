@@ -238,8 +238,8 @@ export function RehabPlanTab({
   const handleSavePlan = useCallback(() => {
     if (!repaymentResult) return;
     startSaveTransition(async () => {
-      // 청산가치보장 "적용 여부": 현재가치 ≤ 청산가치이면 보장 메커니즘 발동
-      const isLiqGuaranteed = liquidationValue > 0 && (repaymentResult.presentValue == null || repaymentResult.presentValue <= liquidationValue);
+      // 청산가치보장 충족 여부: 현재가치 > 청산가치이면 자연 충족 (D5110)
+      const isLiqGuaranteed = repaymentResult.presentValue != null && repaymentResult.presentValue > liquidationValue;
       const result = await upsertRehabIncomeSettings(caseId, organizationId, {
         repay_period_option: repayOption,
         repay_months: repaymentResult.repayMonths,
