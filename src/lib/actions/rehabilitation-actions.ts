@@ -39,6 +39,7 @@ function mapApplicationFormToDb(form: Record<string, unknown>) {
     // 소득/직업
     income_type: form.income_type || null,
     employer_name: form.employer_name || null,
+    employer_phone: form.employer_phone || null,
     position: form.occupation || null,
     work_period: form.employment_start_date || null,
     has_extra_income: form.has_extra_income ?? false,
@@ -52,6 +53,7 @@ function mapApplicationFormToDb(form: Record<string, unknown>) {
     case_year: form.case_year || null,
     case_number: form.case_number || null,
     application_date: form.filing_date || null,
+    filing_purpose: form.filing_purpose || null,
     repayment_start_date: form.repayment_start_date || null,
     repayment_start_uncertain: form.repayment_start_uncertain ?? false,
     repayment_start_day: form.repayment_start_day || 0,
@@ -542,14 +544,16 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
     living_cost_rate: form.living_cost_rate ?? 100,
     child_support: form.child_support ?? 0,
     trustee_comm_rate: form.trustee_comm_rate ?? 0,
-    // 추가생계비: jsonb가 있으면 합산, 없으면 단일 필드
+    // 추가생계비: jsonb가 있으면 합산 + 항목별 저장, 없으면 단일 필드
     extra_living_cost: Array.isArray(form.additional_living_costs)
       ? (form.additional_living_costs as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
       : (form.extra_living_cost ?? 0),
-    // 처분재산: jsonb가 있으면 합산, 없으면 단일 필드
+    ...(Array.isArray(form.additional_living_costs) ? { additional_living_costs: form.additional_living_costs } : {}),
+    // 처분재산: jsonb가 있으면 합산 + 항목별 저장, 없으면 단일 필드
     dispose_amount: Array.isArray(form.dispose_items)
       ? (form.dispose_items as { amount: number }[]).reduce((s, i) => s + (i.amount || 0), 0)
       : (form.dispose_amount ?? 0),
+    ...(Array.isArray(form.dispose_items) ? { dispose_items: form.dispose_items } : {}),
   };
   // 변제계획 탭에서 저장하는 필드 (있을 때만 포함)
   if (form.repay_period_option !== undefined) mapped.repay_period_option = form.repay_period_option;
@@ -563,6 +567,7 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
   if (form.expense_breakdown !== undefined) mapped.expense_breakdown = form.expense_breakdown;
   if (form.trustee_name !== undefined) mapped.trustee_name = form.trustee_name;
   if (form.trustee_account !== undefined) mapped.trustee_account = form.trustee_account;
+  if (form.repay_type !== undefined) mapped.repay_type = form.repay_type;
   return mapped;
 }
 
@@ -693,7 +698,8 @@ function mapAffidavitFormToDb(form: Record<string, unknown>) {
     property_change: form.debt_increase_reason || null,
     income_change: form.repay_effort || null,
     living_situation: form.current_situation || null,
-    repay_feasibility: [form.future_plan, form.reflection].filter(Boolean).join('\n\n') || null,
+    repay_feasibility: (form.future_plan as string) || null,
+    reflection: (form.reflection as string) || null,
   };
 }
 

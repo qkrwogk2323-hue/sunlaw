@@ -69,7 +69,9 @@ export function RehabPlanTab({
   const initialOption = (incomeSettings?.repay_period_option as RepayPeriodOption) || 'capital36';
   const initialMonths = (incomeSettings?.repay_months as number) || 60;
   const [repayOption, setRepayOption] = useState<RepayPeriodOption>(initialOption);
-  const [repayType, setRepayType] = useState<RepayType>('sequential');
+  const [repayType, setRepayType] = useState<RepayType>(
+    ((incomeSettings?.repay_type as string) || 'sequential') as RepayType,
+  );
   const [formMode, setFormMode] = useState<'standard' | 'simple'>('standard');
 
   // 변제계획안 10항
@@ -112,16 +114,16 @@ export function RehabPlanTab({
         lienType: (c.lien_type as string) || '',
         maxClaimAmount: (c.max_claim_amount as number) || 0,
         hasPriorityRepay: (c.has_priority_repay as boolean) || false,
-        isUnsettled: false,
-        isAnnuityDebt: false,
-        applyRestructuring: false,
+        isUnsettled: (c.is_unsettled as boolean) || false,
+        isAnnuityDebt: (c.is_annuity_debt as boolean) || false,
+        applyRestructuring: (c.apply_restructuring as boolean) || false,
         attachments: [],
-        unsettledReason: '',
-        unsettledAmount: 0,
-        unsettledText: '',
-        guarantorName: '',
-        guarantorAmount: 0,
-        guarantorText: '',
+        unsettledReason: (c.unsettled_reason as string) || '',
+        unsettledAmount: (c.unsettled_amount as number) || 0,
+        unsettledText: (c.unsettled_text as string) || '',
+        guarantorName: (c.guarantor_name as string) || '',
+        guarantorAmount: (c.guarantor_amount as number) || 0,
+        guarantorText: (c.guarantor_text as string) || '',
       })),
     [rawCreditors],
   );
@@ -239,6 +241,7 @@ export function RehabPlanTab({
         monthly_repay: repaymentResult.monthlyRepay,
         total_repay_amount: repaymentResult.totalRepayAmount,
         repay_rate: repaymentResult.repayRate,
+        repay_type: repayType,
       });
       if (result.ok) {
         success('변제계획 저장 완료', { message: '문서 출력에 반영됩니다.' });
@@ -246,7 +249,7 @@ export function RehabPlanTab({
         error('저장 실패', { message: result.userMessage || '변제계획 저장에 실패했습니다.' });
       }
     });
-  }, [caseId, organizationId, repayOption, repaymentResult, success, error, startSaveTransition]);
+  }, [caseId, organizationId, repayOption, repayType, repaymentResult, success, error, startSaveTransition]);
 
   // 변제계획안 10항 자동채움
   const autoFillPlanSections = useCallback(() => {

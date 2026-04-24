@@ -90,7 +90,7 @@ function parseStructured(affidavit: Record<string, unknown> | null): AffidavitSt
     debt_increase_reason: (affidavit?.debt_increase_reason as string) || (affidavit?.property_change as string) || '',
     repay_effort: (structured.repay_effort as string) || '',
     current_situation: (affidavit?.current_situation as string) || (affidavit?.living_situation as string) || '',
-    future_plan: (affidavit?.future_plan as string) || '',
+    future_plan: (affidavit?.future_plan as string) || (affidavit?.repay_feasibility as string) || '',
     reflection: (affidavit?.reflection as string) || '',
   };
 }
