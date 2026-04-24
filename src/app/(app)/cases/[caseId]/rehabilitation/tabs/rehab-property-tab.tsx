@@ -113,9 +113,15 @@ export function RehabPropertyTab({
   }, []);
 
   const updateStructuredField = useCallback((id: string, subField: string, value: unknown) => {
-    setItems((prev) => prev.map((i) =>
-      i.id === id ? { ...i, structured_detail: { ...i.structured_detail, [subField]: value } } : i
-    ));
+    setItems((prev) => prev.map((i) => {
+      if (i.id !== id) return i;
+      const updated = { ...i, structured_detail: { ...i.structured_detail, [subField]: value } };
+      // market_value 변경 시 amount 자동 동기화
+      if (subField === 'market_value') {
+        updated.amount = (typeof value === 'number' ? value : 0);
+      }
+      return updated;
+    }));
   }, []);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; detail: string } | null>(null);
