@@ -17,6 +17,7 @@
  */
 
 import { calculateSecuredAllocations } from './secured-allocation';
+import { minimumLivingCost as _minimumLivingCost } from './median-income';
 import { calculateRepayment, getDebtSummary, determineFormType, calculateDisposalAmount } from './repayment-calculator';
 import { calculateLiquidationValue } from './property-valuation';
 import { computeMonthlyAvailable, type MonthlyAvailableResult } from './monthly-available';
@@ -216,15 +217,31 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
   const childSupport = Number(incomeSettings.child_support) || 0;
   const trusteeCommRate = Number(incomeSettings.trustee_comm_rate) || 0;
 
-  // DB에 저장된 living_cost를 직접 사용하여 월 가용소득 계산
-  // computeMonthlyAvailable은 householdSize/year/rate로 내부 계산하므로 여기서는 직접 산출
-  const monthlyAvailable = netSalary - livingCost - extraLivingCost - childSupport
-    - (trusteeCommRate > 0 ? Math.round((netSalary - livingCost - extraLivingCost - childSupport) * trusteeCommRate / 100) : 0);
+  // DB 저장된 living_cost(rate 적용 후)를 사용하여 월 가용소득 계산
+  const livingCostRate = Number(incomeSettings.living_cost_rate) || 100;
+  const incomeYear = Number(incomeSettings.median_income_year) || new Date().getFullYear();
+  const dependentCount = (input.familyMembers || []).filter((m) => m.is_dependent).length;
+  const householdSize = 1 + dependentCount;
+
+  // baseline60 = 기준중위소득 60% 원표값 (rate 미적용)
+  const baseline60 = _minimumLivingCost(householdSize, incomeYear);
+  // afterRate = baseline60 × rate/100 (사용자 적용 후)
+  const afterRate = livingCostRate === 100 ? baseline60 : Math.floor(baseline60 * livingCostRate / 100);
+
+  const rawAvailable = netSalary - livingCost - extraLivingCost - childSupport;
+  const trusteeDeduction = trusteeCommRate > 0 ? Math.round(rawAvailable * trusteeCommRate / 100) : 0;
+  const monthlyAvailable = rawAvailable - trusteeDeduction;
+
   const monthlyResult = {
     monthlyIncome: netSalary,
-    livingCost: { applied: livingCost, baseline60: livingCost, afterRate: livingCost, extraFamilyLowMoney: extraLivingCost },
+    livingCost: {
+      applied: livingCost,         // DB 저장값 (실제 사용되는 생계비)
+      baseline60,                  // 기준중위소득 60% 원표값 (rate 미적용)
+      afterRate,                   // baseline60 × rate/100
+      extraFamilyLowMoney: extraLivingCost,
+    },
     childSupport,
-    trusteeCommission: trusteeCommRate > 0 ? Math.round((netSalary - livingCost - extraLivingCost - childSupport) * trusteeCommRate / 100) : 0,
+    trusteeCommission: trusteeDeduction,
     monthlyAvailable,
   } as any;
 

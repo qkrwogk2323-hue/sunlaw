@@ -599,6 +599,14 @@ export async function upsertRehabIncomeSettings(
     const supabase = await createSupabaseServerClient();
     const dbData = mapIncomeFormToDb(data);
 
+    // ── 법률 게이트: 생계비 rate 검증 ──
+    if (data.living_cost_rate !== undefined) {
+      const rate = Number(data.living_cost_rate) || 100;
+      if (rate > 200) {
+        return { ok: false, code: 'VALIDATION', userMessage: '생계비 비율이 200%를 초과합니다. 법원 이례적 승인이 필요하므로 사유를 기재해 주세요.' };
+      }
+    }
+
     // 소득 탭 vs 변제계획 탭 구분: 소득 탭은 monthly_income/living_cost를 보냄
     const isFromIncomeTab = data.monthly_income !== undefined || data.living_cost !== undefined;
 
