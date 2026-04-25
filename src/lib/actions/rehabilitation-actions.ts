@@ -229,12 +229,17 @@ export async function upsertRehabCreditor(
       }
     }
 
-    // 담보 채권: secured_collateral_value > 0 필수
+    // 담보 채권: secured_collateral_value > 0 필수 + remaining_unsecured 자동 산출
     if (cleanData.is_secured) {
       const scv = Number(cleanData.secured_collateral_value) || 0;
       if (scv <= 0) {
         return { ok: false, code: 'VALIDATION', userMessage: '담보부 채권의 담보평가액을 입력하세요. 담보물건을 연결하거나 환가예상액(시가 × 환가비율)을 직접 입력하세요.' };
       }
+      // remaining_unsecured 자동 산출: 채권현재액 - 담보평가액 (부족액)
+      const totalClaim = (Number(cleanData.capital) || 0) + (Number(cleanData.interest) || 0);
+      cleanData.remaining_unsecured = Math.max(0, totalClaim - scv);
+    } else {
+      cleanData.remaining_unsecured = 0;
     }
 
     // uuid 컬럼에 빈 문자열 전송 방지 → null 변환
