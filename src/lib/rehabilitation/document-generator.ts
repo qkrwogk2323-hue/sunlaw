@@ -6,6 +6,7 @@ import { computeMonthlyAvailable } from './monthly-available';
 import { decideRepaymentPeriod, type RepaymentPeriod } from './repayment-period';
 import { decidePeriodSetting, type PeriodSetting } from './period-setting';
 import { buildAdjustedSchedule } from './rounding';
+import { buildCaseSnapshot as _buildSnapshot } from './case-snapshot';
 
 /**
  * 개인회생 법원 제출 문서 생성기
@@ -52,6 +53,8 @@ export interface DocumentData {
   incomeSettings: Record<string, any> | null;
   affidavit: Record<string, any> | null;
   planSections: Record<string, any>[];
+  /** 단일 스냅샷 — generateDocument 진입점에서 자동 생성 */
+  _snapshot?: import('./case-snapshot').CaseSnapshot;
 }
 
 // ─── 헬퍼 함수 ───
@@ -1085,9 +1088,9 @@ function generateCreditorList(data: DocumentData): string {
           <th style="width: 8%; text-align: center;">합계</th>
           <td style="width: 17%; text-align: right;">${formatAmount(summary.totalAmount)}</td>
           <td rowspan="3" style="width: 20%; text-align: center; font-weight: bold; vertical-align: middle;">담보부 회생<br/>채권액의 합계</td>
-          <td rowspan="3" style="width: 12%; text-align: right; vertical-align: middle;">${formatAmount(summary.securedTotal)}</td>
+          <td rowspan="3" style="width: 12%; text-align: right; vertical-align: middle;">${formatAmount(data._snapshot?.securedTotal ?? summary.securedTotal)}</td>
           <td rowspan="3" style="width: 15%; text-align: center; font-weight: bold; vertical-align: middle;">무담보 회생<br/>채권액의 합계</td>
-          <td rowspan="3" style="width: 13%; text-align: right; vertical-align: middle;">${formatAmount(summary.unsecuredTotal)}</td>
+          <td rowspan="3" style="width: 13%; text-align: right; vertical-align: middle;">${formatAmount(data._snapshot?.unsecuredTotal ?? summary.unsecuredTotal)}</td>
         </tr>
         <tr>
           <th style="text-align: center;">원금</th>
@@ -1595,38 +1598,15 @@ function generateRepaymentPlan(data: DocumentData): string {
     }
   }
 
-  // ── 변제계획 단일 원천 계산 ──
-  // 무담보 원금 분모 (담보 부족액 포함, 이자 제외) — 요약표·스케줄·변제율 공용
-  const unsecuredDenom = (data.creditors || []).reduce((sum: number, c: any) => {
-    const cap = Number(c.capital) || 0;
-    if (c.is_secured) {
-      const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
-      return sum + Math.max(0, cap - collateral);
-    }
-    return sum + cap;
-  }, 0);
-
-  // 청산가치 (재산 - 공제)
-  const liqValueCalc = (() => {
-    const ps = data.properties || [];
-    const ds = data.propertyDeductions || [];
-    const pv = ps.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
-    const dv = ds.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
-    return Math.max(0, pv - dv);
-  })();
-
-  // D5111 청산가치 보장 강제 재계산
-  const baseTotalRepay = Math.floor(availableIncome) * planDurationMonths;
+  // ── 변제계획 단일 원천: snapshot에서 읽기 (D1~D5 해소) ──
+  const snap = data._snapshot!;
+  const unsecuredDenom = snap.unsecuredCapital;
+  const liqValueCalc = snap.liquidationValue;
+  const isD5111 = snap.isD5111;
+  const effectiveMonthlyRepay = snap.effectiveMonthlyRepay;
+  const effectiveTotalRepay = snap.effectiveTotalRepay;
   const leibnizCoefMap: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
   const leibnizCoef = leibnizCoefMap[planDurationMonths];
-  const basePresentValue = leibnizCoef ? Math.floor(availableIncome * leibnizCoef) : baseTotalRepay;
-  const isD5111 = basePresentValue <= liqValueCalc && liqValueCalc > 0;
-
-  // 청산가치 미달 시 월 변제액 강제 상향
-  const effectiveMonthlyRepay = isD5111
-    ? Math.ceil(liqValueCalc / planDurationMonths)
-    : Math.floor(availableIncome);
-  const effectiveTotalRepay = effectiveMonthlyRepay * planDurationMonths;
 
   const totalDebt = unsecuredDenom; // 안분 기준은 무담보 원금
   let creditorTableRows = '';
@@ -2104,27 +2084,9 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     <h3>10. 기타사항</h3>
     ${(() => {
-      // §10 자동 생성: 사건 데이터에서 5종 조건을 판별해 법률 문구 자동 삽입.
-      // 사용자 수동 입력(planSections[10])도 병합.
-      const pvFor10 = (() => {
-        const lc: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
-        const c10 = lc[planDurationMonths];
-        return c10 ? Math.floor(availableIncome * c10) : Math.floor(availableIncome) * planDurationMonths;
-      })();
-      const formType10: 'D5110' | 'D5111' = pvFor10 <= liquidationValueComputed ? 'D5111' : 'D5110';
-      const disposePd10 = Number(incomeSettings.dispose_period) || 1;
-      const multiplier10 = disposePd10 <= 1 ? 1.3 : 1.5;
-
-      const autoClauses = buildSection10Clauses(
-        data.creditors || [],
-        formType10,
-        disposePd10,
-        multiplier10,
-      );
-
-      const etcSection = (data.planSections || []).find((s: any) => s.section_key === 'etc' || s.section_number === 10);
-      const userContent = etcSection?.content?.trim() || '';
-
+      // snapshot에서 clause 읽기 (단일 원천)
+      const autoClauses = snap.section10Clauses;
+      const userContent = snap.section10Addendum?.trim() || '';
       const hasContent = autoClauses.length > 0 || userContent;
 
       if (!hasContent) {
@@ -2133,7 +2095,7 @@ function generateRepaymentPlan(data: DocumentData): string {
 
       let html = `<p>[ 해당있음 ■ / 해당없음 □ ]</p>`;
       for (const clause of autoClauses) {
-        html += `\n    <p style="margin-left: 20px; margin-top: 10px;">${esc(clause.text)}</p>`;
+        html += `\n    <p style="margin-left: 20px; margin-top: 10px; white-space: pre-wrap;">${esc(clause.text)}</p>`;
       }
       if (userContent) {
         html += `\n    <p style="margin-left: 20px; margin-top: 10px;">${esc(userContent)}</p>`;
@@ -2153,8 +2115,20 @@ function generateRepaymentPlan(data: DocumentData): string {
 const DRAFT_WATERMARK = `<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef3c7;border-bottom:2px solid #f59e0b;padding:4px 12px;text-align:center;font-size:11px;color:#92400e;print-color-adjust:exact;-webkit-print-color-adjust:exact;">⚠ 검증용 초안 — 법원 제출 전 반드시 수치·분류·문구를 검증된 출력물과 대조하세요</div>`;
 
 export function generateDocument(type: DocumentType, data: DocumentData): string {
+  // 단일 스냅샷 생성 — 모든 하위 함수가 같은 계산 결과를 참조
+  if (!data._snapshot) {
+    data._snapshot = _buildSnapshot({
+      creditors: data.creditors || [],
+      securedProperties: data.securedProperties || [],
+      properties: data.properties || [],
+      propertyDeductions: data.propertyDeductions || [],
+      incomeSettings: data.incomeSettings || {},
+      application: data.application || {},
+      familyMembers: data.familyMembers || [],
+    });
+  }
+
   const raw = generateDocumentRaw(type, data);
-  // 모든 문서에 초안 워터마크 삽입
   return raw.includes('<body') ? raw.replace('<body', `${DRAFT_WATERMARK}<body`) : `${DRAFT_WATERMARK}${raw}`;
 }
 
@@ -2279,13 +2253,19 @@ function generateCoverPage(data: DocumentData): string {
  * 채권자목록 요약표
  */
 function generateCreditorSummary(data: DocumentData): string {
-  const creditors = data.creditors || [];
+  const snap = data._snapshot!;
   const fmt = (n: number) => n.toLocaleString('ko-KR');
 
-  const totalCapital = creditors.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
-  const totalInterest = creditors.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
-  const totalDebt = totalCapital + totalInterest;
+  const totalCapital = snap.totalCapital;
+  const totalInterest = snap.totalInterest;
+  const totalDebt = snap.totalDebt;
 
+  // snapshot에서 단일 원천 사용 — D1 해소
+  const securedTotal = snap.securedTotal;
+  const unsecuredTotal = snap.unsecuredTotal;
+
+  // 카테고리별 소계 (표시용)
+  const creditors = data.creditors || [];
   const secured = creditors.filter((c: Record<string, any>) => c.is_secured);
   const priority = creditors.filter((c: Record<string, any>) => c.has_priority_repay && !c.is_secured);
   const unsecured = creditors.filter((c: Record<string, any>) => !c.is_secured && !c.has_priority_repay);
@@ -2296,15 +2276,6 @@ function generateCreditorSummary(data: DocumentData): string {
   const priInterest = priority.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
   const unsCapital = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
   const unsInterest = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
-
-  // 담보부: 담보가치 회수분만, 부족액은 무담보에 편입
-  let securedTotal = 0;
-  for (const c of secured) {
-    const totalClaim = ((c.capital as number) || 0) + ((c.interest as number) || 0);
-    const collateral = Math.min(Number(c.secured_collateral_value) || 0, totalClaim);
-    securedTotal += collateral;
-  }
-  const unsecuredTotal = totalDebt - securedTotal;
 
   const content = `
 <h2 style="text-align:center;margin-bottom:20px">채 권 자 목 록 요 약 표</h2>
