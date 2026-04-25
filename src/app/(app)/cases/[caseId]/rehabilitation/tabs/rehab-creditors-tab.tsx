@@ -183,14 +183,22 @@ export function RehabCreditorsTab({
     return searchFinancialInstitution(searchKeyword);
   }, [searchKeyword]);
 
-  // 합계 (전체 기준 — creditorsSummary 사용, 현재 페이지가 아닌 전건)
+  // 합계 (전체 기준 — 담보부는 환가예상액 기반 분리, snapshot과 동일 계산)
   const totals = useMemo(() => {
     const all = creditorsSummary;
     const totalCapital = all.reduce((s, c) => s + ((c.capital as number) || 0), 0);
     const totalInterest = all.reduce((s, c) => s + ((c.interest as number) || 0), 0);
-    const securedDebt = all.filter((c) => c.is_secured).reduce((s, c) => s + ((c.capital as number) || 0) + ((c.interest as number) || 0), 0);
-    const unsecuredDebt = totalCapital + totalInterest - securedDebt;
-    return { totalCapital, totalInterest, totalDebt: totalCapital + totalInterest, securedDebt, unsecuredDebt, count: creditorsPagination.total };
+    const totalDebt = totalCapital + totalInterest;
+    // 담보부 = 담보가치 회수분만 (부족액은 무담보 편입)
+    let securedDebt = 0;
+    for (const c of all) {
+      if (!c.is_secured) continue;
+      const claim = ((c.capital as number) || 0) + ((c.interest as number) || 0);
+      const collateral = Math.min(Number(c.secured_collateral_value) || 0, claim);
+      securedDebt += collateral;
+    }
+    const unsecuredDebt = totalDebt - securedDebt;
+    return { totalCapital, totalInterest, totalDebt, securedDebt, unsecuredDebt, count: creditorsPagination.total };
   }, [creditorsSummary, creditorsPagination.total]);
 
   // D5106 출력 뷰용 담보/무담보 요약 (filter·reduce 반복 방지)
