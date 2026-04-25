@@ -216,14 +216,17 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
   const childSupport = Number(incomeSettings.child_support) || 0;
   const trusteeCommRate = Number(incomeSettings.trustee_comm_rate) || 0;
 
-  const monthlyResult = computeMonthlyAvailable({
+  // DB에 저장된 living_cost를 직접 사용하여 월 가용소득 계산
+  // computeMonthlyAvailable은 householdSize/year/rate로 내부 계산하므로 여기서는 직접 산출
+  const monthlyAvailable = netSalary - livingCost - extraLivingCost - childSupport
+    - (trusteeCommRate > 0 ? Math.round((netSalary - livingCost - extraLivingCost - childSupport) * trusteeCommRate / 100) : 0);
+  const monthlyResult = {
     monthlyIncome: netSalary,
-    livingCost,
-    extraLivingCost,
+    livingCost: { applied: livingCost, baseline60: livingCost, afterRate: livingCost, extraFamilyLowMoney: extraLivingCost },
     childSupport,
-    trusteeCommRate,
-  });
-  const monthlyAvailable = monthlyResult.monthlyAvailable;
+    trusteeCommission: trusteeCommRate > 0 ? Math.round((netSalary - livingCost - extraLivingCost - childSupport) * trusteeCommRate / 100) : 0,
+    monthlyAvailable,
+  } as any;
 
   // ── 4. 청산가치 (단일 계산 — D1 해소) ──
   const propertyItems: RehabPropertyItem[] = properties.map((p) => ({
