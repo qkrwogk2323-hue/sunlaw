@@ -575,6 +575,7 @@ function mapIncomeFormToDb(form: Record<string, unknown>) {
   if (form.repay_type !== undefined) mapped.repay_type = form.repay_type;
   if (form.liquidation_guaranteed !== undefined) mapped.liquidation_guaranteed = form.liquidation_guaranteed;
   if (form.period_setting !== undefined) mapped.period_setting = form.period_setting;
+  if (form.section10_manual_addendum !== undefined) mapped.section10_manual_addendum = form.section10_manual_addendum;
   return mapped;
 }
 

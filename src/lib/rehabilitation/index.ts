@@ -66,5 +66,9 @@ export type { PropertyCategoryKey } from './property-schemas';
 // D5103 수입/지출 스키마
 export { incomeBreakdownSchema, expenseBreakdownSchema, validateIncomeBreakdown, validateExpenseBreakdown, computeMonthlyAverageIncome, computeAdditionalExpenseRate, computeAnnualAmount } from './income-expense-schemas';
 
+// 변제계획안 제1~9항 자동 생성
+export { buildPlanCoreSections } from './plan-core-sections';
+export type { PlanSnapshot } from './plan-core-sections';
+
 // D5108/D5109/D5110 법원 서식 스키마
 export { d5108Schema, d5109Schema, d5110Schema, validateD5108, validateD5109, validateD5110 } from './court-form-schemas';

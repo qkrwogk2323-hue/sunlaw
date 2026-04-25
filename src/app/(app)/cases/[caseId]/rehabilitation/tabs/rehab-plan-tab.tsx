@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useTransition } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
-import { upsertRehabIncomeSettings, upsertRehabPlanSections } from '@/lib/actions/rehabilitation-actions';
+import { upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
 import {
   calculateRepayment,
   calculateSecuredAllocations,
@@ -15,7 +15,9 @@ import {
   calculateDisposalAmount,
   validateSecuredVsProperties,
   formatMoney,
+  buildPlanCoreSections,
 } from '@/lib/rehabilitation';
+import { buildSection10Clauses } from '@/lib/rehabilitation/rules/plan-section10-rules';
 import type {
   RehabCreditor,
   RehabSecuredProperty,
@@ -76,16 +78,10 @@ export function RehabPlanTab({
   );
   const [formMode, setFormMode] = useState<'standard' | 'simple'>('standard');
 
-  // 변제계획안 10항
-  const [planSections, setPlanSections] = useState<string[]>(() => {
-    const arr = Array(10).fill('');
-    for (const s of rawPlanSections) {
-      const num = (s.section_number as number) || 0;
-      if (num >= 1 && num <= 10) arr[num - 1] = (s.content as string) || '';
-    }
-    return arr;
-  });
-  const [savingSections, setSavingSections] = useState(false);
+  // 제10항 수동 추가사항만 편집 가능
+  const [section10Addendum, setSection10Addendum] = useState(
+    (incomeSettings?.section10_manual_addendum as string) || '',
+  );
 
   // 데이터 변환
   const creditors: RehabCreditor[] = useMemo(
@@ -253,6 +249,7 @@ export function RehabPlanTab({
           const map: Record<string, number> = { capital60: 1, both60: 2, capital100_5y: 3, capital100_3y: 4, both36: 5, capital36: 6 };
           return map[repayOption] ?? 6;
         })(),
+        section10_manual_addendum: section10Addendum || null,
       });
       if (result.ok) {
         success('변제계획 저장 완료', { message: '문서 출력에 반영됩니다.' });
@@ -260,85 +257,46 @@ export function RehabPlanTab({
         error('저장 실패', { message: result.userMessage || '변제계획 저장에 실패했습니다.' });
       }
     });
-  }, [caseId, organizationId, repayOption, repayType, repaymentResult, success, error, startSaveTransition]);
+  }, [caseId, organizationId, repayOption, repayType, repaymentResult, section10Addendum, success, error, startSaveTransition]);
 
-  // 변제계획안 10항 자동채움
-  const autoFillPlanSections = useCallback(() => {
-    if (!repaymentResult) return;
-    const totalDebt = repaymentResult.totalDebt;
-    const rateStr = repaymentResult.repayRate.toFixed(2);
-    const startDate = repaymentStartDate || '변제개시일';
-    const months = repaymentResult.repayMonths;
-    const incomeTypeLabel = (incomeSettings?.income_type as string) === 'business' ? '영업' : '급여';
+  // 변제계획안 제1~9항 자동 생성 (읽기전용, 계산 결과에서 도출)
+  const planCoreSections = useMemo(() => {
+    if (!repaymentResult) return null;
+    return buildPlanCoreSections({
+      repaymentStartDate: repaymentStartDate || '변제개시일',
+      repayMonths: repaymentResult.repayMonths,
+      monthlyIncome: monthlyIncome,
+      livingCost,
+      monthlyAvailable: repaymentResult.monthlyAvailable,
+      incomeType: ((incomeSettings?.income_type as string) === 'business' ? 'business' : 'salary'),
+      monthlyRepay: repaymentResult.monthlyRepay,
+      totalRepayAmount: repaymentResult.totalRepayAmount,
+      repayRate: repaymentResult.repayRate,
+      totalDebt: repaymentResult.totalDebt,
+      totalCapital: repaymentResult.totalCapital,
+      totalInterest: repaymentResult.totalInterest,
+      presentValue: repaymentResult.presentValue,
+      liquidationValue,
+      disposeAmount,
+      disposePeriod,
+      trusteeCommRate,
+      propertyItems: propertyItems.map((p) => ({
+        detail: p.detail || '',
+        category: p.category || '',
+        amount: p.amount || 0,
+        isProtection: p.isProtection || false,
+      })),
+    });
+  }, [repaymentResult, repaymentStartDate, monthlyIncome, livingCost, incomeSettings, liquidationValue, disposeAmount, disposePeriod, trusteeCommRate, propertyItems]);
 
-    // D5110 vs D5111 판별
-    const formType = determineFormType(repaymentResult.presentValue, liquidationValue);
-    const isD5111 = formType === 'D5111';
-
-    // 제5항: 변제자금의 조달방법
-    let section5: string;
-    if (isD5111) {
-      const disposal = calculateDisposalAmount(
-        liquidationValue,
-        repaymentResult.presentValue ?? 0,
-        disposePeriod,
-        trusteeCommRate > 0,
-      );
-      section5 = `변제자금은 신청인의 ${incomeTypeLabel}소득 및 재산처분에 의하여 조달한다.\n가용소득에 의한 변제: 매월 ${formatMoney(repaymentResult.monthlyRepay)}원\n재산처분 변제투입예정액: ${formatMoney(disposal)}원`;
-    } else {
-      section5 = `변제자금은 신청인의 ${incomeTypeLabel}소득으로 조달한다.${disposeAmount > 0 ? `\n처분할 재산의 변제투입예정액: ${formatMoney(disposeAmount)}원` : ''}`;
-    }
-
-    // 제9항: 처분할 재산의 처분방법
-    let section9: string;
-    if (isD5111) {
-      const disposableProps = propertyItems.filter((p) => !p.isProtection && p.amount > 0);
-      if (disposableProps.length > 0) {
-        const propList = disposableProps
-          .map((p) => `- ${p.detail || p.category}: ${formatMoney(p.amount)}원`)
-          .join('\n');
-        section9 = `다음 재산을 환가하여 변제에 투입하기로 한다.\n${propList}`;
-      } else {
-        section9 = '처분할 재산의 처분 대금은 변제기간 중 처분하여 일시변제에 투입하기로 한다.';
-      }
-    } else {
-      section9 = '해당 없음.';
-    }
-
-    const defaults = [
-      `변제계획안의 기간은 ${startDate}부터 ${months}개월로 한다.`,
-      `신청인은 매월 ${formatMoney(repaymentResult.monthlyRepay)}원을 개인회생위원에게 납부하고, 개인회생위원은 이를 각 채권자에게 그 채권액의 비율에 따라 안분 변제한다.`,
-      `총 채무액 ${formatMoney(totalDebt)}원 중 ${formatMoney(repaymentResult.totalRepayAmount)}원을 변제한다 (변제율 ${rateStr}%).\n원금 ${formatMoney(repaymentResult.totalCapital)}원, 이자 ${formatMoney(repaymentResult.totalInterest)}원.`,
-      `별첨 채권자별 변제계획표에 의한다.`,
-      section5,
-      `부인채권이 있는 경우 이를 환수하여 변제계획에 포함하기로 한다.`,
-      `변제계획에 따른 변제를 완료한 때에는 나머지 채무에 대하여 면책을 받기로 한다.`,
-      `특별조항 없음.`,
-      section9,
-      `기타 사항 없음.`,
-    ];
-
-    setPlanSections((prev) =>
-      prev.map((existing, i) => existing.trim() ? existing : defaults[i]),
-    );
-    success('자동채움 완료', { message: '빈 항목만 자동 입력되었습니다.' });
-  }, [repaymentResult, incomeSettings, disposeAmount, disposePeriod, liquidationValue, trusteeCommRate, propertyItems, success]);
-
-  // 변제계획안 10항 저장
-  const handleSaveSections = useCallback(async () => {
-    setSavingSections(true);
-    const sections = planSections.map((content, i) => ({
-      section_number: i + 1,
-      content,
-    }));
-    const result = await upsertRehabPlanSections(caseId, organizationId, sections);
-    if (result.ok) {
-      success('변제계획안 10항 저장 완료');
-    } else {
-      error('저장 실패', { message: result.userMessage || '저장에 실패했습니다.' });
-    }
-    setSavingSections(false);
-  }, [caseId, organizationId, planSections, success, error]);
+  // 제10항: buildSection10Clauses + manual addendum
+  const section10Clauses = useMemo(() => {
+    const rawCreds = rawCreditors.map((c) => ({ ...c }));
+    const formType = repaymentResult
+      ? determineFormType(repaymentResult.presentValue, liquidationValue)
+      : 'D5110' as const;
+    return buildSection10Clauses(rawCreds, formType, disposePeriod, disposePeriod <= 1 ? 1.3 : 1.5);
+  }, [rawCreditors, repaymentResult, liquidationValue, disposePeriod]);
 
   // capitalOnly: 원금만 변제하는 옵션인지 (이자 면책)
   const isCapitalOnly = ['capital36', 'capital60', 'capital100_3y', 'capital100_5y'].includes(repayOption);
@@ -867,49 +825,54 @@ export function RehabPlanTab({
         </div>
       )}
 
-      {/* 변제계획안 10항 편집 */}
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-800">변제계획안 10항</h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={autoFillPlanSections}
-              disabled={!repaymentResult}
-              className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors"
-              aria-label="자동채움"
-            >
-              자동채움
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveSections}
-              disabled={savingSections}
-              className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              aria-label="10항 저장"
-            >
-              {savingSections ? '저장 중...' : '10항 저장'}
-            </button>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {PLAN_SECTION_LABELS.map((label, i) => (
-            <div key={i} className="space-y-1">
-              <label htmlFor={`plan-section-${i}`} className="text-xs font-semibold text-slate-700">
-                {label}
+      {/* 변제계획안 미리보기 (제1~9항 자동 생성, 읽기전용) */}
+      {planCoreSections && (
+        <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-base font-semibold text-slate-800">변제계획안 (자동 생성)</h2>
+          <p className="mb-3 text-xs text-slate-500">
+            제1항~제9항은 입력 데이터에서 자동 생성됩니다. 채권자·재산·소득 데이터를 수정하면 자동 반영됩니다.
+          </p>
+          <div className="space-y-3">
+            {PLAN_SECTION_LABELS.slice(0, 9).map((label, i) => (
+              <div key={i} className="space-y-1">
+                <p className="text-xs font-semibold text-slate-700">{label}</p>
+                <div className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap">
+                  {planCoreSections[i] || '—'}
+                </div>
+              </div>
+            ))}
+
+            {/* 제10항: 자동 clause + 수동 추가사항 */}
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-700">제10항 기타사항</p>
+              {section10Clauses.length > 0 ? (
+                <div className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700 space-y-2">
+                  {section10Clauses.map((clause) => (
+                    <div key={clause.id} className="whitespace-pre-wrap">
+                      {clause.text}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+                  해당 없음
+                </div>
+              )}
+              <label htmlFor="section10-addendum" className="text-xs font-medium text-slate-600 mt-2 block">
+                추가 기재사항 (선택)
               </label>
               <textarea
-                id={`plan-section-${i}`}
-                rows={3}
-                value={planSections[i]}
-                onChange={(e) => setPlanSections((prev) => prev.map((v, j) => j === i ? e.target.value : v))}
+                id="section10-addendum"
+                rows={2}
+                value={section10Addendum}
+                onChange={(e) => setSection10Addendum(e.target.value)}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder={`${label} 내용을 입력하세요`}
+                placeholder="법원 제출 시 추가로 기재할 사항이 있으면 입력하세요"
               />
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* 별제권 배분 결과 */}
       {securedResults.length > 0 && (
