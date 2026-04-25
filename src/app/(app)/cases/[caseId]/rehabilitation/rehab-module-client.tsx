@@ -20,8 +20,7 @@ const TABS = [
   { key: 'property', label: '재산' },
   { key: 'income', label: '소득/생계비' },
   { key: 'affidavit', label: '진술서' },
-  { key: 'plan', label: '변제계획' },
-  { key: 'documents', label: '출력/문서' },
+  { key: 'documents', label: '미리보기/출력' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -149,26 +148,18 @@ export function RehabModuleClient({
             affidavit={affidavit}
           />
         )}
-        {activeTab === 'plan' && (
-          <RehabPlanTab
-            caseId={caseId}
-            organizationId={organizationId}
-            creditors={creditors}
-            securedProperties={securedProperties}
-            properties={properties}
-            propertyDeductions={propertyDeductions}
-            incomeSettings={incomeSettings}
-            familyMembers={familyMembers}
-            planSections={planSections}
-            applicationDate={(application?.application_date as string) ?? null}
-            repaymentStartDate={(application?.repayment_start_date as string) ?? null}
-          />
-        )}
         {activeTab === 'documents' && (
           <RehabDocumentsTab
             caseId={caseId}
             organizationId={organizationId}
             hubDocuments={hubDocuments}
+            creditors={creditors}
+            securedProperties={securedProperties}
+            properties={properties}
+            propertyDeductions={propertyDeductions}
+            incomeSettings={incomeSettings}
+            application={application}
+            familyMembers={familyMembers}
           />
         )}
       </div>

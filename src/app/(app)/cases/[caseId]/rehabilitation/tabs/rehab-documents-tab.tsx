@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import { FileText, Download, Printer, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { FileText, Download, Printer, Loader2, X, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useToast } from '@/components/ui/toast-provider';
 import { PrintFrame } from '@/components/ui/print-frame';
 import { CaseHubDocumentTimeline } from '@/components/case-hub-document-timeline';
-import { generateRehabDocument, upsertProhibitionOrder } from '@/lib/actions/rehabilitation-actions';
+import { generateRehabDocument, upsertProhibitionOrder, upsertRehabIncomeSettings } from '@/lib/actions/rehabilitation-actions';
 import { getGeneratedDocumentDownloadUrl } from '@/lib/actions/document-download-actions';
 import type { DocumentType } from '@/lib/rehabilitation/document-generator';
 import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
+import { buildCaseSnapshot, formatMoney } from '@/lib/rehabilitation';
 
 interface ProhibitionOrderForm {
   court_name: string;
@@ -61,8 +62,15 @@ interface RehabDocumentsTabProps {
   caseId: string;
   organizationId: string;
   prohibitionOrder?: Record<string, unknown> | null;
-  /** case-hub-projection.documents — 이미 등록된 문서 타임라인 (생성·계약서 통합). */
   hubDocuments?: CaseHubDocuments | null;
+  // snapshot 데이터 (미리보기용)
+  creditors?: Record<string, unknown>[];
+  securedProperties?: Record<string, unknown>[];
+  properties?: Record<string, unknown>[];
+  propertyDeductions?: Record<string, unknown>[];
+  incomeSettings?: Record<string, unknown> | null;
+  application?: Record<string, unknown> | null;
+  familyMembers?: Record<string, unknown>[];
 }
 
 const DOCUMENT_TYPES: {
@@ -103,10 +111,33 @@ export function RehabDocumentsTab({
   organizationId,
   prohibitionOrder,
   hubDocuments,
+  creditors: rawCreditors,
+  securedProperties: rawSecuredProps,
+  properties: rawProperties,
+  propertyDeductions: rawDeductions,
+  incomeSettings,
+  application,
+  familyMembers,
 }: RehabDocumentsTabProps) {
   const { success: toastSuccess, error: toastError } = useToast();
   const [loadingDoc, setLoadingDoc] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+
+  // 단일 snapshot — 변제계획 요약, 문서 생성의 유일한 원천
+  const snapshot = useMemo(() => {
+    if (!rawCreditors?.length && !incomeSettings) return null;
+    try {
+      return buildCaseSnapshot({
+        creditors: (rawCreditors || []) as Record<string, any>[],
+        securedProperties: (rawSecuredProps || []) as Record<string, any>[],
+        properties: (rawProperties || []) as Record<string, any>[],
+        propertyDeductions: (rawDeductions || []) as Record<string, any>[],
+        incomeSettings: (incomeSettings || {}) as Record<string, any>,
+        application: (application || {}) as Record<string, any>,
+        familyMembers: (familyMembers || []) as Record<string, any>[],
+      });
+    } catch { return null; }
+  }, [rawCreditors, rawSecuredProps, rawProperties, rawDeductions, incomeSettings, application, familyMembers]);
 
   // 부속서류 포함 옵션
   const [attachmentOptions, setAttachmentOptions] = useState({
@@ -256,6 +287,58 @@ export function RehabDocumentsTab({
           반드시 COLAW 등 검증된 출력물과 대조한 후 사용하세요.
         </p>
       </div>
+
+      {/* 변제계획 요약 (snapshot 단일 원천) */}
+      {snapshot && (
+        <section className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Settings className="h-4 w-4 text-blue-600" />
+            <h2 className="text-sm font-semibold text-blue-800">변제계획 요약</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 text-sm">
+            <div>
+              <p className="text-xs text-blue-600">총 채무액</p>
+              <p className="font-semibold text-blue-900">{formatMoney(snapshot.totalDebt)}원</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">담보부 / 무담보</p>
+              <p className="font-semibold text-blue-900">{formatMoney(snapshot.securedTotal)} / {formatMoney(snapshot.unsecuredTotal)}원</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">월 변제액</p>
+              <p className="font-semibold text-blue-900">{formatMoney(snapshot.effectiveMonthlyRepay)}원</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">총 변제예정액</p>
+              <p className="font-semibold text-blue-900">{formatMoney(snapshot.effectiveTotalRepay)}원</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">변제율</p>
+              <p className="font-semibold text-blue-900">{snapshot.repayRate}%</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">변제기간</p>
+              <p className="font-semibold text-blue-900">{snapshot.repayMonths}개월 ({snapshot.repayStartDate || '미설정'} ~ {snapshot.repayEndDate || '미설정'})</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">청산가치</p>
+              <p className="font-semibold text-blue-900">{formatMoney(snapshot.liquidationValue)}원</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-600">양식</p>
+              <p className={`font-semibold ${snapshot.isD5111 ? 'text-red-700' : 'text-green-700'}`}>
+                {snapshot.isD5111 ? 'D5111 (재산처분 병행)' : 'D5110 (가용소득만)'}
+              </p>
+            </div>
+          </div>
+          {snapshot.isD5111 && (
+            <p className="mt-2 text-xs text-red-600">
+              청산가치보장 원칙에 따라 월 변제액이 상향 조정되었습니다.
+              해결 방안: ① 변제기간 연장 ② 생계비 비율 조정 ③ 재산처분형 변제
+            </p>
+          )}
+        </section>
+      )}
 
       {/* 이미 등록된 문서 타임라인 (case-hub-projection 단일 원천). */}
       {hubDocuments ? (
