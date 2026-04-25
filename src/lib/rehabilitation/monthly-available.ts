@@ -28,6 +28,12 @@ export interface MonthlyAvailableInput {
   childSupport?: number;
   /** 회생위원 보수율, % 단위 */
   trusteeCommissionRate?: number;
+  /**
+   * DB에 저장된 생계비 직접 사용.
+   * 설정 시 householdSize/year/livingCostRate 기반 내부 계산을 건너뛰고
+   * 이 값을 applied 생계비로 사용합니다.
+   */
+  livingCostOverride?: number;
 }
 
 export interface MonthlyAvailableResult {
@@ -40,12 +46,24 @@ export interface MonthlyAvailableResult {
 }
 
 export function computeMonthlyAvailable(input: MonthlyAvailableInput): MonthlyAvailableResult {
-  const livingCost = computeLivingCost({
-    householdSize: input.householdSize,
-    year: input.year,
-    rate: input.livingCostRate,
-    extraFamilyLowMoney: input.extraFamilyLowMoney,
-  });
+  // livingCostOverride가 있으면 DB 저장값을 직접 사용 (snapshot용)
+  const livingCost: LivingCostResult = input.livingCostOverride != null
+    ? (() => {
+        // 기준값은 정식 계산, applied만 override
+        const base = computeLivingCost({
+          householdSize: input.householdSize,
+          year: input.year,
+          rate: input.livingCostRate,
+          extraFamilyLowMoney: input.extraFamilyLowMoney,
+        });
+        return { ...base, applied: input.livingCostOverride };
+      })()
+    : computeLivingCost({
+        householdSize: input.householdSize,
+        year: input.year,
+        rate: input.livingCostRate,
+        extraFamilyLowMoney: input.extraFamilyLowMoney,
+      });
 
   const childSupport = Math.max(0, Math.round(input.childSupport ?? 0));
   const commissionRate = input.trusteeCommissionRate ?? 0;

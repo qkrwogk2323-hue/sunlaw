@@ -17,7 +17,6 @@
  */
 
 import { calculateSecuredAllocations } from './secured-allocation';
-import { minimumLivingCost as _minimumLivingCost } from './median-income';
 import { calculateRepayment, getDebtSummary, determineFormType, calculateDisposalAmount } from './repayment-calculator';
 import { calculateLiquidationValue } from './property-valuation';
 import { computeMonthlyAvailable, type MonthlyAvailableResult } from './monthly-available';
@@ -221,33 +220,24 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
   const childSupport = Number(incomeSettings.child_support) || 0;
   const trusteeCommRate = Number(incomeSettings.trustee_comm_rate) || 0;
 
-  // DB 저장된 living_cost(rate 적용 후)를 사용하여 월 가용소득 계산
+  // 정식 computeMonthlyAvailable 호출 — as any 제거
   const livingCostRate = Number(incomeSettings.living_cost_rate) || 100;
   const incomeYear = Number(incomeSettings.median_income_year) || new Date().getFullYear();
   const dependentCount = (input.familyMembers || []).filter((m) => m.is_dependent).length;
   const householdSize = 1 + dependentCount;
 
-  // baseline60 = 기준중위소득 60% 원표값 (rate 미적용)
-  const baseline60 = _minimumLivingCost(householdSize, incomeYear);
-  // afterRate = baseline60 × rate/100 (사용자 적용 후)
-  const afterRate = livingCostRate === 100 ? baseline60 : Math.floor(baseline60 * livingCostRate / 100);
-
-  const rawAvailable = netSalary - livingCost - extraLivingCost - childSupport;
-  const trusteeDeduction = trusteeCommRate > 0 ? Math.round(rawAvailable * trusteeCommRate / 100) : 0;
-  const monthlyAvailable = rawAvailable - trusteeDeduction;
-
-  const monthlyResult = {
+  const monthlyResult = computeMonthlyAvailable({
     monthlyIncome: netSalary,
-    livingCost: {
-      applied: livingCost,         // DB 저장값 (실제 사용되는 생계비)
-      baseline60,                  // 기준중위소득 60% 원표값 (rate 미적용)
-      afterRate,                   // baseline60 × rate/100
-      extraFamilyLowMoney: extraLivingCost,
-    },
+    householdSize,
+    year: incomeYear,
+    livingCostRate,
+    extraFamilyLowMoney: extraLivingCost,
     childSupport,
-    trusteeCommission: trusteeDeduction,
-    monthlyAvailable,
-  } as any;
+    trusteeCommissionRate: trusteeCommRate,
+    // DB에 저장된 생계비를 직접 사용 (snapshot ↔ 소득탭 일관성 보장)
+    livingCostOverride: livingCost > 0 ? livingCost : undefined,
+  });
+  const monthlyAvailable = monthlyResult.monthlyAvailable;
 
   // ── 4. 청산가치 (단일 계산 — D1 해소) ──
   const propertyItems: RehabPropertyItem[] = properties.map((p) => ({

@@ -215,11 +215,25 @@ export async function upsertRehabCreditor(
       }
     }
 
-    // 담보 채권: secured_collateral_value > 0 필수 (폴백 1원 제거 → 저장 차단)
+    // 담보 채권: secured_property_id 연결 시 환가예상액 자동 계산
+    if (cleanData.is_secured && cleanData.secured_property_id) {
+      const { data: secProp } = await supabase
+        .from('rehabilitation_secured_properties')
+        .select('market_value, valuation_rate')
+        .eq('id', cleanData.secured_property_id as string)
+        .maybeSingle();
+      if (secProp) {
+        const mv = Number(secProp.market_value) || 0;
+        const vr = Number(secProp.valuation_rate) || 70;
+        cleanData.secured_collateral_value = Math.round(mv * vr / 100);
+      }
+    }
+
+    // 담보 채권: secured_collateral_value > 0 필수
     if (cleanData.is_secured) {
       const scv = Number(cleanData.secured_collateral_value) || 0;
       if (scv <= 0) {
-        return { ok: false, code: 'VALIDATION', userMessage: '담보부 채권의 담보평가액을 입력하세요. (환가예상액 = 시가 × 환가비율)' };
+        return { ok: false, code: 'VALIDATION', userMessage: '담보부 채권의 담보평가액을 입력하세요. 담보물건을 연결하거나 환가예상액(시가 × 환가비율)을 직접 입력하세요.' };
       }
     }
 
