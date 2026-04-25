@@ -204,15 +204,23 @@ export async function upsertRehabCreditor(
     // 클라이언트 전용 필드 및 무효 id 제거
     const { id: _formId, bond_number: _bn, isNew: _isNew, expanded: _expanded, ...cleanData } = creditorData as Record<string, unknown> & { id?: string; bond_number?: number; isNew?: boolean; expanded?: boolean };
 
-    // DB CHECK 제약조건 보호: is_secured=true이면 secured_collateral_value > 0 필수.
-    // 담보평가액 미입력 시 CHECK 위반 방지용 폴백(1). 정상 흐름에서는 폼에서 입력됨.
-    // 보증채무(bond_type='보증채무'/'연대보증')는 일반적으로 무담보이므로 is_secured=false 강제.
+    // ── 법률 게이트: 저장 전 필수 조건 검증 ──
     const bondType = cleanData.bond_type as string | undefined;
+
+    // 보증채무는 무담보 강제 + parent_creditor_id 필수
     if (bondType === '보증채무' || bondType === '연대보증') {
       cleanData.is_secured = false;
+      if (!cleanData.parent_creditor_id) {
+        return { ok: false, code: 'VALIDATION', userMessage: '보증채무는 주채무자를 연결해야 합니다.' };
+      }
     }
-    if (cleanData.is_secured && !Number(cleanData.secured_collateral_value)) {
-      cleanData.secured_collateral_value = 1;
+
+    // 담보 채권: secured_collateral_value > 0 필수 (폴백 1원 제거 → 저장 차단)
+    if (cleanData.is_secured) {
+      const scv = Number(cleanData.secured_collateral_value) || 0;
+      if (scv <= 0) {
+        return { ok: false, code: 'VALIDATION', userMessage: '담보부 채권의 담보평가액을 입력하세요. (환가예상액 = 시가 × 환가비율)' };
+      }
     }
 
     // uuid 컬럼에 빈 문자열 전송 방지 → null 변환
@@ -862,6 +870,31 @@ export async function generateRehabDocument(
       affidavit: moduleData.affidavit as Record<string, any> | null,
       planSections: (moduleData.planSections ?? []) as Record<string, any>[],
     };
+
+    // ── 법률 게이트: 문서 생성 전 필수 입력 검증 ──
+    const planDocs = new Set(['repayment_plan', 'creditor_list', 'creditor_summary', 'income_statement']);
+    if (planDocs.has(documentType)) {
+      const income = docData.incomeSettings;
+      if (!income || !Number(income.net_salary)) {
+        return { ok: false, code: 'VALIDATION', userMessage: '월 소득을 먼저 입력하세요. (소득/생계비 탭)' };
+      }
+      // 담보 채권이 있는데 담보평가액이 기본값(1원)이면 차단
+      const securedWithoutValue = (docData.creditors || []).filter(
+        (c: any) => c.is_secured && (Number(c.secured_collateral_value) || 0) <= 1
+      );
+      if (securedWithoutValue.length > 0) {
+        const names = securedWithoutValue.map((c: any) => c.creditor_name || '?').join(', ');
+        return { ok: false, code: 'VALIDATION', userMessage: `담보부 채권(${names})의 담보평가액을 입력하세요.` };
+      }
+      // 보증채무가 있는데 parent_creditor_id 없으면 차단
+      const orphanGuarantor = (docData.creditors || []).filter(
+        (c: any) => (c.bond_type === '보증채무' || c.bond_type === '연대보증') && !c.parent_creditor_id
+      );
+      if (orphanGuarantor.length > 0) {
+        const names = orphanGuarantor.map((c: any) => c.creditor_name || '?').join(', ');
+        return { ok: false, code: 'VALIDATION', userMessage: `보증채무(${names})의 주채무자를 연결하세요.` };
+      }
+    }
 
     const html = generateDocument(documentType, docData);
 
