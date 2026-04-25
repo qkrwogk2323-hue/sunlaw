@@ -154,7 +154,7 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
       lienPriority: Number(c.lien_priority) || 1,
       lienType: c.lien_type || '',
       securedPropertyId: c.secured_property_id || null,
-    })),
+    } as any)),
   );
 
   // 별제권 attachment rows 구축
