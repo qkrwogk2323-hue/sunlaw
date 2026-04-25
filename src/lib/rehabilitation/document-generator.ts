@@ -883,11 +883,13 @@ function generateStayOrder(data: DocumentData): string {
 function generateSecuredCreditorTable(
   creditors: Record<string, any>[],
   securedProperties: Record<string, any>[],
-  assessmentDate: string
+  assessmentDate: string,
+  snapshot?: import('./case-snapshot').CaseSnapshot,
 ): string {
+  // snapshot이 있으면 snapshot의 securedAttachment 사용 (단일 원천)
+  const attachment = snapshot?.securedAttachment ?? [];
   const securedCreditors = creditors.filter((c: any) => c.is_secured);
 
-  // 담보물건 ID → 담보물건 정보 맵
   const propertyMap = new Map<string, any>();
   (securedProperties || []).forEach((p: any) => {
     if (p.id) propertyMap.set(p.id, p);
@@ -901,19 +903,8 @@ function generateSecuredCreditorTable(
   let lienDetailsRows = '';
 
   if (securedCreditors.length === 0) {
-    // 담보부 채권이 없는 경우 — 빈 행 표시
-    securedRows = `
-      <tr>
-        <td colspan="6" style="height: 60px; text-align: center; color: #888; vertical-align: middle;">
-          해당 사항 없음
-        </td>
-      </tr>`;
-    lienDetailsRows = `
-      <tr>
-        <td colspan="5" style="height: 40px; text-align: center; color: #888; vertical-align: middle;">
-          해당 사항 없음
-        </td>
-      </tr>`;
+    securedRows = `<tr><td colspan="6" style="height: 60px; text-align: center; color: #888; vertical-align: middle;">해당 사항 없음</td></tr>`;
+    lienDetailsRows = `<tr><td colspan="5" style="height: 40px; text-align: center; color: #888; vertical-align: middle;">해당 사항 없음</td></tr>`;
   } else {
     securedCreditors.forEach((cred: any) => {
       const bondNumber = cred.bond_number || '';
@@ -921,14 +912,12 @@ function generateSecuredCreditorTable(
       const capital = Number(cred.capital) || 0;
       const interest = Number(cred.interest) || 0;
       const totalClaim = capital + interest;
-      const maxClaimAmount = Number(cred.max_claim_amount) || 0;
 
-      // ③ 별제권행사로 변제예상액: max_claim_amount 또는 채권현재액 중 작은 값
-      const expectedRepay = maxClaimAmount > 0 ? Math.min(maxClaimAmount, totalClaim) : 0;
-      // ④ 변제받을 수 없는 채권액: 채권현재액 - 변제예상액
-      const unrecoverable = Math.max(0, totalClaim - expectedRepay);
-      // ⑤ 담보부회생채권액 = ③ 별제권행사변제예상액
-      const securedAmount = expectedRepay;
+      // snapshot에서 환가예상액 기반 분리값 사용
+      const attRow = attachment.find((a) => a.bondNumber === Number(bondNumber));
+      const expectedRepay = attRow?.expectedRepay ?? (Number(cred.secured_collateral_value) || 0);
+      const unrecoverable = attRow?.deficiency ?? Math.max(0, totalClaim - expectedRepay);
+      const securedAmount = attRow?.securedRehabAmount ?? expectedRepay;
 
       securedTotalClaim += totalClaim;
       securedTotalExpectedRepay += expectedRepay;
@@ -948,13 +937,13 @@ function generateSecuredCreditorTable(
           <td style="text-align: right; padding-right: 8px;">${formatAmount(securedAmount)}</td>
         </tr>`;
 
-      // ⑥ 별제권 등의 내용 및 목적물
       const lienType = cred.lien_type || '';
       const lienPriority = cred.lien_priority || '';
       const property = cred.secured_property_id ? propertyMap.get(cred.secured_property_id) : null;
       const propertyDesc = property
         ? `${property.property_type || ''} ${property.detail || ''}`
         : '';
+      const maxClaimAmount = Number(cred.max_claim_amount) || 0;
       lienDetailsRows += `
         <tr>
           <td style="text-align: center;">${esc(String(bondNumber))}</td>
@@ -1133,7 +1122,7 @@ function generateCreditorList(data: DocumentData): string {
 
     <h3>부속서류 1. 별제권부채권 및 이에 준하는 채권의 내역</h3>
 
-    ${generateSecuredCreditorTable(data.creditors || [], data.securedProperties, header.assessmentDate)}
+    ${generateSecuredCreditorTable(data.creditors || [], data.securedProperties, header.assessmentDate, data._snapshot)}
 
     ${unsettledHtml}
   `;
@@ -2073,7 +2062,7 @@ function generateRepaymentPlan(data: DocumentData): string {
       })()} ]항에 의하여 변제하여야 할 금원은 개인회생위원이 관리하는 예금계좌에 임치합니다.
     </p>
     <p>
-      ② 개인회생위원의 예금계좌: (추후 보완)
+      ② 개인회생위원의 예금계좌: ${snap.trusteeAccount || snap.trusteeName ? `${snap.trusteeName ? snap.trusteeName + ' ' : ''}${snap.trusteeAccount || '(계좌번호 미입력)'}` : '(추후 보완)'}
     </p>
 
     <h3>9. 면책의 범위 및 효력발생시기</h3>
