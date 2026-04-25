@@ -77,8 +77,12 @@ export interface CaseSnapshot {
   securedTotal: number;
   /** 무담보 = 총채권 - 담보부 */
   unsecuredTotal: number;
-  /** 무담보 원금 (변제율 분모, 이자 제외) */
+  /** 무담보 원금 전체 (변제율 분모, 이자 제외) = confirmed + unconfirmed */
   unsecuredCapital: number;
+  /** 확정 무담보 원금 (일반 무담보 채권 원금, 안분 대상) */
+  confirmedUnsecuredCapital: number;
+  /** 미확정 무담보 원금 (별제권 부족액 + 기타 미확정, 유보 대상) */
+  unconfirmedUnsecuredCapital: number;
 
   // ── 별제권부 처리 (부속서류 1) ──
   securedAttachment: SecuredAttachmentRow[];
@@ -211,6 +215,25 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
     securedResults,
   );
   const unsecuredCapital = debtSummary.unsecuredCapital;
+
+  // 확정/미확정 분리 (COLAW 기준: 별제권 부족액 = 미확정, 일반 무담보 = 확정)
+  let confirmedUnsecuredCapital = 0;
+  let unconfirmedUnsecuredCapital = 0;
+  for (const c of creditors) {
+    const cap = Number(c.capital) || 0;
+    if (c.is_unsettled || c.is_other_unconfirmed) {
+      // 미확정 채권 전액 → 유보
+      unconfirmedUnsecuredCapital += cap;
+    } else if (c.is_secured) {
+      // 별제권 부족액 → 미확정 (유보)
+      const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
+      const deficiency = Math.max(0, cap - collateral);
+      unconfirmedUnsecuredCapital += deficiency;
+    } else {
+      // 일반 무담보 → 확정 (안분 대상)
+      confirmedUnsecuredCapital += cap;
+    }
+  }
 
   // ── 3. 소득·생계비 ──
   const netSalary = Number(incomeSettings.net_salary) || 0;
@@ -375,6 +398,8 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
     securedTotal,
     unsecuredTotal,
     unsecuredCapital,
+    confirmedUnsecuredCapital,
+    unconfirmedUnsecuredCapital,
     securedAttachment,
     netSalary,
     grossSalary,
