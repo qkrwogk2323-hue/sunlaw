@@ -1141,12 +1141,70 @@ function generateCreditorList(data: DocumentData): string {
 /**
  * 4. 재산목록 생성
  */
+/** 카테고리별 재산 상세 직렬화 — structured_detail → 법원 제출용 문장 */
+function renderPropertyDetail(prop: any): string {
+  const sd = prop.structured_detail || {};
+  const cat = prop.category || '';
+  const detail = prop.detail || '';
+
+  switch (cat) {
+    case 'car':
+    case '자동차': {
+      const parts = [sd.model || detail, sd.year ? `(${sd.year}년식)` : '', sd.registration_number ? `등록번호: ${sd.registration_number}` : ''];
+      return parts.filter(Boolean).join(' ') || detail || '자동차';
+    }
+    case 'realestate':
+    case '부동산': {
+      const parts = [sd.location || detail, sd.area_sqm ? `(면적 ${sd.area_sqm}㎡)` : '', sd.property_kind || ''];
+      const lien = sd.lien_type ? ` [${sd.lien_type}${sd.lien_amount ? ` 채권최고액 ${formatAmount(sd.lien_amount)}` : ''}]` : '';
+      return (parts.filter(Boolean).join(' ') + lien) || detail || '부동산';
+    }
+    case 'deposit':
+    case '예금': {
+      const parts = [sd.bank_name || '', sd.account_number || '', sd.deposit_type ? `(${sd.deposit_type})` : ''];
+      return parts.filter(Boolean).join(' ') || detail || '예금';
+    }
+    case 'insurance':
+    case '보험': {
+      const parts = [sd.company_name || '', sd.policy_number ? `증권번호: ${sd.policy_number}` : ''];
+      return parts.filter(Boolean).join(' ') || detail || '보험';
+    }
+    case 'lease':
+    case '임차보증금': {
+      const parts = [sd.property_description || detail, sd.deposit_amount ? `보증금 ${formatAmount(sd.deposit_amount)}` : ''];
+      return parts.filter(Boolean).join(' ') || detail || '임차보증금';
+    }
+    case 'retirement':
+    case '예상퇴직금':
+    case 'expected_retirement': {
+      const parts = [sd.employer_name || detail, sd.gross_amount ? `총액 ${formatAmount(sd.gross_amount)}` : '', sd.net_amount ? `(1/2: ${formatAmount(sd.net_amount)})` : ''];
+      return parts.filter(Boolean).join(' ') || detail || '예상퇴직금';
+    }
+    case 'equipment':
+    case '사업설비': {
+      const parts = [sd.item_name || detail, sd.quantity ? `수량 ${sd.quantity}` : ''];
+      return parts.filter(Boolean).join(' ') || detail || '사업용 설비';
+    }
+    case 'loan':
+    case '대여금채권':
+    case 'sales':
+    case '매출금채권': {
+      const parts = [sd.debtor_name || detail, sd.current_amount ? `현재액 ${formatAmount(sd.current_amount)}` : ''];
+      return parts.filter(Boolean).join(' ') || detail || cat;
+    }
+    default:
+      return detail || cat || '기타';
+  }
+}
+
 function generatePropertyList(data: DocumentData): string {
   const properties = data.properties || [];
+  // 0원이고 detail도 없는 행은 제외
+  const validProperties = properties.filter((p: any) => (Number(p.amount) || 0) > 0 || (p.detail && p.detail.trim()));
   let totalValue = 0;
 
-  properties.forEach((p: any) => {
-    totalValue += p.amount || 0;
+  validProperties.forEach((p: any) => {
+    totalValue += Number(p.amount) || 0;
   });
 
   const deductions = data.propertyDeductions || [];
@@ -1154,21 +1212,25 @@ function generatePropertyList(data: DocumentData): string {
   const liquidationValue = Math.max(0, totalValue - totalDeduction);
 
   let propertyRows = '';
-  properties.forEach((prop: any) => {
-    const name = prop.detail || prop.category || '';
-    const amount = Number(prop.amount) || 0;
-    const hasSeizure = prop.seizure || '무';
-    const notes = prop.repay_use || '';
+  if (validProperties.length === 0) {
+    propertyRows = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">해당 없음</td></tr>`;
+  } else {
+    validProperties.forEach((prop: any) => {
+      const name = renderPropertyDetail(prop);
+      const amount = Number(prop.amount) || 0;
+      const hasSeizure = prop.seizure || '무';
+      const notes = prop.repay_use || '';
 
-    propertyRows += `
-      <tr>
-        <td style="width: 25%; text-align: left;">${esc(name)}</td>
-        <td style="width: 20%; text-align: right;">${formatAmount(amount)}</td>
-        <td style="width: 15%; text-align: center;">${esc(hasSeizure)}</td>
-        <td style="width: 40%; text-align: left;">${esc(notes)}</td>
-      </tr>
-    `;
-  });
+      propertyRows += `
+        <tr>
+          <td style="width: 35%; text-align: left;">${esc(name)}</td>
+          <td style="width: 18%; text-align: right;">${formatAmount(amount)}</td>
+          <td style="width: 12%; text-align: center;">${esc(hasSeizure)}</td>
+          <td style="width: 35%; text-align: left;">${esc(notes)}</td>
+        </tr>
+      `;
+    });
+  }
 
   const content = `
     <h1>재 산 목 록</h1>

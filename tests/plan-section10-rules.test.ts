@@ -24,14 +24,15 @@ describe('buildSection10Clauses', () => {
     expect(guarantorClause!.text).toContain('국민은행');
   });
 
-  it('별제권 부족액 → 부족분 처리 문구', () => {
+  it('별제권 부족액 → 변제기간 단축 + 채권자명 특정', () => {
     const creditors = [
-      { id: 'c1', is_secured: true, remaining_unsecured: 3_000_000 },
+      { id: 'c1', bond_number: 1, creditor_name: '우리은행', capital: 50_000_000, interest: 5_000_000, is_secured: true, secured_collateral_value: 30_000_000, remaining_unsecured: 25_000_000 },
     ];
     const clauses = buildSection10Clauses(creditors, 'D5110');
     const deficiency = clauses.find((c) => c.id === 'secured_deficiency');
     expect(deficiency).toBeDefined();
-    expect(deficiency!.text).toContain('미확정채권으로 처리');
+    expect(deficiency!.text).toContain('우리은행');
+    expect(deficiency!.text).toContain('단축');
     expect(deficiency!.text).toContain('동일한 비율로 안분');
   });
 
