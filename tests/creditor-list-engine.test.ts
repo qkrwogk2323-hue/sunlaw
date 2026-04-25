@@ -21,7 +21,7 @@ const CASE_1_CREDITORS = [
 
 // Golden case 2: 보증인·대위변제 포함
 const CASE_2_CREDITORS = [
-  { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 10_000_000, interest: 1_000_000, bond_cause: '주택담보대출', is_secured: true, guarantor_amount: 3_000_000, guarantor_name: '이보증', bond_type: '주채무' },
+  { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 10_000_000, interest: 1_000_000, bond_cause: '주택담보대출', is_secured: true, secured_collateral_value: 7_000_000, guarantor_amount: 3_000_000, guarantor_name: '이보증', bond_type: '주채무' },
   { id: 'c2', bond_number: 2, creditor_name: '신한은행', capital: 5_000_000, interest: 500_000, bond_cause: '신용대출', is_secured: false },
   { id: 'c3', bond_number: 1, creditor_name: '이보증', capital: 3_000_000, interest: 0, bond_cause: '구상채권', is_secured: false, parent_creditor_id: 'c1', sub_number: 1 },
 ];
@@ -29,7 +29,7 @@ const CASE_2_CREDITORS = [
 // Golden case 3: 미확정 채권 포함
 const CASE_3_CREDITORS = [
   { id: 'c1', bond_number: 1, creditor_name: '우리은행', capital: 8_000_000, interest: 800_000, bond_cause: '신용대출', is_secured: false },
-  { id: 'c2', bond_number: 2, creditor_name: '별제권은행', capital: 20_000_000, interest: 2_000_000, bond_cause: '근저당', is_secured: true, remaining_unsecured: 5_000_000 },
+  { id: 'c2', bond_number: 2, creditor_name: '별제권은행', capital: 20_000_000, interest: 2_000_000, bond_cause: '근저당', is_secured: true, secured_collateral_value: 17_000_000, remaining_unsecured: 5_000_000 },
   { id: 'c3', bond_number: 3, creditor_name: '미확정채권자', capital: 3_000_000, interest: 0, bond_cause: '소송 중', is_secured: false, is_unsettled: true, unsettled_reason: '채권액 다툼' },
 ];
 
@@ -81,8 +81,10 @@ describe('buildCreditorListOutput', () => {
       expect(mainDebtor?.subrogationNote).toContain('3,000,000');
     });
 
-    it('담보부 합계에 주채무자 포함', () => {
-      expect(output.summary.securedTotal).toBe(11_000_000);
+    it('담보부 합계 = 담보가치 회수분만 (부족액은 무담보)', () => {
+      // 국민은행: totalClaim=11M, collateral=7M → secured=7M, deficiency=4M
+      expect(output.summary.securedTotal).toBe(7_000_000);
+      expect(output.summary.unsecuredTotal).toBe(4_000_000 + 5_500_000 + 3_000_000); // deficiency + 신한 + 이보증
     });
   });
 

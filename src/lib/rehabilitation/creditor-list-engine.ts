@@ -105,6 +105,7 @@ export function buildCreditorListOutput(
   };
 
   // ── Summary ──
+  // 담보부/무담보 분류: 담보채권은 담보가치 회수분과 부족액(무담보 편입)으로 분리
   let totalCapital = 0;
   let totalInterest = 0;
   let securedTotal = 0;
@@ -113,12 +114,18 @@ export function buildCreditorListOutput(
   for (const cred of creditors) {
     const capital = cred.capital || 0;
     const interest = cred.interest || 0;
+    const totalClaim = capital + interest;
     totalCapital += capital;
     totalInterest += interest;
+
     if (cred.is_secured) {
-      securedTotal += capital + interest;
+      const collateralValue = Number(cred.secured_collateral_value) || 0;
+      const covered = Math.min(collateralValue, totalClaim);
+      const deficiency = Math.max(0, totalClaim - covered);
+      securedTotal += covered;
+      unsecuredTotal += deficiency;
     } else {
-      unsecuredTotal += capital + interest;
+      unsecuredTotal += totalClaim;
     }
   }
 

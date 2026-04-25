@@ -37,9 +37,14 @@ export function getDebtSummary(
     securedDebt = securedResults.reduce((s, r) => s + r.securedRehabAmount, 0);
     unsecuredDebt = totalDebt - securedDebt;
   } else {
+    // 담보채권: 담보가치 회수분만 담보부, 부족액은 무담보 편입
     securedDebt = creditors
       .filter(c => c.isSecured)
-      .reduce((s, c) => s + (c.capital || 0) + (c.interest || 0), 0);
+      .reduce((s, c) => {
+        const totalClaim = (c.capital || 0) + (c.interest || 0);
+        const collateral = Math.min(c.securedCollateralValue ?? 0, totalClaim);
+        return s + collateral;
+      }, 0);
     unsecuredDebt = totalDebt - securedDebt;
   }
 

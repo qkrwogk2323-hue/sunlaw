@@ -2227,7 +2227,13 @@ function generateCreditorSummary(data: DocumentData): string {
   const unsCapital = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.capital as number) || 0), 0);
   const unsInterest = unsecured.reduce((s: number, c: Record<string, any>) => s + ((c.interest as number) || 0), 0);
 
-  const securedTotal = secCapital + secInterest;
+  // 담보부: 담보가치 회수분만, 부족액은 무담보에 편입
+  let securedTotal = 0;
+  for (const c of secured) {
+    const totalClaim = ((c.capital as number) || 0) + ((c.interest as number) || 0);
+    const collateral = Math.min(Number(c.secured_collateral_value) || 0, totalClaim);
+    securedTotal += collateral;
+  }
   const unsecuredTotal = totalDebt - securedTotal;
 
   const content = `

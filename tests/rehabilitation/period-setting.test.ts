@@ -100,21 +100,21 @@ describe('변제기간 6규칙 (P1-8)', () => {
     expect(r.targetInterest).toBe(4_549_968);
   });
 
-  it('청산가치 미충족 시 자동 연장', () => {
+  it('청산가치 미충족 + forcedMonths 없으면 자동 연장', () => {
     // 36: 400000×33.7719=13,508,760 < 20m → 48: 17,582,200 < 20m → 60: 21,457,320 ≥ 20m
     const r = decidePeriodSetting({
       setting: 6,
       creditors: kimHanGyeong,
       monthlyAvailable: 400_000,
       liquidationValue: 20_000_000,
-      forcedMonths: 36,
+      // forcedMonths 없음 → 자동 연장 허용
     });
     expect(r.months).toBe(60);
     expect(r.liquidationGuaranteed).toBe(true);
     expect(r.notes.some((n) => n.includes('60개월에서 충족'))).toBe(true);
   });
 
-  it('60개월에도 미달 → liquidationGuaranteed false', () => {
+  it('forcedMonths 있으면 자동 연장 안 함 → 경고만', () => {
     const r = decidePeriodSetting({
       setting: 6,
       creditors: kimHanGyeong,
@@ -122,9 +122,10 @@ describe('변제기간 6규칙 (P1-8)', () => {
       liquidationValue: 50_000_000,
       forcedMonths: 36,
     });
-    expect(r.months).toBe(60);
+    // forcedMonths가 있으면 사용자 선택 기간 유지
+    expect(r.months).toBe(36);
     expect(r.liquidationGuaranteed).toBe(false);
-    expect(r.notes.some((n) => n.includes('보장 위배'))).toBe(true);
+    expect(r.notes.some((n) => n.includes('미충족'))).toBe(true);
   });
 
   it('forcedMonths가 baseMonths보다 우선', () => {

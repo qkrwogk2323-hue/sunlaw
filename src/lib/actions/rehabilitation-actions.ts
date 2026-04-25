@@ -598,7 +598,7 @@ export async function upsertRehabIncomeSettings(
       // 채권자 집계
       const { data: creditors } = await supabase
         .from('rehabilitation_creditors')
-        .select('capital, interest, is_secured')
+        .select('capital, interest, is_secured, secured_collateral_value')
         .eq('case_id', caseId)
         .neq('lifecycle_status', 'soft_deleted');
 
@@ -609,9 +609,14 @@ export async function upsertRehabIncomeSettings(
         for (const c of creditors) {
           const cap = Number(c.capital) || 0;
           const int = Number(c.interest) || 0;
+          const totalClaim = cap + int;
           totalCapital += cap;
           totalInterest += int;
-          if (c.is_secured) securedDebt += cap + int;
+          if (c.is_secured) {
+            // 담보가치 회수분만 담보부, 부족액은 무담보 편입
+            const collateral = Math.min(Number(c.secured_collateral_value) || 0, totalClaim);
+            securedDebt += collateral;
+          }
         }
         const totalDebt = totalCapital + totalInterest;
         dbData.total_capital = totalCapital;
