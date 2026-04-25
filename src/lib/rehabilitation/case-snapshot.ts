@@ -16,7 +16,7 @@
  *   D7: trustee_name/account — snapshot에 포함
  */
 
-import { calculateSecuredAllocations, type SecuredAllocationResult } from './secured-allocation';
+import { calculateSecuredAllocations } from './secured-allocation';
 import { calculateRepayment, getDebtSummary, determineFormType, calculateDisposalAmount } from './repayment-calculator';
 import { calculateLiquidationValue } from './property-valuation';
 import { computeMonthlyAvailable, type MonthlyAvailableResult } from './monthly-available';
