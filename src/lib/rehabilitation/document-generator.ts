@@ -1483,7 +1483,316 @@ function generateAffidavit(data: DocumentData): string {
 /**
  * 7. 변제계획안 생성
  */
+/**
+ * 변제계획안 생성 — snapshot 전용 렌더러.
+ * 계산 0줄. data._snapshot에서만 읽음.
+ */
 function generateRepaymentPlan(data: DocumentData): string {
+  const snap = data._snapshot!;
+  const app = data.application || {};
+  const creditors = data.creditors || [];
+  const incomeSettings = data.incomeSettings || {};
+
+  const courtName = app.court_name || '';
+  const applicantName = app.applicant_name || '';
+  const residentFront = app.resident_number_front || '';
+  const agentName = app.agent_name || '';
+  const agentLawFirm = app.agent_law_firm || '';
+
+  // snapshot에서 모든 값 읽기 — 독자 계산 없음
+  const startDate = snap.repayStartDate || '변제개시일';
+  const endDate = snap.repayEndDate || '';
+  const months = snap.repayMonths;
+  const monthlyRepay = snap.effectiveMonthlyRepay;
+  const totalRepay = snap.effectiveTotalRepay;
+  const repayRate = snap.repayRate;
+  const liqValue = snap.liquidationValue;
+  const pvAmount = snap.presentValueAmount;
+  const isD5111 = snap.isD5111;
+  const unsecuredDenom = snap.unsecuredCapital;
+  const securedTotal = snap.securedTotal;
+  const unsecuredTotal = snap.unsecuredTotal;
+  const monthlyAvailable = snap.monthlyAvailable;
+  const livingCost = snap.livingCost;
+  const netSalary = snap.netSalary;
+  const incomeType = snap.incomeType === 'business' ? '영업' : '급여';
+  const trusteeCommRate = snap.trusteeCommRate;
+  const disposalInvestment = snap.disposalInvestment;
+
+  // 채권자별 안분 계산 (snapshot 분모 사용)
+  const creditorRows = creditors.map((c: any) => {
+    const cap = Number(c.capital) || 0;
+    const interest = Number(c.interest) || 0;
+    const credUnsecured = c.is_secured
+      ? Math.max(0, cap - Math.min(Number(c.secured_collateral_value) || 0, cap))
+      : cap;
+    const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
+    const mPay = Math.ceil(monthlyRepay * ratio);
+    const tPay = mPay * months;
+    const rRate = credUnsecured > 0 ? Math.round((tPay / credUnsecured) * 100) : 0;
+    return { bondNumber: c.bond_number || '', name: c.creditor_name || '', cap, interest, totalClaim: cap + interest, credUnsecured, mPay, tPay, rRate };
+  });
+
+  // 별제권부 채권 5항 표
+  const securedCreditors = creditors.filter((c: any) => c.is_secured);
+  const securedTableHtml = snap.securedAttachment.length > 0 ? snap.securedAttachment.map((a) => `
+    <tr>
+      <td style="text-align:center">${a.bondNumber}</td>
+      <td>${esc(a.creditorName)}</td>
+      <td style="text-align:right">${formatAmount(a.totalClaim)}</td>
+      <td style="text-align:right">${formatAmount(a.expectedRepay)}</td>
+      <td style="text-align:right">${formatAmount(a.deficiency)}</td>
+      <td style="text-align:right">${formatAmount(a.securedRehabAmount)}</td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:#888">해당 없음</td></tr>';
+
+  const securedTotalRow = snap.securedAttachment.length > 0 ? `<tr style="font-weight:bold;border-top:2px solid #000">
+    <td colspan="2" style="text-align:center">합 계</td>
+    <td style="text-align:right">${formatAmount(snap.securedAttachment.reduce((s, a) => s + a.totalClaim, 0))}</td>
+    <td style="text-align:right">${formatAmount(securedTotal)}</td>
+    <td style="text-align:right">${formatAmount(snap.securedAttachment.reduce((s, a) => s + a.deficiency, 0))}</td>
+    <td style="text-align:right">${formatAmount(securedTotal)}</td>
+  </tr>` : '';
+
+  // 별표(1) 스케줄 — snapshot 분모로 동일 안분
+  const scheduleRows: string[] = [];
+  const cumulByCred = new Map<string, number>();
+  for (let round = 1; round <= months; round++) {
+    creditors.forEach((c: any, idx: number) => {
+      const cap = Number(c.capital) || 0;
+      const credUnsecured = c.is_secured
+        ? Math.max(0, cap - Math.min(Number(c.secured_collateral_value) || 0, cap))
+        : cap;
+      const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
+      const mPay = idx === creditors.length - 1
+        ? monthlyRepay - creditors.slice(0, -1).reduce((s: number, cc: any) => {
+            const cCap = Number(cc.capital) || 0;
+            const cUnsec = cc.is_secured ? Math.max(0, cCap - Math.min(Number(cc.secured_collateral_value) || 0, cCap)) : cCap;
+            return s + Math.ceil(monthlyRepay * (unsecuredDenom > 0 ? cUnsec / unsecuredDenom : 0));
+          }, 0)
+        : Math.ceil(monthlyRepay * ratio);
+      const key = c.id || String(idx);
+      const prev = cumulByCred.get(key) || 0;
+      const cumul = prev + mPay;
+      cumulByCred.set(key, cumul);
+      scheduleRows.push(`<tr>
+        ${idx === 0 ? `<td rowspan="${creditors.length}" style="text-align:center;vertical-align:middle">${round}</td>` : ''}
+        <td style="text-align:center">${c.bond_number || idx + 1}</td>
+        <td>${esc(c.creditor_name || '')}</td>
+        <td style="text-align:right">${formatAmount((Number(c.capital) || 0) + (Number(c.interest) || 0))}</td>
+        <td style="text-align:right">${formatAmount(mPay)}</td>
+        <td style="text-align:right">${formatAmount(cumul)}</td>
+        <td></td>
+      </tr>`);
+    });
+  }
+
+  // 10항 — snapshot clause
+  const section10Html = (() => {
+    const clauses = snap.section10Clauses;
+    const addendum = snap.section10Addendum?.trim() || '';
+    if (clauses.length === 0 && !addendum) return '<p>[ 해당있음 □ / 해당없음 ■ ]</p>';
+    let html = '<p>[ 해당있음 ■ / 해당없음 □ ]</p>';
+    for (const clause of clauses) {
+      html += `\n<p style="margin-left:20px;margin-top:10px;white-space:pre-wrap">${esc(clause.text)}</p>`;
+    }
+    if (addendum) html += `\n<p style="margin-left:20px;margin-top:10px">${esc(addendum)}</p>`;
+    return html;
+  })();
+
+  // 미확정 채권
+  const unsettledCreditors = creditors.filter((c: any) => c.is_unsettled || c.is_other_unconfirmed);
+
+  // 라이프니츠 계수
+  const leibnizCoef: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
+  const coef = leibnizCoef[months];
+  const pvDisplay = coef ? Math.floor(monthlyRepay * coef) : null;
+
+  const content = `
+    <h1 style="text-align:center">변 제 계 획(안)</h1>
+    <p style="text-align:center">사 건: ${esc(courtName)} 개인회생</p>
+    <p style="text-align:center">채 무 자: ${esc(applicantName)} (${esc(residentFront)}-*******)</p>
+    ${agentName ? `<p style="text-align:center">대 리 인: ${esc(agentLawFirm ? `${agentLawFirm} ${agentName}` : agentName)}</p>` : ''}
+
+    <h3>1. 변제기간</h3>
+    <p>[ ${startDate.replace(/-/g, '. ')} ]부터 [ ${endDate ? endDate.replace(/-/g, '. ') : '미설정'} ]까지 [ ${months} ]개월간</p>
+
+    <h3>2. 변제에 제공되는 소득 또는 재산</h3>
+    <h4>가. 소득</h4>
+    <table>
+      <tr><th style="width:50%">항목</th><th style="width:50%;text-align:right">금액</th></tr>
+      <tr><td>(1) 수입</td><td style="text-align:right">${formatAmount(netSalary * 12)}원/년</td></tr>
+      <tr><td>(2) 생계비</td><td style="text-align:right">${formatAmount(livingCost)}원/월</td></tr>
+      <tr><td>(3) 가용소득</td><td style="text-align:right">${formatAmount(monthlyAvailable)}원/월</td></tr>
+    </table>
+
+    <h4>나. 재산</h4>
+    <p>[ 해당${isD5111 ? '있음 ■' : '없음 ■'} / 해당${isD5111 ? '없음 □' : '있음 □'} ]</p>
+    ${isD5111 ? `<p style="margin-left:20px;font-size:0.95em">
+      현재가치(${formatAmount(pvDisplay ?? 0)}원)가 청산가치(${formatAmount(liqValue)}원)에 미달하므로
+      재산처분에 의한 변제가 병행됩니다 (D5111 양식).
+    </p>` : ''}
+
+    <h3>3. 개인회생재단채권에 대한 변제</h3>
+    ${trusteeCommRate > 0 ? `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <h4>가. 회생위원의 보수 및 비용</h4>
+    <p style="margin-left:20px">월 가용소득의 ${trusteeCommRate}%</p>
+    ` : `
+    <p>[ 해당있음 □ / 해당없음 ■ ]</p>
+    <h4>가. 회생위원의 보수 및 비용</h4>
+    <p style="margin-left:20px">법원사무관이 회생위원으로 선임되어 별도의 보수가 발생하지 않습니다.</p>
+    `}
+    <h4>나. 기타 개인회생재단채권</h4>
+    <p style="margin-left:20px">해당 없음</p>
+
+    <h3>4. 일반의 우선권 있는 개인회생채권에 대한 변제</h3>
+    <p>[ 해당있음 □ / 해당없음 ■ ]</p>
+
+    <h3>5. 별제권부 채권 및 이에 준하는 채권의 처리</h3>
+    ${securedCreditors.length > 0 ? `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <h4>가. 채권의 내용</h4>
+    <table>
+      <tr>
+        <th style="width:8%;text-align:center">번호</th>
+        <th style="width:15%;text-align:center">채권자</th>
+        <th style="width:18%;text-align:center">①채권현재액</th>
+        <th style="width:18%;text-align:center">③예상회수</th>
+        <th style="width:18%;text-align:center">④부족액</th>
+        <th style="width:14%;text-align:center">⑤담보부회생채권액</th>
+      </tr>
+      ${securedTableHtml}
+      ${securedTotalRow}
+    </table>
+    ` : `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`}
+
+    <h3>6. 일반 개인회생채권에 대한 변제</h3>
+    <h4>가. 가용소득에 의한 변제</h4>
+    <p>(1) 월 변제예정(유보)액 및 총 변제예정(유보)액: [원금] 기준 안분</p>
+    <p>(2) 변제방법</p>
+    <p style="margin-left:20px">(가) 기간: ${months}개월, 횟수: ${months}회</p>
+    <p style="margin-left:20px">(나) 변제월 및 변제일: 매월 같은 날</p>
+
+    ${isD5111 ? `
+    <h4>나. 재산의 처분에 의한 변제</h4>
+    <p>(1) 변제투입예정액: ${formatAmount(disposalInvestment)}원 ([원금] 기준 안분)</p>
+    <p>(2) 변제방법</p>
+    <p style="margin-left:20px">(가) 변제기한: 인가일부터 1년 내</p>
+    ` : ''}
+
+    <h3>개인회생채권 변제예정액표</h3>
+    <h4>1. 기초사항</h4>
+    <h4>가. 채무자의 가용소득</h4>
+    <table>
+      <tr><th>항목</th><th style="text-align:right">월액</th><th style="text-align:right">연액</th><th>비고</th></tr>
+      <tr><td>가용소득 (⑥)</td><td style="text-align:right">${formatAmount(monthlyAvailable)}원</td><td style="text-align:right">${formatAmount(monthlyAvailable * 12)}원</td><td></td></tr>
+    </table>
+
+    <h4>나. 총변제예정액 및 현재가치</h4>
+    <table>
+      <tr><th style="width:40%;text-align:center">항목</th><th style="width:30%;text-align:center">금액</th><th style="width:30%;text-align:center">산식</th></tr>
+      <tr>
+        <td style="text-align:center">(K) 총변제예정액</td>
+        <td style="text-align:right">${formatAmount(totalRepay)}</td>
+        <td style="text-align:center">월변제 ${formatAmount(monthlyRepay)} × ${months}</td>
+      </tr>
+      <tr>
+        <td style="text-align:center">(L) (K)의 현재가치</td>
+        <td style="text-align:right">${pvDisplay != null ? formatAmount(pvDisplay) : '—'}</td>
+        <td style="text-align:center">${coef ? `월변제 × 라이프니츠 계수(${coef})` : '계수 미확정'}</td>
+      </tr>
+      ${isD5111 ? `<tr><td colspan="3" style="padding:8px;background:#fef3cd;font-size:0.9em">
+        ※ 청산가치보장 원칙에 따라 월 변제액이 ${formatAmount(Math.floor(monthlyAvailable))}원 → ${formatAmount(monthlyRepay)}원으로 상향 조정됨
+      </td></tr>` : ''}
+    </table>
+
+    <p style="margin-top:8px"><strong>변제율: ${repayRate}%</strong>
+      <span style="color:#666;font-size:0.85em">(총변제 ${formatAmount(totalRepay)} / 무담보원금 ${formatAmount(unsecuredDenom)})</span>
+    </p>
+
+    <h4>2. 채권자별 변제예정액의 산정내역 및 변제율</h4>
+    <table>
+      <tr>
+        <th style="width:8%;text-align:center">번호</th>
+        <th style="width:22%;text-align:center">채권자</th>
+        <th style="width:18%;text-align:center">(A)채권액</th>
+        <th style="width:18%;text-align:center">(B)월변제액</th>
+        <th style="width:18%;text-align:center">(C)총변제액</th>
+        <th style="width:16%;text-align:center">변제율</th>
+      </tr>
+      ${creditorRows.map(r => `<tr>
+        <td style="text-align:center">${r.bondNumber}</td>
+        <td style="text-align:center">${esc(r.name)}</td>
+        <td style="text-align:right">${formatAmount(r.totalClaim)}</td>
+        <td style="text-align:right">${formatAmount(r.mPay)}</td>
+        <td style="text-align:right">${formatAmount(r.tPay)}</td>
+        <td style="text-align:center">${r.rRate}%</td>
+      </tr>`).join('')}
+      <tr style="font-weight:bold;border-top:2px solid #000">
+        <td colspan="2" style="text-align:center">합 계</td>
+        <td style="text-align:right">${formatAmount(unsecuredDenom)}</td>
+        <td style="text-align:right">${formatAmount(monthlyRepay)}</td>
+        <td style="text-align:right">${formatAmount(totalRepay)}</td>
+        <td style="text-align:center">${Math.round(repayRate)}%</td>
+      </tr>
+    </table>
+
+    <h4>3. 청산가치와의 비교</h4>
+    <table>
+      <tr><th style="width:50%">항목</th><th style="width:50%;text-align:right">금액</th></tr>
+      <tr style="font-weight:bold"><td>청산가치 (A)</td><td style="text-align:right">${formatAmount(liqValue)}</td></tr>
+      <tr style="font-weight:bold"><td>총 변제예정액 (B)</td><td style="text-align:right">${formatAmount(totalRepay)}</td></tr>
+    </table>
+    <p style="margin-top:10px">
+      ${totalRepay >= liqValue
+        ? `총 변제예정액(${formatAmount(totalRepay)})이 청산가치(${formatAmount(liqValue)})를 <strong>상회</strong>하므로 청산가치 보장 원칙을 충족합니다.`
+        : `<strong style="color:red">⚠ 총 변제예정액(${formatAmount(totalRepay)})이 청산가치(${formatAmount(liqValue)})에 미달합니다.</strong>`}
+    </p>
+
+    <div class="page-break"></div>
+
+    <h3>별표(1) 가용소득에 의한 변제 내역</h3>
+    <table style="font-size:9pt">
+      <thead><tr>
+        <th style="width:6%;text-align:center">회차</th>
+        <th style="width:8%;text-align:center">번호</th>
+        <th style="width:20%;text-align:center">채권자</th>
+        <th style="width:18%;text-align:center">(D)채권액</th>
+        <th style="width:18%;text-align:center">(E)월변제액</th>
+        <th style="width:18%;text-align:center">(F)누적변제액</th>
+        <th style="width:12%;text-align:center">비고</th>
+      </tr></thead>
+      <tbody>${scheduleRows.join('')}</tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3>7. 미확정 개인회생채권에 대한 조치</h3>
+    ${unsettledCreditors.length > 0 ? `
+    <p>[ 해당있음 ■ / 해당없음 □ ]</p>
+    <h4>가. 변제금액의 유보</h4>
+    <p style="margin-left:20px">미확정 개인회생채권에 대하여는 [원금] 기준으로 산정한 변제금을 유보합니다.</p>
+    <h4>나. 미확정 개인회생채권에 대한 변제</h4>
+    <p style="margin-left:20px">미확정 개인회생채권이 확정되는 때에는, 확정된 채권액을 기준으로 다른 [원금] 기준의 개인회생채권과의 사이에 [원금]에 비례하여 안분한 금액을 변제합니다.</p>
+    ` : `<p>[ 해당있음 □ / 해당없음 ■ ]</p>`}
+
+    <h3>8. 변제금원의 회생위원에 대한 임치 및 지급</h3>
+    <p>① 위 [ 6 ]항에 의하여 변제하여야 할 금원은 개인회생위원이 관리하는 예금계좌에 임치합니다.</p>
+    <p>② 개인회생위원의 예금계좌: ${snap.trusteeAccount || snap.trusteeName ? `${snap.trusteeName ? snap.trusteeName + ' ' : ''}${snap.trusteeAccount || '(계좌번호 미입력)'}` : '(추후 보완)'}</p>
+
+    <h3>9. 면책의 범위 및 효력발생시기</h3>
+    <p>변제계획에 따른 변제를 완료한 때에는, 변제계획에 의하여 변제되지 아니한 채무에 대하여는 면책됩니다.
+    다만, 채무자 회생 및 파산에 관한 법률 제625조 제2항 각호에 해당하는 청구권은 면책되지 아니합니다.</p>
+
+    <h3>10. 기타사항</h3>
+    ${section10Html}
+  `;
+
+  return wrapDocument(content, '변제계획안');
+}
+
+/** @deprecated snapshot 전용 렌더러로 대체됨. 참조용으로만 보존. */
+function _legacyGenerateRepaymentPlan(data: DocumentData): string {
   const app = data.application || {};
   const planSections = data.planSections || [];
   const incomeSettings = data.incomeSettings || {};
