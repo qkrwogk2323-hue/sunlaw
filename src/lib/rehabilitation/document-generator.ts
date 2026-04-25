@@ -1527,13 +1527,46 @@ function generateRepaymentPlan(data: DocumentData): string {
     if (!isNaN(start.getTime())) {
       planStartDate = repayStartDate;
       const end = new Date(start);
-      end.setMonth(end.getMonth() + planDurationMonths);
+      // 종료일: 시작일 + (기간-1)개월 (예: 2026.06.10 + 35개월 = 2029.05.10)
+      end.setMonth(end.getMonth() + planDurationMonths - 1);
       planEndDate = end.toISOString().slice(0, 10);
     }
   }
 
-  // 채권자별 변제액: 가용소득 기반 안분 계산
-  const totalDebt = (data.creditors || []).reduce((sum: number, c: any) => sum + (Number(c.capital) || 0), 0);
+  // ── 변제계획 단일 원천 계산 ──
+  // 무담보 원금 분모 (담보 부족액 포함, 이자 제외) — 요약표·스케줄·변제율 공용
+  const unsecuredDenom = (data.creditors || []).reduce((sum: number, c: any) => {
+    const cap = Number(c.capital) || 0;
+    if (c.is_secured) {
+      const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
+      return sum + Math.max(0, cap - collateral);
+    }
+    return sum + cap;
+  }, 0);
+
+  // 청산가치 (재산 - 공제)
+  const liqValueCalc = (() => {
+    const ps = data.properties || [];
+    const ds = data.propertyDeductions || [];
+    const pv = ps.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+    const dv = ds.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+    return Math.max(0, pv - dv);
+  })();
+
+  // D5111 청산가치 보장 강제 재계산
+  const baseTotalRepay = Math.floor(availableIncome) * planDurationMonths;
+  const leibnizCoefMap: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
+  const leibnizCoef = leibnizCoefMap[planDurationMonths];
+  const basePresentValue = leibnizCoef ? Math.floor(availableIncome * leibnizCoef) : baseTotalRepay;
+  const isD5111 = basePresentValue <= liqValueCalc && liqValueCalc > 0;
+
+  // 청산가치 미달 시 월 변제액 강제 상향
+  const effectiveMonthlyRepay = isD5111
+    ? Math.ceil(liqValueCalc / planDurationMonths)
+    : Math.floor(availableIncome);
+  const effectiveTotalRepay = effectiveMonthlyRepay * planDurationMonths;
+
+  const totalDebt = unsecuredDenom; // 안분 기준은 무담보 원금
   let creditorTableRows = '';
   (data.creditors || []).forEach((cred: any, idx: number) => {
     const bondNumber = cred.bond_number || String(idx + 1);
@@ -1784,11 +1817,7 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     <p><strong>나. 총변제예정액 및 현재가치</strong></p>
     ${(() => {
-      const totalRepay = Math.floor(availableIncome) * planDurationMonths;
-      // 라이프니츠 현가계수 (공표 4자리 표값)
-      const leibniz: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
-      const coef = leibniz[planDurationMonths];
-      const presentValue = coef ? Math.floor(availableIncome * coef) : null;
+      const presentValue = leibnizCoef ? Math.floor(effectiveMonthlyRepay * leibnizCoef) : null;
       return `
         <table style="margin: 10px 0;">
           <tr>
@@ -1797,15 +1826,20 @@ function generateRepaymentPlan(data: DocumentData): string {
             <th style="width: 30%; text-align: center;">산식</th>
           </tr>
           <tr>
-            <td style="text-align: center;">(K) 가용소득 총변제예정액</td>
-            <td style="text-align: right;">${formatAmount(totalRepay)}</td>
-            <td style="text-align: center;">월가용 × ${planDurationMonths}</td>
+            <td style="text-align: center;">(K) 총변제예정액</td>
+            <td style="text-align: right;">${formatAmount(effectiveTotalRepay)}</td>
+            <td style="text-align: center;">월변제 ${formatAmount(effectiveMonthlyRepay)} × ${planDurationMonths}</td>
           </tr>
           <tr>
             <td style="text-align: center;">(L) (K)의 현재가치</td>
             <td style="text-align: right;">${presentValue != null ? formatAmount(presentValue) : '— (계수 미확정)'}</td>
-            <td style="text-align: center;">${coef ? `월가용 × 라이프니츠 계수(${coef})` : `${planDurationMonths}개월 계수 미확정`}</td>
+            <td style="text-align: center;">${leibnizCoef ? `월변제 × 라이프니츠 계수(${leibnizCoef})` : `${planDurationMonths}개월 계수 미확정`}</td>
           </tr>
+          ${isD5111 ? `<tr>
+            <td colspan="3" style="padding: 8px; background: #fef3cd; font-size: 0.9em;">
+              ※ 청산가치보장 원칙에 따라 월 변제액이 ${formatAmount(Math.floor(availableIncome))}원 → ${formatAmount(effectiveMonthlyRepay)}원으로 상향 조정됨
+            </td>
+          </tr>` : ''}
         </table>`;
     })()}
 
@@ -1816,24 +1850,14 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     ${(() => {
       // 변제율 (CLAUDE.md): 총변제액 / 무담보원금 × 100 (반올림)
-      // 무담보원금 = 일반 무담보 원금 + 별제권 부족분 (담보 초과 미회수 원금)
-      const unsecuredCapitalForRate = (data.creditors || []).reduce((sum: number, c: any) => {
-        const cap = Number(c.capital) || 0;
-        if (c.is_secured) {
-          const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
-          return sum + Math.max(0, cap - collateral);
-        }
-        return sum + cap;
-      }, 0);
-      const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
-      const ratePercent = unsecuredCapitalForRate > 0
-        ? Math.round((totalRepayAmount / unsecuredCapitalForRate) * 100)
+      const ratePercent = unsecuredDenom > 0
+        ? Math.round((effectiveTotalRepay / unsecuredDenom) * 100)
         : 0;
       return `
         <p style="margin-top: 8px;">
           <strong>변제율: ${ratePercent}%</strong>
           <span style="color: #666; font-size: 0.85em;">
-            (총변제 ${formatAmount(totalRepayAmount)} / 무담보원금 ${formatAmount(unsecuredCapitalForRate)})
+            (총변제 ${formatAmount(effectiveTotalRepay)} / 무담보원금 ${formatAmount(unsecuredDenom)})
           </span>
         </p>`;
     })()}
@@ -1849,32 +1873,20 @@ function generateRepaymentPlan(data: DocumentData): string {
         <th style="width: 16%; text-align: center;">변제율</th>
       </tr>
       ${(() => {
-        // 변제율 단일 분모: 무담보 원금 (이자 제외, 별제권 충당분 제외)
-        // 회생법원 양식 기준 — repayment-calculator.getDebtSummary.unsecuredCapital과 동일 산식
-        const unsecuredDenom = (data.creditors || []).reduce((sum: number, c: any) => {
-          const cap = Number(c.capital) || 0;
-          if (c.is_secured) {
-            const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
-            return sum + Math.max(0, cap - collateral);
-          }
-          return sum + cap;
-        }, 0);
-
-        const totalRepayAmount = Math.floor(availableIncome) * planDurationMonths;
+        // 단일 원천: unsecuredDenom, effectiveMonthlyRepay (상단에서 이미 계산)
         const overallRate = unsecuredDenom > 0
-          ? Math.round((totalRepayAmount / unsecuredDenom) * 100)
+          ? Math.round((effectiveTotalRepay / unsecuredDenom) * 100)
           : 0;
 
         return (data.creditors || []).map((cred: any, idx: number) => {
           const cap = Number(cred.capital) || 0;
           const interest = Number(cred.interest) || 0;
           const credDebt = cap + interest;
-          // 채권자별 변제 분모 (무담보 원금 기준): 별제권은 원금 부족액, 일반은 원금 전액
           const credUnsecured = cred.is_secured
             ? Math.max(0, cap - Math.min(Number(cred.secured_collateral_value) || 0, cap))
             : cap;
           const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
-          const mPay = Math.ceil(availableIncome * ratio);
+          const mPay = Math.ceil(effectiveMonthlyRepay * ratio);
           const tPay = mPay * planDurationMonths;
           const rRate = credUnsecured > 0 ? Math.round((tPay / credUnsecured) * 100) : 0;
           return `<tr>
@@ -1889,8 +1901,8 @@ function generateRepaymentPlan(data: DocumentData): string {
           <tr style="font-weight: bold; border-top: 2px solid #000;">
             <td colspan="2" style="text-align: center;">합 계 (무담보 원금 기준)</td>
             <td style="text-align: right;">${formatAmount(unsecuredDenom)}</td>
-            <td style="text-align: right;">${formatAmount(Math.floor(availableIncome))}</td>
-            <td style="text-align: right;">${formatAmount(totalRepayAmount)}</td>
+            <td style="text-align: right;">${formatAmount(effectiveMonthlyRepay)}</td>
+            <td style="text-align: right;">${formatAmount(effectiveTotalRepay)}</td>
             <td style="text-align: center;">${overallRate}%</td>
           </tr>`;
       })()}
@@ -1898,25 +1910,17 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     <h4>3. 청산가치와의 비교</h4>
     ${(() => {
-      const props = data.properties || [];
-      const deductions = data.propertyDeductions || [];
-      const totalPropValue = props.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
-      const totalDeduction = deductions.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
-      const liqValue = Math.max(0, totalPropValue - totalDeduction);
-      const totalRepay = Math.floor(availableIncome) * planDurationMonths;
-      const exceedsLiq = totalRepay >= liqValue;
+      const exceedsLiq = effectiveTotalRepay >= liqValueCalc;
       return `
         <table style="margin: 10px 0;">
           <tr><th style="width: 50%;">항목</th><th style="width: 50%; text-align: right;">금액</th></tr>
-          <tr><td>총 재산가액</td><td style="text-align: right;">${formatAmount(totalPropValue)}</td></tr>
-          <tr><td>공제금액 합계</td><td style="text-align: right;">${formatAmount(totalDeduction)}</td></tr>
-          <tr style="font-weight: bold;"><td>청산가치 (A)</td><td style="text-align: right;">${formatAmount(liqValue)}</td></tr>
-          <tr style="font-weight: bold;"><td>총 변제예정액 (B)</td><td style="text-align: right;">${formatAmount(totalRepay)}</td></tr>
+          <tr style="font-weight: bold;"><td>청산가치 (A)</td><td style="text-align: right;">${formatAmount(liqValueCalc)}</td></tr>
+          <tr style="font-weight: bold;"><td>총 변제예정액 (B)</td><td style="text-align: right;">${formatAmount(effectiveTotalRepay)}</td></tr>
         </table>
         <p style="margin-top: 10px;">
           ${exceedsLiq
-            ? `총 변제예정액(${formatAmount(totalRepay)})이 청산가치(${formatAmount(liqValue)})를 <strong>상회</strong>하므로 청산가치 보장 원칙을 충족합니다.`
-            : `<strong style="color: red;">⚠ 총 변제예정액(${formatAmount(totalRepay)})이 청산가치(${formatAmount(liqValue)})에 미달합니다. 변제액 조정이 필요합니다.</strong>`}
+            ? `총 변제예정액(${formatAmount(effectiveTotalRepay)})이 청산가치(${formatAmount(liqValueCalc)})를 <strong>상회</strong>하므로 청산가치 보장 원칙을 충족합니다.`
+            : `<strong style="color: red;">⚠ 총 변제예정액(${formatAmount(effectiveTotalRepay)})이 청산가치(${formatAmount(liqValueCalc)})에 미달합니다.</strong>`}
         </p>`;
     })()}
 
@@ -1926,14 +1930,11 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     ${(() => {
       const credList = data.creditors || [];
-      // P1-9: buildAdjustedSchedule로 회차별 월변제액 분배
-      // totalTarget 미지정 시 base × months → diff=0 → 모든 회차 동일
-      // 향후 저장된 총변제액을 incomeSettings에서 읽어 totalTarget으로 주입
-      const savedTotalTarget = Number(incomeSettings.total_repay_amount) || 0;
+      // 요약표와 동일한 원천 사용: effectiveMonthlyRepay, unsecuredDenom
       const schedule = buildAdjustedSchedule({
-        monthlyAvailable: availableIncome,
+        monthlyAvailable: effectiveMonthlyRepay,
         months: planDurationMonths,
-        totalTarget: savedTotalTarget > 0 ? savedTotalTarget : undefined,
+        totalTarget: effectiveTotalRepay,
       });
 
       const rows: string[] = [];
@@ -1943,13 +1944,19 @@ function generateRepaymentPlan(data: DocumentData): string {
         const monthlyTotal = r.amount;
         credList.forEach((cred: any, idx: number) => {
           const cap = Number(cred.capital) || 0;
-          const credDebt = cap + (Number(cred.interest) || 0);
-          const ratio = totalDebt > 0 ? credDebt / totalDebt : 0;
-          // 마지막 채권자는 잔여 흡수 (올림 오차 보정) — CLAUDE.md: (E) Math.ceil
+          // 요약표와 동일한 무담보 원금 기준 비율
+          const credUnsecured = cred.is_secured
+            ? Math.max(0, cap - Math.min(Number(cred.secured_collateral_value) || 0, cap))
+            : cap;
+          const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
+          // 마지막 채권자는 잔여 흡수 (올림 오차 보정)
           const mPay = idx === credList.length - 1
             ? monthlyTotal - credList.slice(0, -1).reduce((s: number, c: any) => {
-                const d = (Number(c.capital) || 0) + (Number(c.interest) || 0);
-                const rt = totalDebt > 0 ? d / totalDebt : 0;
+                const cCap = Number(c.capital) || 0;
+                const cUnsec = c.is_secured
+                  ? Math.max(0, cCap - Math.min(Number(c.secured_collateral_value) || 0, cCap))
+                  : cCap;
+                const rt = unsecuredDenom > 0 ? cUnsec / unsecuredDenom : 0;
                 return s + Math.ceil(monthlyTotal * rt);
               }, 0)
             : Math.ceil(monthlyTotal * ratio);
@@ -1957,6 +1964,7 @@ function generateRepaymentPlan(data: DocumentData): string {
           const prev = cumulByCred.get(credKey) || 0;
           const cumul = prev + mPay;
           cumulByCred.set(credKey, cumul);
+          const credDebt = cap + (Number(cred.interest) || 0);
           rows.push(`<tr>
             ${idx === 0 ? `<td rowspan="${credList.length}" style="text-align: center; vertical-align: middle;">${r.index}</td>` : ''}
             <td style="text-align: center;">${cred.bond_number || idx + 1}</td>

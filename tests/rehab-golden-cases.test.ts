@@ -53,7 +53,7 @@ const CASE_3 = {
   name: '담보권부 채권',
   application: { applicant_name: '박상철', court_name: '대전지방법원' },
   creditors: [
-    { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 50_000_000, interest: 5_000_000, is_secured: true, remaining_unsecured: 10_000_000 },
+    { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 50_000_000, interest: 5_000_000, is_secured: true, secured_collateral_value: 45_000_000, remaining_unsecured: 10_000_000 },
     { id: 'c2', bond_number: 2, creditor_name: '신한은행', capital: 10_000_000, interest: 1_000_000, is_secured: false },
   ],
 };
@@ -160,8 +160,9 @@ describe('Golden Case 통합 테스트', () => {
     const output = buildCreditorListOutput(CASE_3.application, {}, CASE_3.creditors);
     const s10 = buildSection10Clauses(CASE_3.creditors, 'D5110');
 
-    it('채권자목록: 담보부 합계에 secured 포함', () => {
-      expect(output.summary.securedTotal).toBe(55_000_000);
+    it('채권자목록: 담보부 = 담보가치 회수분만', () => {
+      // 국민은행: totalClaim=55M, collateral=45M → secured=45M
+      expect(output.summary.securedTotal).toBe(45_000_000);
     });
 
     it('미확정: 별제권 부족액 1건', () => {
@@ -304,7 +305,7 @@ describe('Golden Case 통합 테스트', () => {
   // ═══════════════════════════════════════════════════════════════════
   describe('Case 9: 복합 사건 (모든 특수 조건 동시)', () => {
     const creditors = [
-      { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 50_000_000, interest: 5_000_000, is_secured: true, remaining_unsecured: 15_000_000 },
+      { id: 'c1', bond_number: 1, creditor_name: '국민은행', capital: 50_000_000, interest: 5_000_000, is_secured: true, secured_collateral_value: 40_000_000, remaining_unsecured: 15_000_000 },
       { id: 'c2', bond_number: 2, creditor_name: '국세청', capital: 2_000_000, interest: 0, is_secured: false, has_priority_repay: true },
       { id: 'c3', bond_number: 3, creditor_name: '하나은행', capital: 10_000_000, interest: 1_000_000, is_secured: false, guarantor_amount: 3_000_000, guarantor_name: '박보증', bond_type: '주채무' },
       { id: 'c4', bond_number: 3, creditor_name: '박보증', capital: 3_000_000, interest: 0, is_secured: false, parent_creditor_id: 'c3', sub_number: 1, bond_type: '보증채무' },
@@ -318,8 +319,9 @@ describe('Golden Case 통합 테스트', () => {
       expect(output.rows.some(r => r.bondNumber === '3-1')).toBe(true);
     });
 
-    it('담보부 합계 정확', () => {
-      expect(output.summary.securedTotal).toBe(55_000_000);
+    it('담보부 합계 = 담보가치 회수분만', () => {
+      // 국민은행: totalClaim=55M, collateral=40M → secured=40M
+      expect(output.summary.securedTotal).toBe(40_000_000);
     });
 
     it('미확정: 별제권 부족 + 소송 중 = 2건', () => {
