@@ -136,6 +136,14 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
   // ── 1. 별제권 배분 (환가예상액 기준) ──
   const securedCreditors = creditors.filter((c) => c.is_secured);
   const securedResults = calculateSecuredAllocations(
+    securedProperties.map((p) => ({
+      id: p.id || '',
+      propertyType: p.property_type || '',
+      description: p.description || '',
+      marketValue: Number(p.market_value) || 0,
+      valuationRate: Number(p.valuation_rate) || 70,
+      note: '',
+    })),
     securedCreditors.map((c) => ({
       id: c.id || '',
       creditorName: c.creditor_name || '',
@@ -145,13 +153,7 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
       maxClaimAmount: Number(c.max_claim_amount) || 0,
       lienPriority: Number(c.lien_priority) || 1,
       lienType: c.lien_type || '',
-    })),
-    securedProperties.map((p) => ({
-      id: p.id || '',
-      propertyType: p.property_type || '',
-      description: p.description || '',
-      marketValue: Number(p.market_value) || 0,
-      valuationRate: Number(p.valuation_rate) || 70,
+      securedPropertyId: c.secured_property_id || null,
     })),
   );
 
