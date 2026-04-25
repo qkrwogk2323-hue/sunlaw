@@ -127,6 +127,10 @@ export interface CaseSnapshot {
 
   // ── 1~9항 ──
   planCoreSections: string[];
+
+  // ── 일관성 검증 ──
+  /** 핵심 숫자의 해시 — PDF/CSV가 같은 snapshot에서 나왔는지 검증용 */
+  snapshotHash: string;
 }
 
 // ─── 빌더 ───────────────────────────────────────────────────────────
@@ -411,5 +415,21 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
     section10Clauses,
     section10Addendum,
     planCoreSections,
+    // 핵심 숫자 해시 — 같은 snapshot에서 나온 PDF/CSV인지 검증
+    snapshotHash: computeSnapshotHash({
+      totalDebt, securedTotal, unsecuredTotal, unsecuredCapital,
+      effectiveMonthlyRepay, effectiveTotalRepay, repayRate, liquidationValue,
+      repayMonths, isD5111,
+    }),
   };
+}
+
+/** 핵심 숫자들의 간단한 해시 (동일 입력 → 동일 해시) */
+function computeSnapshotHash(values: Record<string, unknown>): string {
+  const str = JSON.stringify(values);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return `snap_${(hash >>> 0).toString(36)}`;
 }
