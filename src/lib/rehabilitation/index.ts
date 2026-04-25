@@ -66,6 +66,10 @@ export type { PropertyCategoryKey } from './property-schemas';
 // D5103 수입/지출 스키마
 export { incomeBreakdownSchema, expenseBreakdownSchema, validateIncomeBreakdown, validateExpenseBreakdown, computeMonthlyAverageIncome, computeAdditionalExpenseRate, computeAnnualAmount } from './income-expense-schemas';
 
+// 사건 단일 스냅샷 (모든 문서의 유일한 원천)
+export { buildCaseSnapshot } from './case-snapshot';
+export type { CaseSnapshot, CaseSnapshotInput, SecuredAttachmentRow } from './case-snapshot';
+
 // 변제계획안 제1~9항 자동 생성
 export { buildPlanCoreSections } from './plan-core-sections';
 export type { PlanSnapshot } from './plan-core-sections';
