@@ -1523,8 +1523,10 @@ function generateRepaymentPlan(data: DocumentData): string {
   const creditorRows = creditors.map((c: any) => {
     const cap = Number(c.capital) || 0;
     const interest = Number(c.interest) || 0;
+    // 안분 weight = max(채권최고액, 채권현재액) - 담보가치 (COLAW 기준)
+    const totalClaim = cap + interest;
     const credUnsecured = c.is_secured
-      ? Math.max(0, cap - Math.min(Number(c.secured_collateral_value) || 0, cap))
+      ? Math.max(0, Math.max(Number(c.max_claim_amount) || 0, totalClaim) - Math.min(Number(c.secured_collateral_value) || 0, totalClaim))
       : cap;
     const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
     const mPay = Math.ceil(monthlyRepay * ratio);
@@ -1559,14 +1561,21 @@ function generateRepaymentPlan(data: DocumentData): string {
   for (let round = 1; round <= months; round++) {
     creditors.forEach((c: any, idx: number) => {
       const cap = Number(c.capital) || 0;
+      const int = Number(c.interest) || 0;
+      const tc = cap + int;
+      // 안분 weight = max(채권최고액, 채권현재액) - 담보가치 (COLAW 기준)
       const credUnsecured = c.is_secured
-        ? Math.max(0, cap - Math.min(Number(c.secured_collateral_value) || 0, cap))
+        ? Math.max(0, Math.max(Number(c.max_claim_amount) || 0, tc) - Math.min(Number(c.secured_collateral_value) || 0, tc))
         : cap;
       const ratio = unsecuredDenom > 0 ? credUnsecured / unsecuredDenom : 0;
       const mPay = idx === creditors.length - 1
         ? monthlyRepay - creditors.slice(0, -1).reduce((s: number, cc: any) => {
             const cCap = Number(cc.capital) || 0;
-            const cUnsec = cc.is_secured ? Math.max(0, cCap - Math.min(Number(cc.secured_collateral_value) || 0, cCap)) : cCap;
+            const cInt = Number(cc.interest) || 0;
+            const cTc = cCap + cInt;
+            const cUnsec = cc.is_secured
+              ? Math.max(0, Math.max(Number(cc.max_claim_amount) || 0, cTc) - Math.min(Number(cc.secured_collateral_value) || 0, cTc))
+              : cCap;
             return s + Math.ceil(monthlyRepay * (unsecuredDenom > 0 ? cUnsec / unsecuredDenom : 0));
           }, 0)
         : Math.ceil(monthlyRepay * ratio);
