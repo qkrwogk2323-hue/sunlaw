@@ -174,7 +174,9 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
 
     // 환가예상액 기반 분리
     const expectedRepay = result?.securedRehabAmount ?? Math.min(Number(c.secured_collateral_value) || 0, totalClaim);
-    const deficiency = Math.max(0, totalClaim - expectedRepay);
+    // ④ = max(채권최고액, 채권현재액) - 담보가치 (COLAW 기준)
+    const maxClaimOrTotal = Math.max(Number(c.max_claim_amount) || 0, totalClaim);
+    const deficiency = Math.max(0, maxClaimOrTotal - expectedRepay);
 
     return {
       bondNumber: Number(c.bond_number) || 0,

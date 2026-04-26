@@ -235,9 +235,10 @@ export async function upsertRehabCreditor(
       if (scv <= 0) {
         return { ok: false, code: 'VALIDATION', userMessage: '담보부 채권의 담보평가액을 입력하세요. 담보물건을 연결하거나 환가예상액(시가 × 환가비율)을 직접 입력하세요.' };
       }
-      // remaining_unsecured 자동 산출: 채권현재액 - 담보평가액 (부족액)
+      // remaining_unsecured 자동 산출: max(채권최고액, 채권현재액) - 담보평가액
       const totalClaim = (Number(cleanData.capital) || 0) + (Number(cleanData.interest) || 0);
-      cleanData.remaining_unsecured = Math.max(0, totalClaim - scv);
+      const maxClaimOrTotal = Math.max(Number(cleanData.max_claim_amount) || 0, totalClaim);
+      cleanData.remaining_unsecured = Math.max(0, maxClaimOrTotal - scv);
     } else {
       cleanData.remaining_unsecured = 0;
     }
