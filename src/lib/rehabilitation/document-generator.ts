@@ -1600,7 +1600,10 @@ function generateRepaymentPlan(data: DocumentData): string {
   })();
 
   // 미확정 채권
-  const unsettledCreditors = creditors.filter((c: any) => c.is_unsettled || c.is_other_unconfirmed);
+  // 미확정 채권: is_unsettled + is_other_unconfirmed + 별제권 부족액(remaining_unsecured > 0)
+  const unsettledCreditors = creditors.filter((c: any) =>
+    c.is_unsettled || c.is_other_unconfirmed || (c.is_secured && (Number(c.remaining_unsecured) || 0) > 0)
+  );
 
   // 라이프니츠 계수
   const leibnizCoef: Record<number, number> = { 36: 33.7719, 48: 43.9555, 60: 53.6433 };
@@ -1620,15 +1623,15 @@ function generateRepaymentPlan(data: DocumentData): string {
     <h4>가. 소득</h4>
     <table>
       <tr><th style="width:50%">항목</th><th style="width:50%;text-align:right">금액</th></tr>
-      <tr><td>(1) 수입</td><td style="text-align:right">${formatAmount(netSalary * 12)}원/년</td></tr>
-      <tr><td>(2) 생계비</td><td style="text-align:right">${formatAmount(livingCost)}원/월</td></tr>
-      <tr><td>(3) 가용소득</td><td style="text-align:right">${formatAmount(monthlyAvailable)}원/월</td></tr>
+      <tr><td>(1) 수입</td><td style="text-align:right">${formatAmountNoUnit(netSalary * 12)}원/년</td></tr>
+      <tr><td>(2) 생계비</td><td style="text-align:right">${formatAmountNoUnit(livingCost)}원/월</td></tr>
+      <tr><td>(3) 가용소득</td><td style="text-align:right">${formatAmountNoUnit(monthlyAvailable)}원/월</td></tr>
     </table>
 
     <h4>나. 재산</h4>
     <p>[ 해당${isD5111 ? '있음 ■' : '없음 ■'} / 해당${isD5111 ? '없음 □' : '있음 □'} ]</p>
     ${isD5111 ? `<p style="margin-left:20px;font-size:0.95em">
-      현재가치(${formatAmount(pvDisplay ?? 0)}원)가 청산가치(${formatAmount(liqValue)}원)에 미달하므로
+      현재가치(${formatAmount(pvDisplay ?? 0)})가 청산가치(${formatAmount(liqValue)})에 미달하므로
       재산처분에 의한 변제가 병행됩니다 (D5111 양식).
     </p>` : ''}
 
@@ -1675,7 +1678,7 @@ function generateRepaymentPlan(data: DocumentData): string {
 
     ${isD5111 ? `
     <h4>나. 재산의 처분에 의한 변제</h4>
-    <p>(1) 변제투입예정액: ${formatAmount(disposalInvestment)}원 ([원금] 기준 안분)</p>
+    <p>(1) 변제투입예정액: ${formatAmount(disposalInvestment)} ([원금] 기준 안분)</p>
     <p>(2) 변제방법</p>
     <p style="margin-left:20px">(가) 변제기한: 인가일부터 1년 내</p>
     ` : ''}
@@ -1685,7 +1688,7 @@ function generateRepaymentPlan(data: DocumentData): string {
     <h4>가. 채무자의 가용소득</h4>
     <table>
       <tr><th>항목</th><th style="text-align:right">월액</th><th style="text-align:right">연액</th><th>비고</th></tr>
-      <tr><td>가용소득 (⑥)</td><td style="text-align:right">${formatAmount(monthlyAvailable)}원</td><td style="text-align:right">${formatAmount(monthlyAvailable * 12)}원</td><td></td></tr>
+      <tr><td>가용소득 (⑥)</td><td style="text-align:right">${formatAmount(monthlyAvailable)}</td><td style="text-align:right">${formatAmount(monthlyAvailable * 12)}</td><td></td></tr>
     </table>
 
     <h4>나. 총변제예정액 및 현재가치</h4>
@@ -1702,7 +1705,7 @@ function generateRepaymentPlan(data: DocumentData): string {
         <td style="text-align:center">${coef ? `월변제 × 라이프니츠 계수(${coef})` : '계수 미확정'}</td>
       </tr>
       ${isD5111 ? `<tr><td colspan="3" style="padding:8px;background:#fef3cd;font-size:0.9em">
-        ※ 청산가치보장 원칙에 따라 월 변제액이 ${formatAmount(Math.floor(monthlyAvailable))}원 → ${formatAmount(monthlyRepay)}원으로 상향 조정됨
+        ※ 청산가치보장 원칙에 따라 월 변제액이 ${formatAmount(Math.floor(monthlyAvailable))} → ${formatAmount(monthlyRepay)}으로 상향 조정됨
       </td></tr>` : ''}
     </table>
 
