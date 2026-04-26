@@ -216,7 +216,9 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
     })),
     securedResults,
   );
-  const unsecuredCapital = debtSummary.unsecuredCapital;
+  // unsecuredCapital은 아래 confirmed+unconfirmed 합산으로 재산출 (max_claim 반영)
+  // getDebtSummary의 값은 원금 기준이라 채권최고액 초과분을 포함하지 않음
+  let unsecuredCapital: number; // 아래에서 계산
 
   // 확정/미확정 분리 (COLAW 기준: 별제권 부족액 = 미확정, 일반 무담보 = 확정)
   let confirmedUnsecuredCapital = 0;
@@ -237,6 +239,7 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
       confirmedUnsecuredCapital += cap;
     }
   }
+  unsecuredCapital = confirmedUnsecuredCapital + unconfirmedUnsecuredCapital;
 
   // ── 3. 소득·생계비 ──
   const netSalary = Number(incomeSettings.net_salary) || 0;
@@ -340,8 +343,10 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
     ? calculateDisposalAmount(liquidationValue, pv, disposePeriod, trusteeCommRate > 0)
     : 0;
 
-  const repayRate = unsecuredCapital > 0
-    ? Math.round((effectiveTotalRepay / unsecuredCapital) * 100 * 100) / 100  // 소수 2자리
+  // 변제율 분모 = 확정 무담보 + 미확정(별제권 부족액 포함) = 871M (COLAW 기준)
+  const repayRateDenom = confirmedUnsecuredCapital + unconfirmedUnsecuredCapital;
+  const repayRate = repayRateDenom > 0
+    ? Math.round((effectiveTotalRepay / repayRateDenom) * 100 * 100) / 100  // 소수 2자리
     : 0;
 
   // ── 7. 기간 계산 ──
