@@ -54,7 +54,9 @@ export function buildSection10Clauses(
       const name = c.creditor_name ?? '채권자';
       const totalClaim = (Number(c.capital) || 0) + (Number(c.interest) || 0);
       const collateral = Math.min(Number(c.secured_collateral_value) || 0, totalClaim);
-      const deficiency = Math.max(0, totalClaim - collateral);
+      // ④ = max(채권최고액, 채권현재액) - 담보가치
+      const maxClaimOrTotal = Math.max(Number(c.max_claim_amount) || 0, totalClaim);
+      const deficiency = Math.max(0, maxClaimOrTotal - collateral);
       return `채권번호 ${bondNum}번 ${name}(예상부족액 ${deficiency.toLocaleString('ko-KR')}원)`;
     }).join(', ');
 

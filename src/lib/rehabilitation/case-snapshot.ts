@@ -227,9 +227,10 @@ export function buildCaseSnapshot(input: CaseSnapshotInput): CaseSnapshot {
       // 미확정 채권 전액 → 유보
       unconfirmedUnsecuredCapital += cap;
     } else if (c.is_secured) {
-      // 별제권 부족액 → 미확정 (유보)
-      const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap);
-      const deficiency = Math.max(0, cap - collateral);
+      // 별제권 부족액 → 미확정 (유보). max(채권최고액, 원금) - 담보가치
+      const collateral = Math.min(Number(c.secured_collateral_value) || 0, cap + (Number(c.interest) || 0));
+      const maxClaimOrCap = Math.max(Number(c.max_claim_amount) || 0, cap + (Number(c.interest) || 0));
+      const deficiency = Math.max(0, maxClaimOrCap - collateral);
       unconfirmedUnsecuredCapital += deficiency;
     } else {
       // 일반 무담보 → 확정 (안분 대상)
