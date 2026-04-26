@@ -201,17 +201,26 @@ export function RehabCreditorsTab({
     return { totalCapital, totalInterest, totalDebt, securedDebt, unsecuredDebt, count: creditorsPagination.total };
   }, [creditorsSummary, creditorsPagination.total]);
 
-  // D5106 출력 뷰용 담보/무담보 요약 (filter·reduce 반복 방지)
+  // D5106 출력 뷰용 담보/무담보 요약 — snapshot과 동일한 분류 사용
   const d5106Summary = useMemo(() => {
     const secured = creditors.filter((c) => c.is_secured);
     const unsecured = creditors.filter((c) => !c.is_secured);
+    const allCapital = creditors.reduce((s, c) => s + c.capital, 0);
+    const allInterest = creditors.reduce((s, c) => s + c.interest, 0);
+    // 담보부 = 환가예상액 합계 (별제권 회수분만)
+    let securedTotal = 0;
+    for (const c of secured) {
+      const claim = c.capital + c.interest;
+      const collateral = Math.min(c.secured_collateral_value || 0, claim);
+      securedTotal += collateral;
+    }
     return {
-      securedCapital: secured.reduce((s, c) => s + c.capital, 0),
-      securedInterest: secured.reduce((s, c) => s + c.interest, 0),
-      unsecuredCapital: unsecured.reduce((s, c) => s + c.capital, 0),
-      unsecuredInterest: unsecured.reduce((s, c) => s + c.interest, 0),
-      allCapital: creditors.reduce((s, c) => s + c.capital, 0),
-      allInterest: creditors.reduce((s, c) => s + c.interest, 0),
+      securedCapital: securedTotal,
+      securedInterest: 0, // 담보부는 환가예상액 기준이므로 원금/이자 구분 불필요
+      unsecuredCapital: allCapital + allInterest - securedTotal,
+      unsecuredInterest: 0,
+      allCapital,
+      allInterest,
       securedCreditors: secured,
     };
   }, [creditors]);

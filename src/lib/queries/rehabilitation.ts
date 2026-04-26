@@ -125,7 +125,7 @@ export async function getRehabCreditorsAll(caseId: string) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from('rehabilitation_creditors')
-    .select('id, capital, interest, is_secured, classify, has_priority_repay')
+    .select('id, capital, interest, is_secured, classify, has_priority_repay, secured_collateral_value, remaining_unsecured')
     .eq('case_id', caseId)
     .neq('lifecycle_status', 'soft_deleted')
     .order('bond_number');
