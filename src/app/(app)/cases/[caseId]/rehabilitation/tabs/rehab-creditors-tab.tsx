@@ -23,6 +23,7 @@ interface RehabCreditorsTabProps {
   creditorsPagination: { total: number; page: number; pageSize: number; totalPages: number };
   creditorsSummary: Record<string, unknown>[];
   securedProperties: Record<string, unknown>[];
+  snapshotHash: string | null;
 }
 
 type CreditorForm = {
@@ -128,6 +129,7 @@ export function RehabCreditorsTab({
   creditorsPagination,
   creditorsSummary,
   securedProperties: initialSecuredProperties,
+  snapshotHash,
 }: RehabCreditorsTabProps) {
   const { success, error, undo } = useToast();
   const router = useRouter();
@@ -1254,7 +1256,7 @@ export function RehabCreditorsTab({
               capital: c.capital,
               interest: c.interest,
             }));
-            const csv = convertToEcourtCSV(rows);
+            const csv = convertToEcourtCSV(rows, snapshotHash ?? undefined);
             downloadCSVBlob(csv, `전자소송_채권자목록_${new Date().toISOString().split('T')[0]}.csv`);
           }}
           disabled={creditors.length === 0}

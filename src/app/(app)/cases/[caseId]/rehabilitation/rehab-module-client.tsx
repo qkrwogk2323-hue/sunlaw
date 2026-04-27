@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/cn';
 import type { CaseHubDocuments } from '@/lib/queries/case-hub-projection';
+import { buildCaseSnapshot } from '@/lib/rehabilitation';
 
 // 탭별 dynamic import — 활성 탭만 로드 (번들 ~120K → 탭당 ~20K)
 const RehabApplicantTab = dynamic(() => import('./tabs/rehab-applicant-tab').then(m => ({ default: m.RehabApplicantTab })));
@@ -67,6 +68,21 @@ export function RehabModuleClient({
 }: RehabModuleClientProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('applicant');
 
+  // 단일 snapshot — 모든 탭이 같은 hash를 공유
+  const snapshot = useMemo(() => {
+    try {
+      return buildCaseSnapshot({
+        creditors: (creditors || []) as Record<string, any>[],
+        securedProperties: (securedProperties || []) as Record<string, any>[],
+        properties: (properties || []) as Record<string, any>[],
+        propertyDeductions: (propertyDeductions || []) as Record<string, any>[],
+        incomeSettings: (incomeSettings || {}) as Record<string, any>,
+        application: (application || {}) as Record<string, any>,
+        familyMembers: (familyMembers || []) as Record<string, any>[],
+      });
+    } catch { return null; }
+  }, [creditors, securedProperties, properties, propertyDeductions, incomeSettings, application, familyMembers]);
+
   const handleTabChange = useCallback((tab: TabKey) => {
     setActiveTab(tab);
   }, []);
@@ -121,6 +137,7 @@ export function RehabModuleClient({
             creditorsPagination={creditorsPagination}
             creditorsSummary={creditorsSummary}
             securedProperties={securedProperties}
+            snapshotHash={snapshot?.snapshotHash ?? null}
           />
         )}
         {activeTab === 'property' && (

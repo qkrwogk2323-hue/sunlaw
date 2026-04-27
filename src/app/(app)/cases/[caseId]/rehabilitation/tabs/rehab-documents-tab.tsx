@@ -441,9 +441,10 @@ export function RehabDocumentsTab({
                   <button
                     type="button"
                     className="inline-flex items-center gap-1 rounded bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-40"
-                    disabled={isLoadingPreview || isLoadingDownload}
+                    disabled={isLoadingPreview || isLoadingDownload || !snapshot}
                     onClick={() => handleDownload(doc.key, doc.label)}
                     aria-label={`${doc.label} 다운로드`}
+                    title={!snapshot ? '데이터가 부족합니다. 소득/생계비 탭을 먼저 저장하세요.' : undefined}
                   >
                     {isLoadingDownload ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
