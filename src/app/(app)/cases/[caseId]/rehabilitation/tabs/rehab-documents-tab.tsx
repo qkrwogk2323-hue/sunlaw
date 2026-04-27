@@ -337,6 +337,7 @@ export function RehabDocumentsTab({
               해결 방안: ① 변제기간 연장 ② 생계비 비율 조정 ③ 재산처분형 변제
             </p>
           )}
+          <p className="mt-2 text-xs text-slate-400">snapshot: {snapshot.snapshotHash}</p>
         </section>
       )}
 

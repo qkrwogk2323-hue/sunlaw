@@ -31,8 +31,9 @@ function escCsv(s: string): string {
 
 /**
  * 채권자 배열을 전자소송 CSV 문자열로 변환합니다.
+ * @param snapshotHash - buildCaseSnapshot().snapshotHash. CSV가 같은 원천에서 나왔음을 보증.
  */
-export function convertToEcourtCSV(creditors: EcourtCreditorRow[]): string {
+export function convertToEcourtCSV(creditors: EcourtCreditorRow[], snapshotHash?: string): string {
   const lines = [ECOURT_HEADER];
 
   for (const c of creditors) {
@@ -57,6 +58,11 @@ export function convertToEcourtCSV(creditors: EcourtCreditorRow[]): string {
       c.capital,
       c.interest,
     ].join(','));
+  }
+
+  // snapshotHash를 CSV 마지막 줄에 메타데이터로 포함
+  if (snapshotHash) {
+    lines.push(`# snapshotHash=${snapshotHash}`);
   }
 
   return lines.join('\n');
