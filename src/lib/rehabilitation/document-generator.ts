@@ -1018,8 +1018,9 @@ function generateCreditorList(data: DocumentData): string {
       <tr>
         <td rowspan="4" style="width: 6%; text-align: center; vertical-align: middle;">${esc(row.bondNumber)}</td>
         <td rowspan="4" style="width: 12%; text-align: center; vertical-align: middle;">${esc(row.creditorName)}</td>
-        <td colspan="2" style="width: 50%;">${esc(row.cause)}${row.subrogationNote ? `<br/><span style="color: #666; font-size: 9pt;">${esc(row.subrogationNote)}</span>` : ''}</td>
-        <td rowspan="4" style="width: 32%; font-size: 9pt; vertical-align: top; padding: 6px;">${fullAddressHtml}</td>
+        <td colspan="2" style="width: 44%;">${esc(row.cause)}${row.subrogationNote ? `<br/><span style="color: #666; font-size: 9pt;">${esc(row.subrogationNote)}</span>` : ''}</td>
+        <td rowspan="4" style="width: 26%; font-size: 9pt; vertical-align: top; padding: 6px;">${fullAddressHtml}</td>
+        <td rowspan="4" style="width: 6%; text-align: center; vertical-align: middle; font-size: 9pt;">${row.isSecured ? '■ 부속서류<br/>(①,2,3,4)' : '□ 부속서류<br/>(1,2,3,4)'}</td>
       </tr>
       <tr>
         <td colspan="2" style="font-size: 9pt;">${esc(row.bondContent)}</td>
@@ -1520,6 +1521,22 @@ function generateRepaymentPlan(data: DocumentData): string {
   const trusteeCommRate = snap.trusteeCommRate;
   const disposalInvestment = snap.disposalInvestment;
 
+  // 출력용 연번 매핑 (creditor-list-engine과 동일 로직)
+  const sortedForNumber = [...creditors].sort((a: any, b: any) => (a.bond_number || 0) - (b.bond_number || 0));
+  let _seq = 1;
+  const _numMap = new Map<string, number>();
+  for (const c of sortedForNumber) {
+    const isChild = (c as any).parent_creditor_id && creditors.find((p: any) => p.id === (c as any).parent_creditor_id);
+    if (!isChild) { _numMap.set((c as any).id || '', _seq++); }
+  }
+  const getOutputBondNumber = (c: any): string => {
+    const parent = c.parent_creditor_id ? creditors.find((p: any) => p.id === c.parent_creditor_id) : null;
+    if (parent && c.sub_number != null) {
+      return `${_numMap.get(parent.id || '') ?? '?'}-${c.sub_number}`;
+    }
+    return String(_numMap.get(c.id || '') ?? c.bond_number ?? '?');
+  };
+
   // 채권자별 안분 계산 (snapshot 분모 사용)
   const creditorRows = creditors.map((c: any) => {
     const cap = Number(c.capital) || 0;
@@ -1533,7 +1550,7 @@ function generateRepaymentPlan(data: DocumentData): string {
     const mPay = Math.ceil(monthlyRepay * ratio);
     const tPay = mPay * months;
     const rRate = credUnsecured > 0 ? Math.round((tPay / credUnsecured) * 100) : 0;
-    return { bondNumber: c.bond_number || '', name: c.creditor_name || '', cap, interest, totalClaim: cap + interest, credUnsecured, mPay, tPay, rRate };
+    return { bondNumber: getOutputBondNumber(c), name: c.creditor_name || '', cap, interest, totalClaim: cap + interest, credUnsecured, mPay, tPay, rRate };
   });
 
   // 별제권부 채권 5항 표
@@ -1586,7 +1603,7 @@ function generateRepaymentPlan(data: DocumentData): string {
       cumulByCred.set(key, cumul);
       scheduleRows.push(`<tr>
         ${idx === 0 ? `<td rowspan="${creditors.length}" style="text-align:center;vertical-align:middle">${round}</td>` : ''}
-        <td style="text-align:center">${c.bond_number || idx + 1}</td>
+        <td style="text-align:center">${getOutputBondNumber(c)}</td>
         <td>${esc(c.creditor_name || '')}</td>
         <td style="text-align:right">${formatAmount((Number(c.capital) || 0) + (Number(c.interest) || 0))}</td>
         <td style="text-align:right">${formatAmount(mPay)}</td>
