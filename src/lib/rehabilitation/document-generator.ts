@@ -348,46 +348,88 @@ function generateApplication(data: DocumentData): string {
       ? `${courtName}`
       : '';
 
+  // 주소 jsonb → 한 줄 문자열
+  const fmtAddr = (addr: any) => {
+    if (!addr) return '';
+    const parts = [addr.address, addr.detail].filter(Boolean);
+    return parts.join(' ') + (addr.postal_code ? ` (우편번호: ${addr.postal_code})` : '');
+  };
+  const regAddr = fmtAddr(app.registered_address);
+  const curAddr = fmtAddr(app.current_address);
+  const offAddr = fmtAddr(app.office_address);
+  const svcAddr = fmtAddr(app.service_address);
+  const svcRecipient = app.service_recipient || '';
+  const phoneHome = app.phone_home || '';
+  const employerName = app.employer_name || '';
+  const incomeSettings = data.incomeSettings || {};
+  const incomeType = (app.income_type || incomeSettings.income_type || '') as string;
+  const isBusiness = incomeType === 'business';
+
   const content = `
     <div class="header-line">
       ${esc(headerLine)}
     </div>
 
-    <h1>개 시 신 청 서</h1>
+    <h1>개인회생절차 개시신청서</h1>
 
-    <div class="section">
-      <h3>신청서</h3>
-      <table>
-        <tr>
-          <td style="width: 30%;">채무자</td>
-          <td>${esc(debtorName)} (${esc(debtorBirth)}-*******)</td>
-        </tr>
-        <tr>
-          <td>전화번호</td>
-          <td>${esc(debtorPhone)}</td>
-        </tr>
-      </table>
-    </div>
+    <table>
+      <tr>
+        <td style="width:20%;text-align:center">성 명</td>
+        <td style="width:30%">${esc(debtorName)}</td>
+        <td style="width:20%;text-align:center">주민등록번호</td>
+        <td style="width:30%">${esc(debtorBirth)}-*******</td>
+      </tr>
+      <tr>
+        <td style="text-align:center">주민등록상주소</td>
+        <td colspan="3">${esc(regAddr)}</td>
+      </tr>
+      <tr>
+        <td style="text-align:center">현 주 소</td>
+        <td colspan="3">${esc(curAddr)}</td>
+      </tr>
+      <tr>
+        <td style="text-align:center">직장주소</td>
+        <td colspan="3">${esc(offAddr)}</td>
+      </tr>
+      <tr>
+        <td style="text-align:center">송달장소</td>
+        <td colspan="3">${esc(svcAddr)}${svcRecipient ? ` (송달영수인: ${esc(svcRecipient)})` : ''}</td>
+      </tr>
+      <tr>
+        <td style="text-align:center">전화번호(집·직장)</td>
+        <td>${esc(phoneHome)}</td>
+        <td style="text-align:center">전화번호(휴대전화)</td>
+        <td>${esc(debtorPhone)}</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:10px">
+      □ 신청인은 정기적이고 확실한 수입을 얻을 것으로 예상되고, 또한 채무자 회생 및 파산에 관한 법률 제595조에 해당하는 개시신청 기각사유는 없습니다(급여소득자).
+    </p>
+    <p>
+      ${isBusiness ? '■' : '□'} 신청인은 부동산임대소득·사업소득·농업소득·임업소득 그 밖에 이와 유사한 수입을 장래에 계속적으로 또는 반복하여 얻을 것으로 예상되고, 또한 채무자 회생 및 파산에 관한 법률 제595조에 해당하는 개시신청 기각사유는 없습니다(영업소득자).
+    </p>
 
     <div class="section">
       <h3>대리인</h3>
       <table>
         <tr>
-          <td style="width: 30%;">법무법인</td>
-          <td>${esc(agentLawFirm)}</td>
+          <td style="width:20%;text-align:center">성 명</td>
+          <td colspan="3">${esc(agentLawFirm)}${agentName ? ` 담당변호사 ${esc(agentName)}` : ''}</td>
         </tr>
         <tr>
-          <td>담당자</td>
-          <td>${esc(agentName)}</td>
+          <td style="text-align:center">사무실 주소</td>
+          <td colspan="3">${esc(fmtAddr(app.agent_address))}</td>
         </tr>
         <tr>
-          <td>전화</td>
+          <td style="text-align:center">전화번호(사무실)</td>
           <td>${esc(agentPhone)}</td>
+          <td style="text-align:center">FAX번호</td>
+          <td>${esc(agentFax)}</td>
         </tr>
-        ${agentFax ? `<tr><td>팩스</td><td>${esc(agentFax)}</td></tr>` : ''}
         <tr>
-          <td>전자메일</td>
-          <td>${esc(agentEmail)}</td>
+          <td style="text-align:center">이-메일 주소</td>
+          <td colspan="3">${esc(agentEmail)}</td>
         </tr>
       </table>
     </div>
@@ -1397,7 +1439,10 @@ function generateAffidavit(data: DocumentData): string {
   const careers: Array<{ period?: string; industry?: string; company?: string; position?: string }> = structured.careers || [];
   const marriageStatus = structured.marriage_status || '';
   const marriageNote = structured.marriage_note || '';
-  const housingType = structured.housing_type || '1';
+  // housing_type: DB에 '자가', '기숙사', '임차', '친족무상', '친족외무상', '기타' 또는 '1'~'6'
+  const housingTypeRaw = structured.housing_type || '';
+  const housingTypeMap: Record<string, string> = { '자가': '1', '기숙사': '2', '임차': '3', '친족무상': '4', '친족외무상': '5', '기타': '6' };
+  const housingType = housingTypeMap[housingTypeRaw] || housingTypeRaw || '0';
   const housingStart = structured.housing_start || '';
   const housingNote = structured.housing_note || '';
   const debtHasLawsuit = structured.debt_has_lawsuit || '없음';
@@ -1421,9 +1466,9 @@ function generateAffidavit(data: DocumentData): string {
             <th style="width: 25%; text-align: center;">직장명</th>
             <th style="width: 35%; text-align: center;">직위</th>
           </tr>
-          ${careers.length > 0 ? careers.map(c => `<tr>
-            <td style="text-align: center;">${esc(c.period || '')}</td>
-            <td style="text-align: center;">${esc(c.industry || '')}</td>
+          ${careers.length > 0 ? careers.map((c: any) => `<tr>
+            <td style="text-align: center;">${esc(c.period || c.from ? `${c.from || ''}~${c.to || '현재'}` : '')}</td>
+            <td style="text-align: center;">${esc(c.industry || c.reason || '')}</td>
             <td style="text-align: center;">${esc(c.company || '')}</td>
             <td style="text-align: center;">${esc(c.position || '')}</td>
           </tr>`).join('') : '<tr><td colspan="4" style="height: 40px; text-align: center; color: #666;">해당 없음</td></tr>'}
