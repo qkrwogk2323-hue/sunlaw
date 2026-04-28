@@ -1,4 +1,4 @@
-# 개인회생 법률 실행 명세서 v1 — rehab-rulebook
+# 개인회생 법률 실행 명세서 v1.1 — rehab-rulebook
 
 > 이 문서가 동결되기 전에는 코드 수정 금지.
 > 모든 계산은 이 문서의 규칙대로만 구현한다.
@@ -104,3 +104,100 @@
 | 6 | 60개월 | 자동 연장 또는 사용자 선택 |
 | 7 | 급여소득 | income_type='salary' |
 | 8 | 영업소득 | income_type='business' |
+
+---
+
+## 부속표 A. 반올림·절상 규칙표
+
+| # | 값 | 반올림 | 함수 | 법원 근거 |
+|---|---|--------|------|---------|
+| 1 | (E) 월변제예정(유보)액 (채권자별) | **올림** | `Math.ceil` | 작성방법 p.11 "원 미만은 '올림' 으로 처리" |
+| 2 | (F) 총변제예정(유보)액 (채권자별) | = (E) × 변제횟수 | 정수 곱셈 | 작성방법 p.11 |
+| 3 | (P) 재산처분 변제액 (채권자별) | **올림** | `Math.ceil` | 가이드 p.17 |
+| 4 | (O) 변제투입예정액 | **올림** | `Math.ceil` | CLAUDE.md |
+| 5 | (L) 현재가치 (라이프니쯔) | **버림** | `Math.floor` | 작성방법 p.12 "원 미만은 버림" |
+| 6 | ④ 회생위원 보수 | **반올림** | `Math.round` | CLAUDE.md |
+| 7 | 변제율(%) | **반올림** (소수점 이하) | `Math.round` | 작성방법 p.12 "소수점 이하는 반올림" |
+| 8 | 생계비 | 공표 고정값 (계산 아님) | 정수 | 보건복지부 고시 |
+| 9 | 라이프니츠 계수 | 공표 4자리 | 36: 33.7719, 48: 43.9555, 60: 53.6433 | 작성방법 p.12 |
+| 10 | 마지막 채권자 보정 | 잔여 흡수 | 총합 = 월변제액 정확 일치 | CLAUDE.md |
+
+### 6원/216원 차이 처리
+
+| 원인 | VS | COLAW | 차이 | 판정 |
+|------|-----|-------|------|------|
+| 생계비 공표값 vs 계산값 | 1,538,543 (공표) | 1,538,537 (추정 계산) | +6 | **허용** — VS가 공표값 사용, 법적으로 더 정확 |
+| 월변제 | 2,461,457 | 2,461,463 | -6 | 생계비 차이 전파 |
+| 총변제 | 88,612,452 | 88,612,668 | -216 | 6원 × 36개월 |
+| 현재가치 | 83,128,079 | 83,128,282 | -203 | 생계비 차이 전파 |
+
+**결론**: diff 0 불가. 법원 기준상 허용 차이. 코드 버그 아님.
+
+---
+
+## 부속표 B. 문서-필드 매핑표
+
+| # | 문서 | 섹션 | snapshot 필드 | 수동입력 | 비고 |
+|---|------|------|-------------|---------|------|
+| 1 | 개시신청서 | 총변제예정액 | `totalRepayAmount` | ❌ | |
+| 2 | 개시신청서 | 월변제액 | `monthlyRepay` | ❌ | |
+| 3 | D5106 상단 | 합계 | `totalDebt` | ❌ | |
+| 4 | D5106 상단 | 담보부 회생채권액 | `securedRehabAmount` | ❌ | |
+| 5 | D5106 상단 | 무담보 회생채권액 | `unsecuredTotal` (= totalDebt - securedRehabAmount) | ❌ | **≠ repaymentDenominatorCapital** |
+| 6 | 부속서류1 | ③ 예상회수 | `securedAttachment[].expectedRepay` | ❌ | |
+| 7 | 부속서류1 | ④ 부족액 | `securedAttachment[].deficiency` | ❌ | |
+| 8 | 부속서류1 | ⑤ 담보부회생채권액 | `securedAttachment[].securedRehabAmount` | ❌ | = ③ |
+| 9 | 부속서류2 | 미확정 금액 | `securedAttachment[].deficiency` (별제권) + `is_unsettled` 채권 | ❌ | |
+| 10 | 재산목록 | 각 항목 | `properties[].amount` + `structured_detail` | ❌ | |
+| 11 | 재산목록 | 청산가치 | `liquidationValue` | ❌ | |
+| 12 | 수입지출목록 | 수입 | `netSalary` | ❌ | |
+| 13 | 수입지출목록 | 생계비 | `livingCostApplied` | ❌ | |
+| 14 | 수입지출목록 | 가족 | `familyMembers[]` | ❌ | |
+| 15 | 변제계획안 1항 | 기간 | `repayStartDate`, `repayEndDate`, `repayMonths` | ❌ | |
+| 16 | 변제계획안 2항 | 소득/생계비/가용소득 | `netSalary`, `livingCostApplied`, `monthlyAvailable` | ❌ | |
+| 17 | 변제계획안 2항 나 | D5110/D5111 | `isD5111`, `presentValue`, `liquidationValue` | ❌ | |
+| 18 | 변제계획안 3항 | 재단채권 | `trusteeCommRate` | ❌ | |
+| 19 | 변제계획안 5항 | 별제권 ①③④⑤ | `securedAttachment[]` | ❌ | |
+| 20 | 변제계획안 6항 | 월/총 변제, 분모 | `monthlyRepay`, `totalRepayAmount`, `repaymentDenominatorCapital` | ❌ | |
+| 21 | 변제계획안 6항 | 현재가치 | `presentValue` | ❌ | |
+| 22 | 변제계획안 6항 | 변제율 | `repayRate` | ❌ | |
+| 23 | 변제계획안 6항 요약표 | 채권자별 | `creditor.unsecuredWeight / repaymentDenominatorCapital × monthlyRepay` (ceil) | ❌ | |
+| 24 | 변제계획안 7항 | 미확정 해당여부 | `is_unsettled` ∪ `remaining_unsecured > 0` | ❌ | |
+| 25 | 변제계획안 8항 | 위원 계좌 | `trusteeName`, `trusteeAccount` | ✅ | |
+| 26 | 별표(1) | 회차별 안분 | 같은 weight/분모, `Math.ceil`, 마지막 채권자 잔여 흡수 | ❌ | |
+| 27 | 변제계획안 10항 | clause | `section10Clauses[]` | addendum만 ✅ | |
+| 28 | CSV | 채권자 행 | `creditors[]` raw 데이터 + `snapshotHash` 메타 | ❌ | |
+
+---
+
+## 부속표 C. 법률 강제표 — 저장·출력 차단 조건
+
+| # | 조건 | 차단 대상 | 차단 방식 |
+|---|------|---------|---------|
+| C1 | `is_secured=true` + `secured_collateral_value ≤ 0` | **채권자 저장** | 서버 액션 return error |
+| C2 | `bond_type='보증채무'` + `parent_creditor_id` 없음 | **채권자 저장** | 서버 액션 return error |
+| C3 | `net_salary = 0` | **PDF 출력** | 서버 액션 return error |
+| C4 | 담보채권 `secured_collateral_value ≤ 1` (기본값 폴백) | **PDF 출력** | 서버 액션 return error |
+| C5 | 보증채무 `parent_creditor_id` 없음 | **PDF 출력** | 서버 액션 return error |
+| C6 | `living_cost_rate > 200` | **소득 저장** | 서버 액션 return error |
+| C7 | `repayMonths ≥ 72` | **저장** | 절대 불가 (법 §611②) |
+| C8 | snapshot 없음 | **다운로드** | UI 버튼 비활성화 |
+
+---
+
+## 부속표 D. 채권자별 안분 weight 규칙
+
+| 채권자 유형 | 안분 weight | 분모 | 비고 |
+|-----------|-----------|------|------|
+| 일반 무담보 (확정) | `capital` | `repaymentDenominatorCapital` | |
+| 별제권부 부족액 (미확정) | `MAX(max_claim_amount, capital+interest) - expectedRepay` | 동일 | ④부족액 기준 |
+| 미확정 채권 (`is_unsettled`) | `capital` | 동일 | 유보 |
+| 보증채무 (장래구상, 금액 0) | `0` | — | 행만 표시, 안분 없음 |
+
+### 안분 공식
+
+```
+(E) 월변제예정(유보)액 = Math.ceil(monthlyRepay × weight / repaymentDenominatorCapital)
+마지막 채권자: monthlyRepay - SUM(앞 채권자 (E)) (잔여 흡수)
+(F) 총변제예정(유보)액 = (E) × repayMonths
+```
