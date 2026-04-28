@@ -1192,7 +1192,8 @@ function renderPropertyDetail(prop: any): string {
 function generatePropertyList(data: DocumentData): string {
   const properties = data.properties || [];
   // 0원이고 detail도 없는 행은 제외
-  const validProperties = properties.filter((p: any) => (Number(p.amount) || 0) > 0 || (p.detail && p.detail.trim()));
+  // 법 §580: 소유재산 전체 기재 의무. 0원이어도 출력 (담보초과·신탁 등)
+  const validProperties = properties;
   let totalValue = 0;
 
   validProperties.forEach((p: any) => {

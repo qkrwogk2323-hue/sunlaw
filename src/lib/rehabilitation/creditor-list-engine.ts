@@ -148,13 +148,27 @@ export function buildCreditorListOutput(
     return aSortKey - bSortKey;
   });
 
+  // 출력용 연번 매핑: 부모(주채무) 채권에 1부터 연속 번호 부여
+  let outputSeq = 1;
+  const outputNumberMap = new Map<string, number>();
+  for (const cred of sorted) {
+    const isChild = cred.parent_creditor_id && creditors.find((p) => p.id === cred.parent_creditor_id);
+    if (!isChild) {
+      outputNumberMap.set(cred.id || String(outputSeq), outputSeq);
+      outputSeq++;
+    }
+  }
+
   const rows: CreditorDisplayRow[] = sorted.map((cred, idx) => {
     const parentCred = cred.parent_creditor_id
       ? creditors.find((p) => p.id === cred.parent_creditor_id)
       : null;
+    // 출력용 연번: 부모는 1,2,3..., 자식은 부모번호-sub_number
+    const parentOutputNum = parentCred ? outputNumberMap.get(parentCred.id || '') : undefined;
+    const selfOutputNum = outputNumberMap.get(cred.id || '');
     const bondNumber = parentCred && cred.sub_number != null
-      ? `${parentCred.bond_number || '?'}-${cred.sub_number}`
-      : String(cred.bond_number || idx + 1);
+      ? `${parentOutputNum ?? '?'}-${cred.sub_number}`
+      : String(selfOutputNum ?? idx + 1);
 
     const capital = cred.capital || 0;
     const interest = cred.interest || 0;
