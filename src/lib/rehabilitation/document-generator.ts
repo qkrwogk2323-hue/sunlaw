@@ -339,7 +339,7 @@ function generateApplication(data: DocumentData): string {
   const agentPhone = app.agent_phone || '';
   const agentEmail = app.agent_email || '';
   const agentFax = app.agent_fax || '';
-  const agentLawFirm = app.agent_law_firm || agentName || '';
+  const agentLawFirm = app.agent_law_firm || '';
 
   // 법원서식 D5100 형식: "인천지방법원 2025 개회 101101 호" → cases.case_number에 "2025 개회 101101" 형태로 저장됨
   const headerLine = courtName && caseNumber
@@ -415,7 +415,7 @@ function generateApplication(data: DocumentData): string {
       <table>
         <tr>
           <td style="width:20%;text-align:center">성 명</td>
-          <td colspan="3">${esc(agentLawFirm)}${agentName ? ` 담당변호사 ${esc(agentName)}` : ''}</td>
+          <td colspan="3">${agentLawFirm ? `${esc(agentLawFirm)} 담당변호사 ${esc(agentName)}` : esc(agentName)}</td>
         </tr>
         <tr>
           <td style="text-align:center">사무실 주소</td>
